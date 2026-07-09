@@ -23,11 +23,11 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.6.1782696751"></script>
-    <script src="/static/js/theme.js?v=2026.07.6.1783117645"></script>
-    <script src="/static/js/i18n.js?v=2026.07.6.1783116068"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.8.1783562825"></script>
+    <script src="/static/js/theme.js?v=2026.07.8.1783562825"></script>
+    <script src="/static/js/i18n.js?v=2026.07.8.1783562825"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=2026.07.6.1782696732');
+        @import url('/static/vendor/css/fonts.css?v=2026.07.8.1783562825');
 
         /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
         .w-1\.5 { width: 0.375rem; }
@@ -580,6 +580,67 @@
             border-color:#22c55e;
             color:#16a34a;
             overflow:visible;
+        }
+
+        /* 版本显示样式 */
+        .version-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 8px 12px;
+            margin-top: auto;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .sidebar:hover .version-display,
+        .sidebar.is-pinned .version-display {
+            opacity: 1;
+        }
+
+        .version-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .version-check-btn {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .version-check-btn:hover {
+            background: var(--nav-hover-bg);
+            color: var(--text);
+        }
+
+        .version-check-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .version-check-btn.checking {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .version-check-btn.has-update {
+            color: #22c55e;
         }
 
         html.theme-dark .side-pill.update-available,
@@ -1403,6 +1464,18 @@
                 </div>
 
             </div>
+
+            <!-- 版本显示 -->
+            <div class="version-display" id="versionDisplay">
+                <span class="version-text">v2026.07.8</span>
+                <button class="version-check-btn" id="versionCheckBtn" onclick="checkForUpdates()" title="检查更新">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                </button>
+            </div>
         </aside>
         <script>
             /* 在侧栏 DOM 解析完后立即把 active 类移到当前页对应的入口，避免首屏先在文生图上闪一下 */
@@ -1421,16 +1494,16 @@
         </script>
 
         <main class="stage">
-            <iframe id="frame-zimage" data-src="/static/zimage.html?v=2026.07.6.1783221066" class="active" scrolling="yes"></iframe>
-            <iframe id="frame-enhance" data-src="/static/enhance.html?v=2026.07.6.1783507232" scrolling="yes"></iframe>
-            <iframe id="frame-klein" data-src="/static/klein.html?v=2026.07.6.1783221066" scrolling="yes"></iframe>
-            <iframe id="frame-angle" data-src="/static/angle.html?v=2026.07.6.1783507232" scrolling="yes"></iframe>
-            <iframe id="frame-online" data-src="/static/online.html?v=2026.07.6.1783325923" scrolling="yes"></iframe>
-            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.07.6.1783507232" scrolling="yes"></iframe>
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.07.6.1783507232" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.6.1783507232" scrolling="yes"></iframe>
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.07.6.1783507232" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.07.6.1783507232" scrolling="yes"></iframe>
+            <iframe id="frame-zimage" data-src="/static/zimage.html?v=2026.07.8.1783563526" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-enhance" data-src="/static/enhance.html?v=2026.07.8.1783563526" scrolling="yes"></iframe>
+            <iframe id="frame-klein" data-src="/static/klein.html?v=2026.07.8.1783563526" scrolling="yes"></iframe>
+            <iframe id="frame-angle" data-src="/static/angle.html?v=2026.07.8.1783563526" scrolling="yes"></iframe>
+            <iframe id="frame-online" data-src="/static/online.html?v=2026.07.8.1783563526" scrolling="yes"></iframe>
+            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=2026.07.8.1783563526" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.07.8.1783562825" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.07.8.1783563526" scrolling="yes"></iframe>
+            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.07.8.1783563526" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.07.8.1783562825" scrolling="yes"></iframe>
 
         </main>
     </div>
@@ -1894,24 +1967,16 @@
         }
 
         function setProjectVersionBadge(version) {
-            const badge = document.getElementById('project-version-badge');
-            if(!badge) return;
+            const versionText = document.querySelector('.version-text');
+            if(!versionText) return;
             const full = versionLabel(version);
-            badge.replaceChildren();
-            if(version) {
-                const compactSpan = document.createElement('span');
-                compactSpan.className = 'project-version-compact';
-                compactSpan.textContent = versionLabel(version, 'compact');
-                const fullSpan = document.createElement('span');
-                fullSpan.className = 'project-version-full';
-                fullSpan.textContent = full;
-                badge.append(compactSpan, fullSpan);
-            } else {
-                badge.textContent = 'v-';
+            versionText.textContent = full;
+            const versionDisplay = document.getElementById('versionDisplay');
+            if(versionDisplay) {
+                versionDisplay.title = window.StudioI18n?.lang?.() === 'en'
+                    ? `Current version: ${full}`
+                    : `当前版本：${full}`;
             }
-            badge.title = window.StudioI18n?.lang?.() === 'en'
-                ? `Current version: ${full} · click to check for updates`
-                : `当前版本：${full} · 点击检测更新`;
         }
 
         function refreshUpdateButtonText() {
@@ -2492,8 +2557,8 @@
 
         async function checkForUpdates(manual = false) {
             const isEn = window.StudioI18n?.lang?.() === 'en';
-            const badge = document.getElementById('project-version-badge');
-            if(manual && badge) badge.classList.add('checking');
+            const checkBtn = document.getElementById('versionCheckBtn');
+            if(manual && checkBtn) checkBtn.classList.add('checking');
             try {
                 const info = await fetch('/api/app-info', { cache:'no-store' }).then(r => r.json()).catch(() => ({}));
                 appInfo = {...appInfo, ...info};
@@ -2547,7 +2612,7 @@
                 // 离线包里没有网络时保持安静，不影响本地使用。
                 if(manual) alert(isEn ? 'Update check failed.' : '检测更新失败。');
             } finally {
-                if(badge) badge.classList.remove('checking');
+                if(checkBtn) checkBtn.classList.remove('checking');
             }
         }
     </script>

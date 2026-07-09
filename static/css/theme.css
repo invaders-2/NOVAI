@@ -2,8 +2,8 @@ html.studio-theme-dark,
 html.studio-theme-dark body,
 body.studio-theme-dark {
     color-scheme: dark;
-    background: #08090c !important;
-    color: #e8e8ea !important;
+    background: #0a0a0b !important;
+    color: #f1f5f9 !important;
 }
 
 html,
@@ -13,12 +13,12 @@ body {
 
 * {
     scrollbar-width: thin !important;
-    scrollbar-color: rgba(148, 163, 184, .72) transparent !important;
+    scrollbar-color: rgba(148, 163, 184, .5) transparent !important;
 }
 
 *::-webkit-scrollbar {
-    width: 10px !important;
-    height: 10px !important;
+    width: 8px !important;
+    height: 8px !important;
     background: transparent !important;
 }
 
@@ -28,15 +28,15 @@ body {
 
 *::-webkit-scrollbar-thumb {
     min-height: 36px;
-    background-color: rgba(148, 163, 184, .72) !important;
-    border: 3px solid transparent !important;
-    border-right-width: 3px !important;
+    background-color: rgba(148, 163, 184, .4) !important;
+    border: 2px solid transparent !important;
     background-clip: padding-box !important;
     border-radius: 999px !important;
+    transition: background-color 0.2s;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(100, 116, 139, .86) !important;
+    background-color: rgba(148, 163, 184, .6) !important;
 }
 
 *::-webkit-scrollbar-corner {
@@ -44,11 +44,11 @@ body {
 }
 
 body.studio-theme-dark {
-    --accent: #e8e8ea;
-    --bg: #08090c;
-    --bg-base: #08090c;
-    --card: #111216;
-    --text-main: #e8e8ea;
+    --accent: #f1f5f9;
+    --bg: #0a0a0b;
+    --bg-base: #0a0a0b;
+    --card: #141416;
+    --text-main: #f1f5f9;
 }
 
 html.studio-theme-dark body .app-shell,
@@ -57,70 +57,71 @@ html.studio-theme-dark body .stage,
 body.studio-theme-dark .app-shell,
 body.studio-theme-dark .sidebar,
 body.studio-theme-dark .stage {
-    background: #08090c !important;
-    border-color: #25262b !important;
+    background: #0a0a0b !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
 }
 
 html.studio-theme-dark body .stage,
 body.studio-theme-dark .stage {
-    box-shadow: inset 0 0 42px rgba(255,255,255,.015);
+    box-shadow: inset 0 2px 8px -2px rgba(0,0,0,.3), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 html.studio-theme-dark body .nav-item,
 body.studio-theme-dark .nav-item {
-    color: #8f9aab;
+    color: #94a3b8;
 }
 
 html.studio-theme-dark body .nav-item:hover,
 body.studio-theme-dark .nav-item:hover {
-    background: #111216 !important;
-    color: #e8e8ea !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: #f1f5f9 !important;
 }
 
 html.studio-theme-dark body .nav-item.active,
 body.studio-theme-dark .nav-item.active {
-    background: #d8dee9 !important;
-    color: #10141d !important;
-    box-shadow: 0 12px 24px rgba(0,0,0,.28);
+    background: #f1f5f9 !important;
+    color: #0f172a !important;
+    box-shadow: 0 8px 20px -4px rgba(0,0,0,.4);
 }
 
 html.studio-theme-dark body .logo-ring,
 body.studio-theme-dark .logo-ring {
-    border-color: #d8dee9 !important;
+    border-color: #f1f5f9 !important;
 }
 
 html.studio-theme-dark body #logo-dot,
 body.studio-theme-dark #logo-dot {
-    background: #d8dee9 !important;
+    background: #f1f5f9 !important;
 }
 
 html.studio-theme-dark body .nano-monitor,
 body.studio-theme-dark .nano-monitor {
-    background: rgba(17,18,22,.88) !important;
-    color: #d8dee9;
-    border-color: rgba(255,255,255,.10) !important;
-    box-shadow: 0 12px 34px rgba(0,0,0,.24);
+    background: rgba(20,20,22,.92) !important;
+    color: #f1f5f9;
+    border-color: rgba(255,255,255,.08) !important;
+    box-shadow: 0 8px 24px -4px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.06);
 }
 
 html.studio-theme-dark body .divider,
 body.studio-theme-dark .divider {
-    background: rgba(216,222,233,.14) !important;
+    background: rgba(241,245,249,.12) !important;
 }
 
 html.studio-theme-dark body .theme-dock-btn,
 body.studio-theme-dark .theme-dock-btn {
-    background: #111216;
-    border-color: #25262b;
-    color: #9aa6b8;
+    background: #141416;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    transition: all 0.2s ease;
 }
 
 html.studio-theme-dark body .theme-dock-btn:hover,
 html.studio-theme-dark body .theme-dock-btn.active,
 body.studio-theme-dark .theme-dock-btn:hover,
 body.studio-theme-dark .theme-dock-btn.active {
-    background: #d8dee9;
-    border-color: #d8dee9;
-    color: #10141d;
+    background: #f1f5f9;
+    border-color: #f1f5f9;
+    color: #0f172a;
 }
 
 html.studio-theme-dark body .console-card,

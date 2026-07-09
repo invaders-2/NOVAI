@@ -44,44 +44,40 @@
         @keyframes studio-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
         :root {
-            --accent: #000000;
+            --accent: #0f172a;
             --fluid-ease: cubic-bezier(0.3, 0, 0, 1);
-            --bg: #ffffff;
+            --bg: #fafafa;
             --sidebar-bg: #ffffff;
-            --stage-bg: #fcfcfc;
-            --border: #f2f2f2;
-            --stage-border: #f0f0f0;
-            --text: #121212;
-            --muted: #999;
-            --nav-hover-bg: #fafafa;
-            --monitor-bg: rgba(255, 255, 255, 0.7);
-            --monitor-border: rgba(0, 0, 0, 0.05);
-            --monitor-shadow: rgba(0, 0, 0, 0.04);
-            --divider: rgba(0, 0, 0, 0.1);
-            --scrollbar: #d8d8d8;
-            --scrollbar-hover: #c0c0c0;
-            --author-name: #000;
-            --social-icon: #ccc;
+            --stage-bg: #f8f9fa;
+            --border: rgba(0, 0, 0, 0.06);
+            --stage-border: rgba(0, 0, 0, 0.08);
+            --text: #0f172a;
+            --muted: #64748b;
+            --nav-hover-bg: rgba(0, 0, 0, 0.03);
+            --monitor-bg: rgba(255, 255, 255, 0.85);
+            --monitor-border: rgba(0, 0, 0, 0.06);
+            --monitor-shadow: rgba(0, 0, 0, 0.06);
+            --divider: rgba(0, 0, 0, 0.08);
+            --scrollbar: rgba(0, 0, 0, 0.15);
+            --scrollbar-hover: rgba(0, 0, 0, 0.25);
         }
 
         html.theme-dark,
         body.theme-dark {
-            --bg: #0f141d;
-            --sidebar-bg: #0f141d;
-            --stage-bg: #111722;
-            --border: #242d3b;
-            --stage-border: #2a3444;
-            --text: #e5e9f0;
-            --muted: #8f9aab;
-            --nav-hover-bg: #171d29;
-            --monitor-bg: rgba(23, 29, 41, 0.82);
+            --bg: #0a0a0b;
+            --sidebar-bg: #0f0f10;
+            --stage-bg: #111113;
+            --border: rgba(255, 255, 255, 0.08);
+            --stage-border: rgba(255, 255, 255, 0.1);
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --nav-hover-bg: rgba(255, 255, 255, 0.05);
+            --monitor-bg: rgba(15, 15, 16, 0.9);
             --monitor-border: rgba(255, 255, 255, 0.08);
-            --monitor-shadow: rgba(0, 0, 0, 0.3);
-            --divider: rgba(255, 255, 255, 0.15);
-            --scrollbar: #334155;
-            --scrollbar-hover: #475569;
-            --author-name: #e5e9f0;
-            --social-icon: #64748b;
+            --monitor-shadow: rgba(0, 0, 0, 0.4);
+            --divider: rgba(255, 255, 255, 0.1);
+            --scrollbar: rgba(255, 255, 255, 0.15);
+            --scrollbar-hover: rgba(255, 255, 255, 0.25);
         }
 
         /* 极简滚动条 */
@@ -154,15 +150,17 @@
             flex-direction: column;
             align-items: center;
             border-right: 1px solid var(--border);
-            padding: 40px 0;
-            transition: width 0.5s var(--fluid-ease) 0.5s, background 0.3s, border-color 0.3s;
+            padding: 32px 0;
+            transition: width 0.4s var(--fluid-ease) 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s;
             z-index: 50;
             overflow: hidden;
+            box-shadow: 0 0 0 1px var(--border);
         }
 
         .sidebar:hover {
             width: 220px;
             transition-delay: 0s;
+            box-shadow: 4px 0 24px -8px var(--monitor-shadow);
         }
 
         body.studio-scale-host .sidebar {
@@ -181,8 +179,8 @@
         }
 
         .logo-ring {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border: 2px solid var(--text);
             border-radius: 12px;
             background: transparent;
@@ -193,8 +191,7 @@
             justify-content: center;
             cursor: pointer;
             flex: 0 0 auto;
-            /* 仅保留 hover 真正会用到的属性过渡，避免 transition: all 因首屏属性补齐被意外触发 */
-            transition: transform 0.6s var(--fluid-ease) 0.5s, border-radius 0.6s var(--fluid-ease) 0.5s, border-color 0.3s, background-color .18s, box-shadow .2s;
+            transition: transform 0.5s var(--fluid-ease) 0.3s, border-radius 0.5s var(--fluid-ease) 0.3s, border-color 0.3s, background-color .2s, box-shadow .2s;
         }
 
         .sidebar:hover .logo-ring {
@@ -207,26 +204,26 @@
         .logo-ring:focus-visible {
             background: var(--nav-hover-bg);
             border-color: var(--text);
-            box-shadow: 0 0 0 4px rgba(148, 163, 184, .16), 0 10px 24px rgba(15, 23, 42, .08);
+            box-shadow: 0 0 0 4px rgba(15, 23, 42, .08), 0 8px 20px rgba(15, 23, 42, .1);
             outline: none;
         }
 
         .logo-ring:hover #logo-dot,
         .logo-ring:focus-visible #logo-dot {
-            transform: scale(1.8);
+            transform: scale(2);
         }
 
         .logo-ring:active {
-            transform: scale(.94);
+            transform: scale(.92);
             transition-delay: 0s;
         }
 
         .sidebar:hover .logo-ring:active {
-            transform: rotate(90deg) scale(.94);
+            transform: rotate(90deg) scale(.92);
         }
 
         #logo-dot {
-            transition: transform .16s ease, background-color .16s ease, box-shadow .16s ease;
+            transition: transform .2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color .2s ease, box-shadow .2s ease;
         }
 
         /* 导航项 */
@@ -235,14 +232,13 @@
             width: 48px;
             height: 48px;
             flex: 0 0 48px;
-            margin: 10px 0;
+            margin: 8px 0;
             display: flex;
             align-items: center;
             justify-content: flex-start;
-            border-radius: 18px;
+            border-radius: 16px;
             cursor: pointer;
-            /* 只对 width 做带延迟的过渡（侧栏悬停展开效果）；background/color 不参与过渡，避免 active 切换时底色"流动" */
-            transition: width 0.3s var(--fluid-ease) 0.5s;
+            transition: width 0.3s var(--fluid-ease) 0.3s, background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
             color: var(--muted);
             overflow: hidden;
             padding-left: 14px;
@@ -256,17 +252,25 @@
         .nav-item:hover {
             background: var(--nav-hover-bg);
             color: var(--text);
+            transform: translateX(2px);
         }
 
         .nav-item.active {
             background: var(--accent);
             color: #fff;
+            box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.15);
+        }
+
+        .nav-item.active:hover {
+            transform: translateX(0);
+            box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.2);
         }
 
         html.theme-dark .nav-item.active,
         body.theme-dark .nav-item.active {
             background: #f1f5f9;
             color: #0f172a;
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.3);
         }
 
         .nav-text {
@@ -275,7 +279,7 @@
             font-weight: 600;
             font-size: 14px;
             white-space: nowrap;
-            transition: opacity 0.3s 0.5s;
+            transition: opacity 0.3s 0.3s;
         }
 
         .sidebar:hover .nav-text {
@@ -383,17 +387,23 @@
         .stage {
             flex: 1;
             background: var(--stage-bg);
-            margin: 16px;
-            border-radius: 32px;
+            margin: 12px;
+            border-radius: 28px;
             overflow: hidden;
             border: 1px solid var(--stage-border);
             position: relative;
-            transition: background 0.3s, border-color 0.3s;
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px var(--stage-border);
+        }
+
+        html.theme-dark .stage,
+        body.theme-dark .stage {
+            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--stage-border);
         }
 
         body.studio-scale-host .stage {
-            margin: max(10px, calc(16px * var(--studio-ui-scale, 1)));
-            border-radius: max(20px, calc(32px * var(--studio-ui-scale, 1)));
+            margin: max(10px, calc(12px * var(--studio-ui-scale, 1)));
+            border-radius: max(20px, calc(28px * var(--studio-ui-scale, 1)));
         }
 
         iframe {
@@ -403,9 +413,9 @@
             height: 100%;
             border: none;
             opacity: 0;
-            transform: scale(1.02);
-            filter: blur(4px);
-            transition: all 0.5s var(--fluid-ease);
+            transform: scale(1.01);
+            filter: blur(2px);
+            transition: opacity 0.4s var(--fluid-ease), transform 0.4s var(--fluid-ease), filter 0.4s var(--fluid-ease);
             pointer-events: none;
         }
 
@@ -419,27 +429,38 @@
         /* 左下角监视器 */
         .nano-monitor {
             position: absolute;
-            bottom: 24px;
-            left: 24px;
+            bottom: 20px;
+            left: 20px;
             z-index: 100;
             display: flex;
             align-items: center;
             gap: 10px;
             background: var(--monitor-bg);
-            backdrop-filter: blur(12px);
-            padding: 7px 12px;
-            border-radius: 12px;
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            padding: 8px 14px;
+            border-radius: 14px;
             border: 1px solid var(--monitor-border);
-            box-shadow: 0 4px 20px var(--monitor-shadow);
-            font-family: monospace;
-            transition: all 0.4s var(--fluid-ease);
+            box-shadow: 0 4px 16px -2px var(--monitor-shadow), 0 0 0 1px var(--monitor-border);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            transition: all 0.3s var(--fluid-ease);
+        }
+
+        .nano-monitor:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px -4px var(--monitor-shadow), 0 0 0 1px var(--monitor-border);
         }
 
         .nano-monitor.is-busy {
-            background: #000;
+            background: #0f172a;
             color: #fff;
-            border-color: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.3);
+        }
+
+        html.theme-dark .nano-monitor.is-busy,
+        body.theme-dark .nano-monitor.is-busy {
+            background: #1e293b;
         }
 
         .stat-group {
@@ -515,7 +536,7 @@
 
         .side-pill {
             width:44px;
-            height:36px;
+            height:38px;
             border-radius:999px;
             background: transparent;
             border: 1px solid var(--border);
@@ -524,8 +545,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            /* 只过渡 hover/激活会改的属性，避免 all 触发延迟 */
-            transition: width 0.3s var(--fluid-ease) 0.5s, gap 0.3s var(--fluid-ease) 0.5s, background-color 0.2s, color 0.2s, border-color 0.2s;
+            transition: width 0.3s var(--fluid-ease) 0.3s, gap 0.3s var(--fluid-ease) 0.3s, background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
             flex-shrink: 0;
             overflow:hidden;
             gap:8px;
@@ -541,12 +561,19 @@
             background: var(--nav-hover-bg);
             color: var(--text);
             border-color: var(--stage-border);
+            transform: translateX(2px);
         }
 
         .side-pill.active {
             background: var(--text);
             color: var(--bg);
             border-color: var(--text);
+            box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.15);
+        }
+
+        .side-pill.active:hover {
+            transform: translateX(0);
+            box-shadow: 0 6px 16px -2px rgba(15, 23, 42, 0.2);
         }
 
         .side-pill.update-available {

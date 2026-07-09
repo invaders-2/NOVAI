@@ -1,0 +1,55 @@
+{
+  "active_library_id": "default",
+  "libraries": [
+    {
+      "id": "default",
+      "name": "默认资产库",
+      "type": "asset",
+      "categories": [
+        {
+          "id": "characters",
+          "name": "角色",
+          "type": "image",
+          "items": [],
+          "dir": "角色"
+        },
+        {
+          "id": "scenes",
+          "name": "场景",
+          "type": "image",
+          "items": [],
+          "dir": "场景"
+        },
+        {
+          "id": "workflows",
+          "name": "工作流",
+          "type": "workflow",
+          "items": []
+        }
+      ]
+    }
+  ],
+  "categories": [
+    {
+      "id": "characters",
+      "name": "角色",
+      "type": "image",
+      "items": [],
+      "dir": "角色"
+    },
+    {
+      "id": "scenes",
+      "name": "场景",
+      "type": "image",
+      "items": [],
+      "dir": "场景"
+    },
+    {
+      "id": "workflows",
+      "name": "工作流",
+      "type": "workflow",
+      "items": []
+    }
+  ],
+  "updated_at": 1783212587156
+}

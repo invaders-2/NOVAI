@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/images/logo.png" type="image/png">
+    <title>素材库管理</title>
+    <script>
+        (function(){
+            try {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
+                if(theme === 'dark') {
+                    document.documentElement.classList.add('studio-theme-dark');
+                    document.documentElement.classList.add('theme-dark');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <script src="/static/vendor/js/lucide.js?v=2026.07.6.1782696749"></script>
+    <script src="/static/js/theme.js?v=2026.07.6.1783117645"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.6.1782696682">
+    <link rel="stylesheet" href="/static/css/asset-manager.css?v=2026.07.6.1782696676">
+</head>
+<body>
+    <div class="asset-page">
+        <header class="asset-page-head">
+            <div>
+                <div class="asset-title">素材库管理</div>
+                <div class="asset-sub">按库、分组、内容和预览管理素材与提示词。</div>
+            </div>
+            <div class="asset-head-actions">
+                <div id="assetStatus" class="asset-status">准备就绪</div>
+                <button id="refreshBtn" class="asset-btn" type="button"><i data-lucide="refresh-cw"></i><span>刷新</span></button>
+            </div>
+        </header>
+
+        <div class="asset-tabs">
+            <button id="assetTabAssets" class="active" type="button" data-tab="assets"><i data-lucide="image"></i><span>图片资产</span></button>
+            <button id="assetTabWorkflows" type="button" data-tab="workflows"><i data-lucide="workflow"></i><span>工作流管理</span></button>
+            <button id="assetTabPrompts" type="button" data-tab="prompts"><i data-lucide="text-cursor-input"></i><span>提示词库</span></button>
+            <button id="assetTabCanvasAssets" type="button" data-tab="canvas-assets"><i data-lucide="layout-dashboard"></i><span>画布资产</span></button>
+            <button id="assetTabLocal" type="button" data-tab="local"><i data-lucide="folder-open"></i><span>本地素材</span></button>
+        </div>
+
+        <main id="assetManagerRoot" class="asset-manager-root"></main>
+    </div>
+
+    <input id="assetUploadInput" type="file" accept="image/*,video/*,audio/*,.json,.zip,application/json,application/zip" multiple hidden>
+    <script src="/static/js/asset-manager.js?v=2026.07.6.1782696698"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "projects": [
+    {
+      "id": "default",
+      "name": "默认项目",
+      "order": 0,
+      "created_at": 1783563859033,
+      "updated_at": 1783563859033
+    }
+  ]
+}

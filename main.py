@@ -3322,6 +3322,19 @@ def list_deleted_canvases():
     records = iter_canvas_records(include_deleted=True)
     return sorted(records, key=lambda item: item["deleted_at"], reverse=True)
 
+@app.get("/api/recent-canvases")
+def recent_canvases():
+    records = iter_canvas_records(include_deleted=False)
+    sorted_records = sorted(records, key=lambda item: -(item.get("updated_at") or item.get("created_at") or 0))
+    recent = sorted_records[:4]
+    return [
+        {
+            "name": r.get("title", "未命名画布"),
+            "lastOpened": r.get("updated_at") or r.get("created_at", 0),
+        }
+        for r in recent
+    ]
+
 def canvas_asset_url_value(value):
     if isinstance(value, str):
         return value.strip()

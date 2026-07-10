@@ -18,20 +18,83 @@ AI 创作工具，支持无限画布上的图像/视频生成与编辑。
 
 ## 快速开始
 
-### 安装依赖
-```bash
-pip install -r requirements.txt
-```
+### 环境要求
 
-### 启动服务
-```bash
-python main.py
-```
+- Python 3.11+
+- Git（用于更新）
 
-服务默认运行在 `http://127.0.0.1:3000`
+---
+
+### Windows 运行方法
+
+#### 方法一：使用内置 Python（推荐）
+
+项目自带 Windows Python 运行时，无需额外安装：
+
+1. 下载或克隆项目到本地
+2. 双击运行 `python/python.exe main.py`
+3. 或打开命令提示符，进入项目目录执行：
+   ```cmd
+   python\python.exe main.py
+   ```
+4. 浏览器访问 `http://127.0.0.1:3000`
+
+#### 方法二：使用系统 Python
+
+1. 安装 [Python 3.11+](https://www.python.org/downloads/)
+2. 打开命令提示符，进入项目目录
+3. 安装依赖：
+   ```cmd
+   pip install -r requirements.txt
+   ```
+4. 启动服务：
+   ```cmd
+   python main.py
+   ```
+5. 浏览器访问 `http://127.0.0.1:3000`
+
+---
+
+### Mac 运行方法
+
+1. 安装 [Python 3.11+](https://www.python.org/downloads/)（如未安装）
+   ```bash
+   brew install python@3.11
+   ```
+
+2. 克隆项目：
+   ```bash
+   git clone https://github.com/invaders-2/NOVAI.git
+   cd NOVAI
+   ```
+
+3. 安装依赖：
+   ```bash
+   pip3 install -r requirements.txt
+   ```
+
+4. 启动服务：
+   ```bash
+   python3 main.py
+   ```
+
+5. 浏览器访问 `http://127.0.0.1:3000`
+
+---
 
 ### 配置 API
+
 启动后在页面中配置你的 API 密钥（支持 OpenAI、Gemini、火山引擎等）
+
+---
+
+### 更新项目
+
+```bash
+git pull origin main
+```
+
+或在应用内点击侧边栏 GitHub 按钮一键更新。
 
 ---
 

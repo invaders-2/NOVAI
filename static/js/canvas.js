@@ -14620,6 +14620,13 @@ document.addEventListener('wheel', e => {
 const TRACKPAD_PINCH_THRESHOLD = 80;
 let trackpadPinchAccum = 0;
 let trackpadLastPinchTime = 0;
+// 判断是否为普通鼠标滚轮（非触控板）：
+// - deltaMode === 1（行模式）→ 普通鼠标
+// - deltaMode === 0 但 |deltaY| >= 100 → 普通鼠标（像素模式，典型值 100/120）
+// - deltaMode === 0 且 |deltaY| < 100 → 触控板
+function isMouseWheel(e){
+    return e.deltaMode === 1 || Math.abs(e.deltaY) >= 100;
+}
 board.onwheel = e => {
     if(!canvas) return;
     e.preventDefault();
@@ -14641,18 +14648,18 @@ board.onwheel = e => {
         viewport.x = e.clientX - rect.left - before.x * viewport.scale;
         viewport.y = e.clientY - rect.top - before.y * viewport.scale;
         trackpadPinchAccum = 0;
-    } else if(Math.abs(e.deltaX) > 0){
-        // Mac 触控板双指平移：有显著 deltaX 时视为平移，重置捏合累积器
-        trackpadPinchAccum = 0;
-        viewport.x -= e.deltaX;
-        viewport.y -= e.deltaY;
-    } else {
-        // 普通鼠标滚轮缩放
+    } else if(isMouseWheel(e)){
+        // 普通鼠标滚轮 → 缩放
         trackpadPinchAccum = 0;
         const before = screenToWorld(e.clientX, e.clientY);
         viewport.scale = viewport.scale * (e.deltaY > 0 ? .92 : 1.08);
         viewport.x = e.clientX - rect.left - before.x * viewport.scale;
         viewport.y = e.clientY - rect.top - before.y * viewport.scale;
+    } else {
+        // 触控板双指平移（deltaMode===0 且 deltaY 较小）
+        trackpadPinchAccum = 0;
+        viewport.x -= e.deltaX;
+        viewport.y -= e.deltaY;
     }
     applyViewport();
     renderLinks();

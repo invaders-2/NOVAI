@@ -160,6 +160,10 @@ function onBoardPanEnd(){
 const TRACKPAD_PINCH_THRESHOLD = 80;
 let trackpadPinchAccum = 0;
 let trackpadLastPinchTime = 0;
+// 判断是否为普通鼠标滚轮（非触控板）
+function isMouseWheel(e){
+    return e.deltaMode === 1 || Math.abs(e.deltaY) >= 100;
+}
 
 function onBoardWheel(e){
     e.preventDefault();
@@ -181,13 +185,8 @@ function onBoardWheel(e){
         viewport.x = px - wx * next;
         viewport.y = py - wy * next;
         trackpadPinchAccum = 0;
-    } else if(Math.abs(e.deltaX) > 0){
-        // Mac 触控板双指平移
-        trackpadPinchAccum = 0;
-        viewport.x -= e.deltaX;
-        viewport.y -= e.deltaY;
-    } else {
-        // 普通鼠标滚轮缩放
+    } else if(isMouseWheel(e)){
+        // 普通鼠标滚轮 → 缩放
         trackpadPinchAccum = 0;
         const wx = (px - viewport.x) / viewport.scale;
         const wy = (py - viewport.y) / viewport.scale;
@@ -196,6 +195,11 @@ function onBoardWheel(e){
         viewport.scale = next;
         viewport.x = px - wx * next;
         viewport.y = py - wy * next;
+    } else {
+        // 触控板双指平移
+        trackpadPinchAccum = 0;
+        viewport.x -= e.deltaX;
+        viewport.y -= e.deltaY;
     }
     applyViewport();
 }

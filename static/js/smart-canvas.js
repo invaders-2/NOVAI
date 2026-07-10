@@ -16003,6 +16003,10 @@ let gestureActive = false, gestureState = null;
 const TRACKPAD_PINCH_THRESHOLD = 80;
 let trackpadPinchAccum = 0;
 let trackpadLastPinchTime = 0;
+// 判断是否为普通鼠标滚轮（非触控板）
+function isMouseWheel(e){
+    return e.deltaMode === 1 || Math.abs(e.deltaY) >= 100;
+}
 
 document.addEventListener('gesturestart', e => {
     e.preventDefault();
@@ -16061,8 +16065,20 @@ shell.addEventListener('wheel', e => {
         viewport.y = sy - before.y * viewport.scale;
         trackpadPinchAccum = 0;
         applyViewport();
+    } else if(isMouseWheel(e)){
+        // 普通鼠标滚轮 → 缩放
+        trackpadPinchAccum = 0;
+        const rect = shell.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+        const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
+        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        viewport.scale = safeScale(viewport.scale * factor);
+        viewport.x = sx - before.x * viewport.scale;
+        viewport.y = sy - before.y * viewport.scale;
+        applyViewport();
     } else {
-        // 普通滚轮/双指滑动 = 画布平移，重置捏合累积器
+        // 触控板双指平移
         trackpadPinchAccum = 0;
         viewport.x -= e.deltaX;
         viewport.y -= e.deltaY;

@@ -187,7 +187,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "1.0.18"
+APP_VERSION = "1.0.10"
 GITHUB_REPO_URL = "https://github.com/invaders-2/NOVAI"
 GITHUB_VERSION_URL = "https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION"
 GITHUB_TREE_URL = "https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1"
@@ -198,6 +198,14 @@ GITEE_VERSION_URL = "https://gitee.com/invaders/novai/raw/main/VERSION"
 GITEE_TREE_URL = "https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1"
 GITEE_RAW_ROOT = "https://gitee.com/invaders/novai/raw/main"
 GITEE_UPDATE_NOTES_URL = GITEE_RAW_ROOT + "/static/update-notes.json"
+MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/NOVAI"
+MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/NOVAI/raw/main"
+# ModelScope 仓库默认分支为 master；raw 网页路径会返回 HTML，必须用仓库文件 API 才能拿到纯文本
+# 注意：.ai 站命名空间为小写 daniel8152，API 路径大小写敏感（推送/文件 API 用大写会 404/拒绝）
+MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.ai/api/v1/studio/daniel8152/NOVAI/repo?Revision=master&FilePath="
+MODELSCOPE_VERSION_URL = MODELSCOPE_FILE_API_ROOT + "VERSION"
+MODELSCOPE_UPDATE_NOTES_URL = MODELSCOPE_FILE_API_ROOT + "static/update-notes.json"
+MODELSCOPE_TREE_URL = "https://www.modelscope.ai/api/v1/studio/daniel8152/NOVAI/repo/files?Revision=master&Recursive=true"
 
 @app.websocket("/ws/stats")
 async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
@@ -1507,11 +1515,10 @@ def fetch_remote_update_notes(url: str, version: str = "", timeout: float = 5.0)
 def fetch_update_notes_with_fallback(preferred_source: str, version: str, timeout: float = 3.0) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     urls = {
         "github": GITHUB_UPDATE_NOTES_URL,
-        "gitee": GITEE_UPDATE_NOTES_URL,
+        "modelscope": MODELSCOPE_UPDATE_NOTES_URL,
     }
     preferred = preferred_source if preferred_source in urls else "github"
-    all_sources = ["github", "gitee"]
-    order = [preferred] + [s for s in all_sources if s != preferred]
+    order = [preferred, "modelscope" if preferred == "github" else "github"]
     notes_by_source: Dict[str, Any] = {}
     best_notes: Dict[str, Any] = {"version": version, "items": []}
     for source in order:
@@ -1764,7 +1771,7 @@ def update_connectivity_targets() -> List[Tuple[str, str, str, bool]]:
         ("GitHub 更新列表", GITHUB_TREE_URL, "github", True),
         ("GitHub 版本文件", GITHUB_VERSION_URL, "github", True),
         ("GitHub 主页", "https://github.com/", "github", False),
-        ("Gitee 更新列表", "https://gitee.com/invaders/novai", "gitee", True),
+        ("Gitee 更新列表", GITEE_TREE_URL, "gitee", True),
         ("Gitee 版本文件", GITEE_VERSION_URL, "gitee", True),
         ("Gitee 主页", "https://gitee.com/", "gitee", False),
         ("Google 连通性", "https://www.google.com/generate_204", "reference", False),
@@ -1802,7 +1809,7 @@ def update_connectivity():
         "results": results,
         "sources": sources,
         "required": sources["github"]["required"],
-        "optional": ["GitHub 主页", "ModelScope 空间页面", "ModelScope 主页", "Google 连通性"],
+        "optional": ["GitHub 主页", "Gitee 主页", "Google 连通性"],
     }
 
 def fetch_remote_version(url: str, timeout: float = 5.0) -> Dict[str, Any]:
@@ -1857,6 +1864,7 @@ def check_update():
     threads = [
         Thread(target=_probe, args=("github", GITHUB_VERSION_URL), daemon=True),
         Thread(target=_probe, args=("gitee", GITEE_VERSION_URL), daemon=True),
+        Thread(target=_probe, args=("modelscope", MODELSCOPE_VERSION_URL), daemon=True),
     ]
     for t in threads:
         t.start()
@@ -1864,8 +1872,9 @@ def check_update():
         t.join(timeout=5.5)
     github = holder.get("github") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": GITHUB_VERSION_URL, "source": "github"}
     gitee = holder.get("gitee") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": GITEE_VERSION_URL, "source": "gitee"}
+    modelscope = holder.get("modelscope") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": MODELSCOPE_VERSION_URL, "source": "modelscope"}
     best: Dict[str, Any] = {}
-    for item in (github, gitee):
+    for item in (github, gitee, modelscope):
         if item["ok"] and item["version"]:
             if not best or version_gt(item["version"], best["version"]):
                 best = {"source": item["source"], "version": item["version"]}
@@ -1878,11 +1887,12 @@ def check_update():
         "current": current,
         "github": github,
         "gitee": gitee,
+        "modelscope": modelscope,
         "latest": best,
         "update_notes": best.get("update_notes") if best else {},
         "update_notes_sources": notes_by_source,
         "update_available": update_available,
-        "reachable": bool(github["ok"] or gitee["ok"]),
+        "reachable": bool(github["ok"] or gitee["ok"] or modelscope["ok"]),
     }
 
 def update_allowed_file(path: str) -> bool:
@@ -1954,49 +1964,48 @@ def download_github_update_files(files: List[str], staging_root: str) -> None:
         with open(stage_path, "wb") as f:
             f.write(data)
 
-# ---------- Gitee 更新文件下载 ----------
-
-def gitee_update_file_list() -> Tuple[List[str], List[str], List[str]]:
-    """通过 Gitee Tree API 列出所有允许更新的文件。"""
-    resp = github_get(GITEE_TREE_URL, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=30)
+def modelscope_update_file_list() -> List[str]:
+    """通过 ModelScope 仓库文件 API 列出所有允许更新的文件（不依赖 git）。"""
+    resp = github_get(MODELSCOPE_TREE_URL, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=30)
     payload = json.loads(resp.content.decode("utf-8", errors="replace"))
-    entries = payload.get("tree") or []
-    static_files: List[str] = []
-    root_files: List[str] = []
-    for entry in entries:
-        path = str(entry.get("path") or "").replace("\\", "/")
-        if entry.get("type") == "blob" and update_allowed_file(path):
-            if path.startswith("static/"):
-                static_files.append(path)
-            else:
-                root_files.append(path)
-    if "main.py" not in root_files:
-        root_files.append("main.py")
-    if "VERSION" not in root_files:
-        root_files.append("VERSION")
-    static_files = sorted(set(static_files))
-    root_files = sorted(set(root_files))
-    files = root_files + static_files
-    if not static_files:
-        raise RuntimeError("Gitee 未返回 static 文件，已取消更新")
-    return root_files, static_files, files
+    files_node = ((payload.get("Data") or {}).get("Files")) or []
+    out: List[str] = []
+    for entry in files_node:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("Type") != "blob":
+            continue
+        path = str(entry.get("Path") or "").replace("\\", "/")
+        if update_allowed_file(path):
+            out.append(path)
+    return sorted(set(out))
 
-def gitee_file_bytes(rel: str) -> bytes:
-    url = f"{GITEE_RAW_ROOT}/{urllib.parse.quote(rel, safe='/')}"
+def modelscope_file_bytes(rel: str) -> bytes:
+    url = MODELSCOPE_FILE_API_ROOT + urllib.parse.quote(rel, safe="/")
     resp = github_get(url, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=60)
     return resp.content
 
-def download_gitee_update_files(files: List[str], staging_root: str) -> None:
+def download_modelscope_update_files(staging_root: str) -> List[str]:
+    # 用 HTTP 仓库文件 API 下载（与 GitHub raw 同样思路），不依赖本机安装 Git。
+    # 之前用 git clone 会要求目标机装 Git for Windows，很多用户没装 → 一键更新失败。
+    files = modelscope_update_file_list()
+    if not files:
+        raise RuntimeError("ModelScope 未返回任何文件")
+    if "main.py" not in files or "VERSION" not in files:
+        raise RuntimeError("ModelScope 更新源缺少 main.py 或 VERSION")
+    if not any(f.startswith("static/") for f in files):
+        raise RuntimeError("ModelScope 未返回 static 文件，已取消更新")
     staging_root_abs = os.path.abspath(staging_root)
     for rel in files:
         safe_update_target(rel)
-        data = gitee_file_bytes(rel)
+        data = modelscope_file_bytes(rel)
         stage_path = os.path.abspath(os.path.join(staging_root_abs, *rel.split("/")))
         if os.path.commonpath([staging_root_abs, stage_path]) != staging_root_abs:
             raise ValueError(f"更新暂存路径不安全：{rel}")
         os.makedirs(os.path.dirname(stage_path), exist_ok=True)
         with open(stage_path, "wb") as f:
             f.write(data)
+    return files
 
 def safe_update_target(path: str) -> str:
     rel = str(path or "").replace("\\", "/").lstrip("/")
@@ -2140,20 +2149,21 @@ def staged_update_file_list(staging_root: str) -> Tuple[List[str], List[str], Li
     static_files = sorted(set(static_files))
     return root_files, static_files, root_files + static_files
 
-UPDATE_SOURCE_LABELS = {"github": "GitHub", "gitee": "Gitee"}
+UPDATE_SOURCE_LABELS = {"github": "GitHub", "modelscope": "ModelScope"}
 
 def normalize_update_source(value: str) -> str:
     source = str(value or "github").strip().lower()
-    if source not in {"github", "gitee"}:
+    if source == "ms":
+        return "modelscope"
+    if source not in {"github", "modelscope"}:
         return "github"
     return source
 
 def stage_update_from_source(source: str, staging_root: str) -> Tuple[List[str], List[str], List[str]]:
     """下载指定源的更新文件到 staging，返回 (root_files, static_files, files)。失败抛异常。"""
-    if source == "gitee":
-        root_files, static_files, files = gitee_update_file_list()
-        download_gitee_update_files(files, staging_root)
-        return root_files, static_files, files
+    if source == "modelscope":
+        download_modelscope_update_files(staging_root)
+        return staged_update_file_list(staging_root)
     root_files, static_files, files = github_update_file_list()
     download_github_update_files(files, staging_root)
     return root_files, static_files, files
@@ -2164,13 +2174,11 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
         raise HTTPException(status_code=409, detail="正在更新中，请稍后再试")
     staging_root = ""
     requested_source = normalize_update_source(req.source)
-    # 冗余设计：先用用户选择的源，失败后自动切换到其他源兜底，全部失败才报错
+    # 冗余设计：先用用户选择的源，失败后自动切换到另一个源兜底，全部失败才报错
     source_order = [requested_source]
     if req.fallback:
-        all_sources = ["github", "gitee"]
-        for s in all_sources:
-            if s != requested_source:
-                source_order.append(s)
+        other = "modelscope" if requested_source == "github" else "github"
+        source_order.append(other)
     try:
         backup_root = os.path.join(DATA_DIR, "update_backups", time.strftime("%Y%m%d-%H%M%S"))
 
@@ -3329,7 +3337,6 @@ def recent_canvases():
     recent = sorted_records[:4]
     return [
         {
-            "id": r.get("id", ""),
             "name": r.get("title", "未命名画布"),
             "lastOpened": r.get("updated_at") or r.get("created_at", 0),
         }
@@ -4428,18 +4435,18 @@ def gpt_image_2_skill_size_arg(size="", model="", prompt="", provider="openai"):
     ratio_match = re.fullmatch(r"\s*(\d{1,2})\s*:\s*(\d{1,2})\s*", size_text)
     if ratio_match:
         ratio = f"{int(ratio_match.group(1))}:{int(ratio_match.group(2))}"
-        options = GPT_IMAGE2_RATIO_SIZE_OPTIONS.get(ratio)
+        options = CHAT_RATIO_SIZE_OPTIONS.get(ratio)
         if options:
-            if "4k" in text or "3840" in text or "2k" in text or "2048" in text:
+            if "4k" in text or "3840" in text:
                 return options[-1]
             if "1k" in text or "1024" in text:
                 return options[0]
             return options[1] if len(options) > 1 else options[0]
-    if "4k" in text or "3840" in text or "2k" in text or "2048" in text:
-        return "2048x2048"
+    if "4k" in text or "3840" in text:
+        return "4K"
     if "1k" in text or "1024" in text:
-        return "1024x1024"
-    return "1024x1024"
+        return "1K"
+    return "2K"
 
 def gpt_image_2_skill_prompt_arg(prompt="", size="", provider="openai"):
     prompt_text = str(prompt or "").strip()
@@ -8515,24 +8522,8 @@ def chat_prompt_size_override(message, current_size=""):
         return options[1] if len(options) > 1 else options[0]
     return options[0]
 
-# GPT-Image-2 仅支持以下固定尺寸（OpenAI API 白名单），不接受任意宽高值。
-GPT_IMAGE2_SUPPORTED_SIZES = (
-    "1024x1024",
-    "1536x1024",
-    "1024x1536",
-    "2048x2048",
-)
-# 按比例映射到 GPT-Image-2 支持的标准尺寸：(1K, 2K, 4K)
-# 3:4 / 4:3 / 9:16 / 16:9 没有精确匹配，对齐到最接近的可用尺寸。
-GPT_IMAGE2_RATIO_SIZE_OPTIONS = {
-    "1:1":  ("1024x1024", "2048x2048", "2048x2048"),
-    "2:3":  ("1024x1536", "1024x1536", "1024x1536"),
-    "3:2":  ("1536x1024", "1536x1024", "1536x1024"),
-    "3:4":  ("1024x1536", "1024x1536", "1024x1536"),
-    "4:3":  ("1536x1024", "1536x1024", "1536x1024"),
-    "9:16": ("1024x1536", "1024x1536", "1024x1536"),
-    "16:9": ("1536x1024", "1536x1024", "1536x1024"),
-}
+# GPT-Image-2 限制：长边最大 3840，主要受最大像素限制（约 829 万 = 3840x2160）。
+# 这里只用于上游报错后给出友好的像素上限提示；不对尺寸做任何缩小（用户选什么就原样发送）。
 GPT_IMAGE2_MAX_EDGE = 3840
 GPT_IMAGE2_MAX_PIXELS = 8_294_400
 GPT_IMAGE2_MIN_PIXELS = 655_360
@@ -8552,39 +8543,38 @@ def is_gpt_image_2_model(model):
     )
 
 def normalize_gpt_image_2_size(size):
-    """将任意尺寸对齐到 GPT-Image-2 支持的标准尺寸。"""
-    raw = str(size or "").strip().lower()
-    if not raw or raw == "auto":
-        return "auto"
-    # 已经是支持的标准尺寸，直接返回
-    if raw in GPT_IMAGE2_SUPPORTED_SIZES:
-        return raw
-    width, height = parse_size_pair(raw)
+    width, height = parse_size_pair(size)
     if not width or not height:
-        return "auto"
-    # 按宽高比找最接近的支持尺寸
-    target_ratio = width / height
-    target_pixels = width * height
-    best = None
-    best_score = float("inf")
-    for s in GPT_IMAGE2_SUPPORTED_SIZES:
-        sw, sh = parse_size_pair(s)
-        sr = sw / sh
-        ratio_diff = abs(sr - target_ratio) / max(target_ratio, 0.01)
-        pixel_diff = abs(sw * sh - target_pixels) / max(target_pixels, 1)
-        score = ratio_diff * 3 + pixel_diff
-        if score < best_score:
-            best_score = score
-            best = s
-    return best or "1024x1024"
+        return size or "auto"
+    # 已在 GPT 支持范围内（长边≤3840 且 总像素≤约829万）的尺寸原样返回，不做任何改动。
+    if max(width, height) <= GPT_IMAGE2_MAX_EDGE and width * height <= GPT_IMAGE2_MAX_PIXELS:
+        return f"{width}x{height}"
+    # 超限时按比例等比缩小到 GPT 上限，保持原始宽高比（例如 4096x4096 → ~2864x2864，仍是 1:1）。
+    ratio = width / height
+    if ratio > 3:
+        width = height * 3
+    elif ratio < 1 / 3:
+        height = width * 3
+    scale = min(
+        1.0,
+        GPT_IMAGE2_MAX_EDGE / max(width, height),
+        (GPT_IMAGE2_MAX_PIXELS / max(1, width * height)) ** 0.5,
+    )
+    width = max(16, int((width * scale) // 16) * 16)
+    height = max(16, int((height * scale) // 16) * 16)
+    if width * height < GPT_IMAGE2_MIN_PIXELS:
+        grow = (GPT_IMAGE2_MIN_PIXELS / max(1, width * height)) ** 0.5
+        width = int((width * grow + 15) // 16) * 16
+        height = int((height * grow + 15) // 16) * 16
+    return f"{width}x{height}"
 
 def gpt_image_2_size_error_message(size):
+    width, height = parse_size_pair(size)
     display_size = size or "未指定"
-    supported = "、".join(GPT_IMAGE2_SUPPORTED_SIZES)
     return (
-        f"GPT-Image-2 不支持当前尺寸 {display_size}。"
-        f"它仅支持以下固定尺寸：{supported}。"
-        f"请切换到标准尺寸，或使用 nano-banana 生成自定义分辨率。"
+        f"GPT-Image-2 不支持当前尺寸 {display_size}：它有最大像素限制"
+        "（长边最大 3840、总像素约 829 万）。请改用更小的尺寸，"
+        "或切换到 nano-banana 生成更高分辨率。"
     )
 
 def gpt_image_2_size_exceeds_supported(size):
@@ -10033,10 +10023,8 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
         return await generate_volcengine_provider_image(prompt, size, model, reference_images, provider)
     is_gpt2 = is_gpt_image_2_model(model)
     is_apimart = is_apimart_provider(provider)
-    # GPT-Image-2 只接受固定尺寸（1024x1024、1536x1024、1024x1536、2048x2048），
-    # 必须在发送前归一化到最近的支持尺寸，否则上游会直接拒绝。
-    if is_gpt2:
-        size = normalize_gpt_image_2_size(size)
+    # 不对 GPT 尺寸做任何缩小/拦截：用户选什么尺寸就原样发给上游；
+    # 若超过 GPT 的最大像素限制被上游拒绝，再由 friendly_image_error_detail 给出友好的像素上限提示。
     quality = str(quality or "").strip().lower()
     if quality not in {"low", "medium", "high"}:
         quality = ""
@@ -17033,6 +17021,5 @@ if __name__ == "__main__":
     # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
     # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。
-    port = int(os.environ.get("DEPLOY_RUN_PORT", 3000))
-    uvicorn.run(app, host="0.0.0.0", port=port,
+    uvicorn.run(app, host="0.0.0.0", port=3000,
                 ws_ping_interval=None, ws_ping_timeout=None)

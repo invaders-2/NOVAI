@@ -1,34 +1,22 @@
 {
-  "version": "1.0.18",
+  "version": "1.0.21",
   "updated_at": "2026-07-11",
   "items": [
     {
-      "type": "feature",
-      "text": "新增 Gitee 下载源，更新支持 GitHub / Gitee 双源 fallback"
-    },
-    {
-      "type": "feature",
-      "text": "切换模型时自动匹配该模型支持的比例和尺寸（生图+生视频全覆盖）"
-    },
-    {
-      "type": "improve",
-      "text": "首页最近项目渲染加固：防缓存、容错处理、切换回首页自动刷新"
-    },
-    {
-      "type": "improve",
-      "text": "GPT-Image-2 尺寸自动对齐到 API 支持的标准尺寸，避免非标准尺寸被拒绝"
-    },
-    {
-      "type": "improve",
-      "text": "移除 ModelScope 更新源（AI 模型服务不受影响）"
-    },
-    {
       "type": "fix",
-      "text": "修复 Gitee 连接测试因 HEAD 请求返回 401 导致显示不可用"
+      "text": "修复 Gitee 连接测试因缺少检测目标导致显示不可用"
     },
     {
-      "type": "fix",
-      "text": "修复点击最近项目卡片无法跳转到对应画布"
+      "type": "improve",
+      "text": "更新弹窗新增 Gitee 源连通性检测项（更新列表/版本文件/主页）"
+    },
+    {
+      "type": "improve",
+      "text": "深色模式左侧边栏与右侧内容区背景色统一"
+    },
+    {
+      "type": "improve",
+      "text": "画布页顶部导航与底部工具栏改为毛玻璃透明效果"
     }
   ]
 }

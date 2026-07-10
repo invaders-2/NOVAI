@@ -193,10 +193,10 @@ GITHUB_VERSION_URL = "https://raw.githubusercontent.com/invaders-2/NOVAI/main/VE
 GITHUB_TREE_URL = "https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1"
 GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/invaders-2/NOVAI/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
-GITEE_REPO_URL = "https://gitee.com/your-username/NOVAI"  # 需要替换为你的 Gitee 用户名
-GITEE_VERSION_URL = "https://gitee.com/your-username/NOVAI/raw/main/VERSION"  # 需要替换
-GITEE_TREE_URL = "https://gitee.com/api/v5/repos/your-username/NOVAI/git/trees/main?recursive=1"  # 需要替换
-GITEE_RAW_ROOT = "https://gitee.com/your-username/NOVAI/raw/main"  # 需要替换
+GITEE_REPO_URL = "https://gitee.com/invaders/novai"
+GITEE_VERSION_URL = "https://gitee.com/invaders/novai/raw/main/VERSION"
+GITEE_TREE_URL = "https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1"
+GITEE_RAW_ROOT = "https://gitee.com/invaders/novai/raw/main"
 GITEE_UPDATE_NOTES_URL = GITEE_RAW_ROOT + "/static/update-notes.json"
 MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/NOVAI"
 MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/NOVAI/raw/main"

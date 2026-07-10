@@ -81,24 +81,3 @@ python main.py
 *This software is for personal and company use only, but is prohibited from being modified or packaged into commercial products in any way. Commercial use requires authorization.*
 
 *Software developed based on this code must remain open source and the original author must be credited.*
-
----
-
-## 截图预览
-
-### 首页
-![首页](static/images/screenshots/home.png)
-
-### 无限画布
-![无限画布](static/images/screenshots/canvas.png)
-
-### AI 生图
-![AI 生图](static/images/screenshots/generate.png)
-
-### API 设置
-![API 设置](static/images/screenshots/settings.png)
-
-### 资产管理
-![资产管理](static/images/screenshots/assets.png)
-
-<img width="2214" height="771" alt="视频生成" src="https://github.com/user-attachments/assets/52e10958-753f-45ba-a50e-3bbec27be436" />

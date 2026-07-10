@@ -156,25 +156,39 @@ function onBoardPanEnd(){
     panState = null;
     board.classList.remove('panning');
 }
+// 触控板捏合缩放阈值：累积 deltaY 超过该值才触发一次缩放，避免平移时轻微捏合噪声误触发
+const TRACKPAD_PINCH_THRESHOLD = 15;
+let trackpadPinchAccum = 0;
+let trackpadLastPinchTime = 0;
+
 function onBoardWheel(e){
     e.preventDefault();
     const rect = board.getBoundingClientRect();
     const px = e.clientX - rect.left, py = e.clientY - rect.top;
+    const now = Date.now();
+    // 超过 200ms 没有新的捏合事件，重置累积器（新一轮手势）
+    if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
+    trackpadLastPinchTime = now;
     if(e.ctrlKey || e.metaKey){
-        // 触控板捏合缩放
+        // 触控板捏合缩放：累积 deltaY，超过阈值才触发
+        trackpadPinchAccum += e.deltaY;
+        if(Math.abs(trackpadPinchAccum) < TRACKPAD_PINCH_THRESHOLD) return;
         const wx = (px - viewport.x) / viewport.scale;
         const wy = (py - viewport.y) / viewport.scale;
-        const factor = Math.exp(-e.deltaY * 0.01);
+        const factor = Math.exp(-trackpadPinchAccum * 0.01);
         const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewport.scale * factor));
         viewport.scale = next;
         viewport.x = px - wx * next;
         viewport.y = py - wy * next;
+        trackpadPinchAccum = 0;
     } else if(Math.abs(e.deltaX) > 0){
         // Mac 触控板双指平移
+        trackpadPinchAccum = 0;
         viewport.x -= e.deltaX;
         viewport.y -= e.deltaY;
     } else {
         // 普通鼠标滚轮缩放
+        trackpadPinchAccum = 0;
         const wx = (px - viewport.x) / viewport.scale;
         const wy = (py - viewport.y) / viewport.scale;
         const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;

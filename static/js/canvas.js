@@ -14616,25 +14616,39 @@ document.addEventListener('gestureend', e => {
 document.addEventListener('wheel', e => {
     if (e.ctrlKey || e.metaKey) e.preventDefault();
 }, { capture: true, passive: false });
+// 触控板捏合缩放阈值：累积 deltaY 超过该值才触发一次缩放，避免平移时轻微捏合噪声误触发
+const TRACKPAD_PINCH_THRESHOLD = 15;
+let trackpadPinchAccum = 0;
+let trackpadLastPinchTime = 0;
 board.onwheel = e => {
     if(!canvas) return;
     e.preventDefault();
     e.stopPropagation();
     const rect = board.getBoundingClientRect();
+    const now = Date.now();
+    // 超过 200ms 没有新的捏合事件，重置累积器（新一轮手势）
+    if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
+    trackpadLastPinchTime = now;
     if(e.ctrlKey || e.metaKey){
         // 触控板捏合缩放（Chrome）：gesture 活跃时跳过，避免双重缩放
-        if(gestureActive) return;
+        if(gestureActive){ trackpadPinchAccum = 0; return; }
+        // 累积 deltaY，超过阈值才触发缩放
+        trackpadPinchAccum += e.deltaY;
+        if(Math.abs(trackpadPinchAccum) < TRACKPAD_PINCH_THRESHOLD) return;
         const before = screenToWorld(e.clientX, e.clientY);
-        const factor = Math.exp(-e.deltaY * 0.01);
+        const factor = Math.exp(-trackpadPinchAccum * 0.01);
         viewport.scale = viewport.scale * factor;
         viewport.x = e.clientX - rect.left - before.x * viewport.scale;
         viewport.y = e.clientY - rect.top - before.y * viewport.scale;
+        trackpadPinchAccum = 0;
     } else if(Math.abs(e.deltaX) > 0){
-        // Mac 触控板双指平移
+        // Mac 触控板双指平移：有显著 deltaX 时视为平移，重置捏合累积器
+        trackpadPinchAccum = 0;
         viewport.x -= e.deltaX;
         viewport.y -= e.deltaY;
     } else {
         // 普通鼠标滚轮缩放
+        trackpadPinchAccum = 0;
         const before = screenToWorld(e.clientX, e.clientY);
         viewport.scale = viewport.scale * (e.deltaY > 0 ? .92 : 1.08);
         viewport.x = e.clientX - rect.left - before.x * viewport.scale;

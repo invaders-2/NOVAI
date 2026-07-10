@@ -4428,18 +4428,18 @@ def gpt_image_2_skill_size_arg(size="", model="", prompt="", provider="openai"):
     ratio_match = re.fullmatch(r"\s*(\d{1,2})\s*:\s*(\d{1,2})\s*", size_text)
     if ratio_match:
         ratio = f"{int(ratio_match.group(1))}:{int(ratio_match.group(2))}"
-        options = CHAT_RATIO_SIZE_OPTIONS.get(ratio)
+        options = GPT_IMAGE2_RATIO_SIZE_OPTIONS.get(ratio)
         if options:
-            if "4k" in text or "3840" in text:
+            if "4k" in text or "3840" in text or "2k" in text or "2048" in text:
                 return options[-1]
             if "1k" in text or "1024" in text:
                 return options[0]
             return options[1] if len(options) > 1 else options[0]
-    if "4k" in text or "3840" in text:
-        return "4K"
+    if "4k" in text or "3840" in text or "2k" in text or "2048" in text:
+        return "2048x2048"
     if "1k" in text or "1024" in text:
-        return "1K"
-    return "2K"
+        return "1024x1024"
+    return "1024x1024"
 
 def gpt_image_2_skill_prompt_arg(prompt="", size="", provider="openai"):
     prompt_text = str(prompt or "").strip()
@@ -8515,8 +8515,24 @@ def chat_prompt_size_override(message, current_size=""):
         return options[1] if len(options) > 1 else options[0]
     return options[0]
 
-# GPT-Image-2 限制：长边最大 3840，主要受最大像素限制（约 829 万 = 3840x2160）。
-# 这里只用于上游报错后给出友好的像素上限提示；不对尺寸做任何缩小（用户选什么就原样发送）。
+# GPT-Image-2 仅支持以下固定尺寸（OpenAI API 白名单），不接受任意宽高值。
+GPT_IMAGE2_SUPPORTED_SIZES = (
+    "1024x1024",
+    "1536x1024",
+    "1024x1536",
+    "2048x2048",
+)
+# 按比例映射到 GPT-Image-2 支持的标准尺寸：(1K, 2K, 4K)
+# 3:4 / 4:3 / 9:16 / 16:9 没有精确匹配，对齐到最接近的可用尺寸。
+GPT_IMAGE2_RATIO_SIZE_OPTIONS = {
+    "1:1":  ("1024x1024", "2048x2048", "2048x2048"),
+    "2:3":  ("1024x1536", "1024x1536", "1024x1536"),
+    "3:2":  ("1536x1024", "1536x1024", "1536x1024"),
+    "3:4":  ("1024x1536", "1024x1536", "1024x1536"),
+    "4:3":  ("1536x1024", "1536x1024", "1536x1024"),
+    "9:16": ("1024x1536", "1024x1536", "1024x1536"),
+    "16:9": ("1536x1024", "1536x1024", "1536x1024"),
+}
 GPT_IMAGE2_MAX_EDGE = 3840
 GPT_IMAGE2_MAX_PIXELS = 8_294_400
 GPT_IMAGE2_MIN_PIXELS = 655_360
@@ -8536,38 +8552,39 @@ def is_gpt_image_2_model(model):
     )
 
 def normalize_gpt_image_2_size(size):
-    width, height = parse_size_pair(size)
+    """将任意尺寸对齐到 GPT-Image-2 支持的标准尺寸。"""
+    raw = str(size or "").strip().lower()
+    if not raw or raw == "auto":
+        return "auto"
+    # 已经是支持的标准尺寸，直接返回
+    if raw in GPT_IMAGE2_SUPPORTED_SIZES:
+        return raw
+    width, height = parse_size_pair(raw)
     if not width or not height:
-        return size or "auto"
-    # 已在 GPT 支持范围内（长边≤3840 且 总像素≤约829万）的尺寸原样返回，不做任何改动。
-    if max(width, height) <= GPT_IMAGE2_MAX_EDGE and width * height <= GPT_IMAGE2_MAX_PIXELS:
-        return f"{width}x{height}"
-    # 超限时按比例等比缩小到 GPT 上限，保持原始宽高比（例如 4096x4096 → ~2864x2864，仍是 1:1）。
-    ratio = width / height
-    if ratio > 3:
-        width = height * 3
-    elif ratio < 1 / 3:
-        height = width * 3
-    scale = min(
-        1.0,
-        GPT_IMAGE2_MAX_EDGE / max(width, height),
-        (GPT_IMAGE2_MAX_PIXELS / max(1, width * height)) ** 0.5,
-    )
-    width = max(16, int((width * scale) // 16) * 16)
-    height = max(16, int((height * scale) // 16) * 16)
-    if width * height < GPT_IMAGE2_MIN_PIXELS:
-        grow = (GPT_IMAGE2_MIN_PIXELS / max(1, width * height)) ** 0.5
-        width = int((width * grow + 15) // 16) * 16
-        height = int((height * grow + 15) // 16) * 16
-    return f"{width}x{height}"
+        return "auto"
+    # 按宽高比找最接近的支持尺寸
+    target_ratio = width / height
+    target_pixels = width * height
+    best = None
+    best_score = float("inf")
+    for s in GPT_IMAGE2_SUPPORTED_SIZES:
+        sw, sh = parse_size_pair(s)
+        sr = sw / sh
+        ratio_diff = abs(sr - target_ratio) / max(target_ratio, 0.01)
+        pixel_diff = abs(sw * sh - target_pixels) / max(target_pixels, 1)
+        score = ratio_diff * 3 + pixel_diff
+        if score < best_score:
+            best_score = score
+            best = s
+    return best or "1024x1024"
 
 def gpt_image_2_size_error_message(size):
-    width, height = parse_size_pair(size)
     display_size = size or "未指定"
+    supported = "、".join(GPT_IMAGE2_SUPPORTED_SIZES)
     return (
-        f"GPT-Image-2 不支持当前尺寸 {display_size}：它有最大像素限制"
-        "（长边最大 3840、总像素约 829 万）。请改用更小的尺寸，"
-        "或切换到 nano-banana 生成更高分辨率。"
+        f"GPT-Image-2 不支持当前尺寸 {display_size}。"
+        f"它仅支持以下固定尺寸：{supported}。"
+        f"请切换到标准尺寸，或使用 nano-banana 生成自定义分辨率。"
     )
 
 def gpt_image_2_size_exceeds_supported(size):

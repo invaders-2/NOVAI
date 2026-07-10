@@ -1515,10 +1515,12 @@ def fetch_remote_update_notes(url: str, version: str = "", timeout: float = 5.0)
 def fetch_update_notes_with_fallback(preferred_source: str, version: str, timeout: float = 3.0) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     urls = {
         "github": GITHUB_UPDATE_NOTES_URL,
+        "gitee": GITEE_UPDATE_NOTES_URL,
         "modelscope": MODELSCOPE_UPDATE_NOTES_URL,
     }
     preferred = preferred_source if preferred_source in urls else "github"
-    order = [preferred, "modelscope" if preferred == "github" else "github"]
+    all_sources = ["github", "gitee", "modelscope"]
+    order = [preferred] + [s for s in all_sources if s != preferred]
     notes_by_source: Dict[str, Any] = {}
     best_notes: Dict[str, Any] = {"version": version, "items": []}
     for source in order:
@@ -1722,6 +1724,13 @@ def app_info():
                 "tree_url": GITHUB_TREE_URL,
                 "update_notes_url": GITHUB_UPDATE_NOTES_URL,
             },
+            "gitee": {
+                "label": "Gitee",
+                "repo_url": GITEE_REPO_URL,
+                "version_url": GITEE_VERSION_URL,
+                "tree_url": GITEE_TREE_URL,
+                "update_notes_url": GITEE_UPDATE_NOTES_URL,
+            },
             "modelscope": {
                 "label": "ModelScope",
                 "repo_url": MODELSCOPE_REPO_URL,
@@ -1771,6 +1780,9 @@ def update_connectivity_targets() -> List[Tuple[str, str, str, bool]]:
         ("GitHub 更新列表", GITHUB_TREE_URL, "github", True),
         ("GitHub 版本文件", GITHUB_VERSION_URL, "github", True),
         ("GitHub 主页", "https://github.com/", "github", False),
+        ("Gitee 更新列表", GITEE_TREE_URL, "gitee", True),
+        ("Gitee 版本文件", GITEE_VERSION_URL, "gitee", True),
+        ("Gitee 主页", "https://gitee.com/", "gitee", False),
         ("ModelScope 版本文件", MODELSCOPE_VERSION_URL, "modelscope", True),
         ("ModelScope 空间页面", MODELSCOPE_REPO_URL, "modelscope", False),
         ("ModelScope 主页", "https://modelscope.cn/", "modelscope", False),
@@ -1798,7 +1810,7 @@ def update_connectivity():
         item["required"] = required
         results.append(item)
     sources = {}
-    for source in ("github", "modelscope"):
+    for source in ("github", "gitee", "modelscope"):
         source_required = [item for item in results if item.get("source") == source and item.get("required")]
         sources[source] = {
             "ok": all(item["ok"] for item in source_required),
@@ -1957,6 +1969,50 @@ def download_github_update_files(files: List[str], staging_root: str) -> None:
         safe_update_target(rel)
         raw_url = f"{GITHUB_RAW_ROOT}/{urllib.parse.quote(rel, safe='/')}"
         data = github_bytes(raw_url)
+        stage_path = os.path.abspath(os.path.join(staging_root_abs, *rel.split("/")))
+        if os.path.commonpath([staging_root_abs, stage_path]) != staging_root_abs:
+            raise ValueError(f"更新暂存路径不安全：{rel}")
+        os.makedirs(os.path.dirname(stage_path), exist_ok=True)
+        with open(stage_path, "wb") as f:
+            f.write(data)
+
+# ---------- Gitee 更新文件下载 ----------
+
+def gitee_update_file_list() -> Tuple[List[str], List[str], List[str]]:
+    """通过 Gitee Tree API 列出所有允许更新的文件。"""
+    resp = github_get(GITEE_TREE_URL, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=30)
+    payload = json.loads(resp.content.decode("utf-8", errors="replace"))
+    entries = payload.get("tree") or []
+    static_files: List[str] = []
+    root_files: List[str] = []
+    for entry in entries:
+        path = str(entry.get("path") or "").replace("\\", "/")
+        if entry.get("type") == "blob" and update_allowed_file(path):
+            if path.startswith("static/"):
+                static_files.append(path)
+            else:
+                root_files.append(path)
+    if "main.py" not in root_files:
+        root_files.append("main.py")
+    if "VERSION" not in root_files:
+        root_files.append("VERSION")
+    static_files = sorted(set(static_files))
+    root_files = sorted(set(root_files))
+    files = root_files + static_files
+    if not static_files:
+        raise RuntimeError("Gitee 未返回 static 文件，已取消更新")
+    return root_files, static_files, files
+
+def gitee_file_bytes(rel: str) -> bytes:
+    url = f"{GITEE_RAW_ROOT}/{urllib.parse.quote(rel, safe='/')}"
+    resp = github_get(url, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=60)
+    return resp.content
+
+def download_gitee_update_files(files: List[str], staging_root: str) -> None:
+    staging_root_abs = os.path.abspath(staging_root)
+    for rel in files:
+        safe_update_target(rel)
+        data = gitee_file_bytes(rel)
         stage_path = os.path.abspath(os.path.join(staging_root_abs, *rel.split("/")))
         if os.path.commonpath([staging_root_abs, stage_path]) != staging_root_abs:
             raise ValueError(f"更新暂存路径不安全：{rel}")
@@ -2149,13 +2205,13 @@ def staged_update_file_list(staging_root: str) -> Tuple[List[str], List[str], Li
     static_files = sorted(set(static_files))
     return root_files, static_files, root_files + static_files
 
-UPDATE_SOURCE_LABELS = {"github": "GitHub", "modelscope": "ModelScope"}
+UPDATE_SOURCE_LABELS = {"github": "GitHub", "gitee": "Gitee", "modelscope": "ModelScope"}
 
 def normalize_update_source(value: str) -> str:
     source = str(value or "github").strip().lower()
     if source == "ms":
         return "modelscope"
-    if source not in {"github", "modelscope"}:
+    if source not in {"github", "gitee", "modelscope"}:
         return "github"
     return source
 
@@ -2164,6 +2220,10 @@ def stage_update_from_source(source: str, staging_root: str) -> Tuple[List[str],
     if source == "modelscope":
         download_modelscope_update_files(staging_root)
         return staged_update_file_list(staging_root)
+    if source == "gitee":
+        root_files, static_files, files = gitee_update_file_list()
+        download_gitee_update_files(files, staging_root)
+        return root_files, static_files, files
     root_files, static_files, files = github_update_file_list()
     download_github_update_files(files, staging_root)
     return root_files, static_files, files
@@ -2174,11 +2234,13 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
         raise HTTPException(status_code=409, detail="正在更新中，请稍后再试")
     staging_root = ""
     requested_source = normalize_update_source(req.source)
-    # 冗余设计：先用用户选择的源，失败后自动切换到另一个源兜底，全部失败才报错
+    # 冗余设计：先用用户选择的源，失败后自动切换到其他源兜底，全部失败才报错
     source_order = [requested_source]
     if req.fallback:
-        other = "modelscope" if requested_source == "github" else "github"
-        source_order.append(other)
+        all_sources = ["github", "gitee", "modelscope"]
+        for s in all_sources:
+            if s != requested_source:
+                source_order.append(s)
     try:
         backup_root = os.path.join(DATA_DIR, "update_backups", time.strftime("%Y%m%d-%H%M%S"))
 
@@ -3337,6 +3399,7 @@ def recent_canvases():
     recent = sorted_records[:4]
     return [
         {
+            "id": r.get("id", ""),
             "name": r.get("title", "未命名画布"),
             "lastOpened": r.get("updated_at") or r.get("created_at", 0),
         }

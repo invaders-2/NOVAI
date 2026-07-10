@@ -2000,7 +2000,7 @@
         </script>
 
         <main class="stage">
-            <iframe id="frame-home" data-src="/static/home.html?v=1.0.16.1783695653" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-home" data-src="/static/home.html?v=1.0.16.1783696961" class="active" scrolling="yes"></iframe>
             <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.16.1783695805" scrolling="yes"></iframe>
             <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.16.1783695805" scrolling="yes"></iframe>
             <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.16.1783695805" scrolling="yes"></iframe>
@@ -2054,6 +2054,21 @@
                             </div>
                         </div>
                         <div class="connectivity-list" data-connectivity-source="github"></div>
+                    </button>
+                    <button id="update-source-gitee" class="update-source-card" type="button" data-update-source="gitee" onclick="setUpdateSource('gitee')">
+                        <div class="update-source-head">
+                            <div class="update-source-title">
+                                <strong>Gitee 下载源</strong>
+                                <span>Gitee API / raw 文件，国内网络推荐，无需代理。</span>
+                            </div>
+                            <div class="update-source-head-right">
+                                <span class="update-source-check" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </span>
+                                <span class="update-source-badge">待测试</span>
+                            </div>
+                        </div>
+                        <div class="connectivity-list" data-connectivity-source="gitee"></div>
                     </button>
                 </div>
                 <div id="project-update-summary" class="update-modal-summary warn">
@@ -2222,6 +2237,10 @@
             if (id === 'canvas' && target.src) {
                 try { target.contentWindow?.postMessage({ type: 'canvas-focus' }, '*'); } catch(e) {}
             }
+            // 切换到首页时刷新最近项目列表
+            if (id === 'home' && target.src) {
+                try { target.contentWindow?.postMessage({ type: 'canvas-focus' }, '*'); } catch(e) {}
+            }
             resetStudioRootScroll();
         }
 
@@ -2242,6 +2261,15 @@
                 if (PAGE_IDS.includes(route)) {
                     const trigger = document.querySelector(`[onclick*="'${route}'"],[onclick*='"${route}"']`);
                     switchUI(trigger, route);
+                    // 如果携带了 canvasId，在导航完成后转发给目标 iframe
+                    if (event.data.canvasId) {
+                        const targetFrame = document.getElementById('frame-' + route);
+                        if (targetFrame && targetFrame.contentWindow) {
+                            setTimeout(() => {
+                                try { targetFrame.contentWindow.postMessage({ type: 'open-canvas', canvasId: event.data.canvasId }, '*'); } catch(e) {}
+                            }, 300);
+                        }
+                    }
                 }
                 return;
             }
@@ -2593,11 +2621,13 @@
         }
 
         function updateSourceLabel(source = updateSource) {
-            return 'GitHub';
+            const labels = { github: 'GitHub', gitee: 'Gitee', modelscope: 'ModelScope' };
+            return labels[source] || 'GitHub';
         }
 
         function setUpdateSource(source) {
-            updateSource = 'github';
+            const valid = ['github', 'gitee', 'modelscope'];
+            updateSource = valid.includes(source) ? source : 'github';
             localStorage.setItem('studio_update_source', updateSource);
             refreshProjectUpdateModalText();
         }

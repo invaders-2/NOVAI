@@ -429,32 +429,52 @@
         function renderRecentProjects() {
             var grid = document.getElementById('recentProjects');
             if (!grid) return;
-            fetch('/api/recent-canvases')
-                .then(function(r) { return r.json(); })
+            fetch('/api/recent-canvases', { cache: 'no-store' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
                 .then(function(projects) {
                     if (!projects || !Array.isArray(projects) || !projects.length) {
-                        console.log('No recent projects found');
+                        console.log('[home] No recent projects');
                         return;
                     }
-                    console.log('Recent projects:', projects);
+                    console.log('[home] Recent projects:', projects);
                     var html = '';
                     projects.forEach(function(p) {
-                        var timeAgo = getTimeAgo(p.lastOpened);
-                        html += '<div class="recent-card" onclick="parent.postMessage({type:\'navigate\',route:\'canvas\'},\'*\')">' +
-                            '<div class="recent-card-icon">' +
-                            '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-                            '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>' +
-                            '<rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' +
-                            '</svg></div>' +
-                            '<div class="recent-card-info">' +
-                            '<div class="recent-card-name">' + escapeHtml(p.name) + '</div>' +
-                            '<div class="recent-card-time">' + timeAgo + '</div>' +
-                            '</div></div>';
+                        try {
+                            var name = escapeHtml(p.name || p.title || '未命名画布');
+                            var canvasId = p.id || '';
+                            var timeAgo = getTimeAgo(p.lastOpened);
+                            var onclick = canvasId
+                                ? "parent.postMessage({type:'navigate',route:'canvas',canvasId:'" + canvasId + "'},'*')"
+                                : "parent.postMessage({type:'navigate',route:'canvas'},'*')";
+                            html += '<div class="recent-card" onclick="' + onclick + '">' +
+                                '<div class="recent-card-icon">' +
+                                '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                                '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>' +
+                                '<rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' +
+                                '</svg></div>' +
+                                '<div class="recent-card-info">' +
+                                '<div class="recent-card-name">' + name + '</div>' +
+                                '<div class="recent-card-time">' + timeAgo + '</div>' +
+                                '</div></div>';
+                        } catch(e) {
+                            console.warn('[home] Failed to render project card:', e, p);
+                        }
                     });
-                    grid.innerHTML = html;
+                    if (html) grid.innerHTML = html;
                 })
-                .catch(function(err) { console.error('Failed to load recent projects:', err); });
+                .catch(function(err) { console.error('[home] Failed to load recent projects:', err); });
         }
+
+        // 监听从父页面发来的刷新消息（如切换回首页时）
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'canvas-focus') {
+                renderRecentProjects();
+            }
+        });
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', renderRecentProjects);
         } else {

@@ -10033,8 +10033,10 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
         return await generate_volcengine_provider_image(prompt, size, model, reference_images, provider)
     is_gpt2 = is_gpt_image_2_model(model)
     is_apimart = is_apimart_provider(provider)
-    # 不对 GPT 尺寸做任何缩小/拦截：用户选什么尺寸就原样发给上游；
-    # 若超过 GPT 的最大像素限制被上游拒绝，再由 friendly_image_error_detail 给出友好的像素上限提示。
+    # GPT-Image-2 只接受固定尺寸（1024x1024、1536x1024、1024x1536、2048x2048），
+    # 必须在发送前归一化到最近的支持尺寸，否则上游会直接拒绝。
+    if is_gpt2:
+        size = normalize_gpt_image_2_size(size)
     quality = str(quality or "").strip().lower()
     if quality not in {"low", "medium", "high"}:
         quality = ""

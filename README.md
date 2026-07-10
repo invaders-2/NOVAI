@@ -25,14 +25,7 @@ python main.py
 
 ## 配套工具
 
-- **Chrome 采集插件**：[Infinite Canvas 图像视频文字抓取](https://chromewebstore.google.com/detail/infinite-canvas-%E5%9B%BE%E5%83%8F%E8%A7%86%E9%A2%91%E6%96%87%E5%AD%97%E6%8A%93%E5%8F%96%E5%B7%A5/ajfhnbklbmpfaaookhfakohabnpmlcic)
 - **Photoshop 直连插件**：PS 直连画布调用所有功能
-
----
-
-## 视频教程
-
-详细教程：[https://youtu.be/r_y_9ALr7fg](https://youtu.be/r_y_9ALr7fg)
 
 ---
 
@@ -42,8 +35,6 @@ python main.py
 
 - https://apib.ai/register?aff=1uyAbb （包含所有生图模型/视频模型/LLM模型）
 - https://www.fhl.mom/register?aff=86L574B4T2N9 （包含 Codex 和 GPT Image 2 模型）
-
-功能请求/问题反馈：[B站](https://space.bilibili.com/78652351)
 
 ---
 

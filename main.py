@@ -1510,7 +1510,7 @@ def fetch_update_notes_with_fallback(preferred_source: str, version: str, timeou
         "gitee": GITEE_UPDATE_NOTES_URL,
     }
     preferred = preferred_source if preferred_source in urls else "github"
-    all_sources = ["github", "gitee", "modelscope"]
+    all_sources = ["github", "gitee"]
     order = [preferred] + [s for s in all_sources if s != preferred]
     notes_by_source: Dict[str, Any] = {}
     best_notes: Dict[str, Any] = {"version": version, "items": []}
@@ -1764,7 +1764,7 @@ def update_connectivity_targets() -> List[Tuple[str, str, str, bool]]:
         ("GitHub 更新列表", GITHUB_TREE_URL, "github", True),
         ("GitHub 版本文件", GITHUB_VERSION_URL, "github", True),
         ("GitHub 主页", "https://github.com/", "github", False),
-        ("Gitee 更新列表", GITEE_TREE_URL, "gitee", True),
+        ("Gitee 更新列表", "https://gitee.com/invaders/novai", "gitee", True),
         ("Gitee 版本文件", GITEE_VERSION_URL, "gitee", True),
         ("Gitee 主页", "https://gitee.com/", "gitee", False),
         ("Google 连通性", "https://www.google.com/generate_204", "reference", False),

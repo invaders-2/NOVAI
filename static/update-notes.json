@@ -1,26 +1,34 @@
 {
-  "version": "1.0.10",
-  "updated_at": "2026-07-10",
+  "version": "1.0.18",
+  "updated_at": "2026-07-11",
   "items": [
     {
       "type": "feature",
-      "text": "首页新增「最近项目」区域，展示近期访问的画布"
+      "text": "新增 Gitee 下载源，更新支持 GitHub / Gitee 双源 fallback"
     },
     {
       "type": "feature",
-      "text": "版本号徽章在检测到新版本时橙色高亮呼吸动画"
+      "text": "切换模型时自动匹配该模型支持的比例和尺寸（生图+生视频全覆盖）"
     },
     {
       "type": "improve",
-      "text": "更新弹窗现在显示详细更新日志"
+      "text": "首页最近项目渲染加固：防缓存、容错处理、切换回首页自动刷新"
+    },
+    {
+      "type": "improve",
+      "text": "GPT-Image-2 尺寸自动对齐到 API 支持的标准尺寸，避免非标准尺寸被拒绝"
+    },
+    {
+      "type": "improve",
+      "text": "移除 ModelScope 更新源（AI 模型服务不受影响）"
     },
     {
       "type": "fix",
-      "text": "修复 main.py 仓库地址仍指向旧仓库导致版本检测异常"
+      "text": "修复 Gitee 连接测试因 HEAD 请求返回 401 导致显示不可用"
     },
     {
       "type": "fix",
-      "text": "修复侧边栏 overflow:hidden 裁剪更新按钮的问题"
+      "text": "修复点击最近项目卡片无法跳转到对应画布"
     }
   ]
 }

@@ -2470,10 +2470,8 @@
         }
 
         function setProjectVersionBadge(version) {
-            const versionText = document.querySelector('.version-text');
             const logoVersion = document.querySelector('.logo-version');
             const full = versionLabel(version);
-            if(versionText) versionText.textContent = full;
             if(logoVersion) logoVersion.textContent = full;
             const versionDisplay = document.getElementById('versionDisplay');
             if(versionDisplay) {

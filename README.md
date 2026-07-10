@@ -95,12 +95,10 @@ python main.py
 ### AI 生图
 ![AI 生图](static/images/screenshots/generate.png)
 
-<img width="1735" height="1400" alt="ComfyUI 设置" src="https://github.com/user-attachments/assets/d8328ff8-bbe0-4f1c-9ffa-7b56e8a1a51d" />
+### API 设置
+![API 设置](static/images/screenshots/settings.png)
 
-<img width="2258" height="969" alt="智能画布" src="https://github.com/user-attachments/assets/4a752d99-885d-4ba9-8b86-91b495786b5c" />
-
-<img width="1531" height="1374" alt="图像增强" src="https://github.com/user-attachments/assets/0af79e38-0955-4740-9e65-5c9bb057f58c" />
-
-<img width="2196" height="1040" alt="3D 预览" src="https://github.com/user-attachments/assets/6d823668-cde2-4836-8332-1858efe5f520" />
+### 资产管理
+![资产管理](static/images/screenshots/assets.png)
 
 <img width="2214" height="771" alt="视频生成" src="https://github.com/user-attachments/assets/52e10958-753f-45ba-a50e-3bbec27be436" />

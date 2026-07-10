@@ -1967,13 +1967,13 @@
                     </svg>
                     <span id="update-now-text" class="update-now-text">一键更新</span>
                 </button>
-                <div id="project-version-badge" class="project-version-badge" title="点击检测更新" role="button" tabindex="0" onclick="checkForUpdates(true)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();checkForUpdates(true);}">v-</div>
+                <div id="project-version-badge" class="project-version-badge" title="点击检测更新" role="button" tabindex="0" onclick="checkForUpdates(true)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();checkForUpdates(true);}">检查更新</div>
 
             </div>
 
             <!-- 版本显示 -->
             <div class="version-display" id="versionDisplay">
-                <span class="version-text" data-i18n="sidebar.checkUpdate">检查更新</span>
+                <span class="version-text">检查更新</span>
                 <button class="version-check-btn" id="versionCheckBtn" onclick="checkForUpdates()" title="检查更新">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="23 4 23 10 17 10"></polyline>
@@ -2000,7 +2000,7 @@
         </script>
 
         <main class="stage">
-            <iframe id="frame-home" data-src="/static/home.html?v=1.0.15.1783693167" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-home" data-src="/static/home.html?v=1.0.16" class="active" scrolling="yes"></iframe>
             <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.15.1783694389" scrolling="yes"></iframe>
             <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.15.1783694389" scrolling="yes"></iframe>
             <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.15.1783694389" scrolling="yes"></iframe>
@@ -2478,6 +2478,11 @@
                 versionDisplay.title = window.StudioI18n?.lang?.() === 'en'
                     ? `Current version: ${full}`
                     : `当前版本：${full}`;
+            }
+            // 更新 project-version-badge 显示版本号
+            const badge = document.getElementById('project-version-badge');
+            if(badge && version) {
+                badge.textContent = full;
             }
         }
 

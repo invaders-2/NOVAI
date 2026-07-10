@@ -426,12 +426,17 @@
         });
 
         // 最近项目
-        (function renderRecentProjects() {
+        function renderRecentProjects() {
             var grid = document.getElementById('recentProjects');
+            if (!grid) return;
             fetch('/api/recent-canvases')
                 .then(function(r) { return r.json(); })
                 .then(function(projects) {
-                    if (!projects || !projects.length) return;
+                    if (!projects || !Array.isArray(projects) || !projects.length) {
+                        console.log('No recent projects found');
+                        return;
+                    }
+                    console.log('Recent projects:', projects);
                     var html = '';
                     projects.forEach(function(p) {
                         var timeAgo = getTimeAgo(p.lastOpened);
@@ -448,8 +453,13 @@
                     });
                     grid.innerHTML = html;
                 })
-                .catch(function() { /* 静默失败，保留空状态 */ });
-        })();
+                .catch(function(err) { console.error('Failed to load recent projects:', err); });
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderRecentProjects);
+        } else {
+            renderRecentProjects();
+        }
 
         function getTimeAgo(timestamp) {
             if (!timestamp) return '';

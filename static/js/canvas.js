@@ -705,6 +705,56 @@ function sanitizeVideoNodeProviderModel(node){
     if(!models.length) node.model = '';
     else if(!models.includes(node.model)) node.model = models[0] || '';
 }
+// 视频模型支持的比例映射：键名按匹配优先级排列，model name 包含键名即命中
+// 未列出的模型默认支持全部比例
+const VIDEO_MODEL_ASPECT_RATIOS = {
+    // Seedance
+    'seedance': ['16:9', '9:16', '1:1'],
+    // Kling
+    'kling': ['16:9', '9:16', '1:1'],
+    // Veo
+    'veo-3': ['16:9', '9:16', '1:1'],
+    'veo-2': ['16:9', '9:16', '1:1'],
+    'veo': ['16:9', '9:16'],
+    // Sora
+    'sora': ['16:9', '9:16', '1:1'],
+    // Wan
+    'wan': ['16:9', '9:16', '1:1'],
+    // MiniMax / Hailuo
+    'minimax': ['16:9', '9:16', '1:1'],
+    'hailuo': ['16:9', '9:16', '1:1'],
+    // Luma Dream Machine
+    'ray2': ['16:9', '9:16', '1:1'],
+    'ray': ['16:9', '9:16', '1:1'],
+    'lumalabs': ['16:9', '9:16', '1:1'],
+    // Pika
+    'pika': ['16:9', '9:16', '1:1'],
+    // Runway Gen
+    'gen-4': ['16:9', '9:16', '1:1'],
+    'gen-3': ['16:9', '9:16', '1:1'],
+    'runway': ['16:9', '9:16', '1:1'],
+    // Agnes
+    'agnes': ['16:9', '9:16', '1:1'],
+    // Jimeng / 即梦
+    'jimeng': ['16:9', '9:16', '1:1'],
+    // Higgsfield
+    'higgsfield': ['16:9', '9:16', '1:1'],
+    // Pixverse
+    'pixverse': ['16:9', '9:16', '1:1'],
+    // LTX
+    'ltx': ['16:9', '9:16', '1:1'],
+    // OpenAI
+    'sora-2': ['16:9', '9:16', '1:1']
+};
+
+function getVideoAspectRatios(model) {
+    const m = String(model || '').toLowerCase();
+    for (const [key, ratios] of Object.entries(VIDEO_MODEL_ASPECT_RATIOS)) {
+        if (m.includes(key)) return ratios;
+    }
+    return null; // null = 支持全部
+}
+
 function videoModelOptions(selectedModel, providerId){
     const models = providerVideoModels(providerId);
     if(!models.length){
@@ -8530,15 +8580,23 @@ function renderVideoBody(node){
                 <label class="field" style="flex:1">
                     <div class="setting-title">${tr('canvas.videoAspect')}</div>
                     <select class="select-lite video-aspect compact-select">
-                        <option value="16:9">16:9</option>
-                        <option value="9:16">9:16</option>
-                        <option value="1:1">1:1</option>
-                        <option value="4:3">4:3</option>
-                        <option value="3:4">3:4</option>
-                        <option value="21:9">21:9</option>
-                        <option value="9:21">9:21</option>
-                        <option value="keep_ratio">keep</option>
-                        <option value="adaptive">adapt</option>
+                        ${(() => {
+                            const allRatios = [
+                                ['16:9','16:9'], ['9:16','9:16'], ['1:1','1:1'],
+                                ['4:3','4:3'], ['3:4','3:4'], ['21:9','21:9'], ['9:21','9:21']
+                            ];
+                            const allowed = getVideoAspectRatios(node.model);
+                            const current = node.aspectRatio || '16:9';
+                            let html = '';
+                            for (const [val, label] of allRatios) {
+                                const hidden = allowed && !allowed.includes(val) ? ' style="display:none"' : '';
+                                const sel = val === current ? ' selected' : '';
+                                html += `<option value="${val}"${hidden}${sel}>${label}</option>`;
+                            }
+                            html += `<option value="keep_ratio"${current==='keep_ratio'?' selected':''}>keep</option>`;
+                            html += `<option value="adaptive"${current==='adaptive'?' selected':''}>adapt</option>`;
+                            return html;
+                        })()}
                     </select>
                 </label>
                 <label class="field" style="flex:1">
@@ -8587,9 +8645,33 @@ function renderVideoBody(node){
         const models = providerVideoModels(node.apiProvider);
         if(!models.includes(node.model)) node.model = models[0] || node.model;
         modelSelect.innerHTML = videoModelOptions(node.model, node.apiProvider);
+        // Update aspect ratio options for new model
+        const allowed = getVideoAspectRatios(node.model);
+        aspectSelect.querySelectorAll('option').forEach(opt => {
+            if(opt.value === 'keep_ratio' || opt.value === 'adaptive') return;
+            opt.style.display = (!allowed || allowed.includes(opt.value)) ? '' : 'none';
+        });
+        if(allowed && !allowed.includes(aspectSelect.value)) {
+            aspectSelect.value = allowed[0] || '16:9';
+            node.aspectRatio = aspectSelect.value;
+        }
         scheduleSave();
     };
-    modelSelect.onchange = e => { e.stopPropagation(); node.model = e.target.value; scheduleSave(); };
+    modelSelect.onchange = e => {
+        e.stopPropagation();
+        node.model = e.target.value;
+        // Update aspect ratio options for new model
+        const allowed = getVideoAspectRatios(node.model);
+        aspectSelect.querySelectorAll('option').forEach(opt => {
+            if(opt.value === 'keep_ratio' || opt.value === 'adaptive') return;
+            opt.style.display = (!allowed || allowed.includes(opt.value)) ? '' : 'none';
+        });
+        if(allowed && !allowed.includes(aspectSelect.value)) {
+            aspectSelect.value = allowed[0] || '16:9';
+            node.aspectRatio = aspectSelect.value;
+        }
+        scheduleSave();
+    };
     durationSelect.oninput = e => { e.stopPropagation(); node.duration = Math.max(1, Math.min(60, Number(e.target.value || 5))); scheduleSave(); };
     durationSelect.onblur = e => { e.target.value = String(Math.max(1, Math.min(60, Number(node.duration || 5)))); };
     aspectSelect.onchange = e => { e.stopPropagation(); node.aspectRatio = e.target.value; scheduleSave(); };

@@ -2,6 +2,18 @@
 
 AI 创作工具，支持无限画布上的图像/视频生成与编辑。
 
+## 截图预览
+
+![首页](static/images/screenshots/home.png)
+
+![无限画布](static/images/screenshots/canvas.png)
+
+![AI 生图](static/images/screenshots/generate.png)
+
+![API 设置](static/images/screenshots/settings.png)
+
+![资产管理](static/images/screenshots/assets.png)
+
 ---
 
 ## 快速开始

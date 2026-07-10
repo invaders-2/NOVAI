@@ -86,17 +86,14 @@ python main.py
 
 ## 截图预览
 
-<img width="2079" height="665" alt="首页" src="https://github.com/user-attachments/assets/8469923b-f7a2-403c-9c37-e6e789211f28" />
+### 首页
+![首页](static/images/screenshots/home.png)
 
-<img width="1865" height="1503" alt="无限画布" src="https://github.com/user-attachments/assets/f4030201-67c6-4845-b08b-b6fdf304afaa" />
+### 无限画布
+![无限画布](static/images/screenshots/canvas.png)
 
-<img width="1696" height="1350" alt="AI 生图" src="https://github.com/user-attachments/assets/0a6090fb-a8dd-4c3d-adee-b1f9233a2d91" />
-
-<img width="1525" height="1473" alt="GPT 对话" src="https://github.com/user-attachments/assets/6f61fcf9-746c-425b-9e36-cfc8d252da7c" />
-
-<img width="1261" height="864" alt="资产管理" src="https://github.com/user-attachments/assets/57f3e230-3134-488f-8179-d97e7d15383a" />
-
-<img width="1530" height="858" alt="API 设置" src="https://github.com/user-attachments/assets/9990e42d-22d5-4a10-a1e1-ad35a634edd2" />
+### AI 生图
+![AI 生图](static/images/screenshots/generate.png)
 
 <img width="1735" height="1400" alt="ComfyUI 设置" src="https://github.com/user-attachments/assets/d8328ff8-bbe0-4f1c-9ffa-7b56e8a1a51d" />
 

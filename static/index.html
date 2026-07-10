@@ -1955,21 +1955,6 @@
                         </div>
                         <div class="connectivity-list" data-connectivity-source="github"></div>
                     </button>
-                    <button id="update-source-modelscope" class="update-source-card" type="button" data-update-source="modelscope" onclick="setUpdateSource('modelscope')">
-                        <div class="update-source-head">
-                            <div class="update-source-title">
-                                <strong>ModelScope 下载源</strong>
-                                <span>ModelScope 空间与版本文件，适合国内网络。</span>
-                            </div>
-                            <div class="update-source-head-right">
-                                <span class="update-source-check" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                </span>
-                                <span class="update-source-badge">待测试</span>
-                            </div>
-                        </div>
-                        <div class="connectivity-list" data-connectivity-source="modelscope"></div>
-                    </button>
                 </div>
                 <div id="project-update-summary" class="update-modal-summary warn">
                     <span class="update-modal-dot" aria-hidden="true"></span>
@@ -2502,11 +2487,11 @@
         }
 
         function updateSourceLabel(source = updateSource) {
-            return source === 'modelscope' ? 'ModelScope' : 'GitHub';
+            return 'GitHub';
         }
 
         function setUpdateSource(source) {
-            updateSource = source === 'modelscope' ? 'modelscope' : 'github';
+            updateSource = 'github';
             localStorage.setItem('studio_update_source', updateSource);
             refreshProjectUpdateModalText();
         }
@@ -2523,13 +2508,7 @@
         }
 
         function bestUpdateSourceFromConnectivity(data) {
-            const results = data?.results || [];
-            const github = sourceConnectivityStats('github', results);
-            const ms = sourceConnectivityStats('modelscope', results);
-            if(github.ok && ms.ok) return ms.avg < github.avg ? 'modelscope' : 'github';
-            if(ms.ok) return 'modelscope';
-            if(github.ok) return 'github';
-            return updateSource;
+            return 'github';
         }
 
         function updateTargetLabel(name) {
@@ -2537,10 +2516,6 @@
                 'GitHub 更新列表': ['GitHub 更新列表', 'GitHub update API'],
                 'GitHub 版本文件': ['GitHub 版本文件', 'GitHub version file'],
                 'GitHub 主页': ['GitHub 主页', 'GitHub home page'],
-                'ModelScope 更新列表': ['ModelScope 更新列表', 'ModelScope update list'],
-                'ModelScope 版本文件': ['ModelScope 版本文件', 'ModelScope version file'],
-                'ModelScope 空间页面': ['ModelScope 空间页面', 'ModelScope space page'],
-                'ModelScope 主页': ['ModelScope 主页', 'ModelScope home page'],
                 'Google 连通性': ['Google 连通性', 'Google connectivity'],
             };
             const item = labels[name] || [name, name];
@@ -2570,14 +2545,10 @@
         function updateConnectivityTargets() {
             const sources = appInfo.sources || {};
             const github = sources.github || {};
-            const ms = sources.modelscope || {};
             return [
                 { name:'GitHub 更新列表', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1', source:'github', required:true },
                 { name:'GitHub 版本文件', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION', source:'github', required:true },
                 { name:'GitHub 主页', url:'https://github.com/', source:'github' },
-                { name:'ModelScope 版本文件', url:ms.version_url || 'https://www.modelscope.cn/api/v1/studio/Daniel8152/Infinite-Canvas/repo?Revision=master&FilePath=VERSION', source:'modelscope', required:true },
-                { name:'ModelScope 空间页面', url:ms.repo_url || 'https://modelscope.cn/studios/Daniel8152/Infinite-Canvas', source:'modelscope' },
-                { name:'ModelScope 主页', url:'https://modelscope.cn/', source:'modelscope' },
                 { name:'Google 连通性', url:'https://www.google.com/generate_204', source:'reference' },
             ];
         }
@@ -2615,7 +2586,6 @@
             });
             };
             renderInto(document.querySelector('[data-connectivity-source="github"]'), 'github');
-            renderInto(document.querySelector('[data-connectivity-source="modelscope"]'), 'modelscope');
         }
 
         function refreshProjectUpdateModalText() {
@@ -2666,8 +2636,8 @@
                     'warn',
                     updateUiText('建议先测试连通性', 'Connectivity test recommended'),
                     updateUiText(
-                        '测试会同时测速 GitHub 和 ModelScope。你可以根据结果切换下载源。',
-                        'The test checks both GitHub and ModelScope. Choose the faster reachable source before updating.'
+                        '测试会检测 GitHub 连通性。',
+                        'The test checks GitHub connectivity.'
                     )
                 );
             } else if(updateConnectivityResult.backend_missing) {
@@ -2735,7 +2705,7 @@
 
         function computeConnectivitySources(results) {
             const out = {};
-            for(const source of ['github', 'modelscope']) {
+            for(const source of ['github']) {
                 const reqAll = (results || []).filter(it => it.source === source && it.required);
                 out[source] = {
                     ok: reqAll.length > 0 && reqAll.every(it => it.ok),
@@ -2890,7 +2860,7 @@
                 if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '更新失败'));
                 if(data.update_notes) setProjectUpdateNotes(data.update_notes);
                 const restarting = data.restart_scheduled;
-                const usedLabel = data.source_label || (data.source === 'modelscope' ? 'ModelScope' : 'GitHub');
+                const usedLabel = data.source_label || 'GitHub';
                 const fallbackNote = data.fallback_used
                     ? (isEn
                         ? ` (${sourceName} was unreachable, so it fell back to ${usedLabel})`
@@ -2986,7 +2956,7 @@
                 let best = null;
                 let reachable = false;
                 let serverChecked = false;
-                // 优先走后端检测：服务端用系统代理同时检测 GitHub 和 ModelScope，避免浏览器跨域/被墙
+                // 优先走后端检测：服务端用系统代理检测 GitHub，避免浏览器跨域/被墙
                 try {
                     const r = await fetch('/api/check-update', { cache:'no-store' });
                     if(r.ok) {
@@ -2997,12 +2967,11 @@
                         if(d.latest?.version) best = {source:d.latest.source, version:d.latest.version, update_notes:d.latest.update_notes || d.update_notes || null};
                     }
                 } catch(e) {}
-                // 兜底：旧后端无 /api/check-update 时，浏览器直接拉取双源 VERSION
+                // 兜底：旧后端无 /api/check-update 时，浏览器直接拉取 GitHub VERSION
                 if(!serverChecked) {
                     const sources = appInfo.sources || {};
                     const candidates = [
                         {source:'github', url:sources.github?.version_url || appInfo.version_url || ''},
-                        {source:'modelscope', url:sources.modelscope?.version_url || ''},
                     ].filter(item => item.url);
                     for(const item of candidates) {
                         try {
@@ -3014,7 +2983,6 @@
                 }
                 const hasUpdate = !!(current && best?.version && compareVersions(best.version, current) > 0);
                 if(hasUpdate) {
-                    if(best.source === 'modelscope') setUpdateSource('modelscope');
                     setProjectUpdateNotes(best.update_notes || null);
                     showUpdateNotice(current, best.version);
                 }
@@ -3024,7 +2992,7 @@
                     } else if(reachable) {
                         alert(isEn ? `You are on the latest version (${versionLabel(current)}).` : `已是最新版本（${versionLabel(current)}）。`);
                     } else {
-                        alert(isEn ? 'Could not reach GitHub or ModelScope. Check your network/proxy and try again.' : '无法连接 GitHub 或 ModelScope 更新源，请检查网络或代理后重试。');
+                        alert(isEn ? 'Could not reach GitHub. Check your network/proxy and try again.' : '无法连接 GitHub 更新源，请检查网络或代理后重试。');
                     }
                 }
             } catch(e) {

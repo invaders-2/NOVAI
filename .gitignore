@@ -95,3 +95,4 @@ logs/
 history.json
 *.db
 *.sqlite
+.codegraph

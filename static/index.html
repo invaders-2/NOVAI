@@ -2621,12 +2621,12 @@
         }
 
         function updateSourceLabel(source = updateSource) {
-            const labels = { github: 'GitHub', gitee: 'Gitee', modelscope: 'ModelScope' };
+            const labels = { github: 'GitHub', gitee: 'Gitee' };
             return labels[source] || 'GitHub';
         }
 
         function setUpdateSource(source) {
-            const valid = ['github', 'gitee', 'modelscope'];
+            const valid = ['github', 'gitee'];
             updateSource = valid.includes(source) ? source : 'github';
             localStorage.setItem('studio_update_source', updateSource);
             refreshProjectUpdateModalText();

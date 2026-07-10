@@ -90,5 +90,8 @@ logs/
 # Preview files
 .preview
 
-# CodeGraph index
-.codegraph
+# 用户数据（含 API 密钥、画布节点、对话记录等敏感信息）
+/data/
+history.json
+*.db
+*.sqlite

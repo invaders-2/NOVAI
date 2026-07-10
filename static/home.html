@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVAI - 首页</title>
+    <style>
+        :root {
+            --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+            --bg: #f5f5f7;
+            --stage-bg: #ffffff;
+            --text: #1c1c1e;
+            --muted: #86868b;
+            --border: rgba(0, 0, 0, 0.07);
+            --card-bg: rgba(255,255,255,0.55);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --card-shadow: rgba(0, 0, 0, 0.04);
+            --btn-bg: #1c1c1e;
+            --btn-text: #ffffff;
+        }
+
+        html[data-theme="dark"],
+        html.theme-dark {
+            --bg: #0c0c0c;
+            --stage-bg: #141416;
+            --text: #f5f5f7;
+            --muted: #96969a;
+            --border: rgba(255, 255, 255, 0.07);
+            --card-bg: rgba(18,18,18,0.6);
+            --card-border: rgba(255, 255, 255, 0.06);
+            --card-shadow: rgba(0, 0, 0, 0.2);
+            --btn-bg: #f5f5f7;
+            --btn-text: #0c0c0c;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: background 0.5s var(--fluid-ease), color 0.5s var(--fluid-ease);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 40px 24px;
+        }
+
+        .home-container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 48px;
+        }
+
+        /* ===== Hero 区 ===== */
+        .hero {
+            text-align: center;
+            animation: fadeUp 0.7s var(--fluid-ease) both;
+        }
+
+        .hero-title {
+            font-size: 56px;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--text) 0%, var(--muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--muted);
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .hero-desc {
+            font-size: 14px;
+            color: var(--muted);
+            max-width: 480px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== 功能卡片区 ===== */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 28px 20px 24px;
+            text-align: center;
+            transition: transform 0.35s var(--fluid-ease), box-shadow 0.35s var(--fluid-ease), border-color 0.35s var(--fluid-ease);
+            cursor: default;
+            animation: fadeUp 0.7s var(--fluid-ease) 0.1s both;
+        }
+
+        .feature-card:nth-child(2) { animation-delay: 0.18s; }
+        .feature-card:nth-child(3) { animation-delay: 0.26s; }
+        .feature-card:nth-child(4) { animation-delay: 0.34s; }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px -8px var(--card-shadow);
+            border-color: var(--border);
+        }
+
+        .feature-card-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .feature-card-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .feature-card-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .feature-card-desc {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* ===== 快捷入口区 ===== */
+        .cta-section {
+            text-align: center;
+            animation: fadeUp 0.7s var(--fluid-ease) 0.4s both;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: none;
+            border-radius: 16px;
+            padding: 14px 36px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.35s var(--fluid-ease);
+            text-decoration: none;
+            letter-spacing: -0.01em;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.04);
+            box-shadow: 0 8px 28px -6px var(--card-shadow);
+        }
+
+        .cta-button:active {
+            transform: scale(0.97);
+        }
+
+        .cta-button svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ===== 底部状态 ===== */
+        .status-bar {
+            text-align: center;
+            padding-top: 8px;
+            animation: fadeUp 0.7s var(--fluid-ease) 0.5s both;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #34c759;
+            animation: nano-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes nano-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 720px) {
+            .cards-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .hero-title { font-size: 40px; }
+        }
+
+        @media (max-width: 480px) {
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero-title { font-size: 34px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="home-container">
+        <!-- Hero 区 -->
+        <section class="hero">
+            <h1 class="hero-title">NOVAI</h1>
+            <p class="hero-subtitle">AI 图像与视频生成平台</p>
+            <p class="hero-desc">
+                一站式 AI 创作工作台，集在线生图、智能对话、无限画布与素材管理于一体，让你的创意即刻落地。
+            </p>
+        </section>
+
+        <!-- 功能卡片区 -->
+        <section class="cards-grid">
+            <div class="feature-card">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                </div>
+                <div class="feature-card-title">在线生图</div>
+                <div class="feature-card-desc">AI 驱动的图像生成引擎，支持文生图、图生图等多种模式</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <div class="feature-card-title">GPT 对话</div>
+                <div class="feature-card-desc">智能 AI 助手，辅助创意构思与提示词优化</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                </div>
+                <div class="feature-card-title">无限画布</div>
+                <div class="feature-card-desc">自由布局的创作空间，支持多图拼接与图层编辑</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5V6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v12.7"/>
+                        <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5V8.8A2.8 2.8 0 0 0 17.2 6H6.8A2.8 2.8 0 0 0 4 8.8v10.7z"/>
+                    </svg>
+                </div>
+                <div class="feature-card-title">素材库</div>
+                <div class="feature-card-desc">集中管理生成作品与上传素材，快速检索与复用</div>
+            </div>
+        </section>
+
+        <!-- 快捷入口区 -->
+        <section class="cta-section">
+            <button class="cta-button" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                开始创作
+            </button>
+        </section>
+
+        <!-- 底部状态 -->
+        <section class="status-bar">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                系统就绪
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Listen for theme changes from parent
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'studio-theme') {
+                if (e.data.theme === 'dark') {
+                    document.documentElement.classList.add('theme-dark');
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('theme-dark');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

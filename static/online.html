@@ -383,6 +383,56 @@ select { background: var(--stage-bg) !important; border: 1px solid var(--border)
                 ['3840x2160', '4k']
             ]
         };
+
+        // 模型专用尺寸映射
+        const MODEL_SIZE_PRESETS = {
+            'gpt-image-2': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['1024x1536','1k']],
+                landscape: [['1536x1024','1k']]
+            },
+            'nano-banana': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']]
+            },
+            'nano-banana-2': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']]
+            },
+            'seedream-4.0': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['832x1216','1k'], ['1664x2432','2k']],
+                landscape: [['1216x832','1k'], ['2432x1664','2k']],
+                portrait43: [['928x1216','1k'], ['1856x2432','2k']],
+                landscape43: [['1216x928','1k'], ['2432x1856','2k']]
+            },
+            'seedream-3.0': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['832x1216','1k'], ['1664x2432','2k']],
+                landscape: [['1216x832','1k'], ['2432x1664','2k']],
+                portrait43: [['928x1216','1k'], ['1856x2432','2k']],
+                landscape43: [['1216x928','1k'], ['2432x1856','2k']]
+            },
+            'kolors': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['768x1024','1k'], ['1536x2048','2k']],
+                landscape: [['1024x768','1k'], ['2048x1536','2k']]
+            }
+        };
+
+        function getSizeOptionsForModel(model) {
+            const m = String(model || '').toLowerCase();
+            for (const [key, sizes] of Object.entries(MODEL_SIZE_PRESETS)) {
+                if (m.includes(key)) return sizes;
+            }
+            return SIZE_OPTIONS;
+        }
+
+        function currentSizeOptions() {
+            return getSizeOptionsForModel(selectedModel);
+        }
         const RES_LONG_SIDE = { '1k': 1536, '2k': 2048, '4k': 3840 };
         const RES_PIXEL_LIMIT = { '1k': 1572864, '2k': 4194304, '4k': 8294400 };
 
@@ -530,9 +580,11 @@ select { background: var(--stage-bg) !important; border: 1px solid var(--border)
             provider = next;
             selectedModel = providerModels(provider)[0] || selectedModel;
             renderProviderControls();
+            updateSizeUI();
         }
         function setModel(next){
             selectedModel = next;
+            updateSizeUI();
         }
         function escapeHtml(str){ return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
 
@@ -565,7 +617,7 @@ select { background: var(--stage-bg) !important; border: 1px solid var(--border)
         function setRatio(next, preferredSize = ''){
             ratio = next;
             if (preferredSize) {
-                const match = SIZE_OPTIONS[next]?.find(([value]) => value === preferredSize);
+                const match = currentSizeOptions()[next]?.find(([value]) => value === preferredSize);
                 if (match) resolution = match[1];
             }
             if(next !== 'custom') {
@@ -612,6 +664,16 @@ select { background: var(--stage-bg) !important; border: 1px solid var(--border)
             const sizeCustomWidthInput = document.getElementById('sizeCustomWidth');
             const sizeCustomHeightInput = document.getElementById('sizeCustomHeight');
             const fitImageSizeBtn = document.getElementById('fitImageSizeBtn');
+            // Hide unsupported ratio options for current model
+            const opts = currentSizeOptions();
+            Array.from(ratioSelect.options).forEach(opt => {
+                if (opt.value && opt.value !== 'custom') {
+                    opt.hidden = !opts[opt.value];
+                }
+            });
+            if (!opts[ratio]) {
+                ratio = Object.keys(opts)[0] || 'square';
+            }
             ratioSelect.value = ratio;
             ratioSelect.disabled = resolution === 'custom';
             ratioField.classList.toggle('custom', ratio === 'custom');
@@ -639,7 +701,8 @@ select { background: var(--stage-bg) !important; border: 1px solid var(--border)
 
         function currentSize(){
             if(resolution === 'custom') return customSizeValue();
-            const options = SIZE_OPTIONS[ratio] || SIZE_OPTIONS.square;
+            const opts = currentSizeOptions();
+            const options = opts[ratio] || opts.square;
             if(ratio === 'custom'){
                 const parsed = customRatioValue();
                 const longSide = RES_LONG_SIDE[resolution] || 1024;
@@ -652,7 +715,7 @@ select { background: var(--stage-bg) !important; border: 1px solid var(--border)
                     return `${Math.max(64, width)}x${Math.max(64, height)}`;
                 }
             }
-            const match = options.find(([, label]) => label === resolution) || SIZE_OPTIONS.square.find(([, label]) => label === resolution) || SIZE_OPTIONS.square[0];
+            const match = options.find(([, label]) => label === resolution) || opts.square.find(([, label]) => label === resolution) || opts.square[0];
             return match[0];
         }
 
@@ -796,8 +859,9 @@ select { background: var(--stage-bg) !important; border: 1px solid var(--border)
                 }).catch(() => {});
             });
             const size = currentLightboxData.params?.size || '1024x1024';
-            const matchedRatio = Object.keys(SIZE_OPTIONS).find(key => SIZE_OPTIONS[key].some(([value]) => value === size)) || 'square';
-            const matchedRes = SIZE_OPTIONS[matchedRatio]?.find(([value]) => value === size)?.[1];
+            const opts = currentSizeOptions();
+            const matchedRatio = Object.keys(opts).find(key => opts[key].some(([value]) => value === size)) || 'square';
+            const matchedRes = opts[matchedRatio]?.find(([value]) => value === size)?.[1];
             if(matchedRes) {
                 setRatio(matchedRatio, size);
                 setResolution(matchedRes);

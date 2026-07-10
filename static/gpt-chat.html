@@ -777,6 +777,56 @@ body {
             wide: [['1280x720','1k'], ['1920x1080','2k'], ['2560x1440','4k']]
         };
 
+        // 模型专用尺寸映射：根据模型自动匹配其 API 支持的尺寸
+        const MODEL_SIZE_PRESETS = {
+            'gpt-image-2': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['1024x1536','1k']],
+                landscape: [['1536x1024','1k']]
+            },
+            'nano-banana': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']]
+            },
+            'nano-banana-2': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']]
+            },
+            'seedream-4.0': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['832x1216','1k'], ['1664x2432','2k']],
+                landscape: [['1216x832','1k'], ['2432x1664','2k']],
+                portrait43: [['928x1216','1k'], ['1856x2432','2k']],
+                landscape43: [['1216x928','1k'], ['2432x1856','2k']]
+            },
+            'seedream-3.0': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['832x1216','1k'], ['1664x2432','2k']],
+                landscape: [['1216x832','1k'], ['2432x1664','2k']],
+                portrait43: [['928x1216','1k'], ['1856x2432','2k']],
+                landscape43: [['1216x928','1k'], ['2432x1856','2k']]
+            },
+            'kolors': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['768x1024','1k'], ['1536x2048','2k']],
+                landscape: [['1024x768','1k'], ['2048x1536','2k']]
+            }
+        };
+
+        function getSizeOptionsForModel(model) {
+            const m = String(model || '').toLowerCase();
+            for (const [key, sizes] of Object.entries(MODEL_SIZE_PRESETS)) {
+                if (m.includes(key)) return sizes;
+            }
+            return SIZE_OPTIONS; // 默认：通用尺寸
+        }
+
+        function currentSizeOptions() {
+            return getSizeOptionsForModel(activeImageModel);
+        }
+
         const headers = () => ({'Content-Type':'application/json', 'X-User-ID':userId});
 
         function rememberConversation(id){
@@ -959,6 +1009,7 @@ body {
             }
             renderProviderControls();
             updateModelLabel();
+            updateChatResolutionUI();
             saveChatSettings();
         }
         function setActiveModel(model, kind=activePickerKind()){
@@ -970,6 +1021,7 @@ body {
             }
             renderProviderControls();
             updateModelLabel();
+            updateChatResolutionUI();
             saveChatSettings();
         }
 
@@ -1253,7 +1305,7 @@ body {
                 document.getElementById(`chat-ratio-${item}`)?.classList.toggle('active', item === next);
             });
             if(preferredSize){
-                const match = SIZE_OPTIONS[next]?.find(([value]) => value === preferredSize);
+                const match = currentSizeOptions()[next]?.find(([value]) => value === preferredSize);
                 if(match) chatPresetResolution = match[1];
             }
             if(chatResolution !== 'auto' && chatResolution !== 'custom') chatResolution = chatPresetResolution;
@@ -1273,7 +1325,8 @@ body {
         function chatSizeForResolution(label = chatResolution){
             if(label === 'auto') return '1024x1024';
             if(label === 'custom') return normalizeChatCustomSize(chatCustomSize) || '1024x1024';
-            const options = SIZE_OPTIONS[chatRatio] || SIZE_OPTIONS.square;
+            const opts = currentSizeOptions();
+            const options = opts[chatRatio] || opts.square;
             const match = options.find(([, item]) => item === label) || options[0];
             return match[0];
         }
@@ -1359,13 +1412,28 @@ body {
             ['1k','2k','4k'].forEach(label => {
                 const btn = document.querySelector(`.resolution-picker-option[data-resolution="${label}"]`);
                 const sizeEl = document.getElementById(`resolutionPreset${label}`);
-                if(btn) btn.classList.toggle('active', !isAuto && !isCustom && chatPresetResolution === label);
+                const available = (opts[chatRatio] || opts.square || []).some(([, l]) => l === label);
+                if(btn) {
+                    btn.style.display = available ? '' : 'none';
+                    btn.classList.toggle('active', available && !isAuto && !isCustom && chatPresetResolution === label);
+                }
                 if(sizeEl) sizeEl.textContent = chatSizeForResolution(label);
             });
+            const opts = currentSizeOptions();
+            // 隐藏当前模型不支持的比例
             ['square','portrait','portrait43','landscape43','landscape','story','wide'].forEach(label => {
                 const btn = document.getElementById(`chat-ratio-${label}`);
-                if(btn) btn.classList.toggle('active', !isAuto && !isCustom && chatRatio === label);
+                if(!btn) return;
+                const supported = !!opts[label];
+                btn.style.display = supported ? '' : 'none';
+                if(btn) btn.classList.toggle('active', supported && !isAuto && !isCustom && chatRatio === label);
             });
+            // 如果当前比例不被支持，自动切到最近的支持比例
+            if(!opts[chatRatio]){
+                const fallback = opts.portrait ? 'portrait' : (opts.landscape ? 'landscape' : 'square');
+                setChatRatio(fallback);
+                return; // setChatRatio 会再次调用 updateChatResolutionUI
+            }
             const [w, h] = custom.split('x');
             const widthInput = document.getElementById('customResolutionWidth');
             const heightInput = document.getElementById('customResolutionHeight');
@@ -1402,7 +1470,8 @@ body {
             if(chatResolution === 'custom' && !wants4k && !wants2k) return fallbackSize;
             const fallbackEdge = Math.max(...String(fallbackSize || '').split(/[xX×*]/).map(n => Number(n) || 0));
             const targetLabel = wants4k ? '4k' : (wants2k ? '2k' : (chatResolution === 'auto' ? '1k' : (fallbackEdge >= 2400 ? '4k' : (fallbackEdge >= 1500 ? '2k' : '1k'))));
-            return (SIZE_OPTIONS[key] || SIZE_OPTIONS.square).find(([, label]) => label === targetLabel)?.[0] || fallbackSize;
+            const opts = currentSizeOptions();
+            return (opts[key] || opts.square).find(([, label]) => label === targetLabel)?.[0] || fallbackSize;
         }
 
         function renderMessages(messages){

@@ -206,6 +206,8 @@ body.canvas-board-pan * { cursor:grabbing !important; user-select:none !importan
 .links { position:absolute; inset:0; width:6000px; height:4000px; overflow:visible; pointer-events:none; z-index:1; }
 .link { stroke:var(--faint); stroke-width:2.2; fill:none; opacity:.62; pointer-events:none; transition:stroke .22s var(--fluid-ease), opacity .22s var(--fluid-ease); }
 .link.link-active { stroke:var(--text); opacity:.85; }
+.link.link-flow { stroke:#f59e0b; stroke-width:2.6; opacity:1; stroke-dasharray:8 14; animation:linkMeteorTrail 1.2s linear infinite; filter:drop-shadow(0 0 4px rgba(245,158,11,.45)); }
+@keyframes linkMeteorTrail { to { stroke-dashoffset:-22; } }
 .link.temp { stroke:var(--strong); stroke-dasharray:6 6; }
 .link.knife-trail { stroke:#ef4444; stroke-width:2.4; stroke-dasharray:7 6; opacity:.88; filter:drop-shadow(0 0 6px rgba(239,68,68,.35)); }
 .link-hit { stroke:transparent; stroke-width:18; fill:none; pointer-events:stroke; }

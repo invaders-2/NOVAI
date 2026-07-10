@@ -14333,7 +14333,10 @@ function renderLinks(){
     });
     segments.forEach(({c, a, b}) => {
         const relClass = isConnectionSelected(c) ? ' link-active' : '';
-        linksEl.appendChild(pathEl(a.x, a.y, b.x, b.y, `link${relClass}`));
+        const p = pathEl(a.x, a.y, b.x, b.y, `link${relClass}`);
+        p.dataset.from = c.from;
+        p.dataset.to = c.to;
+        linksEl.appendChild(p);
         linkControlsEl.appendChild(linkDeleteButton(c, a, b));
         linksEl.appendChild(linkHitEl(a.x, a.y, b.x, b.y, c.id));
     });
@@ -14415,15 +14418,44 @@ function updateConnectionHoverFromMouse(e){
 function isConnectionSelected(connection){
     return selected.has(connection.from) || selected.has(connection.to);
 }
+function getConnectedLinkKeys(nodeId){
+    const keys = new Set();
+    const visited = new Set();
+    const queue = [nodeId];
+    while(queue.length){
+        const id = queue.shift();
+        if(visited.has(id)) continue;
+        visited.add(id);
+        for(const c of connections){
+            if(c.from === id || c.to === id){
+                keys.add(c.from + '->' + c.to);
+                const next = c.from === id ? c.to : c.from;
+                if(!visited.has(next)) queue.push(next);
+            }
+        }
+    }
+    return keys;
+}
 function refreshSelectionVisuals(){
     nodesEl.querySelectorAll('.node').forEach(el => {
         el.classList.toggle('selected', selected.has(el.dataset.id));
     });
     syncCanvasSelectedImageResolution(nodesEl);
     renderLinks();
+    updateLinkFlowAnimation();
     renderSelectionHub();
     if(workflowTransferModal?.classList.contains('open')) updateWorkflowTransferMeta();
     scheduleMinimapRender();
+}
+function updateLinkFlowAnimation(){
+    const activeKeys = new Set();
+    for(const id of selected){
+        for(const key of getConnectedLinkKeys(id)) activeKeys.add(key);
+    }
+    linksEl.querySelectorAll('path.link').forEach(p => {
+        const key = p.dataset.from + '->' + p.dataset.to;
+        p.classList.toggle('link-flow', activeKeys.has(key));
+    });
 }
 function pathEl(x1,y1,x2,y2,cls){
     const p = document.createElementNS('http://www.w3.org/2000/svg','path');

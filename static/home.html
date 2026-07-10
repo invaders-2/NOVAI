@@ -428,33 +428,27 @@
         // 最近项目
         (function renderRecentProjects() {
             var grid = document.getElementById('recentProjects');
-            try {
-                var projects = JSON.parse(localStorage.getItem('novai_recent_canvases') || '[]');
-            } catch(e) {
-                var projects = [];
-            }
-            if (!projects.length) return;
-
-            var html = '';
-            // 按最近访问时间倒序，取前 4 个
-            projects.sort(function(a, b) { return (b.lastOpened || 0) - (a.lastOpened || 0); });
-            var recent = projects.slice(0, 4);
-
-            recent.forEach(function(p) {
-                var timeAgo = getTimeAgo(p.lastOpened);
-                html += '<div class="recent-card" onclick="parent.postMessage({type:\'navigate\',route:\'canvas\'},\'*\')">' +
-                    '<div class="recent-card-icon">' +
-                    '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-                    '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>' +
-                    '<rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' +
-                    '</svg></div>' +
-                    '<div class="recent-card-info">' +
-                    '<div class="recent-card-name">' + escapeHtml(p.name) + '</div>' +
-                    '<div class="recent-card-time">' + timeAgo + '</div>' +
-                    '</div></div>';
-            });
-
-            grid.innerHTML = html;
+            fetch('/api/recent-canvases')
+                .then(function(r) { return r.json(); })
+                .then(function(projects) {
+                    if (!projects || !projects.length) return;
+                    var html = '';
+                    projects.forEach(function(p) {
+                        var timeAgo = getTimeAgo(p.lastOpened);
+                        html += '<div class="recent-card" onclick="parent.postMessage({type:\'navigate\',route:\'canvas\'},\'*\')">' +
+                            '<div class="recent-card-icon">' +
+                            '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                            '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>' +
+                            '<rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' +
+                            '</svg></div>' +
+                            '<div class="recent-card-info">' +
+                            '<div class="recent-card-name">' + escapeHtml(p.name) + '</div>' +
+                            '<div class="recent-card-time">' + timeAgo + '</div>' +
+                            '</div></div>';
+                    });
+                    grid.innerHTML = html;
+                })
+                .catch(function() { /* 静默失败，保留空状态 */ });
         })();
 
         function getTimeAgo(timestamp) {

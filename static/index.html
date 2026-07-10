@@ -2644,6 +2644,10 @@
         }
 
         function bestUpdateSourceFromConnectivity(data) {
+            const sources = data.sources || {};
+            // 优先选可用的源，Gitee 优先（国内网络更好）
+            if (sources.gitee && sources.gitee.ok) return 'gitee';
+            if (sources.github && sources.github.ok) return 'github';
             return 'github';
         }
 
@@ -2747,7 +2751,6 @@
             const confirmText = document.getElementById('project-update-confirm-text');
             const closeBtn = document.querySelector('#project-update-modal .studio-modal-close');
             if(titleEl) titleEl.textContent = title;
-            renderProjectUpdateNotes();
             document.querySelectorAll('[data-update-source]').forEach(card => {
                 const source = card.dataset.updateSource || 'github';
                 const active = source === updateSource;
@@ -2821,9 +2824,13 @@
             const modal = document.getElementById('project-update-modal');
             if(!modal) return;
             updateConnectivityResult = null;
+            projectUpdateNotes = null;
             refreshProjectUpdateModalText();
             modal.hidden = false;
             document.getElementById('connectivity-test-btn')?.focus?.();
+            // 隐藏更新说明，等更新完成后才显示
+            const notesBox = document.getElementById('project-update-notes');
+            if(notesBox) notesBox.hidden = true;
         }
 
         function closeProjectUpdateModal() {
@@ -2849,7 +2856,7 @@
 
         function computeConnectivitySources(results) {
             const out = {};
-            for(const source of ['github']) {
+            for(const source of ['github', 'gitee']) {
                 const reqAll = (results || []).filter(it => it.source === source && it.required);
                 out[source] = {
                     ok: reqAll.length > 0 && reqAll.every(it => it.ok),

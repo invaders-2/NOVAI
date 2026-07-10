@@ -3068,11 +3068,12 @@
                         if(d.latest?.version) best = {source:d.latest.source, version:d.latest.version, update_notes:d.latest.update_notes || d.update_notes || null};
                     }
                 } catch(e) {}
-                // 兜底：后端检测失败或无结果时，浏览器直接拉取 GitHub VERSION
+                // 兜底：后端检测失败或无结果时，浏览器直接拉取 GitHub/Gitee VERSION
                 if(!serverChecked || !best) {
                     const sources = appInfo.sources || {};
                     const candidates = [
                         {source:'github', url:sources.github?.version_url || appInfo.version_url || ''},
+                        {source:'gitee', url:sources.gitee?.version_url || ''},
                     ].filter(item => item.url);
                     for(const item of candidates) {
                         try {

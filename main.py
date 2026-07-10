@@ -193,6 +193,11 @@ GITHUB_VERSION_URL = "https://raw.githubusercontent.com/invaders-2/NOVAI/main/VE
 GITHUB_TREE_URL = "https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1"
 GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/invaders-2/NOVAI/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
+GITEE_REPO_URL = "https://gitee.com/your-username/NOVAI"  # 需要替换为你的 Gitee 用户名
+GITEE_VERSION_URL = "https://gitee.com/your-username/NOVAI/raw/main/VERSION"  # 需要替换
+GITEE_TREE_URL = "https://gitee.com/api/v5/repos/your-username/NOVAI/git/trees/main?recursive=1"  # 需要替换
+GITEE_RAW_ROOT = "https://gitee.com/your-username/NOVAI/raw/main"  # 需要替换
+GITEE_UPDATE_NOTES_URL = GITEE_RAW_ROOT + "/static/update-notes.json"
 MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/NOVAI"
 MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/NOVAI/raw/main"
 # ModelScope 仓库默认分支为 master；raw 网页路径会返回 HTML，必须用仓库文件 API 才能拿到纯文本
@@ -1848,9 +1853,9 @@ def version_gt(a: str, b: str) -> bool:
 
 @app.get("/api/check-update")
 def check_update():
-    """服务端检测 GitHub 与 ModelScope 两个源的远端版本（走系统代理，避免浏览器跨域/被墙）。"""
+    """服务端检测 GitHub、Gitee 与 ModelScope 三个源的远端版本（走系统代理，避免浏览器跨域/被墙）。"""
     current = current_app_version()
-    # 并发检测两个源，避免串行 8s+8s 拖慢首屏更新提示
+    # 并发检测三个源，避免串行拖慢首屏更新提示
     holder: Dict[str, Dict[str, Any]] = {}
     def _probe(key: str, url: str):
         item = fetch_remote_version(url, timeout=5.0)
@@ -1858,6 +1863,7 @@ def check_update():
         holder[key] = item
     threads = [
         Thread(target=_probe, args=("github", GITHUB_VERSION_URL), daemon=True),
+        Thread(target=_probe, args=("gitee", GITEE_VERSION_URL), daemon=True),
         Thread(target=_probe, args=("modelscope", MODELSCOPE_VERSION_URL), daemon=True),
     ]
     for t in threads:
@@ -1865,9 +1871,10 @@ def check_update():
     for t in threads:
         t.join(timeout=5.5)
     github = holder.get("github") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": GITHUB_VERSION_URL, "source": "github"}
+    gitee = holder.get("gitee") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": GITEE_VERSION_URL, "source": "gitee"}
     modelscope = holder.get("modelscope") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": MODELSCOPE_VERSION_URL, "source": "modelscope"}
     best: Dict[str, Any] = {}
-    for item in (github, modelscope):
+    for item in (github, gitee, modelscope):
         if item["ok"] and item["version"]:
             if not best or version_gt(item["version"], best["version"]):
                 best = {"source": item["source"], "version": item["version"]}
@@ -1879,12 +1886,13 @@ def check_update():
     return {
         "current": current,
         "github": github,
+        "gitee": gitee,
         "modelscope": modelscope,
         "latest": best,
         "update_notes": best.get("update_notes") if best else {},
         "update_notes_sources": notes_by_source,
         "update_available": update_available,
-        "reachable": bool(github["ok"] or modelscope["ok"]),
+        "reachable": bool(github["ok"] or gitee["ok"] or modelscope["ok"]),
     }
 
 def update_allowed_file(path: str) -> bool:

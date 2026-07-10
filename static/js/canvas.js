@@ -14617,7 +14617,7 @@ document.addEventListener('wheel', e => {
     if (e.ctrlKey || e.metaKey) e.preventDefault();
 }, { capture: true, passive: false });
 // 触控板捏合缩放阈值：累积 deltaY 超过该值才触发一次缩放，避免平移时轻微捏合噪声误触发
-const TRACKPAD_PINCH_THRESHOLD = 80;
+const TRACKPAD_PINCH_THRESHOLD = 5;
 let trackpadPinchAccum = 0;
 let trackpadLastPinchTime = 0;
 // 判断是否为普通鼠标滚轮（非触控板）：

@@ -16000,7 +16000,7 @@ window.onmouseup = e => {
 // gestureActive 标志用于防止 Chrome 中 gesture 和 wheel 双重缩放。
 let gestureActive = false, gestureState = null;
 // 触控板捏合缩放阈值：累积 deltaY 超过该值才触发一次缩放，避免平移时轻微捏合噪声误触发
-const TRACKPAD_PINCH_THRESHOLD = 40;
+const TRACKPAD_PINCH_THRESHOLD = 80;
 let trackpadPinchAccum = 0;
 let trackpadLastPinchTime = 0;
 

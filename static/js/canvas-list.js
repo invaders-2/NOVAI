@@ -157,7 +157,7 @@ function onBoardPanEnd(){
     board.classList.remove('panning');
 }
 // 触控板捏合缩放阈值：累积 deltaY 超过该值才触发一次缩放，避免平移时轻微捏合噪声误触发
-const TRACKPAD_PINCH_THRESHOLD = 15;
+const TRACKPAD_PINCH_THRESHOLD = 40;
 let trackpadPinchAccum = 0;
 let trackpadLastPinchTime = 0;
 

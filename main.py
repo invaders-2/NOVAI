@@ -10037,7 +10037,7 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
                 "aspect_ratio": runninghub_aspect_from_size(size, "1:1"),
             }
             if image_refs:
-                body["images"] = [await openai_video_proxy_public_reference_url(ref) for ref in image_refs[:1]]
+                body["images"] = [await openai_video_proxy_public_reference_url(ref) for ref in image_refs[:6]]
             video_url = f"{base_url}/videos" if base_url.endswith("/v1") else f"{base_url}/v1/videos"
             response = await httpx_request_with_transient_retries(
                 client,

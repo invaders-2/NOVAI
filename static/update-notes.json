@@ -1,18 +1,26 @@
 {
-  "version": "1.0.1",
-  "updated_at": "2026-07-09",
+  "version": "1.0.10",
+  "updated_at": "2026-07-10",
   "items": [
     {
       "type": "feature",
-      "text": "优化启动速度，修复若干已知问题"
+      "text": "首页新增「最近项目」区域，展示近期访问的画布"
     },
     {
-      "type": "fix",
-      "text": "修复亮色模式下侧边栏分割线颜色不一致"
+      "type": "feature",
+      "text": "版本号徽章在检测到新版本时橙色高亮呼吸动画"
     },
     {
       "type": "improve",
-      "text": "更新弹窗现在会显示详细的更新说明"
+      "text": "更新弹窗现在显示详细更新日志"
+    },
+    {
+      "type": "fix",
+      "text": "修复 main.py 仓库地址仍指向旧仓库导致版本检测异常"
+    },
+    {
+      "type": "fix",
+      "text": "修复侧边栏 overflow:hidden 裁剪更新按钮的问题"
     }
   ]
 }

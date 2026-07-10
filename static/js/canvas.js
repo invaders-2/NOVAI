@@ -6094,8 +6094,15 @@ function renderNode(node){
     el.onclick = (e) => {
         e.stopPropagation();
         if(isNodeControl(e.target)) return;
-        if(e.ctrlKey || e.metaKey) selected.has(node.id) ? selected.delete(node.id) : selected.add(node.id);
-        else if(!selected.has(node.id)) { selected.clear(); selected.add(node.id); }
+        if(e.ctrlKey || e.metaKey){
+            selected.has(node.id) ? selected.delete(node.id) : selected.add(node.id);
+            flowHighlightNodes.has(node.id) ? flowHighlightNodes.delete(node.id) : flowHighlightNodes.add(node.id);
+        } else if(!selected.has(node.id)) {
+            selected.clear(); selected.add(node.id);
+            flowHighlightNodes.add(node.id);
+        } else {
+            flowHighlightNodes.add(node.id);
+        }
         refreshSelectionVisuals();
     };
     el.oncontextmenu = e => {
@@ -13478,10 +13485,11 @@ function finishSelection(){
     const rect = selectionBox.getBoundingClientRect();
     selectionBox.style.display = 'none';
     selected.clear();
+    flowHighlightNodes.clear();
     nodesEl.querySelectorAll('.node').forEach(el => {
         const r = el.getBoundingClientRect();
         const overlaps = r.left < rect.right && r.right > rect.left && r.top < rect.bottom && r.bottom > rect.top;
-        if(overlaps) selected.add(el.dataset.id);
+        if(overlaps){ selected.add(el.dataset.id); flowHighlightNodes.add(el.dataset.id); }
     });
     selectDrag = null;
     document.body.classList.remove('canvas-selecting');
@@ -14436,6 +14444,7 @@ function getConnectedLinkKeys(nodeId){
     }
     return keys;
 }
+const flowHighlightNodes = new Set();
 function refreshSelectionVisuals(){
     nodesEl.querySelectorAll('.node').forEach(el => {
         el.classList.toggle('selected', selected.has(el.dataset.id));
@@ -14449,13 +14458,18 @@ function refreshSelectionVisuals(){
 }
 function updateLinkFlowAnimation(){
     const activeKeys = new Set();
-    for(const id of selected){
+    for(const id of flowHighlightNodes){
+        if(!nodes.some(n => n.id === id)) continue;
         for(const key of getConnectedLinkKeys(id)) activeKeys.add(key);
     }
     linksEl.querySelectorAll('path.link').forEach(p => {
         const key = p.dataset.from + '->' + p.dataset.to;
         p.classList.toggle('link-flow', activeKeys.has(key));
     });
+}
+function clearFlowHighlight(){
+    flowHighlightNodes.clear();
+    updateLinkFlowAnimation();
 }
 function pathEl(x1,y1,x2,y2,cls){
     const p = document.createElementNS('http://www.w3.org/2000/svg','path');
@@ -14635,6 +14649,7 @@ function startBoardPan(e, opts={}){
         const shouldClearSelection = dragBoard?.clearSelectionOnClick && !dragBoard.moved && selected.size;
         if(shouldClearSelection){
             selected.clear();
+            clearFlowHighlight();
             refreshSelectionVisuals();
         }
         endDrag(e2);
@@ -14937,6 +14952,7 @@ function deleteSelectedNodes(){
     nodes = nodes.filter(n => !toDelete.has(n.id));
     connections = connections.filter(c => !toDelete.has(c.from) && !toDelete.has(c.to));
     selected.clear();
+    flowHighlightNodes.clear();
     render();
     scheduleSave();
 }

@@ -53,10 +53,10 @@
 
         .home-container {
             width: 100%;
-            max-width: 900px;
+            max-width: 860px;
             display: flex;
             flex-direction: column;
-            gap: 48px;
+            gap: 40px;
         }
 
         /* ===== Hero 区 ===== */
@@ -66,11 +66,11 @@
         }
 
         .hero-title {
-            font-size: 56px;
-            font-weight: 900;
-            letter-spacing: -0.04em;
+            font-size: 48px;
+            font-weight: 300;
+            letter-spacing: 0.06em;
             line-height: 1;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             background: linear-gradient(135deg, var(--text) 0%, var(--muted) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -78,19 +78,21 @@
         }
 
         .hero-subtitle {
-            font-size: 18px;
-            font-weight: 500;
+            font-size: 14px;
+            font-weight: 400;
             color: var(--muted);
-            letter-spacing: 0.04em;
-            margin-bottom: 8px;
+            letter-spacing: 0.12em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
         }
 
         .hero-desc {
-            font-size: 14px;
+            font-size: 13px;
+            font-weight: 400;
             color: var(--muted);
-            max-width: 480px;
+            max-width: 420px;
             margin: 0 auto;
-            line-height: 1.6;
+            line-height: 1.7;
         }
 
         @keyframes fadeUp {
@@ -104,10 +106,10 @@
         }
 
         .section-title {
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 500;
             color: var(--muted);
-            letter-spacing: 0.06em;
+            letter-spacing: 0.1em;
             text-transform: uppercase;
             margin-bottom: 14px;
             padding-left: 4px;
@@ -116,7 +118,7 @@
         .recent-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 12px;
+            gap: 10px;
         }
 
         .recent-card {
@@ -124,27 +126,27 @@
             backdrop-filter: blur(40px) saturate(200%);
             -webkit-backdrop-filter: blur(40px) saturate(200%);
             border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 16px;
+            border-radius: 12px;
+            padding: 14px;
             cursor: pointer;
             transition: transform 0.3s var(--fluid-ease), box-shadow 0.3s var(--fluid-ease), border-color 0.3s var(--fluid-ease);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             text-decoration: none;
             color: var(--text);
         }
 
         .recent-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px -6px var(--card-shadow);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px -6px var(--card-shadow);
             border-color: var(--border);
         }
 
         .recent-card-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
             background: var(--bg);
             display: flex;
             align-items: center;
@@ -153,8 +155,8 @@
         }
 
         .recent-card-icon svg {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
         }
 
         .recent-card-info {
@@ -162,15 +164,15 @@
         }
 
         .recent-card-name {
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 12px;
+            font-weight: 500;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .recent-card-time {
-            font-size: 11px;
+            font-size: 10px;
             color: var(--muted);
             margin-top: 2px;
         }
@@ -187,7 +189,7 @@
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
+            gap: 12px;
         }
 
         .feature-card {
@@ -195,8 +197,8 @@
             backdrop-filter: blur(40px) saturate(200%);
             -webkit-backdrop-filter: blur(40px) saturate(200%);
             border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 28px 20px 24px;
+            border-radius: 16px;
+            padding: 24px 18px 20px;
             text-align: center;
             transition: transform 0.35s var(--fluid-ease), box-shadow 0.35s var(--fluid-ease), border-color 0.35s var(--fluid-ease);
             cursor: default;
@@ -208,39 +210,41 @@
         .feature-card:nth-child(4) { animation-delay: 0.34s; }
 
         .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 32px -8px var(--card-shadow);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px -8px var(--card-shadow);
             border-color: var(--border);
         }
 
         .feature-card-icon {
-            width: 48px;
-            height: 48px;
-            margin: 0 auto 14px;
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 14px;
+            border-radius: 12px;
             background: var(--bg);
-            color: var(--text);
+            color: var(--muted);
         }
 
         .feature-card-icon svg {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
         }
 
         .feature-card-title {
-            font-size: 15px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 500;
             margin-bottom: 6px;
             color: var(--text);
+            letter-spacing: 0.01em;
         }
 
         .feature-card-desc {
-            font-size: 12px;
+            font-size: 11px;
+            font-weight: 400;
             color: var(--muted);
-            line-height: 1.5;
+            line-height: 1.55;
         }
 
         /* ===== 快捷入口区 ===== */
@@ -256,19 +260,19 @@
             background: var(--btn-bg);
             color: var(--btn-text);
             border: none;
-            border-radius: 16px;
-            padding: 14px 36px;
-            font-size: 16px;
-            font-weight: 700;
+            border-radius: 12px;
+            padding: 12px 28px;
+            font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
             transition: all 0.35s var(--fluid-ease);
             text-decoration: none;
-            letter-spacing: -0.01em;
+            letter-spacing: 0.02em;
         }
 
         .cta-button:hover {
-            transform: scale(1.04);
-            box-shadow: 0 8px 28px -6px var(--card-shadow);
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px -6px var(--card-shadow);
         }
 
         .cta-button:active {
@@ -276,8 +280,8 @@
         }
 
         .cta-button svg {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
         }
 
         /* ===== 底部状态 ===== */
@@ -290,14 +294,14 @@
         .status-indicator {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 12px;
+            gap: 6px;
+            font-size: 11px;
             color: var(--muted);
         }
 
         .status-dot {
-            width: 7px;
-            height: 7px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: #34c759;
             animation: nano-pulse 2s ease-in-out infinite;
@@ -313,14 +317,14 @@
             .cards-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            .hero-title { font-size: 40px; }
+            .hero-title { font-size: 36px; }
         }
 
         @media (max-width: 480px) {
             .cards-grid {
                 grid-template-columns: 1fr;
             }
-            .hero-title { font-size: 34px; }
+            .hero-title { font-size: 30px; }
         }
     </style>
 </head>

@@ -98,6 +98,91 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        /* ===== 最近项目 ===== */
+        .recent-section {
+            animation: fadeUp 0.7s var(--fluid-ease) 0.12s both;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            padding-left: 4px;
+        }
+
+        .recent-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .recent-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: transform 0.3s var(--fluid-ease), box-shadow 0.3s var(--fluid-ease), border-color 0.3s var(--fluid-ease);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .recent-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px -6px var(--card-shadow);
+            border-color: var(--border);
+        }
+
+        .recent-card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .recent-card-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .recent-card-info {
+            min-width: 0;
+        }
+
+        .recent-card-name {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .recent-card-time {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .recent-empty {
+            font-size: 13px;
+            color: var(--muted);
+            padding: 20px 0;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
+
         /* ===== 功能卡片区 ===== */
         .cards-grid {
             display: grid;
@@ -250,6 +335,14 @@
             </p>
         </section>
 
+        <!-- 最近项目 -->
+        <section class="recent-section">
+            <div class="section-title">最近项目</div>
+            <div class="recent-grid" id="recentProjects">
+                <div class="recent-empty">暂无最近项目，开始创作后这里将显示你最近访问的画布</div>
+            </div>
+        </section>
+
         <!-- 功能卡片区 -->
         <section class="cards-grid">
             <div class="feature-card">
@@ -331,6 +424,57 @@
                 }
             }
         });
+
+        // 最近项目
+        (function renderRecentProjects() {
+            var grid = document.getElementById('recentProjects');
+            try {
+                var projects = JSON.parse(localStorage.getItem('novai_recent_canvases') || '[]');
+            } catch(e) {
+                var projects = [];
+            }
+            if (!projects.length) return;
+
+            var html = '';
+            // 按最近访问时间倒序，取前 4 个
+            projects.sort(function(a, b) { return (b.lastOpened || 0) - (a.lastOpened || 0); });
+            var recent = projects.slice(0, 4);
+
+            recent.forEach(function(p) {
+                var timeAgo = getTimeAgo(p.lastOpened);
+                html += '<div class="recent-card" onclick="parent.postMessage({type:\'navigate\',route:\'canvas\'},\'*\')">' +
+                    '<div class="recent-card-icon">' +
+                    '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>' +
+                    '<rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' +
+                    '</svg></div>' +
+                    '<div class="recent-card-info">' +
+                    '<div class="recent-card-name">' + escapeHtml(p.name) + '</div>' +
+                    '<div class="recent-card-time">' + timeAgo + '</div>' +
+                    '</div></div>';
+            });
+
+            grid.innerHTML = html;
+        })();
+
+        function getTimeAgo(timestamp) {
+            if (!timestamp) return '';
+            var diff = Date.now() - timestamp;
+            var mins = Math.floor(diff / 60000);
+            if (mins < 1) return '刚刚';
+            if (mins < 60) return mins + ' 分钟前';
+            var hours = Math.floor(mins / 60);
+            if (hours < 24) return hours + ' 小时前';
+            var days = Math.floor(hours / 24);
+            if (days < 30) return days + ' 天前';
+            return new Date(timestamp).toLocaleDateString();
+        }
+
+        function escapeHtml(str) {
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
     </script>
 </body>
 </html>

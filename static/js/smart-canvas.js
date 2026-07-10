@@ -15999,9 +15999,15 @@ window.onmouseup = e => {
 // Mac触摸板手势处理：Safari 通过 gesturechange 缩放，Chrome 通过 wheel 缩放。
 // gestureActive 标志用于防止 Chrome 中 gesture 和 wheel 双重缩放。
 let gestureActive = false, gestureState = null;
+// 触控板捏合缩放阈值：累积 deltaY 超过该值才触发一次缩放，避免平移时轻微捏合噪声误触发
+const TRACKPAD_PINCH_THRESHOLD = 15;
+let trackpadPinchAccum = 0;
+let trackpadLastPinchTime = 0;
+
 document.addEventListener('gesturestart', e => {
     e.preventDefault();
     gestureActive = true;
+    trackpadPinchAccum = 0;
     const rect = shell.getBoundingClientRect();
     gestureState = {
         startScale: viewport.scale,
@@ -16024,26 +16030,40 @@ document.addEventListener('gesturechange', e => {
 document.addEventListener('gestureend', e => {
     gestureActive = false;
     gestureState = null;
+    trackpadPinchAccum = 0;
     scheduleSave();
 });
+// 阻止浏览器默认的页面缩放（Ctrl/Cmd + 滚轮、触控板捏合），防止整个网页被放大
+document.addEventListener('wheel', e => {
+    if (e.ctrlKey || e.metaKey) e.preventDefault();
+}, { capture: true, passive: false });
 shell.addEventListener('wheel', e => {
     if(e.target.closest('.composer,.smart-back,.image-edit-modal,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.workflow-transfer-panel,.log-modal,.shortcut-modal,.prompt-node-segments,.prompt-node-text,.prompt-node-llm,.smart-group-list,[data-thumb-scroll]')) return;
     e.preventDefault();
+    const now = Date.now();
+    // 超过 200ms 没有新的捏合事件，重置累积器（新一轮手势）
+    if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
+    trackpadLastPinchTime = now;
     if(e.ctrlKey || e.metaKey){
         // gesture 活跃时跳过，避免 Chrome 上 gesture + wheel 双重缩放
-        if(gestureActive) return;
+        if(gestureActive){ trackpadPinchAccum = 0; return; }
         // ctrlKey+wheel = 缩放（Mac触摸板捏合手势到达此处时为ctrlKey+wheel）
+        // 累积 deltaY，超过阈值才触发缩放
+        trackpadPinchAccum += e.deltaY;
+        if(Math.abs(trackpadPinchAccum) < TRACKPAD_PINCH_THRESHOLD) return;
         const rect = shell.getBoundingClientRect();
         const sx = e.clientX - rect.left;
         const sy = e.clientY - rect.top;
         const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
-        const factor = Math.exp(-e.deltaY * 0.01);
+        const factor = Math.exp(-trackpadPinchAccum * 0.01);
         viewport.scale = safeScale(viewport.scale * factor);
         viewport.x = sx - before.x * viewport.scale;
         viewport.y = sy - before.y * viewport.scale;
+        trackpadPinchAccum = 0;
         applyViewport();
     } else {
-        // 普通滚轮/双指滑动 = 画布平移
+        // 普通滚轮/双指滑动 = 画布平移，重置捏合累积器
+        trackpadPinchAccum = 0;
         viewport.x -= e.deltaX;
         viewport.y -= e.deltaY;
         applyViewport();

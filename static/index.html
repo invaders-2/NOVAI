@@ -23,11 +23,11 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.15.1783694871"></script>
-    <script src="/static/js/theme.js?v=1.0.15.1783694851"></script>
-    <script src="/static/js/i18n.js?v=1.0.15.1783694841"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.25.1783700802"></script>
+    <script src="/static/js/theme.js?v=1.0.25.1783700779"></script>
+    <script src="/static/js/i18n.js?v=1.0.25.1783700767"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=1.0.15.1783694862');
+        @import url('/static/vendor/css/fonts.css?v=1.0.25.1783700790');
 
         /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
         .w-1\.5 { width: 0.375rem; }
@@ -46,7 +46,7 @@
         :root {
             --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
             --bg: #f5f5f7;
-            --sidebar-bg: #ffffff;
+            --sidebar-bg: rgba(255,255,255,0.55);
             --stage-bg: #ffffff;
             --border: rgba(0, 0, 0, 0.07);
             --stage-border: rgba(0, 0, 0, 0.08);
@@ -64,7 +64,7 @@
         html.theme-dark,
         body.theme-dark {
             --bg: #0c0c0c;
-            --sidebar-bg: #141416;
+            --sidebar-bg: rgba(18,18,18,0.6);
             --stage-bg: #141416;
             --border: rgba(255, 255, 255, 0.07);
             --stage-border: rgba(255, 255, 255, 0.08);
@@ -154,9 +154,9 @@
             flex-direction: column;
             align-items: center;
             border-right: 1px solid var(--border);
-            border-radius: 28px;
+            border-radius: 16px;
             margin: 12px 0 12px 12px;
-            padding: 32px 0 12px 0;
+            padding: 32px 0 8px 0;
             transition: width 0.4s var(--fluid-ease) 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s;
             z-index: 50;
             overflow-y: auto;
@@ -211,7 +211,7 @@
             font-size: 10px;
             color: var(--muted);
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 8px;
             transition: all 0.35s var(--fluid-ease);
             white-space: nowrap;
             opacity: 0;
@@ -421,7 +421,7 @@
 
         html.theme-dark .stage,
         body.theme-dark .stage {
-            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.2);
+            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--stage-border);
         }
 
         body.studio-scale-host .stage {
@@ -568,7 +568,7 @@
 
         .side-actions {
             margin-top:auto;
-            margin-bottom:12px;
+            margin-bottom:0;
             display:flex;
             flex-direction:column;
             align-items:center;
@@ -1095,7 +1095,7 @@
         .update-notes-empty { margin:0; color:#848488; font-size:12px; line-height:1.55; }
         .update-source-list { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; align-items:stretch; }
         @media (max-width: 720px) { .update-source-list { grid-template-columns:1fr; } }
-        .update-source-card { width:100%; min-width:0; height:100%; border:1px solid #e5e5e5; border-radius:10px; background:#fff; color:#1c1c1e; text-align:left; padding:12px; display:flex; flex-direction:column; gap:10px; cursor:pointer; transition:border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease; }
+        .update-source-card { width:100%; min-width:0; border:1px solid #e5e5e5; border-radius:10px; background:#fff; color:#1c1c1e; text-align:left; padding:12px; display:flex; flex-direction:column; gap:10px; cursor:pointer; transition:border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease; }
         .update-source-card:hover { transform:translateY(-1px); border-color:#d1d1d6; box-shadow:0 12px 28px rgba(28,28,28,.08); }
         .update-source-card.active { border-color:#16a34a; box-shadow:0 0 0 2px rgba(22,163,74,.20); background:#f0fdf4; }
         .update-source-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
@@ -2000,17 +2000,17 @@
         </script>
 
         <main class="stage">
-            <iframe id="frame-home" data-src="/static/home.html?v=1.0.15.1783694824" class="active" scrolling="yes"></iframe>
-            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-online" data-src="/static/online.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.15.1783694878" scrolling="yes"></iframe>
+            <iframe id="frame-home" data-src="/static/home.html?v=1.0.25.1783760699" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.25.1783760739" scrolling="yes"></iframe>
+            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.25.1783760738" scrolling="yes"></iframe>
+            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.25.1783760739" scrolling="yes"></iframe>
+            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.25.1783760738" scrolling="yes"></iframe>
+            <iframe id="frame-online" data-src="/static/online.html?v=1.0.25.1783760739" scrolling="yes"></iframe>
+            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.25.1783760739" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.25.1783760738" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.25.1783760738" scrolling="yes"></iframe>
+            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.25.1783760738" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.25.1783760738" scrolling="yes"></iframe>
 
         </main>
     </div>
@@ -2644,10 +2644,6 @@
         }
 
         function bestUpdateSourceFromConnectivity(data) {
-            const sources = data.sources || {};
-            // 优先选可用的源，Gitee 优先（国内网络更好）
-            if (sources.gitee && sources.gitee.ok) return 'gitee';
-            if (sources.github && sources.github.ok) return 'github';
             return 'github';
         }
 
@@ -2656,9 +2652,6 @@
                 'GitHub 更新列表': ['GitHub 更新列表', 'GitHub update API'],
                 'GitHub 版本文件': ['GitHub 版本文件', 'GitHub version file'],
                 'GitHub 主页': ['GitHub 主页', 'GitHub home page'],
-                'Gitee 更新列表': ['Gitee 更新列表', 'Gitee update API'],
-                'Gitee 版本文件': ['Gitee 版本文件', 'Gitee version file'],
-                'Gitee 主页': ['Gitee 主页', 'Gitee home page'],
                 'Google 连通性': ['Google 连通性', 'Google connectivity'],
             };
             const item = labels[name] || [name, name];
@@ -2688,14 +2681,10 @@
         function updateConnectivityTargets() {
             const sources = appInfo.sources || {};
             const github = sources.github || {};
-            const gitee = sources.gitee || {};
             return [
                 { name:'GitHub 更新列表', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1', source:'github', required:true },
                 { name:'GitHub 版本文件', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION', source:'github', required:true },
                 { name:'GitHub 主页', url:'https://github.com/', source:'github' },
-                { name:'Gitee 更新列表', url:gitee.tree_url || 'https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1', source:'gitee', required:true },
-                { name:'Gitee 版本文件', url:gitee.version_url || 'https://gitee.com/invaders/novai/raw/main/VERSION', source:'gitee', required:true },
-                { name:'Gitee 主页', url:'https://gitee.com/', source:'gitee' },
                 { name:'Google 连通性', url:'https://www.google.com/generate_204', source:'reference' },
             ];
         }
@@ -2733,7 +2722,6 @@
             });
             };
             renderInto(document.querySelector('[data-connectivity-source="github"]'), 'github');
-            renderInto(document.querySelector('[data-connectivity-source="gitee"]'), 'gitee');
         }
 
         function refreshProjectUpdateModalText() {
@@ -2751,6 +2739,7 @@
             const confirmText = document.getElementById('project-update-confirm-text');
             const closeBtn = document.querySelector('#project-update-modal .studio-modal-close');
             if(titleEl) titleEl.textContent = title;
+            renderProjectUpdateNotes();
             document.querySelectorAll('[data-update-source]').forEach(card => {
                 const source = card.dataset.updateSource || 'github';
                 const active = source === updateSource;
@@ -2783,8 +2772,8 @@
                     'warn',
                     updateUiText('建议先测试连通性', 'Connectivity test recommended'),
                     updateUiText(
-                        '测试会检测 GitHub / Gitee 连通性。',
-                        'The test checks GitHub / Gitee connectivity.'
+                        '测试会检测 GitHub 连通性。',
+                        'The test checks GitHub connectivity.'
                     )
                 );
             } else if(updateConnectivityResult.backend_missing) {
@@ -2824,13 +2813,9 @@
             const modal = document.getElementById('project-update-modal');
             if(!modal) return;
             updateConnectivityResult = null;
-            projectUpdateNotes = null;
             refreshProjectUpdateModalText();
             modal.hidden = false;
             document.getElementById('connectivity-test-btn')?.focus?.();
-            // 隐藏更新说明，等更新完成后才显示
-            const notesBox = document.getElementById('project-update-notes');
-            if(notesBox) notesBox.hidden = true;
         }
 
         function closeProjectUpdateModal() {
@@ -2856,7 +2841,7 @@
 
         function computeConnectivitySources(results) {
             const out = {};
-            for(const source of ['github', 'gitee']) {
+            for(const source of ['github']) {
                 const reqAll = (results || []).filter(it => it.source === source && it.required);
                 out[source] = {
                     ok: reqAll.length > 0 && reqAll.every(it => it.ok),

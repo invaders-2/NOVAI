@@ -14,6 +14,18 @@ __pycache__/
 .env
 .cozeproj/reduction
 
+# 生成的图片/视频
+assets/
+
+# Claude Code skills
+.claude/
+
+# 代码分析缓存
+.codegraph/
+
+# 数据文件（画布、项目配置等）
+data/
+
 # JS/TS bundlers & build outputs
 .next
 .nuxt

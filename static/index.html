@@ -702,14 +702,15 @@
             height:38px;
             border-radius:999px;
             background: transparent;
-            border: 1px solid var(--border);
+            outline: 1px solid transparent;
+            outline-offset: -1px;
             color: var(--muted);
             display: flex;
             align-items: center;
             justify-content: flex-start;
             padding-left: 14px;
             cursor: pointer;
-            transition: width 0.3s var(--fluid-ease) 0.3s, gap 0.3s var(--fluid-ease) 0.3s, background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            transition: width 0.3s var(--fluid-ease) 0.3s, gap 0.3s var(--fluid-ease) 0.3s, background-color 0.2s, color 0.2s, outline-color 0.2s, transform 0.2s, box-shadow 0.2s;
             flex-shrink: 0;
             overflow:hidden;
             gap:8px;
@@ -724,14 +725,14 @@
         .side-pill:hover {
             background: var(--nav-hover-bg);
             color: var(--text);
-            border-color: var(--stage-border);
+            outline-color: var(--stage-border);
             transform: translateX(2px);
         }
 
         .side-pill.active {
             background: var(--text);
             color: var(--bg);
-            border-color: var(--text);
+            outline-color: var(--text);
             box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.12);
         }
 
@@ -741,7 +742,7 @@
         }
 
         .side-pill.update-available {
-            border-color:#22c55e;
+            outline-color:#22c55e;
             color:#16a34a;
             overflow:visible;
         }
@@ -752,15 +753,19 @@
             align-items: center;
             justify-content: flex-start;
             gap: 6px;
-            padding: 8px 12px 8px 14px;
+            width: 48px;
+            padding: 8px 0 8px 14px;
             margin-top: auto;
             opacity: 0;
-            transition: opacity 0.25s ease;
+            overflow: hidden;
+            transition: opacity 0.25s ease, width 0.3s var(--fluid-ease) 0.3s;
         }
 
         .sidebar:hover .version-display,
         .sidebar.is-pinned .version-display {
             opacity: 1;
+            width: 190px;
+            transition-delay: 0s;
         }
 
         .version-text {
@@ -904,28 +909,29 @@
         .project-version-badge {
             width:48px;
             min-height:18px;
-            padding:0 4px;
+            padding:0 0 0 14px;
             border-radius:999px;
-            border:1px solid var(--border);
+            outline:1px solid transparent;
+            outline-offset:-1px;
             background:var(--nav-hover-bg);
             color:var(--muted);
             display:flex;
             align-items:center;
-            justify-content:center;
+            justify-content:flex-start;
             font-size:9px;
             font-weight:800;
             line-height:1;
             white-space:nowrap;
             overflow:hidden;
             cursor:pointer;
-            transition:width 0.3s var(--fluid-ease) 0.5s, color .2s, border-color .2s, background-color .2s;
+            transition:width 0.3s var(--fluid-ease) 0.5s, color .2s, outline-color .2s, background-color .2s;
         }
-        .project-version-badge:hover { color:var(--text); border-color:var(--accent, #6366f1); }
+        .project-version-badge:hover { color:var(--text); outline-color:var(--accent, #6366f1); }
         .project-version-badge.checking { opacity:.6; animation:badge-pulse 1s ease-in-out infinite; }
         .project-version-badge.has-update {
             color: #fff;
             background: #f59e0b;
-            border-color: #f59e0b;
+            outline-color: #f59e0b;
             animation: update-glow 2s ease-in-out infinite;
         }
         @keyframes update-glow {
@@ -947,9 +953,10 @@
             display:none;
             width:48px;
             min-height:24px;
-            padding:0 7px 0 14px;
+            padding:0 0 0 14px;
             border-radius:999px;
-            border:1px solid rgba(34,197,94,.35);
+            outline:1px solid rgba(34,197,94,.35);
+            outline-offset:-1px;
             background:rgba(34,197,94,.1);
             color:#16a34a;
             align-items:center;
@@ -958,7 +965,7 @@
             font-size:9px;
             font-weight:900;
             overflow:hidden;
-            transition:width 0.3s var(--fluid-ease) 0.5s, background-color .2s, color .2s, border-color .2s;
+            transition:width 0.3s var(--fluid-ease) 0.5s, background-color .2s, color .2s, outline-color .2s;
         }
         .update-now-btn.show { display:flex; }
         .sidebar:hover .update-now-btn { width:190px; transition-delay:0s; }
@@ -1541,6 +1548,14 @@
             max-width: 120px;
             transition-delay: .15s;
         }
+        .sidebar.is-pinned .project-version-badge {
+            width: 190px;
+            transition-delay: 0s;
+        }
+        .sidebar.is-pinned .update-now-btn {
+            width: 190px;
+            transition-delay: 0s;
+        }
 
         .sidebar.is-collapsing:hover {
             width: 80px;
@@ -1563,6 +1578,15 @@
         .sidebar.is-collapsing:hover .side-pill {
             width: 48px;
             gap: 0;
+        }
+        .sidebar.is-collapsing:hover .version-display {
+            width: 48px;
+        }
+        .sidebar.is-collapsing:hover .project-version-badge {
+            width: 48px;
+        }
+        .sidebar.is-collapsing:hover .update-now-btn {
+            width: 48px;
         }
         .sidebar.is-collapsing:hover .side-pill-text {
             opacity: 0;

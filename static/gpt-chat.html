@@ -234,7 +234,7 @@
         .composer-body:focus-within,
         .composer-body.has-overflow { overflow:auto; }
         .composer-body.drag-over { border-color:var(--chat-line-2); background:var(--chat-soft); box-shadow:inset 0 0 0 1px var(--chat-line); }
-        textarea { width:100%; flex:1 1 auto; min-height:36px; max-height:96px; resize:none; outline:none; border:0; padding:2px; font-size:14px; line-height:1.55; background:transparent; color:var(--chat-text); }
+        textarea { width:100%; flex:1 1 auto; min-height:36px; max-height:50vh; resize:vertical; outline:none; border:0; padding:2px; font-size:14px; line-height:1.55; background:transparent; color:var(--chat-text); }
         textarea::placeholder { color:var(--chat-faint); }
         .attachment-stack { display:flex; flex-direction:column; align-items:flex-start; gap:8px; min-width:0; }
         .composer-inside-foot { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px; overflow:visible; flex:0 0 auto; }
@@ -1778,7 +1778,7 @@ body {
             if(!body) return;
             body.classList.toggle('has-overflow', body.scrollHeight > body.clientHeight + 2);
         }
-        function autoGrow(el){ el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 150) + 'px'; updateComposerOverflow(); }
+        function autoGrow(el){ el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.5) + 'px'; updateComposerOverflow(); }
         function handleKey(e){ if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); } }
         window.addEventListener('keydown', e => {
             if(e.key === 'Escape') closeImagePreview();

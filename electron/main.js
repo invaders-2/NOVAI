@@ -183,7 +183,7 @@ function createWindow() {
     },
     show: false,
     titleBarStyle: isWin ? 'default' : 'hiddenInset',
-    trafficLightPosition: isWin ? undefined : { x: 16, y: 16 },
+    trafficLightPosition: isWin ? undefined : { x: 16, y: 54 },
   });
 
   mainWindow.once('ready-to-show', () => {

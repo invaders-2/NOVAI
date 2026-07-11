@@ -1,6 +1,6 @@
 {
   "name": "novai",
-  "version": "1.0.38",
+  "version": "1.0.39",
   "description": "NOVAI - 无限画布 AI 图像生成工具",
   "main": "main.js",
   "author": "invaders",

@@ -99,7 +99,7 @@ numbers, text, letters, labels, frame numbers, corner marks, annotations, captio
 ## 预设5：产品三视图
 
 ### 适用场景
-产品设计的正面/侧面/顶面展示，用于工业设计、电商详情、技术文档
+产品设计的正面/侧面/顶面展示，用于工业设计、商品详情、技术文档
 
 ### 正向提示词
 ```

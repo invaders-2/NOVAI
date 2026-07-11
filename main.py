@@ -6482,7 +6482,64 @@ def make_asset_library_item(src: str, name: str = "", subdir: str = "") -> Tuple
         "created_at": now_ms(),
     }
     return dest_name, item
-    return lib
+
+def make_asset_library_item_ref(src_url: str, name: str = "") -> Dict[str, Any]:
+    """Create an asset library item that references the original file without copying.
+    This avoids duplicate storage - the item points to the original /output/ or /assets/ path.
+    """
+    kind = asset_library_media_kind(src_url)
+    safe_name = sanitize_asset_name(name or os.path.basename(src_url), "asset")
+    if not os.path.splitext(safe_name)[1]:
+        ext = asset_library_safe_extension(src_url, kind)
+        safe_name += ext
+    item = {
+        "id": f"asset_{uuid.uuid4().hex[:12]}",
+        "name": os.path.splitext(safe_name)[0][:120],
+        "url": src_url,
+        "kind": kind,
+        "created_at": now_ms(),
+        "auto_synced": True,
+    }
+    return item
+
+def auto_sync_to_asset_library(urls: list, source: str = ""):
+    """Auto-sync generated images/videos to the asset library without copying files.
+    References the original file paths to avoid duplicate storage.
+    """
+    if not urls:
+        return
+    try:
+        lib = load_asset_library()
+        # Find the first image category in the default library
+        target_cat = None
+        for library in lib.get("libraries", []):
+            if library.get("id") == (lib.get("active_library_id") or "default"):
+                for cat in library.get("categories", []):
+                    if cat.get("type") == "image":
+                        target_cat = cat
+                        break
+                break
+        if not target_cat:
+            # Fallback to root categories
+            for cat in lib.get("categories", []):
+                if cat.get("type") == "image":
+                    target_cat = cat
+                    break
+        if not target_cat:
+            return
+        existing_urls = {item.get("url") for item in target_cat.get("items", []) if isinstance(item, dict)}
+        added = []
+        for url in urls:
+            if not url or url in existing_urls:
+                continue
+            item = make_asset_library_item_ref(url, name=f"{source}_{os.path.basename(url)}" if source else "")
+            target_cat.setdefault("items", []).append(item)
+            existing_urls.add(url)
+            added.append(item)
+        if added:
+            save_asset_library(lib)
+    except Exception as e:
+        print(f"[auto_sync] Failed to sync to asset library: {e}")
 
 ASSET_CLASSIFICATION_PROMPT = """请识别这张图片，输出严格 JSON，不要 Markdown，不要解释。
 目标是给素材库做非常全面的筛选分类。所有字段都用中文短标签数组，尽量具体但不要虚构。
@@ -12781,6 +12838,8 @@ async def build_online_image_result(payload: OnlineImageRequest):
         "raw_usage": raw.get("usage") if isinstance(raw, dict) else None,
     }
     save_to_history(result)
+    # Auto-sync generated images to asset library (no file copy, just reference)
+    auto_sync_to_asset_library(local_urls, source="online")
     if GLOBAL_LOOP:
         asyncio.run_coroutine_threadsafe(manager.broadcast_new_image(result), GLOBAL_LOOP)
     return result
@@ -12829,6 +12888,8 @@ async def query_image_task(payload: ImageTaskQueryRequest):
                         "raw": raw,
                     }
                     save_to_history(result)
+                    # Auto-sync RunningHub generated images to asset library
+                    auto_sync_to_asset_library(local_urls, source="runninghub")
                     if GLOBAL_LOOP:
                         asyncio.run_coroutine_threadsafe(manager.broadcast_new_image(result), GLOBAL_LOOP)
                     return result
@@ -12896,6 +12957,9 @@ async def query_image_task(payload: ImageTaskQueryRequest):
             "raw": raw,
         }
         save_to_history(result)
+        # Auto-sync generated images/videos to asset library (no file copy, just reference)
+        all_media_urls = [u for u in (local_images + local_videos) if u]
+        auto_sync_to_asset_library(all_media_urls, source=req.type or "comfy")
         if GLOBAL_LOOP:
             asyncio.run_coroutine_threadsafe(manager.broadcast_new_image(result), GLOBAL_LOOP)
         return result

@@ -8052,7 +8052,7 @@ function renderLLMNodePane(container, node){
         inputEl.oninput = e => { node.userInput = e.target.value; };
     }
     bindScrollableText(container.querySelector('.llm-result-output'));
-    container.querySelector('.llm-pane-resizer').onmousedown = e => startLLMPaneResize(e, node);
+    container.querySelector('.llm-pane-resizer').onmousedown = e => startLLMChatResize(e, node);
     container.querySelector('.llm-run').onclick = e => { e.stopPropagation(); runLLMNode(node.id); };
     bindCascadeButtons(container, node.id);
     const copyBtn = container.querySelector('.llm-output-copy');
@@ -8209,6 +8209,41 @@ function startLLMPaneResize(e, node){
     };
     window.onmousemove = onLLMPaneResize;
     window.onmouseup = endDrag;
+}
+let llmChatDrag = null;
+function startLLMChatResize(e, node){
+    e.preventDefault();
+    e.stopPropagation();
+    llmChatDrag = {
+        node,
+        sy:e.clientY,
+        logStart:Math.max(80, node.llmChatLogHeight || 260),
+        inputStart:Math.max(40, node.llmChatInputHeight || 60)
+    };
+    window.onmousemove = onLLMChatResize;
+    window.onmouseup = endLLMChatDrag;
+}
+function onLLMChatResize(e){
+    if(!llmChatDrag) return;
+    const delta = (e.clientY - llmChatDrag.sy) / viewport.scale;
+    const minLog = 80, minInput = 40;
+    const total = llmChatDrag.logStart + llmChatDrag.inputStart;
+    const nextLog = Math.max(minLog, Math.min(total - minInput, llmChatDrag.logStart + delta));
+    const nextInput = Math.max(minInput, total - nextLog);
+    llmChatDrag.node.llmChatLogHeight = Math.round(nextLog);
+    llmChatDrag.node.llmChatInputHeight = Math.round(nextInput);
+    const el = nodesEl.querySelector(`.node[data-id="${llmChatDrag.node.id}"]`);
+    if(el){
+        const logEl = el.querySelector('.llm-chat-log');
+        const inputEl = el.querySelector('.llm-chat-input');
+        if(logEl){ logEl.style.height = `${llmChatDrag.node.llmChatLogHeight}px`; logEl.style.flexBasis = `${llmChatDrag.node.llmChatLogHeight}px`; }
+        if(inputEl){ inputEl.style.height = `${llmChatDrag.node.llmChatInputHeight}px`; inputEl.style.flexBasis = `${llmChatDrag.node.llmChatInputHeight}px`; }
+    }
+}
+function endLLMChatDrag(){
+    llmChatDrag = null;
+    window.onmousemove = null;
+    window.onmouseup = null;
 }
 function onLLMPaneResize(e){
     if(!llmPaneDrag) return;
@@ -14133,6 +14168,7 @@ function endDrag(event=null){
     dragBoard = null;
     resizeNode = null;
     llmPaneDrag = null;
+    llmChatDrag = null;
     knifeActive = false;
     knifePoint = null;
     knifeTrail = [];

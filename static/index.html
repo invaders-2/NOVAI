@@ -707,19 +707,18 @@
             color: var(--muted);
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             cursor: pointer;
             transition: width 0.3s var(--fluid-ease) 0.3s, gap 0.3s var(--fluid-ease) 0.3s, background-color 0.2s, color 0.2s, outline-color 0.2s, transform 0.2s, box-shadow 0.2s;
             flex-shrink: 0;
             overflow:hidden;
             gap:8px;
             position:relative;
+            padding-left: 14px;
         }
 
         .sidebar:hover .side-pill {
             width: 190px;
-            justify-content: flex-start;
-            padding-left: 14px;
             transition-delay: 0s;
         }
 
@@ -873,7 +872,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: center;
             gap: 8px;
             pointer-events: none;
             transition: max-height .28s var(--fluid-ease), opacity .18s ease;

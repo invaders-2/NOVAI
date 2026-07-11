@@ -2644,6 +2644,10 @@
         }
 
         function bestUpdateSourceFromConnectivity(data) {
+            const sources = data.sources || {};
+            // 优先选可用的源，Gitee 优先（国内网络更好）
+            if (sources.gitee && sources.gitee.ok) return 'gitee';
+            if (sources.github && sources.github.ok) return 'github';
             return 'github';
         }
 
@@ -2652,6 +2656,9 @@
                 'GitHub 更新列表': ['GitHub 更新列表', 'GitHub update API'],
                 'GitHub 版本文件': ['GitHub 版本文件', 'GitHub version file'],
                 'GitHub 主页': ['GitHub 主页', 'GitHub home page'],
+                'Gitee 更新列表': ['Gitee 更新列表', 'Gitee update API'],
+                'Gitee 版本文件': ['Gitee 版本文件', 'Gitee version file'],
+                'Gitee 主页': ['Gitee 主页', 'Gitee home page'],
                 'Google 连通性': ['Google 连通性', 'Google connectivity'],
             };
             const item = labels[name] || [name, name];
@@ -2681,10 +2688,14 @@
         function updateConnectivityTargets() {
             const sources = appInfo.sources || {};
             const github = sources.github || {};
+            const gitee = sources.gitee || {};
             return [
                 { name:'GitHub 更新列表', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1', source:'github', required:true },
                 { name:'GitHub 版本文件', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION', source:'github', required:true },
                 { name:'GitHub 主页', url:'https://github.com/', source:'github' },
+                { name:'Gitee 更新列表', url:gitee.tree_url || 'https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1', source:'gitee', required:true },
+                { name:'Gitee 版本文件', url:gitee.version_url || 'https://gitee.com/invaders/novai/raw/main/VERSION', source:'gitee', required:true },
+                { name:'Gitee 主页', url:'https://gitee.com/', source:'gitee' },
                 { name:'Google 连通性', url:'https://www.google.com/generate_204', source:'reference' },
             ];
         }
@@ -2722,6 +2733,7 @@
             });
             };
             renderInto(document.querySelector('[data-connectivity-source="github"]'), 'github');
+            renderInto(document.querySelector('[data-connectivity-source="gitee"]'), 'gitee');
         }
 
         function refreshProjectUpdateModalText() {
@@ -2772,8 +2784,8 @@
                     'warn',
                     updateUiText('建议先测试连通性', 'Connectivity test recommended'),
                     updateUiText(
-                        '测试会检测 GitHub 连通性。',
-                        'The test checks GitHub connectivity.'
+                        '测试会检测 GitHub / Gitee 连通性。',
+                        'The test checks GitHub / Gitee connectivity.'
                     )
                 );
             } else if(updateConnectivityResult.backend_missing) {
@@ -2813,9 +2825,13 @@
             const modal = document.getElementById('project-update-modal');
             if(!modal) return;
             updateConnectivityResult = null;
+            projectUpdateNotes = null;
             refreshProjectUpdateModalText();
             modal.hidden = false;
             document.getElementById('connectivity-test-btn')?.focus?.();
+            // 隐藏更新说明，等更新完成后才显示
+            const notesBox = document.getElementById('project-update-notes');
+            if(notesBox) notesBox.hidden = true;
         }
 
         function closeProjectUpdateModal() {
@@ -2841,7 +2857,7 @@
 
         function computeConnectivitySources(results) {
             const out = {};
-            for(const source of ['github']) {
+            for(const source of ['github', 'gitee']) {
                 const reqAll = (results || []).filter(it => it.source === source && it.required);
                 out[source] = {
                     ok: reqAll.length > 0 && reqAll.every(it => it.ok),

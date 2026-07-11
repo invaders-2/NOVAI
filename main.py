@@ -1733,6 +1733,60 @@ def app_info():
         "update_notes": read_local_update_notes(version),
     }
 
+@app.get("/api/changelog")
+def api_changelog(limit: int = 50):
+    """从 git log 自动生成 changelog"""
+    limit = max(1, min(int(limit or 50), 200))
+    items = []
+    try:
+        repo_dir = os.path.dirname(os.path.abspath(__file__))
+        result = subprocess.run(
+            ["git", "log", f"--max-count={limit}", "--pretty=format:%H|%s|%ai|%an"],
+            capture_output=True, text=True, timeout=10, cwd=repo_dir,
+        )
+        if result.returncode != 0:
+            return {"version": current_app_version(), "items": [], "source": "git", "error": result.stderr.strip()}
+        for line in result.stdout.strip().split("\n"):
+            if not line.strip():
+                continue
+            parts = line.split("|", 3)
+            if len(parts) < 4:
+                continue
+            commit_hash, message, date_str, author = parts
+            msg = message.strip()
+            if not msg:
+                continue
+            # 解析 conventional commit 类型
+            commit_type = "update"
+            msg_lower = msg.lower()
+            if msg_lower.startswith("feat"):
+                commit_type = "feature"
+                msg = re.sub(r"^feat(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
+            elif msg_lower.startswith("fix"):
+                commit_type = "bugfix"
+                msg = re.sub(r"^fix(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
+            elif msg_lower.startswith("refine") or msg_lower.startswith("refactor"):
+                commit_type = "refine"
+                msg = re.sub(r"^(refine|refactor)(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
+            elif msg_lower.startswith("perf"):
+                commit_type = "perf"
+                msg = re.sub(r"^perf(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
+            elif msg_lower.startswith("chore") or msg_lower.startswith("docs") or msg_lower.startswith("style"):
+                commit_type = "chore"
+                msg = re.sub(r"^(chore|docs|style)(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
+            # 截取日期
+            date_clean = date_str.strip()[:10] if date_str else ""
+            items.append({
+                "type": commit_type,
+                "text": msg[:500],
+                "date": date_clean,
+                "hash": commit_hash[:8],
+                "author": author.strip(),
+            })
+    except Exception as exc:
+        return {"version": current_app_version(), "items": [], "source": "git", "error": str(exc)}
+    return {"version": current_app_version(), "items": items, "source": "git"}
+
 def connectivity_probe(name: str, url: str, timeout: float = 5.0) -> Dict[str, Any]:
     started = time.time()
     item = {

@@ -5060,6 +5060,27 @@ def is_lingjing_provider(provider):
     provider_id = str((provider or {}).get("id") or "").strip().lower()
     return provider_id == "lingjing" or "apistudio.vip" in base_url
 
+def is_lingjing_kling_model(model_id: str) -> bool:
+    """灵境 Kling 可灵视频模型"""
+    return bool(model_id and str(model_id).lower().startswith("kling-"))
+
+def is_lingjing_minimax_model(model_id: str) -> bool:
+    """灵境 MiniMax/海螺视频模型"""
+    return bool(model_id and str(model_id).lower().startswith("minimax-"))
+
+def is_lingjing_bailian_model(model_id: str) -> bool:
+    """灵境 阿里百炼/通义万象视频模型"""
+    m = str(model_id or "").lower()
+    return m.startswith("wan2.") or m.startswith("wanx") or m.startswith("happyhorse-")
+
+def is_lingjing_pixverse_model(model_id: str) -> bool:
+    """灵境 PixVerse 视频模型"""
+    return bool(model_id and str(model_id).lower().startswith("pixverse"))
+
+def is_lingjing_grok_video_model(model_id: str) -> bool:
+    """灵境 Grok 视频模型"""
+    return bool(model_id and str(model_id).lower().startswith("grok-imagine-"))
+
 def is_agnes_provider(provider, model=""):
     base_url = str((provider or {}).get("base_url") or "").lower()
     model_id = str(model or "").strip().lower()
@@ -13452,6 +13473,430 @@ async def yuli_fetch_reference_bytes(client, ref_url):
         return (f"input_reference.{ext}", raw, mime)
     return None
 
+KLING_POLL_INTERVAL = 5
+KLING_POLL_TIMEOUT = 600
+
+def kling_model_name(model_id: str) -> str:
+    m = str(model_id or "").lower()
+    if "kling-3.0-turbo" in m or "kling-v2-5" in m:
+        return "kling-v2-5-turbo"
+    if "kling-v1-6" in m:
+        return "kling-v1-6"
+    return "kling-v2-5-turbo"
+
+def kling_duration(dur) -> int:
+    try:
+        v = int(dur)
+    except Exception:
+        return 5
+    return v if v in (5, 10) else 5
+
+def kling_aspect_ratio(size) -> str:
+    s = str(size or "").strip()
+    mapping = {
+        "16:9": "16:9", "9:16": "9:16", "1:1": "1:1",
+        "1024x576": "16:9", "576x1024": "9:16", "1024x1024": "1:1",
+    }
+    return mapping.get(s, "16:9")
+
+async def fetch_image_base64_for_kling(client, ref) -> str:
+    """将图片转为 base64 data URL 供 Kling API 使用"""
+    ref_url = str(getattr(ref, "url", "") or "").strip()
+    if not ref_url:
+        return ""
+    if ref_url.startswith("data:image/"):
+        return ref_url
+    path = output_file_from_url(ref_url)
+    if path:
+        ext = os.path.splitext(path)[1].lower().lstrip(".")
+        mime_map = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
+        mime = mime_map.get(ext, "image/png")
+        try:
+            with open(path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+            return f"data:{mime};base64,{b64}"
+        except Exception:
+            return ""
+    if ref_url.startswith("http://") or ref_url.startswith("https://"):
+        try:
+            resp = await client.get(ref_url)
+            resp.raise_for_status()
+            content_type = resp.headers.get("content-type", "image/png").split(";")[0].strip()
+            b64 = base64.b64encode(resp.content).decode()
+            return f"data:{content_type};base64,{b64}"
+        except Exception:
+            return ""
+    return ""
+
+async def poll_kling_video(client, query_url: str, headers: dict, task_id: str) -> dict:
+    deadline = time.time() + KLING_POLL_TIMEOUT
+    while time.time() < deadline:
+        await asyncio.sleep(KLING_POLL_INTERVAL)
+        resp = await client.get(query_url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        status = (data.get("data") or {}).get("task_status", "")
+        if status == "succeed":
+            return data
+        if status == "failed":
+            msg = (data.get("data") or {}).get("task_status_msg", "") or data.get("message", "unknown")
+            raise HTTPException(status_code=502, detail=f"Kling 视频生成失败（{task_id}）：{msg}")
+    raise HTTPException(status_code=504, detail=f"Kling 视频生成超时（{task_id}）")
+
+async def generate_lingjing_kling_video(client, payload, provider, base_url, model_id):
+    """灵境 Kling 视频生成：文生视频 / 图生视频"""
+    has_image = bool(payload.images and len(payload.images) > 0 and getattr(payload.images[0], 'url', None))
+    model_name = kling_model_name(model_id)
+    
+    if has_image:
+        submit_url = f"{base_url}/kling/v1/videos/image2video"
+        image_b64 = await fetch_image_base64_for_kling(client, payload.images[0])
+        body = {
+            "model_name": model_name,
+            "prompt": str(payload.prompt or ""),
+            "image": image_b64,
+            "duration": str(kling_duration(payload.duration)),
+            "aspect_ratio": kling_aspect_ratio(payload.aspect_ratio or payload.size),
+        }
+    else:
+        submit_url = f"{base_url}/kling/v1/videos/text2video"
+        body = {
+            "model_name": model_name,
+            "prompt": str(payload.prompt or ""),
+            "duration": kling_duration(payload.duration),
+            "aspect_ratio": kling_aspect_ratio(payload.aspect_ratio or payload.size),
+        }
+    
+    headers = api_headers(json_body=True, provider=provider)
+    resp = await client.post(submit_url, json=body, headers=headers)
+    resp.raise_for_status()
+    data = resp.json()
+    if data.get("code") != 0:
+        raise HTTPException(status_code=502, detail=f"Kling API 错误：{data.get('message', 'unknown')}")
+    
+    task_id = data["data"]["task_id"]
+    query_path = "image2video" if has_image else "text2video"
+    query_url = f"{base_url}/kling/v1/videos/{query_path}/{task_id}"
+    
+    result = await poll_kling_video(client, query_url, headers, task_id)
+    task_result = (result.get("data") or {}).get("task_result") or {}
+    urls = []
+    for video in task_result.get("videos", []):
+        url = video.get("url", "")
+        if url:
+            urls.append(url)
+    if not urls:
+        raise HTTPException(status_code=502, detail=f"Kling 视频生成成功但无视频URL：{result}")
+    
+    local_urls = [await save_remote_video_to_output(u) for u in urls]
+    return {"videos": local_urls, "task_id": task_id, "raw": result}
+
+MINIMAX_POLL_INTERVAL = 5
+MINIMAX_POLL_TIMEOUT = 600
+
+def minimax_duration(dur) -> int:
+    try:
+        v = int(dur)
+    except Exception:
+        return 6
+    return v if v in (6, 10) else 6
+
+async def poll_minimax_video(client, base_url: str, headers: dict, task_id: str) -> dict:
+    query_url = f"{base_url}/minimax/v1/query/video_generation?task_id={task_id}"
+    deadline = time.time() + MINIMAX_POLL_TIMEOUT
+    while time.time() < deadline:
+        await asyncio.sleep(MINIMAX_POLL_INTERVAL)
+        resp = await client.get(query_url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        base_resp = data.get("base_resp", {})
+        # 提交级错误才在这里捕获
+        if base_resp.get("status_code", 0) != 0:
+            raise HTTPException(status_code=502, detail=f"MiniMax API 错误：{base_resp.get('status_msg', 'unknown')}")
+        gen_status = data.get("status") or ""
+        if gen_status.lower() in ("success", "succeed", "completed", "done"):
+            return data
+        if gen_status.lower() in ("failed", "error"):
+            raise HTTPException(status_code=502, detail=f"MiniMax 视频生成失败（{task_id}）：status={gen_status}")
+    raise HTTPException(status_code=504, detail=f"MiniMax 视频生成超时（{task_id}）")
+
+async def generate_lingjing_minimax_video(client, payload, provider, base_url, model_id):
+    """灵境 MiniMax/海螺 视频生成"""
+    submit_url = f"{base_url}/minimax/v1/video_generation"
+    body = {
+        "model": str(model_id).strip() or "MiniMax-Hailuo-02",
+        "prompt": str(payload.prompt or ""),
+        "duration": minimax_duration(payload.duration),
+    }
+    
+    # 图生视频：添加 first_frame_image
+    if payload.images:
+        first_img = payload.images[0]
+        first_url = str(getattr(first_img, "url", "") or "").strip()
+        if first_url:
+            # 转为 base64 data URL
+            b64 = await fetch_image_base64_for_kling(client, first_img)
+            if b64:
+                body["first_frame_image"] = b64
+    
+    headers = api_headers(json_body=True, provider=provider)
+    resp = await client.post(submit_url, json=body, headers=headers)
+    resp.raise_for_status()
+    data = resp.json()
+    
+    base_resp = data.get("base_resp", {})
+    if base_resp.get("status_code", 0) != 0:
+        raise HTTPException(status_code=502, detail=f"MiniMax API 错误：{base_resp.get('status_msg', 'unknown')}")
+    
+    task_id = data.get("task_id", "")
+    if not task_id:
+        raise HTTPException(status_code=502, detail=f"MiniMax API 未返回 task_id：{data}")
+    
+    result = await poll_minimax_video(client, base_url, headers, task_id)
+    
+    try:
+        file_info = result.get("file") or result.get("data", {}).get("file") or {}
+        download_url = file_info.get("download_url") or file_info.get("backup_download_url") or ""
+    except (KeyError, TypeError):
+        download_url = ""
+    
+    if not download_url:
+        raise HTTPException(status_code=502, detail=f"MiniMax 视频生成成功但无视频URL：{result}")
+    
+    local_url = await save_remote_video_to_output(download_url)
+    return {"videos": [local_url], "task_id": task_id, "raw": result}
+
+BAILIAN_POLL_INTERVAL = 5
+BAILIAN_POLL_TIMEOUT = 600
+
+async def poll_bailian_video(client, base_url: str, headers: dict, task_id: str) -> dict:
+    query_url = f"{base_url}/alibailian/api/v1/tasks/{task_id}"
+    deadline = time.time() + BAILIAN_POLL_TIMEOUT
+    while time.time() < deadline:
+        await asyncio.sleep(BAILIAN_POLL_INTERVAL)
+        resp = await client.get(query_url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        output = data.get("output", {})
+        status = output.get("task_status", "")
+        if status == "SUCCEEDED":
+            return data
+        if status == "FAILED":
+            msg = output.get("message", "") or data.get("message", "unknown")
+            raise HTTPException(status_code=502, detail=f"阿里百炼视频生成失败（{task_id}）：{msg}")
+    raise HTTPException(status_code=504, detail=f"阿里百炼视频生成超时（{task_id}）")
+
+async def generate_lingjing_bailian_video(client, payload, provider, base_url, model_id):
+    """灵境 阿里百炼/通义万象 视频生成"""
+    submit_url = f"{base_url}/alibailian/api/v1/services/aigc/video-generation/video-synthesis"
+    
+    input_obj = {"prompt": str(payload.prompt or "")}
+    
+    # 图生视频：img_url
+    if payload.images:
+        first_url = str(getattr(payload.images[0], "url", "") or "").strip()
+        if first_url:
+            input_obj["img_url"] = first_url
+    
+    parameters = {}
+    dur = None
+    try:
+        dur = int(payload.duration) if payload.duration else None
+    except Exception:
+        pass
+    if dur:
+        parameters["duration"] = dur
+    
+    size = str(payload.aspect_ratio or payload.size or "").strip()
+    if size:
+        parameters["resolution"] = size
+    
+    body = {
+        "model": str(model_id).strip(),
+        "input": input_obj,
+        "parameters": parameters,
+    }
+    
+    headers = api_headers(json_body=True, provider=provider)
+    resp = await client.post(submit_url, json=body, headers=headers)
+    resp.raise_for_status()
+    data = resp.json()
+    
+    task_id = (data.get("output") or {}).get("task_id", "")
+    if not task_id:
+        raise HTTPException(status_code=502, detail=f"阿里百炼 API 未返回 task_id：{data}")
+    
+    result = await poll_bailian_video(client, base_url, headers, task_id)
+    video_url = (result.get("output") or {}).get("video_url", "")
+    if not video_url:
+        raise HTTPException(status_code=502, detail=f"阿里百炼视频生成成功但无 video_url：{result}")
+    
+    local_url = await save_remote_video_to_output(video_url)
+    return {"videos": [local_url], "task_id": task_id, "raw": result}
+
+PIXVERSE_POLL_INTERVAL = 5
+PIXVERSE_POLL_TIMEOUT = 600
+
+def pixverse_model_name(model_id: str) -> str:
+    return "v6"
+
+def pixverse_duration(dur) -> int:
+    try:
+        v = int(dur)
+    except Exception:
+        return 5
+    return max(1, min(v, 15))
+
+async def poll_pixverse_video(client, base_url: str, headers: dict, video_id: str) -> dict:
+    query_url = f"{base_url}/openapi/v2/video/result/{video_id}"
+    deadline = time.time() + PIXVERSE_POLL_TIMEOUT
+    while time.time() < deadline:
+        await asyncio.sleep(PIXVERSE_POLL_INTERVAL)
+        resp = await client.get(query_url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        err_msg = str(data.get("ErrMsg") or "").strip()
+        if err_msg and err_msg.lower() in ("success", "completed"):
+            return data
+        # 有 url 即为完成
+        resp_obj = data.get("Resp") or {}
+        if resp_obj.get("url"):
+            return data
+        if err_msg and err_msg.lower() in ("failed", "error"):
+            raise HTTPException(status_code=502, detail=f"PixVerse 视频生成失败（{video_id}）")
+    raise HTTPException(status_code=504, detail=f"PixVerse 视频生成超时（{video_id}）")
+
+def extract_pixverse_video_url(data: dict) -> str:
+    """从 PixVerse 返回中提取视频 URL"""
+    # PixVerse 返回结构: Resp.url
+    resp = data.get("Resp") or {}
+    for key in ("url", "video_url", "output_url", "download_url"):
+        v = resp.get(key)
+        if v:
+            return str(v)
+    for key in ("video_url", "url", "output_url", "result_url", "download_url"):
+        v = data.get(key)
+        if v:
+            return str(v)
+    d = data.get("data") or {}
+    if isinstance(d, dict):
+        for key in ("video_url", "url", "output_url", "result_url", "download_url", "videos"):
+            v = d.get(key)
+            if v:
+                if isinstance(v, list) and v:
+                    return str(v[0])
+                return str(v)
+    output = data.get("output") or {}
+    if isinstance(output, dict):
+        for key in ("video_url", "url", "result_url"):
+            v = output.get(key)
+            if v:
+                return str(v)
+    return ""
+
+async def generate_lingjing_pixverse_video(client, payload, provider, base_url, model_id):
+    """灵境 PixVerse 视频生成"""
+    submit_url = f"{base_url}/openapi/v2/video/text/generate"
+    
+    body = {
+        "model": pixverse_model_name(model_id),
+        "prompt": str(payload.prompt or ""),
+        "aspect_ratio": str(payload.aspect_ratio or payload.size or "16:9"),
+        "duration": pixverse_duration(payload.duration),
+        "quality": "720p",
+    }
+    
+    headers = api_headers(json_body=True, provider=provider)
+    resp = await client.post(submit_url, json=body, headers=headers)
+    resp.raise_for_status()
+    data = resp.json()
+    
+    video_id = (data.get("Resp") or {}).get("video_id") or data.get("video_id") or data.get("task_id") or ""
+    if not video_id:
+        video_id = str((data.get("data") or {}).get("video_id", "") or "")
+    if not video_id:
+        raise HTTPException(status_code=502, detail=f"PixVerse API 未返回 video_id：{data}")
+    
+    result = await poll_pixverse_video(client, base_url, headers, video_id)
+    video_url = extract_pixverse_video_url(result)
+    if not video_url:
+        raise HTTPException(status_code=502, detail=f"PixVerse 视频生成成功但未提取到视频URL：{result}")
+    
+    local_url = await save_remote_video_to_output(video_url)
+    return {"videos": [local_url], "task_id": video_id, "raw": result}
+
+GROK_POLL_INTERVAL = 5
+GROK_POLL_TIMEOUT = 600
+
+async def poll_grok_video(client, base_url: str, headers: dict, task_id: str) -> dict:
+    query_url = f"{base_url}/v1/video/query?id={task_id}"
+    deadline = time.time() + GROK_POLL_TIMEOUT
+    while time.time() < deadline:
+        await asyncio.sleep(GROK_POLL_INTERVAL)
+        resp = await client.get(query_url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json()
+        status = data.get("status") or data.get("task_status", "")
+        if status in ("completed", "success", "succeed", "done"):
+            return data
+        if status in ("failed", "error"):
+            msg = data.get("error", {}).get("message", "") if isinstance(data.get("error"), dict) else data.get("message", "")
+            raise HTTPException(status_code=502, detail=f"Grok 视频生成失败（{task_id}）：{msg}")
+    raise HTTPException(status_code=504, detail=f"Grok 视频生成超时（{task_id}）")
+
+async def generate_lingjing_grok_video(client, payload, provider, base_url, model_id):
+    """灵境 Grok 视频生成（/v1/videos 提交 + /v1/video/query 查询）"""
+    grok_size_map = {
+        "16:9": "1280x720", "9:16": "720x1280", "1:1": "1024x1024",
+        "1024x576": "1280x720", "576x1024": "720x1280", "1024x1024": "1024x1024",
+        "1280x720": "1280x720", "720x1280": "720x1280",
+    }
+    grok_size = grok_size_map.get(str(payload.aspect_ratio or payload.size or "").strip(), "1280x720")
+    
+    submit_url = f"{base_url}/v1/videos"
+    data_fields = {
+        "model": str(model_id).strip(),
+        "prompt": str(payload.prompt or ""),
+        "seconds": str(minimax_duration(payload.duration)),
+        "size": grok_size,
+        "watermark": "false",
+    }
+    
+    files = []
+    for ref in (payload.images or [])[:1]:
+        ref_file = await yuli_fetch_reference_bytes(client, getattr(ref, "url", ""))
+        if ref_file:
+            files.append(("input_reference", ref_file))
+    
+    headers = api_headers(json_body=False, provider=provider)
+    if files:
+        resp = await client.post(submit_url, headers=headers, data=data_fields, files=files)
+    else:
+        multipart_fields = [(k, (None, v)) for k, v in data_fields.items()]
+        resp = await client.post(submit_url, headers=headers, files=multipart_fields)
+    resp.raise_for_status()
+    
+    try:
+        raw = resp.json()
+    except Exception:
+        raw = {"text": (resp.text or "")[:500]}
+    
+    task_id = str(raw.get("id") or raw.get("task_id") or "").strip()
+    if not task_id:
+        raise HTTPException(status_code=502, detail=f"Grok API 未返回 task_id：{raw}")
+    
+    result = await poll_grok_video(client, base_url, headers, task_id)
+    video_url = result.get("video_url") or result.get("url") or ""
+    if not video_url:
+        # 尝试从 output 字段提取
+        out = result.get("output") or {}
+        video_url = out.get("video_url") or out.get("url") or ""
+    if not video_url:
+        raise HTTPException(status_code=502, detail=f"Grok 视频生成成功但无视频URL：{result}")
+    
+    local_url = await save_remote_video_to_output(video_url)
+    return {"videos": [local_url], "task_id": task_id, "raw": result}
+
 async def generate_lingjing_openai_video(client, payload, provider, base_url, requested_model):
     """灵境 API OpenAI 视频格式：POST /v1/videos，参考图走 multipart input_reference。"""
     submit_url = f"{base_url}/v1/videos"
@@ -13583,6 +14028,17 @@ async def canvas_video(payload: CanvasVideoRequest):
     if is_lingjing:
         try:
             async with httpx.AsyncClient(timeout=VIDEO_POLL_TIMEOUT) as lingjing_client:
+                if is_lingjing_kling_model(requested_model):
+                    return await generate_lingjing_kling_video(lingjing_client, payload, provider, base_url, requested_model)
+                if is_lingjing_minimax_model(requested_model):
+                    return await generate_lingjing_minimax_video(lingjing_client, payload, provider, base_url, requested_model)
+                if is_lingjing_bailian_model(requested_model):
+                    return await generate_lingjing_bailian_video(lingjing_client, payload, provider, base_url, requested_model)
+                if is_lingjing_pixverse_model(requested_model):
+                    return await generate_lingjing_pixverse_video(lingjing_client, payload, provider, base_url, requested_model)
+                if is_lingjing_grok_video_model(requested_model):
+                    return await generate_lingjing_grok_video(lingjing_client, payload, provider, base_url, requested_model)
+                # fallback 到通用 OpenAI 视频格式
                 return await generate_lingjing_openai_video(lingjing_client, payload, provider, base_url, requested_model)
         except httpx.HTTPStatusError as exc:
             text = exc.response.text

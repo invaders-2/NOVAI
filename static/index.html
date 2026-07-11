@@ -45,13 +45,16 @@
 
         :root {
             --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-in: cubic-bezier(0.55, 0, 0.68, 0.25);
+            --ease-hover: cubic-bezier(0.25, 0.1, 0.25, 1);
             --bg: #f5f5f7;
             --sidebar-bg: rgba(255,255,255,0.55);
             --stage-bg: #ffffff;
             --border: rgba(0, 0, 0, 0.07);
             --stage-border: rgba(0, 0, 0, 0.08);
             --text: #1c1c1e;
-            --muted: #6e6e73;
+            --muted: #656569;
             --nav-hover-bg: rgba(0, 0, 0, 0.04);
             --monitor-bg: rgba(255, 255, 255, 0.88);
             --monitor-border: rgba(0, 0, 0, 0.08);
@@ -59,6 +62,10 @@
             --divider: rgba(0, 0, 0, 0.08);
             --scrollbar: rgba(0, 0, 0, 0.12);
             --scrollbar-hover: rgba(0, 0, 0, 0.22);
+            --focus-ring: rgba(59, 130, 246, 0.5);
+            --card-shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
+            --card-shadow-md: 0 4px 16px -4px rgba(0,0,0,0.06);
+            --card-shadow-lg: 0 8px 28px -6px rgba(0,0,0,0.1);
         }
 
         html.theme-dark,
@@ -77,6 +84,10 @@
             --divider: rgba(255, 255, 255, 0.08);
             --scrollbar: rgba(255, 255, 255, 0.12);
             --scrollbar-hover: rgba(255, 255, 255, 0.22);
+            --focus-ring: rgba(96, 165, 250, 0.5);
+            --card-shadow-sm: 0 1px 2px rgba(0,0,0,0.15);
+            --card-shadow-md: 0 4px 16px -4px rgba(0,0,0,0.25);
+            --card-shadow-lg: 0 8px 28px -6px rgba(0,0,0,0.35);
         }
 
         /* 极简滚动条 */
@@ -129,7 +140,7 @@
             color: var(--text);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            transition: background 0.5s var(--fluid-ease), color 0.5s var(--fluid-ease);
+            transition: background 0.5s var(--ease-out), color 0.5s var(--ease-out);
         }
 
         .app-shell {
@@ -157,10 +168,10 @@
             border-radius: 16px;
             margin: 12px 0 12px 12px;
             padding: 32px 0 8px 0;
-            transition: width 0.4s var(--fluid-ease) 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s;
+            transition: width 0.4s var(--ease-out) 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s;
             z-index: 50;
             overflow-y: auto;
-            box-shadow: 0 0 0 1px var(--border);
+            box-shadow: var(--card-shadow-sm), 0 0 0 1px var(--border);
         }
 
         .sidebar:hover {
@@ -194,7 +205,7 @@
             margin-bottom: 4px;
             padding: 4px 6px;
             border-radius: 8px;
-            transition: all 0.35s var(--fluid-ease);
+            transition: all 0.35s var(--ease-out);
             white-space: nowrap;
             text-align: center;
             background: transparent;
@@ -212,7 +223,7 @@
             color: var(--muted);
             text-align: center;
             margin-bottom: 8px;
-            transition: all 0.35s var(--fluid-ease);
+            transition: all 0.35s var(--ease-out);
             white-space: nowrap;
             opacity: 0;
         }
@@ -233,10 +244,21 @@
             justify-content: flex-start;
             border-radius: 16px;
             cursor: pointer;
-            transition: width 0.3s var(--fluid-ease) 0.3s, background 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            transition: width 0.3s var(--ease-out) 0.3s, background 0.2s var(--ease-hover), color 0.2s var(--ease-hover), transform 0.2s var(--ease-hover), box-shadow 0.2s var(--ease-hover);
             color: var(--muted);
             overflow: hidden;
             padding-left: 14px;
+        }
+
+        /* 侧边栏收起时增大点击热区 */
+        .sidebar:not(:hover) .nav-item {
+            position: relative;
+        }
+        .sidebar:not(:hover) .nav-item::after {
+            content: '';
+            position: absolute;
+            inset: -4px -8px;
+            /* 扩展热区超出视觉边界 */
         }
 
         .sidebar:hover .nav-item {
@@ -250,15 +272,27 @@
             transform: translateX(2px);
         }
 
+        .nav-item:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+            background: var(--nav-hover-bg);
+            color: var(--text);
+        }
+
         .nav-item.active {
             background: var(--text);
             color: var(--bg);
-            box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.12);
+            box-shadow: var(--card-shadow-sm), 0 4px 16px -2px rgba(0, 0, 0, 0.12);
         }
 
         .nav-item.active:hover {
             transform: translateX(0);
-            box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--card-shadow-sm), 0 6px 16px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item.active:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 3px;
         }
 
         .nav-item.active::before {
@@ -292,7 +326,7 @@
             font-weight: 600;
             font-size: 14px;
             white-space: nowrap;
-            transition: opacity 0.3s 0.3s;
+            transition: opacity 0.3s var(--ease-out) 0.3s;
         }
 
         .sidebar:hover .nav-text {
@@ -305,7 +339,7 @@
             height: 1px;
             background: var(--divider);
             margin: 8px auto;
-            transition: width 0.35s var(--fluid-ease);
+            transition: width 0.3s var(--ease-out);
         }
 
         .sidebar:hover .nav-divider { width: 160px; }
@@ -315,7 +349,7 @@
             width: 48px;
             height: 36px;
             flex: 0 0 36px;
-            margin: 0 0 6px;
+            margin: 0 0 8px;
             padding-left: 14px;
             border: 1px solid var(--border);
             border-radius: 16px;
@@ -326,7 +360,7 @@
             justify-content: flex-start;
             cursor: pointer;
             overflow: hidden;
-            transition: width 0.3s var(--fluid-ease) 0.5s, background-color 0.2s, color 0.2s, border-color 0.2s;
+            transition: width 0.3s var(--ease-out) 0.5s, background-color 0.2s var(--ease-hover), color 0.2s var(--ease-hover), border-color 0.2s var(--ease-hover);
         }
 
         .sidebar:hover .nav-fold-toggle {
@@ -340,11 +374,16 @@
             border-color: var(--stage-border);
         }
 
+        .nav-fold-toggle:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+        }
+
         .nav-fold-icon {
             width: 18px;
             height: 18px;
             flex: 0 0 auto;
-            transition: transform 0.25s var(--fluid-ease);
+            transition: transform 0.25s var(--ease-out);
         }
 
         .nav-fold-toggle[aria-expanded="false"] .nav-fold-icon {
@@ -360,7 +399,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            transition: max-height 0.3s var(--fluid-ease), opacity 0.2s ease;
+            transition: max-height 0.3s var(--ease-out), opacity 0.2s var(--ease-in);
         }
 
         .nav-fold-group.is-collapsed {
@@ -415,13 +454,13 @@
             overflow: hidden;
             border: 1px solid var(--stage-border);
             position: relative;
-            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
-            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px var(--stage-border);
+            transition: background 0.3s var(--ease-out), border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px var(--stage-border), var(--card-shadow-sm);
         }
 
         html.theme-dark .stage,
         body.theme-dark .stage {
-            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--stage-border);
+            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--stage-border), var(--card-shadow-sm);
         }
 
         body.studio-scale-host .stage {
@@ -438,7 +477,7 @@
             opacity: 0;
             transform: scale(1.01);
             filter: blur(3px);
-            transition: opacity 0.4s var(--fluid-ease), transform 0.4s var(--fluid-ease), filter 0.4s var(--fluid-ease);
+            transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out), filter 0.4s var(--ease-out);
             pointer-events: none;
         }
 
@@ -447,6 +486,51 @@
             transform: scale(1);
             filter: blur(0);
             pointer-events: auto;
+        }
+
+        /* 页面切换骨架屏 */
+        .stage-skeleton {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            padding: 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            background: var(--stage-bg);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s var(--ease-in);
+        }
+        .stage-skeleton.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .skeleton-block {
+            border-radius: 12px;
+            background: linear-gradient(90deg, var(--nav-hover-bg) 25%, rgba(128,128,128,0.08) 50%, var(--nav-hover-bg) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.4s ease infinite;
+        }
+        .skeleton-block.sk-hero { height: 48px; max-width: 320px; margin: 0 auto; }
+        .skeleton-block.sk-text { height: 16px; max-width: 480px; margin: 0 auto; }
+        .skeleton-block.sk-text-sm { height: 12px; max-width: 360px; margin: 0 auto; }
+        .skeleton-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .skeleton-card {
+            width: 140px;
+            height: 100px;
+            border-radius: 16px;
+            background: linear-gradient(90deg, var(--nav-hover-bg) 25%, rgba(128,128,128,0.08) 50%, var(--nav-hover-bg) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.4s ease infinite;
+        }
+        @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
 
         /* 左下角监视器 */
@@ -464,14 +548,14 @@
             padding: 8px 14px;
             border-radius: 14px;
             border: 1px solid var(--monitor-border);
-            box-shadow: 0 4px 16px -2px var(--monitor-shadow), 0 0 0 1px var(--monitor-border);
+            box-shadow: var(--card-shadow-sm), 0 4px 16px -2px var(--monitor-shadow), 0 0 0 1px var(--monitor-border);
             font-family: 'SF Mono', 'Fira Code', monospace;
-            transition: all 0.3s var(--fluid-ease);
+            transition: all 0.3s var(--ease-out);
         }
 
         .nano-monitor:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px -4px var(--monitor-shadow), 0 0 0 1px var(--monitor-border);
+            box-shadow: var(--card-shadow-sm), 0 8px 24px -4px var(--monitor-shadow), 0 0 0 1px var(--monitor-border);
         }
 
         .nano-monitor.is-busy {
@@ -2000,7 +2084,20 @@
         </script>
 
         <main class="stage">
-            <iframe id="frame-home" data-src="/static/home.html?v=1.0.28.1783768832" class="active" scrolling="yes"></iframe>
+            <!-- 页面切换骨架屏 -->
+            <div class="stage-skeleton" id="stageSkeleton">
+                <div class="skeleton-block sk-hero"></div>
+                <div class="skeleton-block sk-text"></div>
+                <div class="skeleton-block sk-text-sm"></div>
+                <div style="flex:1"></div>
+                <div class="skeleton-row">
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+            </div>
+            <iframe id="frame-home" data-src="/static/home.html?v=1.0.28.1783769382" class="active" scrolling="yes"></iframe>
             <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.28.1783768285" scrolling="yes"></iframe>
             <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.28.1783768285" scrolling="yes"></iframe>
             <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.28.1783768285" scrolling="yes"></iframe>
@@ -2223,7 +2320,21 @@
             if(el) el.classList.add('active');
             document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
             const target = document.getElementById('frame-' + id);
+            // 显示骨架屏
+            const skeleton = document.getElementById('stageSkeleton');
+            const needsLoad = !target.src;
+            if (skeleton && needsLoad) {
+                skeleton.classList.add('is-visible');
+            }
             target.classList.add('active');
+            if (needsLoad) {
+                target.addEventListener('load', function onLoad() {
+                    target.removeEventListener('load', onLoad);
+                    if (skeleton) skeleton.classList.remove('is-visible');
+                });
+            } else {
+                if (skeleton) skeleton.classList.remove('is-visible');
+            }
             if (!target.src) target.src = target.dataset.src;
             if(!options.skipRemember) localStorage.setItem(ACTIVE_PAGE_KEY, id);
             // sync theme to newly activated iframe

@@ -268,6 +268,192 @@ seam, visible seam, hard seam, broken panorama, discontinuous edge, mismatched l
 
 ---
 
+## 电商
+
+> **分类**：电商
+> **适用平台**：Midjourney / Flux / 即梦 / 可灵 / ComfyUI
+> **核心约束**：鞋类替换预设（11-13）强制保留白底图品牌logo/文字/英文不变形，参考图logo/文案必须去除
+
+---
+
+### 预设11：鞋子静物场景替换
+
+#### 适用场景
+将参考静物场景图中的鞋子替换为用户提供的多角度白底产品图鞋子，保留场景、光影、角度不变。用于鞋类电商主图、场景化展示。
+
+#### 正向提示词 (CN)
+```
+将参考静物场景图中的鞋子替换为多角度白底产品图中的鞋子。严格保留原场景不变——背景物品、道具摆放、光源方向、阴影位置、反光、构图、拍摄角度全部锁定。替换后的鞋子必须以完全相同的透视角度和位置呈现。保留白底图的全部材质细节：精确色值、材质纹理（皮革纹路、织物编织、麂皮绒面、针织纹理、橡胶大底）、车线缝线、鞋带结构、鞋底纹路、金属五金件、表面光泽度（哑光/亮面/漆皮）。白底图鞋面上的品牌logo、文字、英文、字母、图案等所有标识元素必须原样保留，位置精准、比例正确、不变形不拉伸不扭曲、清晰可读。鞋子整体形状不变形——鞋头、鞋身、鞋跟、鞋口、鞋底弧度等全部轮廓线精确一致。自然融入场景：鞋面接受相同方向光照，高光点与场景光源匹配，投影与现有阴影无缝融合，边缘过渡无接缝、无光晕、无色彩断层。最终效果应为单张原始拍摄照片。
+```
+
+#### 正向提示词 (EN)
+```
+Replace the shoes in the reference still-life scene with the shoes from the multi-angle white-background product image. Keep the reference scene completely unchanged — all background elements, props, lighting direction, shadow positions, reflections, composition and camera angle must remain identical. The replacement shoes must render at the exact same perspective angle and position as the original shoes. Retain full material detail from the white-background image: precise color accuracy, material texture (leather grain, fabric weave, suede nap, knit pattern, rubber outsole), stitching, lace structure, sole tread, metallic hardware, and surface finish (matte/glossy/patent). All branding elements on the white-background shoes — logos, text, English characters, letters, patterns — must be preserved exactly: precise positioning, correct proportions, no deformation, stretching or distortion, sharp and legible. Shoe overall shape must not deform — toe box, body, heel, collar, sole curvature all maintain identical silhouette. Natural scene integration: shoes receive identical light direction, specular highlights match scene lighting, cast shadows blend seamlessly with existing shadows. Edge blending must be seamless — no visible seams, no halos, no color mismatch between shoe and background. Final result must appear as a single original photograph.
+```
+
+#### 额外规则
+- 参考图中若有品牌logo、文案、水印、角标等文字/图形元素，必须去除
+- 白底图鞋子上所有品牌标识（logo/文字/英文/图案）必须原样保留，不变形
+
+#### 负向提示词 (CN)
+```
+场景变化、背景改动、光源变化、阴影不匹配、反光不一致、透视错位、角度偏差、位置偏移、色差、材质丢失、纹理丢失、细节丢失、缝线丢失、鞋带丢失、鞋底丢失、logo变形、logo拉伸、logo扭曲、logo模糊、logo丢失、logo位移、文字变形、文字模糊、文字丢失、品牌标识丢失、标识损坏、鞋子变形、鞋头被压扁、鞋身拉长、鞋跟扭曲、鞋口变形、鞋底弧度错误、模糊、像素化、可见接缝、抠图感、贴图感、鞋子悬浮、参考图logo残留、参考图文案残留、参考图水印残留、低画质、JPEG压缩伪影
+```
+
+#### 负向提示词 (EN)
+```
+scene change, background alteration, lighting change, shadow mismatch, reflection mismatch, perspective mismatch, angle mismatch, position shift, color shift, material loss, texture loss, detail loss, stitching loss, lace loss, sole loss, logo deformed, logo stretched, logo distorted, logo blurred, logo lost, logo displaced, text deformed, text blurred, text lost, brand mark lost, branding damaged, shoe deformed, toe box crushed, shoe body elongated, heel twisted, collar deformed, sole curve incorrect, blurry, pixelated, visible seam, visible edge, halo, glow, cutout look, pasted look, floating shoe, reference image logo residue, reference image text residue, reference image watermark residue, distorted shape, low quality, JPEG artifacts
+```
+
+---
+
+### 预设12：模特上脚图鞋子替换
+
+#### 适用场景
+将模特上脚图中的鞋子替换为用户白底产品图鞋子，区分左右脚，保留模特/场景/光影。用于鞋类电商穿搭展示。
+
+#### 正向提示词 (CN)
+```
+将模特上脚图中的鞋子替换为多角度白底产品图中的鞋子。精确区分左右脚。模特、姿态、服装、背景、光源、场景完全保留不变。替换后的鞋子必须自然穿着于脚上——包裹脚型、贴合脚背弧度、脚踝轮廓、鞋头位置精准。匹配原始穿着角度和脚部朝向。保留白底图的全部材质细节：精确色值、材质纹理（皮革纹路、织物编织、麂皮绒面）、车线缝线、鞋带结构、大底纹路、金属五金件、表面光泽度。白底图鞋面上的品牌logo、文字、英文、字母、图案等所有标识元素必须原样保留，位置精准、比例正确、不变形不拉伸不扭曲、清晰可读。鞋子整体形状不变形——鞋头、鞋身、鞋跟、鞋口、鞋底弧度等全部轮廓线精确一致。自然光影融合：鞋面接受一致光源方向、鞋脚接触点环境遮挡自然、在皮肤和地面上投射自然阴影。关键左右脚区分：左右鞋必须呈现正确的非对称性（内侧/外侧弧度、鞋头造型）。鞋脚边界无可见接缝、无异常空隙、无悬浮感。最终效果应为单张原始拍摄照片。
+```
+
+#### 正向提示词 (EN)
+```
+Replace the shoes worn on the model's feet with the shoes from the multi-angle white-background product image. Accurately distinguish left and right foot shoes. Keep the model, pose, clothing, background, lighting and scene completely unchanged. Replacement shoes must dress naturally onto the feet — wrapping around the foot shape, following instep curve, ankle contour, and toe box position precisely. Match the original wear angle and foot orientation exactly. Retain full material detail: exact color accuracy, material texture (leather grain, fabric weave, suede nap), stitching, lace structure, sole tread, metallic hardware, surface finish (matte/glossy/patent). All branding elements on the white-background shoes — logos, text, English characters, letters, patterns — must be preserved exactly: precise positioning, correct proportions, no deformation, stretching or distortion, sharp and legible. Shoe overall shape must not deform — toe box, body, heel, collar, sole curvature all maintain identical silhouette. Natural lighting integration: shoes receive consistent light direction, match ambient occlusion at shoe-foot contact point, cast natural shadows on skin and ground. Critical left-right foot differentiation: left and right shoes must exhibit correct asymmetry matching real footwear design (medial/lateral curve, toe box shape). No visible seams at shoe-foot boundary, no unnatural gaps, no floating. Result must appear as single original photograph.
+```
+
+#### 额外规则
+- 参考图中若有品牌logo、文案、水印、角标等文字/图形元素，必须去除
+- 白底图鞋子上所有品牌标识（logo/文字/英文/图案）必须原样保留，不变形
+
+#### 负向提示词 (CN)
+```
+左右脚混淆、左右鞋不匹配、鞋脚分离、鞋子悬浮、脚型不贴合、脚背弧度错误、鞋头错位、鞋跟错位、鞋口不贴合、光源不一致、阴影不匹配、皮肤接触面无遮挡、材质丢失、纹理丢失、色差、细节模糊、logo变形、logo拉伸、logo扭曲、logo模糊、logo丢失、logo位移、文字变形、文字模糊、文字丢失、品牌标识丢失、标识损坏、鞋子变形、鞋头被压扁、鞋身拉长、鞋跟扭曲、鞋口变形、鞋底弧度错误、可见接缝、抠图感、贴图感、模特变形、背景变化、姿态变化、参考图logo残留、参考图文案残留、参考图水印残留、低画质、JPEG伪影
+```
+
+#### 负向提示词 (EN)
+```
+left right foot confusion, left right shoe mismatch, shoe foot separation, floating shoe, foot shape mismatch, instep curve incorrect, toe box misaligned, heel misaligned, collar gap, lighting inconsistency, shadow mismatch, skin contact no occlusion, material loss, texture loss, color shift, detail blur, logo deformed, logo stretched, logo distorted, logo blurred, logo lost, logo displaced, text deformed, text blurred, text lost, brand mark lost, branding damaged, shoe deformed, toe box crushed, shoe body elongated, heel twisted, collar deformed, sole curve incorrect, visible seam, cutout look, pasted look, model deformed, background change, pose change, reference image logo residue, reference image text residue, reference image watermark residue, low quality, JPEG artifacts
+```
+
+---
+
+### 预设13：脚模鞋子替换
+
+#### 适用场景
+脚模特写图的鞋子替换，聚焦鞋与脚的关系，保留白底图鞋细节。用于鞋类电商细节展示。
+
+#### 正向提示词 (CN)
+```
+将脚模特写图中的鞋子替换为多角度白底产品图中的鞋子。精确区分左右脚。保留脚模的小腿、肤色、姿态、背景、光源、场景元素完全不变。替换后的鞋子必须自然包裹脚部——贴合脚背弧度、足弓轮廓、后跟杯包裹、鞋头位置、鞋口贴合度精准。匹配原始穿着角度。保留白底图的全部材质细节：精确色值、材质纹理（皮革纹路、麂皮绒面、网眼编织、针织纹理、橡胶外底）、车线缝线、鞋带结构、鞋眼五金、外底纹路、中底泡棉纹理、表面光泽度（哑光/亮面/金属/半透）。白底图鞋面上的品牌logo、文字、英文、字母、图案等所有标识元素必须原样保留，位置精准、比例正确、不变形不拉伸不扭曲、清晰可读。鞋子整体形状不变形——鞋头、鞋身、鞋跟、鞋口、鞋底弧度等全部轮廓线精确一致。自然光影：光线方向一致、鞋脚和鞋地接触面环境遮挡、自然柔和阴影。关键左右脚区分：正确非对称性（内侧外侧弧度、鞋头、足弓支撑）。保持真实的鞋脚交互关系：脚背轻微张力褶皱、后跟自然间隙、鞋头上翘弧度。无可见接缝、无空隙、无悬浮。最终效果应为单张原始棚拍照片。
+```
+
+#### 正向提示词 (EN)
+```
+Replace the shoes on the foot model with the shoes from the multi-angle white-background product image. Accurately distinguish left and right foot. Keep the foot model's legs, skin tone, pose, background, lighting and scene elements completely unchanged. Replacement shoes must wrap naturally around the foot — precisely following instep curve, arch contour, heel cup fit, toe box position, and ankle collar fit. Match original wear angle and foot orientation. Retain full material detail: color accuracy, material texture (leather grain, suede nap, mesh weave, knit pattern, rubber outsole), stitching, lace structure, eyelet hardware, sole tread, midsole foam texture, surface finish (matte/glossy/metallic/semi-translucent). All branding elements on the white-background shoes — logos, text, English characters, letters, patterns — must be preserved exactly: precise positioning, correct proportions, no deformation, stretching or distortion, sharp and legible. Shoe overall shape must not deform — toe box, body, heel, collar, sole curvature all maintain identical silhouette. Natural lighting: consistent light direction, ambient occlusion at shoe-foot and shoe-ground contact points, natural soft shadows. Critical left-right differentiation: correct asymmetry (medial/lateral curve, toe box, arch support). Maintain realistic foot-shoe interaction: slight tension wrinkles on instep, natural gap at heel collar, toe spring curve. No visible seams, no gaps, no floating. Result must look like single original studio photograph.
+```
+
+#### 额外规则
+- 参考图中若有品牌logo、文案、水印、角标等文字/图形元素，必须去除
+- 白底图鞋子上所有品牌标识（logo/文字/英文/图案）必须原样保留，不变形
+
+#### 负向提示词 (CN)
+```
+左右脚混淆、鞋脚不贴合、足弓不匹配、后跟分离、鞋头悬空、鞋口扭曲、材质丢失、皮革纹理消失、车线模糊、鞋带变形、五金件丢失、大底纹理消失、色差、光源不一致、阴影错位、皮肤接触面不自然、logo变形、logo拉伸、logo扭曲、logo模糊、logo丢失、logo位移、文字变形、文字模糊、文字丢失、品牌标识丢失、标识损坏、鞋子变形、鞋头被压扁、鞋身拉长、鞋跟扭曲、鞋口变形、鞋底弧度错误、小腿变形、脚踝扭曲、背景变化、可见接缝、抠图边缘、光晕、悬浮感、贴图感、参考图logo残留、参考图文案残留、参考图水印残留、低画质、JPEG伪影
+```
+
+#### 负向提示词 (EN)
+```
+left right foot confusion, shoe-foot mismatch, arch mismatch, heel separation, toe box floating, collar twisted, material loss, leather grain lost, stitching blurred, lace deformed, hardware lost, sole tread lost, color shift, lighting inconsistency, shadow misalignment, skin contact unnatural, logo deformed, logo stretched, logo distorted, logo blurred, logo lost, logo displaced, text deformed, text blurred, text lost, brand mark lost, branding damaged, shoe deformed, toe box crushed, shoe body elongated, heel twisted, collar deformed, sole curve incorrect, leg deformed, ankle twisted, background change, visible seam, cutout edge, halo, floating, pasted look, reference image logo residue, reference image text residue, reference image watermark residue, low quality, JPEG artifacts
+```
+
+---
+
+### 预设14：电商海报设计
+
+#### 适用场景
+用户上传参考海报+产品图+文案，分析参考风格后生成同风格新海报。用于促销活动、品牌页、商品推广。
+
+#### 正向提示词 (CN)
+```
+深入分析参考海报的设计风格：整体构图布局、色板及色彩配比、字体排印风格（字体系列、粗细层级、字间距、行高）、视觉元素编排（产品位置、装饰元素、留白比例）、图形处理手法（扁平/立体/渐变/肌理）、摄影风格（光影基调、渲染方式）、整体视觉调性（轻奢/极简/潮流/复古/科技）。基于提供的产品图和文案，按完全相同设计风格生成新的电商海报。要求：保持一致的视觉节奏和版面密度、准确复刻色彩比例、应用匹配的字重层级体系、保留相近的负空间平衡感、匹配摄影处理和光影基调。产品自然融入版式，文案以恰当视觉权重排布，所有装饰与品牌元素遵循参考设计体系。输出为一张统一视觉的完整设计——必须属于同一系列感。无占位文本、无乱码、无排版错位。
+```
+
+#### 正向提示词 (EN)
+```
+Analyze the reference poster's design style thoroughly: overall composition layout, color palette and color ratios, typography style (font family, weight hierarchy, letter spacing, line height), visual element arrangement (product placement, decorative elements, negative space ratio), graphic treatment (flat/3D/gradient/texture), photography style (lighting mood, rendering approach), and overall visual tone (luxury/minimalist/trendy/vintage/tech). Create a new e-commerce poster in the exact same design style using the provided product image and copy text. Requirements: maintain identical visual rhythm and layout density, replicate color ratios accurately, apply matching typographic hierarchy, preserve similar negative space balance, match photographic treatment and lighting mood. Product naturally integrated into layout. Copy text positioned with proper visual weighting. All decorative and brand elements follow the reference's design system. Output as one cohesive design — must look like it belongs to the same campaign series. No placeholder text, no gibberish, no misalignment.
+```
+
+#### 负向提示词 (CN)
+```
+风格不一致、配色错误、色板偏差、字体错误、排版不匹配、布局错乱、构图错误、间距失衡、版式拥挤、设计不均衡、文字未对齐、文字溢出、文字截断、文案缺失、乱码文字、占位符文本、产品变形、产品错误、产品缺失、低分辨率、模糊、像素化、水印、模板化设计、设计同质化、风格混杂、对比度差、文字不可读、JPEG压缩伪影
+```
+
+#### 负向提示词 (EN)
+```
+different style, wrong color scheme, color mismatch, wrong typography, font mismatch, layout mismatch, wrong composition, wrong spacing, cluttered layout, unbalanced design, text misalignment, text overflow, text truncated, missing text, gibberish text, placeholder text, product distortion, wrong product, missing product, low resolution, blurry, pixelated, watermark, template look, generic design, inconsistent style, mixed design languages, poor contrast, illegible text, JPEG artifacts
+```
+
+---
+
+### 预设15：字体设计
+
+#### 适用场景
+用户上传参考字体图+文案，分析风格后生成同风格字体设计。用于品牌标题字、活动主题字、店铺招牌。
+
+#### 正向提示词 (CN)
+```
+分析参考字体设计特征：字体风格类别（衬线/无衬线/手写/展示/哥特/手绘）、笔画粗细与对比度、字形比例（x字高、升部降部、字宽）、装饰元素（衬线形状、笔画收尾、连字、花体、装饰线）、肌理与材质处理（金属/渐变/立体/手工质感/霓虹/做旧）、色彩运用（纯色/渐变/纹理/多色）、特效处理（投影/发光/描边/浮雕/挤出）、空间排布（基线对齐、字偶距、字间距、堆叠）、背景融合度、整体情绪（优雅/活泼/粗犷/复古/未来/极简）。基于提供的文案，按完全相同的字体设计风格生成新作。精确复刻笔画特征、匹配字形比例、保留装饰细节层级、应用相同肌理和材质处理、使用匹配的配色方案、保持相同空间韵律与间距、达到一致的视觉冲击力和情绪表达。输出干净的字体设计图——字形饱满、边缘锐利、细节清晰、全文字符风格统一。最终效果应如同同一位设计师出品。
+```
+
+#### 正向提示词 (EN)
+```
+Analyze the reference typography design characteristics: font style category (serif/sans-serif/script/display/blackletter/hand-drawn), stroke weight and contrast ratio, letterform proportions (x-height, ascender/descender, width), decorative elements (serif shape, terminal style, ligatures, swashes, flourishes), texture and material treatment (metallic/gradient/3D/handcrafted/neon/distressed), color application (solid/gradient/textured/multi-color), special effects (shadow/glow/outline/emboss/extrude), spatial arrangement (baseline alignment, kerning, tracking, stacking), background integration, and overall mood (elegant/playful/bold/vintage/futuristic/minimalist). Create new typography design using the provided copy text in the exact same typographic style. Replicate stroke characteristics precisely, match letterform proportions, preserve decorative detail level, apply identical texture and material treatment, use matching color scheme, maintain same spatial rhythm and spacing, achieve identical visual impact and mood. Output clean typography artwork — characters well-formed, edges crisp, details sharp, consistent across all characters. Result must look created by same designer as reference.
+```
+
+#### 负向提示词 (CN)
+```
+字体风格错误、笔画粗细不一致、字形比例变形、装饰元素丢失、肌理不匹配、材质质感错误、配色偏移、渐变方向错误、特效缺失、阴影方向错误、发光强度不一致、字间距错误、字偶距不均、基线错位、文字堆叠错误、字符缺失、乱码、占位文本、边缘模糊、像素化、锯齿、背景融合不自然、风格断裂、低画质、JPEG伪影、水印、logo
+```
+
+#### 负向提示词 (EN)
+```
+wrong font style, inconsistent stroke weight, deformed letterform proportions, decorative elements lost, texture mismatch, material finish incorrect, color shift, gradient direction wrong, effect missing, shadow direction wrong, glow intensity inconsistent, tracking error, kerning uneven, baseline misalignment, text stacking error, missing characters, garbled text, placeholder text, blurred edges, pixelated, aliasing, unnatural background integration, style break, low quality, JPEG artifacts, watermark, logo
+```
+
+---
+
+### 预设16：模特生成与换脸
+
+#### 适用场景
+A) 根据风格生成电商服装模特；B) 将目标图模特脸部替换为参考肖像。用于服装展示、模特换装。
+
+#### 正向提示词 (CN)
+```
+任务A——模特生成：基于参考风格生成专业电商服装模特。匹配指定属性：性别、年龄段、种族、体型、肤色、发型发色、五官特征、表情神态、姿态风格。自然棚拍或生活化光源，适合服装电商展示。全身或指定景别。构图干净，适合产品展示。高分辨率，真实感皮肤带自然毛孔和细微瑕疵，服装面料自然垂坠，肢体比例符合解剖学。
+
+任务B——换脸：将目标图中模特的面部替换为上传参考肖像的面部，其余一切不变。目标图光线、肤色、头部角度、身体姿态、服装、背景全部保持原样。替换后的面部必须：精确匹配目标图光源方向与色温、在颌线和发际线处无缝融合肤色零可见边界、保持目标图原有头部角度和表情、精确贴合面部骨骼结构阴影过渡自然、保留自然皮肤纹理和毛孔、与发型耳朵自然衔接。无可见边界、无色差、无光源错位、无重影、无双重曝光。最终效果应为单张原始拍摄照片。
+```
+
+#### 正向提示词 (EN)
+```
+Task A — Model Generation: Generate a professional e-commerce fashion model based on the reference style. Match specified attributes: gender, age range, ethnicity, body type, skin tone, hairstyle and color, facial features, expression, and pose style from reference. Natural studio or lifestyle lighting appropriate for fashion e-commerce. Full body or specified framing. Clean composition suitable for product showcasing. High resolution, photorealistic skin with natural pores and subtle imperfections, realistic fabric draping, anatomically correct proportions.
+
+Task B — Face Swap: Replace the model's face in the target image with the face from the provided reference portrait, preserving everything else unchanged. Target image lighting, skin tone, head angle, body pose, clothing, background must remain identical. The swapped face must: exactly match target lighting direction and color temperature, seamlessly blend skin tone at jawline and hairline with zero visible seams, maintain target's original head angle and expression, accurately follow facial structure with natural shadow transitions, preserve natural skin texture and pores, integrate naturally with hairstyle and ears. No visible boundary, no color shift, no lighting mismatch, no ghosting, no double exposure. Result must look like single original photograph.
+```
+
+#### 负向提示词 (CN)
+```
+脸部变形、五官扭曲、肤色不匹配、色差、光源方向不一致、颌线接缝、发际线接缝、可见边界、过渡不自然、皮肤纹理丢失、塑料感、磨皮过度、重影、双重曝光、表情丢失、原表情移位、角度不匹配、发型错位、耳朵变形、背景变化、身体变形、姿态变化、服装变化、低分辨率、模糊、像素化、水印、logo、JPEG伪影
+```
+
+#### 负向提示词 (EN)
+```
+face deformed, facial features distorted, skin tone mismatch, color shift, lighting direction inconsistent, jawline seam, hairline seam, visible boundary, unnatural transition, skin texture lost, plastic look, over-smoothing, ghosting, double exposure, expression lost, original expression displaced, angle mismatch, hairstyle misaligned, ear deformed, background change, body deformed, pose change, clothing change, low resolution, blurry, pixelated, watermark, logo, JPEG artifacts
+```
+
+---
+
 ## 通用负面词库（所有预设共用补充）
 
 ```
@@ -295,6 +481,7 @@ numbers, text, letters, labels, frame numbers, corner marks, annotations, captio
 | v1.0 | 2026-05-22 | 初始版本，8个预设 |
 | v2.0 | 2026-05-28 | 统一背景为浅暖灰#F0EDE8，新增表情六宫格预设，优化边缘处理，所有预设增加边缘柔和过渡描述 |
 | v2.1 | 2026-05-30 | 新增视角类360全景图预设 |
+| v1.0.55 | 2026-07-12 | 新增「电商」分类（预设11-16）：鞋子静物场景替换、模特上脚图替换、脚模替换、电商海报设计、字体设计、模特生成与换脸，全部中英双语 |
 
 ---
 

@@ -8209,6 +8209,10 @@ let llmChatDrag = null;
         if(llmPaneDrag || llmChatDrag) endDrag();
     });
 })();
+function endDrag(){
+    llmPaneDrag = null;
+    llmChatDrag = null;
+}
 function startLLMPaneResize(e, node){
     e.preventDefault();
     e.stopPropagation();

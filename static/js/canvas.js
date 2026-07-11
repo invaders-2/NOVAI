@@ -8052,7 +8052,7 @@ function renderLLMNodePane(container, node){
         inputEl.oninput = e => { node.userInput = e.target.value; };
     }
     bindScrollableText(container.querySelector('.llm-result-output'));
-    container.querySelector('.llm-pane-resizer').onmousedown = e => startLLMChatResize(e, node);
+    container.querySelector('.llm-pane-resizer').onmousedown = e => startLLMPaneResize(e, node);
     container.querySelector('.llm-run').onclick = e => { e.stopPropagation(); runLLMNode(node.id); };
     bindCascadeButtons(container, node.id);
     const copyBtn = container.querySelector('.llm-output-copy');
@@ -8207,8 +8207,14 @@ function startLLMPaneResize(e, node){
         inputStart:Math.max(70, node.llmInputHeight || 110),
         outputStart:Math.max(70, node.llmOutputHeight || 150)
     };
-    window.onmousemove = onLLMPaneResize;
-    window.onmouseup = endDrag;
+    const onMove = ev => onLLMPaneResize(ev);
+    const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        endDrag();
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
 }
 let llmChatDrag = null;
 function startLLMChatResize(e, node){
@@ -8220,8 +8226,14 @@ function startLLMChatResize(e, node){
         logStart:Math.max(80, node.llmChatLogHeight || 260),
         inputStart:Math.max(40, node.llmChatInputHeight || 60)
     };
-    window.onmousemove = onLLMChatResize;
-    window.onmouseup = endLLMChatDrag;
+    const onMove = ev => onLLMChatResize(ev);
+    const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        endLLMChatDrag();
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
 }
 function onLLMChatResize(e){
     if(!llmChatDrag) return;

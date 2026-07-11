@@ -1216,8 +1216,9 @@
         .update-notes-version { color:#58585a; font-size:11px; font-weight:800; white-space:nowrap; }
         .update-notes-list { margin:0; padding:0 0 0 16px; display:grid; gap:6px; color:#2a2a2a; font-size:12px; line-height:1.55; }
         .update-notes-empty { margin:0; color:#848488; font-size:12px; line-height:1.55; }
-        .update-source-list { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; align-items:stretch; }
-        @media (max-width: 720px) { .update-source-list { grid-template-columns:1fr; } }
+        .update-source-list { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:14px; align-items:stretch; }
+        @media (max-width: 900px) { .update-source-list { grid-template-columns:1fr 1fr; } }
+        @media (max-width: 600px) { .update-source-list { grid-template-columns:1fr; } }
         .update-source-card { width:100%; min-width:0; border:1px solid #e5e5e5; border-radius:10px; background:#fff; color:#1c1c1e; text-align:left; padding:12px; display:flex; flex-direction:column; gap:10px; cursor:pointer; transition:border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease; }
         .update-source-card:hover { transform:translateY(-1px); border-color:transparent; box-shadow:0 12px 28px rgba(28,28,28,.08); }
         .update-source-card.active { border-color:#16a34a; box-shadow:0 0 0 2px rgba(22,163,74,.20); background:#f0fdf4; }
@@ -2217,11 +2218,11 @@
                     <p id="project-update-notes-empty" class="update-notes-empty" hidden>暂未获取到更新说明。</p>
                 </div>
                 <div id="update-source-list" class="update-source-list">
-                    <button id="update-source-github" class="update-source-card" type="button" data-update-source="github" onclick="setUpdateSource('github')">
+                    <button id="update-source-modelscope" class="update-source-card" type="button" data-update-source="modelscope" onclick="setUpdateSource('modelscope')">
                         <div class="update-source-head">
                             <div class="update-source-title">
-                                <strong>GitHub 下载源</strong>
-                                <span>GitHub API / raw 文件 / GitHub 网页，Google 仅作外网参考。</span>
+                                <strong>ModelScope 下载源</strong>
+                                <span>国内 CDN，速度最快，无需代理。</span>
                             </div>
                             <div class="update-source-head-right">
                                 <span class="update-source-check" aria-hidden="true">
@@ -2230,13 +2231,13 @@
                                 <span class="update-source-badge">待测试</span>
                             </div>
                         </div>
-                        <div class="connectivity-list" data-connectivity-source="github"></div>
+                        <div class="connectivity-list" data-connectivity-source="modelscope"></div>
                     </button>
                     <button id="update-source-gitee" class="update-source-card" type="button" data-update-source="gitee" onclick="setUpdateSource('gitee')">
                         <div class="update-source-head">
                             <div class="update-source-title">
                                 <strong>Gitee 下载源</strong>
-                                <span>Gitee API / raw 文件，国内网络推荐，无需代理。</span>
+                                <span>国内网络推荐，无需代理。</span>
                             </div>
                             <div class="update-source-head-right">
                                 <span class="update-source-check" aria-hidden="true">
@@ -2246,6 +2247,21 @@
                             </div>
                         </div>
                         <div class="connectivity-list" data-connectivity-source="gitee"></div>
+                    </button>
+                    <button id="update-source-github" class="update-source-card" type="button" data-update-source="github" onclick="setUpdateSource('github')">
+                        <div class="update-source-head">
+                            <div class="update-source-title">
+                                <strong>GitHub 下载源</strong>
+                                <span>全球 CDN，外网推荐。</span>
+                            </div>
+                            <div class="update-source-head-right">
+                                <span class="update-source-check" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </span>
+                                <span class="update-source-badge">待测试</span>
+                            </div>
+                        </div>
+                        <div class="connectivity-list" data-connectivity-source="github"></div>
                     </button>
                 </div>
                 <div id="project-update-summary" class="update-modal-summary warn">
@@ -2812,12 +2828,12 @@
         }
 
         function updateSourceLabel(source = updateSource) {
-            const labels = { github: 'GitHub', gitee: 'Gitee' };
+            const labels = { github: 'GitHub', gitee: 'Gitee', modelscope: 'ModelScope' };
             return labels[source] || 'GitHub';
         }
 
         function setUpdateSource(source) {
-            const valid = ['github', 'gitee'];
+            const valid = ['github', 'gitee', 'modelscope'];
             updateSource = valid.includes(source) ? source : 'github';
             localStorage.setItem('studio_update_source', updateSource);
             refreshProjectUpdateModalText();
@@ -2880,7 +2896,11 @@
             const sources = appInfo.sources || {};
             const github = sources.github || {};
             const gitee = sources.gitee || {};
+            const modelscope = sources.modelscope || {};
             return [
+                { name:'ModelScope 更新列表', url:modelscope.tree_url || 'https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo?Revision=main&FilePath=/', source:'modelscope', required:true },
+                { name:'ModelScope 版本文件', url:modelscope.version_url || 'https://www.modelscope.cn/studios/bllack/NOVAI-Canvas/raw/main/VERSION', source:'modelscope', required:true },
+                { name:'ModelScope 主页', url:'https://www.modelscope.cn/', source:'modelscope' },
                 { name:'GitHub 更新列表', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1', source:'github', required:true },
                 { name:'GitHub 版本文件', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION', source:'github', required:true },
                 { name:'GitHub 主页', url:'https://github.com/', source:'github' },
@@ -2923,8 +2943,9 @@
                 list.append(row);
             });
             };
-            renderInto(document.querySelector('[data-connectivity-source="github"]'), 'github');
+            renderInto(document.querySelector('[data-connectivity-source="modelscope"]'), 'modelscope');
             renderInto(document.querySelector('[data-connectivity-source="gitee"]'), 'gitee');
+            renderInto(document.querySelector('[data-connectivity-source="github"]'), 'github');
         }
 
         function refreshProjectUpdateModalText() {

@@ -23,11 +23,11 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.53.1783793577"></script>
-    <script src="/static/js/theme.js?v=1.0.53.1783799409"></script>
-    <script src="/static/js/i18n.js?v=1.0.53.1783673379"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.46.1783791221"></script>
+    <script src="/static/js/theme.js?v=1.0.46.1783791221"></script>
+    <script src="/static/js/i18n.js?v=1.0.46.1783673379"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=1.0.53.1783673379');
+        @import url('/static/vendor/css/fonts.css?v=1.0.46.1783673379');
 
         /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
         .w-1\.5 { width: 0.375rem; }
@@ -2086,7 +2086,7 @@
                     </svg>
                 </button>
                 <div class="settings-fold-group is-collapsed" id="settings-fold-group">
-                    <button class="side-pill" onclick="toggleTheme()" id="theme-toggle-btn" type="button" title="切换主题模式">
+                    <button class="side-pill" onclick="toggleTheme()" id="theme-toggle-btn" type="button" title="切换夜间模式">
                         <svg id="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                         </svg>
@@ -2178,17 +2178,17 @@
                     <div class="skeleton-card"></div>
                 </div>
             </div>
-            <iframe id="frame-home" data-src="/static/home.html?v=1.0.53.1783793425" class="active" scrolling="yes"></iframe>
-            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-online" data-src="/static/online.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.53.1783799534" scrolling="yes"></iframe>
+            <iframe id="frame-home" data-src="/static/home.html?v=1.0.46.1783770971" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.46.1783791421" scrolling="yes"></iframe>
+            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.46.1783792968" scrolling="yes"></iframe>
+            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.46.1783792968" scrolling="yes"></iframe>
+            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.46.1783792968" scrolling="yes"></iframe>
+            <iframe id="frame-online" data-src="/static/online.html?v=1.0.46.1783791421" scrolling="yes"></iframe>
+            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.46.1783791421" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.46.1783792968" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.46.1783791421" scrolling="yes"></iframe>
+            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.46.1783792968" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.46.1783792968" scrolling="yes"></iframe>
 
         </main>
     </div>
@@ -2222,7 +2222,7 @@
                         <div class="update-source-head">
                             <div class="update-source-title">
                                 <strong>ModelScope 下载源</strong>
-                                <span>国内 CDN，速度最快，无需代理。</span>
+                                <span>ModelScope API / raw 文件，国内网络推荐，无需代理。</span>
                             </div>
                             <div class="update-source-head-right">
                                 <span class="update-source-check" aria-hidden="true">
@@ -2237,7 +2237,7 @@
                         <div class="update-source-head">
                             <div class="update-source-title">
                                 <strong>Gitee 下载源</strong>
-                                <span>国内网络推荐，无需代理。</span>
+                                <span>Gitee API / raw 文件，国内网络推荐，无需代理。</span>
                             </div>
                             <div class="update-source-head-right">
                                 <span class="update-source-check" aria-hidden="true">
@@ -2252,7 +2252,7 @@
                         <div class="update-source-head">
                             <div class="update-source-title">
                                 <strong>GitHub 下载源</strong>
-                                <span>全球 CDN，外网推荐。</span>
+                                <span>GitHub API / raw 文件 / GitHub 网页，Google 仅作外网参考。</span>
                             </div>
                             <div class="update-source-head-right">
                                 <span class="update-source-check" aria-hidden="true">
@@ -2588,9 +2588,7 @@
                 window.StudioTheme.set(theme);
             }
             document.querySelectorAll('iframe').forEach(f => syncThemeToFrame(f));
-            // 获取实际应用的theme（auto模式下是系统theme）
-            const resolvedTheme = window.StudioTheme ? window.StudioTheme.get() : theme;
-            updateThemeIcon(resolvedTheme);
+            updateThemeIcon(theme);
         }
 
         function updateThemeIcon(theme) {
@@ -2598,21 +2596,24 @@
             const sun = document.getElementById('icon-sun');
             const dark = theme === 'dark';
             if (dark) {
-                if (moon) moon.style.display = 'none';
-                if (sun) sun.style.display = 'block';
+                moon.style.display = 'none';
+                sun.style.display = 'block';
             } else {
-                if (moon) moon.style.display = 'block';
-                if (sun) sun.style.display = 'none';
+                moon.style.display = 'block';
+                sun.style.display = 'none';
             }
-        }
+            // 标签随当前主题切换：暗色时提示切到白天，亮色时提示切到黑夜
+            const label = document.querySelector('#theme-toggle-btn .side-pill-text');
+            if (label) {
+                const key = dark ? 'common.lightMode' : 'common.darkMode';
+                label.dataset.i18n = key;
                 if (window.StudioI18n) label.textContent = window.StudioI18n.t(key);
             }
         }
 
         function toggleTheme() {
             const current = window.StudioTheme ? window.StudioTheme.get() : 'light';
-            const next = current === 'light' ? 'dark' : 'light';
-            broadcastTheme(next);
+            broadcastTheme(current === 'dark' ? 'light' : 'dark');
         }
 
         function toggleLanguage() {
@@ -2851,7 +2852,8 @@
 
         function bestUpdateSourceFromConnectivity(data) {
             const sources = data.sources || {};
-            // 优先选可用的源，Gitee 优先（国内网络更好）
+            // 优先选可用的源，ModelScope 优先（国内最快），其次 Gitee，最后 GitHub
+            if (sources.modelscope && sources.modelscope.ok) return 'modelscope';
             if (sources.gitee && sources.gitee.ok) return 'gitee';
             if (sources.github && sources.github.ok) return 'github';
             return 'github';
@@ -2865,6 +2867,9 @@
                 'Gitee 更新列表': ['Gitee 更新列表', 'Gitee update API'],
                 'Gitee 版本文件': ['Gitee 版本文件', 'Gitee version file'],
                 'Gitee 主页': ['Gitee 主页', 'Gitee home page'],
+                'ModelScope 更新列表': ['ModelScope 更新列表', 'ModelScope update API'],
+                'ModelScope 版本文件': ['ModelScope 版本文件', 'ModelScope version file'],
+                'ModelScope 主页': ['ModelScope 主页', 'ModelScope home page'],
                 'Google 连通性': ['Google 连通性', 'Google connectivity'],
             };
             const item = labels[name] || [name, name];
@@ -2897,15 +2902,15 @@
             const gitee = sources.gitee || {};
             const modelscope = sources.modelscope || {};
             return [
-                { name:'ModelScope 更新列表', url:modelscope.tree_url || 'https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo?Revision=main&FilePath=/', source:'modelscope', required:true },
+                { name:'ModelScope 更新列表', url:modelscope.tree_url || 'https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo?Revision=main&FilePath=/static/update-notes.json', source:'modelscope', required:true },
                 { name:'ModelScope 版本文件', url:modelscope.version_url || 'https://www.modelscope.cn/studios/bllack/NOVAI-Canvas/raw/main/VERSION', source:'modelscope', required:true },
-                { name:'ModelScope 主页', url:'https://www.modelscope.cn/', source:'modelscope' },
-                { name:'GitHub 更新列表', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1', source:'github', required:true },
-                { name:'GitHub 版本文件', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION', source:'github', required:true },
-                { name:'GitHub 主页', url:'https://github.com/', source:'github' },
+                { name:'ModelScope 主页', url:'https://modelscope.cn/studios/bllack/NOVAI-Canvas', source:'modelscope' },
                 { name:'Gitee 更新列表', url:gitee.tree_url || 'https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1', source:'gitee', required:true },
                 { name:'Gitee 版本文件', url:gitee.version_url || 'https://gitee.com/invaders/novai/raw/main/VERSION', source:'gitee', required:true },
                 { name:'Gitee 主页', url:'https://gitee.com/', source:'gitee' },
+                { name:'GitHub 更新列表', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1', source:'github', required:true },
+                { name:'GitHub 版本文件', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION', source:'github', required:true },
+                { name:'GitHub 主页', url:'https://github.com/', source:'github' },
                 { name:'Google 连通性', url:'https://www.google.com/generate_204', source:'reference' },
             ];
         }
@@ -2942,9 +2947,9 @@
                 list.append(row);
             });
             };
-            renderInto(document.querySelector('[data-connectivity-source="modelscope"]'), 'modelscope');
-            renderInto(document.querySelector('[data-connectivity-source="gitee"]'), 'gitee');
             renderInto(document.querySelector('[data-connectivity-source="github"]'), 'github');
+            renderInto(document.querySelector('[data-connectivity-source="gitee"]'), 'gitee');
+            renderInto(document.querySelector('[data-connectivity-source="modelscope"]'), 'modelscope');
         }
 
         function refreshProjectUpdateModalText() {

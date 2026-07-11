@@ -213,6 +213,19 @@
             font-family: inherit;
         }
 
+        .sidebar-logo-img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            border-radius: 4px;
+            transition: all 0.35s var(--ease-out);
+        }
+
+        .sidebar:hover .sidebar-logo-img {
+            width: 32px;
+            height: 32px;
+        }
+
         .sidebar:hover .logo-text {
             font-size: 20px;
             letter-spacing: 0.06em;
@@ -1936,7 +1949,7 @@
 
     <div class="app-shell">
         <aside class="sidebar" id="studioSidebar">
-            <button class="logo-text" title="固定导航栏">NOVAI</button>
+            <button class="logo-text" title="固定导航栏"><img src="/static/images/logo.png" alt="NOVAI" class="sidebar-logo-img"></button>
             <span class="logo-version"></span>
 
             <nav>

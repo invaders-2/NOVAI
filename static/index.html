@@ -51,15 +51,15 @@
             --bg: #f5f5f7;
             --sidebar-bg: rgba(255,255,255,0.55);
             --stage-bg: #ffffff;
-            --border: rgba(0, 0, 0, 0.07);
-            --stage-border: rgba(0, 0, 0, 0.08);
+            --border: transparent;
+            --stage-border: transparent;
             --text: #1c1c1e;
             --muted: #656569;
             --nav-hover-bg: rgba(0, 0, 0, 0.04);
             --monitor-bg: rgba(255, 255, 255, 0.88);
-            --monitor-border: rgba(0, 0, 0, 0.08);
+            --monitor-border: transparent;
             --monitor-shadow: rgba(0, 0, 0, 0.06);
-            --divider: rgba(0, 0, 0, 0.08);
+            --divider: transparent;
             --scrollbar: rgba(0, 0, 0, 0.12);
             --scrollbar-hover: rgba(0, 0, 0, 0.22);
             --focus-ring: rgba(59, 130, 246, 0.5);
@@ -73,15 +73,15 @@
             --bg: #0c0c0c;
             --sidebar-bg: rgba(18,18,18,0.6);
             --stage-bg: #141416;
-            --border: rgba(255, 255, 255, 0.07);
-            --stage-border: rgba(255, 255, 255, 0.08);
+            --border: transparent;
+            --stage-border: transparent;
             --text: #f5f5f7;
             --muted: #96969a;
             --nav-hover-bg: rgba(255, 255, 255, 0.05);
             --monitor-bg: rgba(18,18,18,0.88);
-            --monitor-border: rgba(255, 255, 255, 0.08);
+            --monitor-border: transparent;
             --monitor-shadow: rgba(0, 0, 0, 0.3);
-            --divider: rgba(255, 255, 255, 0.08);
+            --divider: transparent;
             --scrollbar: rgba(255, 255, 255, 0.12);
             --scrollbar-hover: rgba(255, 255, 255, 0.22);
             --focus-ring: rgba(96, 165, 250, 0.5);
@@ -171,7 +171,7 @@
             transition: width 0.4s var(--ease-out) 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s;
             z-index: 50;
             overflow-y: auto;
-            box-shadow: var(--card-shadow-sm), 0 0 0 1px var(--border);
+            box-shadow: var(--card-shadow-sm);
         }
 
         .sidebar:hover {
@@ -547,21 +547,21 @@
             -webkit-backdrop-filter: blur(24px) saturate(200%);
             padding: 8px 14px;
             border-radius: 14px;
-            border: 1px solid var(--monitor-border);
-            box-shadow: var(--card-shadow-sm), 0 4px 16px -2px var(--monitor-shadow), 0 0 0 1px var(--monitor-border);
+            border: 1px solid transparent;
+            box-shadow: var(--card-shadow-sm), 0 4px 16px -2px var(--monitor-shadow);
             font-family: 'SF Mono', 'Fira Code', monospace;
             transition: all 0.3s var(--ease-out);
         }
 
         .nano-monitor:hover {
             transform: translateY(-2px);
-            box-shadow: var(--card-shadow-sm), 0 8px 24px -4px var(--monitor-shadow), 0 0 0 1px var(--monitor-border);
+            box-shadow: var(--card-shadow-sm), 0 8px 24px -4px var(--monitor-shadow);
         }
 
         .nano-monitor.is-busy {
             background: #1c1c1e;
             color: #fff;
-            border-color: rgba(255, 255, 255, 0.12);
+            border-color: transparent;
             box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.3);
         }
 
@@ -1071,7 +1071,7 @@
             flex-direction:column;
             overflow:hidden;
             border-radius:8px;
-            border:1px solid rgba(28,28,28,.1);
+            border:1px solid transparent;
             background:#fff;
             color:#1c1c1e;
             box-shadow:0 24px 70px rgba(28,28,28,.24);
@@ -1083,7 +1083,7 @@
             justify-content:space-between;
             gap:16px;
             padding:20px 20px 14px;
-            border-bottom:1px solid #f0f0f2;
+            border-bottom:1px solid transparent;
         }
 
         .studio-modal-kicker {
@@ -1107,7 +1107,7 @@
             width:32px;
             height:32px;
             border-radius:8px;
-            border:1px solid #e5e5e5;
+            border:1px solid transparent;
             background:#fff;
             color:#58585a;
             display:flex;
@@ -1119,7 +1119,7 @@
 
         .studio-modal-close:hover {
             color:#1c1c1e;
-            border-color:#d1d1d6;
+            border-color:transparent;
             background:#f5f5f7;
         }
 
@@ -1141,7 +1141,7 @@
             gap:10px;
             margin-top:16px;
             padding:12px;
-            border:1px solid #e5e5e5;
+            border:1px solid transparent;
             border-radius:8px;
             background:#f5f5f7;
             color:#2a2a2a;
@@ -1180,7 +1180,7 @@
         .update-source-list { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; align-items:stretch; }
         @media (max-width: 720px) { .update-source-list { grid-template-columns:1fr; } }
         .update-source-card { width:100%; min-width:0; border:1px solid #e5e5e5; border-radius:10px; background:#fff; color:#1c1c1e; text-align:left; padding:12px; display:flex; flex-direction:column; gap:10px; cursor:pointer; transition:border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease; }
-        .update-source-card:hover { transform:translateY(-1px); border-color:#d1d1d6; box-shadow:0 12px 28px rgba(28,28,28,.08); }
+        .update-source-card:hover { transform:translateY(-1px); border-color:transparent; box-shadow:0 12px 28px rgba(28,28,28,.08); }
         .update-source-card.active { border-color:#16a34a; box-shadow:0 0 0 2px rgba(22,163,74,.20); background:#f0fdf4; }
         .update-source-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
         .update-source-title { min-width:0; display:flex; flex-direction:column; gap:4px; }
@@ -1271,7 +1271,7 @@
             min-height:36px;
             padding:0 14px;
             border-radius:8px;
-            border:1px solid #e5e5e5;
+            border:1px solid transparent;
             background:#fff;
             color:#2a2a2a;
             display:inline-flex;
@@ -1291,7 +1291,7 @@
 
         .studio-modal-btn:hover {
             background:#f5f5f7;
-            border-color:#d1d1d6;
+            border-color:transparent;
         }
 
         #connectivity-test-btn {

@@ -391,7 +391,7 @@ different style, wrong color scheme, color mismatch, wrong typography, font mism
 ## 预设15：字体设计
 
 ### 适用场景
-用户上传参考字体图+文案，分析风格后生成同风格字体设计。用于品牌标题字、活动主题字、店铺招牌。
+用户上传参考字体图+文案，分析风格后生成同风格字体设计。用于电商品牌标题字、活动主题字、店铺招牌。
 
 ### 正向提示词
 ```

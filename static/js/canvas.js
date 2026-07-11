@@ -14791,6 +14791,7 @@ document.addEventListener('gesturestart', e => {
         e.preventDefault();
         gestureActive = true;
         const rect = outputPreview.getBoundingClientRect();
+        outputPreview.classList.add('panning');
         gestureState = {
             isLightbox: true,
             startZoom: outputPreviewZoom,
@@ -14841,6 +14842,7 @@ document.addEventListener('gesturechange', e => {
 }, { capture: true });
 document.addEventListener('gestureend', e => {
     if(gestureState?.isLightbox){
+        outputPreview.classList.remove('panning');
         gestureActive = false;
         gestureState = null;
         return;

@@ -16,34 +16,34 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.47.1783793577"></script>
-    <script src="/static/vendor/js/lucide.js?v=1.0.47.1783673379"></script>
-    <script src="/static/js/theme.js?v=1.0.47.1783793537"></script>
-    <script src="/static/js/i18n.js?v=1.0.47.1783673379"></script>
-    <script src="/static/js/image-preview.js?v=1.0.47.1783793573"></script>
-    <script src="/static/js/history-bulk-manager.js?v=1.0.47.1783793573"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.46.1783791221"></script>
+    <script src="/static/vendor/js/lucide.js?v=1.0.46.1783673379"></script>
+    <script src="/static/js/theme.js?v=1.0.46.1783791221"></script>
+    <script src="/static/js/i18n.js?v=1.0.46.1783673379"></script>
+    <script src="/static/js/image-preview.js?v=1.0.46.1783791221"></script>
+    <script src="/static/js/history-bulk-manager.js?v=1.0.46.1783791221"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=1.0.47.1783673379');
-        :root { --accent:#111827; --bg:#f9fafb; --card:#fff; --easing:cubic-bezier(0.4,0,0.2,1); }
+        @import url('/static/vendor/css/fonts.css?v=1.0.46.1783673379');
+        :root { --accent:#1c1c1e; --bg:#f9fafb; --card:#fff; --easing:cubic-bezier(0.4,0,0.2,1); }
         body { background:var(--bg); font-family:'Inter',-apple-system,sans-serif; color:var(--accent); -webkit-font-smoothing:antialiased; }
         .container-box { max-width:1280px; margin:0 auto; padding:0 40px; margin-top:50px; }
-        .nano-input { background:var(--card); border:1px solid #eef0f2; transition:all .3s var(--easing); }
+        .nano-input { background:var(--card); border:1px solid #ececee; transition:all .3s var(--easing); }
         .nano-input:focus { border-color:#000; box-shadow:0 0 0 1px #000; }
-        .upload-item { background:var(--card); border:1px dashed #e2e8f0; transition:all .4s var(--easing); position:relative; overflow:hidden; }
+        .upload-item { background:var(--card); border:1px dashed #e5e5e5; transition:all .4s var(--easing); position:relative; overflow:hidden; }
         .upload-item:hover,.upload-item.drag-over { border-color:#000; transform:translateY(-2px); }
         .preview-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; animation:fadeIn .5s var(--easing); }
-        .glass-btn { background:#111827; transition:all .3s var(--easing); }
+        .glass-btn { background:#1c1c1e; transition:all .3s var(--easing); }
         .glass-btn:hover { background:#000; transform:translateY(-1px); box-shadow:0 12px 24px rgba(0,0,0,.1); }
-        .result-frame { background:#fff; border-radius:32px; border:1px solid #f1f5f9; box-shadow:0 2px 15px rgba(0,0,0,.02); }
-        .tool-panel { background:#fff; border:1px solid #edf0f3; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:10px; }
-        .model-pill { background:#f8fafc; border:1px solid #edf2f7; border-radius:999px; padding:3px; display:grid; grid-template-columns:1fr 1fr; gap:2px; }
-        .model-option { border-radius:999px; height:34px; display:flex; align-items:center; justify-content:center; gap:6px; color:#64748b; font-size:10px; font-weight:600; letter-spacing:.02em; transition:all .25s var(--easing); }
-        .model-option.active { background:#fff; color:#111827; box-shadow:0 1px 3px rgba(15,23,42,.08); }
-        .control-panel { background:#fff; border:1px solid #edf0f3; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:10px; }
-        .control-label { display:flex; align-items:center; gap:6px; color:#94a3b8; font-size:10px; font-weight:600; letter-spacing:.04em; }
+        .result-frame { background:#fff; border-radius:32px; border:1px solid #e5e5e5; box-shadow:0 2px 15px rgba(0,0,0,.02); }
+        .tool-panel { background:#fff; border:1px solid #ececee; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .model-pill { background:#f5f5f7; border:1px solid #dcdcde; border-radius:999px; padding:3px; display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+        .model-option { border-radius:999px; height:34px; display:flex; align-items:center; justify-content:center; gap:6px; color:#58585a; font-size:10px; font-weight:600; letter-spacing:.02em; transition:all .25s var(--easing); }
+        .model-option.active { background:#fff; color:#1c1c1e; box-shadow:0 1px 3px rgba(28,28,28,.08); }
+        .control-panel { background:#fff; border:1px solid #ececee; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .control-label { display:flex; align-items:center; gap:6px; color:#848488; font-size:10px; font-weight:600; letter-spacing:.04em; }
         .size-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; align-items:start; }
         .size-field { min-width:0; display:flex; flex-direction:column; gap:6px; }
-        .size-select,.size-custom { width:100%; min-width:0; max-width:100%; height:34px; border:1px solid #edf2f7; border-radius:14px; background:#f8fafc; color:#111827; outline:none; padding:0 10px; font-size:11px; font-weight:700; }
+        .size-select,.size-custom { width:100%; min-width:0; max-width:100%; height:34px; border:1px solid #dcdcde; border-radius:14px; background:#f5f5f7; color:#1c1c1e; outline:none; padding:0 10px; font-size:11px; font-weight:700; }
         .size-select { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .size-select:disabled { opacity:.55; cursor:not-allowed; }
         .size-custom { display:none; background:#fff; }
@@ -52,32 +52,111 @@
         .size-field.custom .size-pair { display:grid; }
         .size-pair .size-custom { display:block; }
         .size-pair.with-fit { grid-template-columns:1fr 1fr auto; align-items:center; }
-        .size-fit-btn { height:34px; border:1px solid #edf2f7; border-radius:14px; background:#fff; color:#111827; padding:0 10px; font-size:10px; font-weight:800; white-space:nowrap; }
+        .size-fit-btn { height:34px; border:1px solid #dcdcde; border-radius:14px; background:#fff; color:#1c1c1e; padding:0 10px; font-size:10px; font-weight:800; white-space:nowrap; }
         .size-fit-btn:disabled { opacity:.45; cursor:not-allowed; }
-        .mode-badge { font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#0f172a; background:#eef2ff; border:1px solid #e0e7ff; padding:2px 8px; border-radius:999px; }
+        .mode-badge { font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#1c1c1e; background:#f5f5f5; border:1px solid #e5e5e5; padding:2px 8px; border-radius:999px; }
         .masonry-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
         @media (min-width:768px){ .masonry-grid{ grid-template-columns:repeat(4,1fr); } }
         @media (max-width:640px){ .size-row{ grid-template-columns:1fr; } }
-        .masonry-item { aspect-ratio:1/1; border-radius:24px; overflow:hidden; background:#fff; border:1px solid #f1f5f9; transition:all .5s var(--easing); }
+        .masonry-item { aspect-ratio:1/1; border-radius:24px; overflow:hidden; background:#fff; border:1px solid #e5e5e5; transition:all .5s var(--easing); }
         .masonry-item:hover { transform:translateY(-6px); box-shadow:0 20px 40px rgba(0,0,0,.08); }
-        .gallery-lightbox { background:rgba(255,255,255,.99); backdrop-filter:blur(22px) saturate(1.05); }
+        .gallery-lightbox { background:rgba(255,255,255,.99); backdrop-filter:blur(33px) saturate(1.05); }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
     </style>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.47.1783793425">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.46.1783791221">
     <style>
         html:not(.studio-theme-dark) body:not(.studio-theme-dark) #lightbox.gallery-lightbox {
             background: rgba(255,255,255,.99) !important;
-            backdrop-filter: blur(22px) saturate(1.05) !important;
-            -webkit-backdrop-filter: blur(22px) saturate(1.05) !important;
+            backdrop-filter: blur(33px) saturate(1.05) !important;
+            -webkit-backdrop-filter: blur(33px) saturate(1.05) !important;
         }
     </style>
+<style>
+
+/* === Marvis 视觉风格统一注入 === */
+:root {
+    --bg: #f5f5f7;
+    --sidebar-bg: rgba(245, 245, 247, 0.72);
+    --stage-bg: #ffffff;
+    --border: transparent;
+    --text: #1d1d1f;
+    --muted: #86868b;
+    --nav-hover-bg: rgba(0, 0, 0, 0.04);
+    --divider: rgba(0, 0, 0, 0.06);
+    --scrollbar: rgba(0, 0, 0, 0.12);
+    --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --font-sans: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
+    --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
+}
+
+html.theme-dark,
+html.studio-theme-dark,
+body.theme-dark,
+body.studio-theme-dark {
+    --bg: #0d0d0d;
+    --sidebar-bg: rgba(13,13,13,0.78);
+    --stage-bg: #161616;
+    --border: transparent;
+    --text: #f5f5f7;
+    --muted: #86868b;
+    --nav-hover-bg: rgba(255, 255, 255, 0.06);
+    --divider: rgba(255, 255, 255, 0.06);
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.18);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.28);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.34);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.42);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+}
+
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+/* --- 页面特定覆盖 --- */
+
+        body { background: var(--bg) !important; color: var(--text) !important; }
+    
+
+
+/* --- Marvis 增强覆盖 (online.html) --- */
+.model-selector, .resolution-selector { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; box-shadow: var(--shadow-sm) !important; }
+select { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; color: var(--text) !important; }
+.ref-image-upload { border: 1px dashed var(--border) !important; border-radius: var(--radius-lg) !important; background: var(--stage-bg) !important; }
+.generate-btn { background: var(--text) !important; color: var(--bg) !important; border-radius: var(--radius-md) !important; }
+.generate-btn:hover { opacity: 0.88 !important; }
+.image-card { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; }
+.prompt-area { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; color: var(--text) !important; }
+.prompt-area:focus { border-color: var(--text) !important; }
+
+</style>
+
 </head>
 <body>
     <div class="container-box min-h-screen flex flex-col">
         <header class="flex justify-between items-end mb-16">
             <div class="space-y-1">
-                <h1 class="text-4xl font-extrabold tracking-tighter italic" data-i18n="online.title">在线生图</h1>
-                <p class="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400">GPT / NANO BANANA IMAGE STUDIO</p>
             </div>
             <nav class="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest text-gray-400">
                 <span class="text-black border-b-2 border-black pb-1" data-i18n="online.create">Create</span>
@@ -189,7 +268,7 @@
                 </div>
 
                 <button id="genBtn" onclick="submitImage()" class="glass-btn w-full py-5 text-white rounded-3xl font-bold flex items-center justify-center gap-3 shadow-lg">
-                    <i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i>
+                    <i data-lucide="bolt" class="w-4 h-4"></i>
                     <span class="tracking-[0.3em] text-[11px] uppercase" data-i18n="online.generate">Generate</span>
                 </button>
             </div>
@@ -304,6 +383,202 @@
                 ['3840x2160', '4k']
             ]
         };
+
+        // 模型专用尺寸映射：根据模型自动匹配其 API 支持的尺寸
+        // 键名按匹配优先级排列，model name 包含键名即命中
+        const MODEL_SIZE_PRESETS = {
+            // ── OpenAI ──
+            'gpt-image-2': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['1024x1536','1k']],
+                landscape: [['1536x1024','1k']]
+            },
+            'gpt-image-1': {
+                square: [['1024x1024','1k']],
+                portrait: [['1024x1536','1k']],
+                landscape: [['1536x1024','1k']]
+            },
+            'dall-e-3': {
+                square: [['1024x1024','1k']],
+                portrait: [['1024x1792','1k']],
+                landscape: [['1792x1024','1k']]
+            },
+            'dall-e-2': {
+                square: [['1024x1024','1k'], ['512x512','small'], ['256x256','tiny']],
+                portrait: [['512x768','1k']],
+                landscape: [['768x512','1k']]
+            },
+
+            // ── Nano Banana (Gemini 出图) ──
+            'nano-banana': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                portrait43: [['1024x1365','1k'], ['2048x2730','2k'], ['3072x4096','4k']],
+                landscape43: [['1365x1024','1k'], ['2730x2048','2k'], ['4096x3072','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']],
+                story: [['720x1280','1k'], ['1080x1920','2k'], ['2160x3840','4k']],
+                wide: [['1280x720','1k'], ['1920x1080','2k'], ['3840x2160','4k']]
+            },
+            'nano-banana-2': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                portrait43: [['1024x1365','1k'], ['2048x2730','2k'], ['3072x4096','4k']],
+                landscape43: [['1365x1024','1k'], ['2730x2048','2k'], ['4096x3072','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']],
+                story: [['720x1280','1k'], ['1080x1920','2k'], ['2160x3840','4k']],
+                wide: [['1280x720','1k'], ['1920x1080','2k'], ['3840x2160','4k']]
+            },
+            'nano-banana-pro': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                portrait43: [['1024x1365','1k'], ['2048x2730','2k'], ['3072x4096','4k']],
+                landscape43: [['1365x1024','1k'], ['2730x2048','2k'], ['4096x3072','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']],
+                story: [['720x1280','1k'], ['1080x1920','2k'], ['2160x3840','4k']],
+                wide: [['1280x720','1k'], ['1920x1080','2k'], ['3840x2160','4k']]
+            },
+
+            // ── Seedream (火山引擎) ──
+            'seedream-5.0': {
+                square: [['2048x2048','2k'], ['3072x3072','3k']],
+                portrait: [['1536x2048','2k'], ['2304x3072','3k']],
+                portrait43: [['1536x2048','2k'], ['2304x3072','3k']],
+                landscape43: [['2048x1536','2k'], ['3072x2304','3k']],
+                landscape: [['2048x1536','2k'], ['3072x2304','3k']],
+                story: [['1152x2048','2k'], ['1728x3072','3k']],
+                wide: [['2048x1152','2k'], ['3072x1728','3k']]
+            },
+            'seedream-4.5': {
+                square: [['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1536x2048','2k'], ['3072x4096','4k']],
+                portrait43: [['1536x2048','2k'], ['3072x4096','4k']],
+                landscape43: [['2048x1536','2k'], ['4096x3072','4k']],
+                landscape: [['2048x1536','2k'], ['4096x3072','4k']],
+                story: [['1152x2048','2k'], ['2304x4096','4k']],
+                wide: [['2048x1152','2k'], ['4096x2304','4k']]
+            },
+            'seedream-4.0': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['832x1216','1k'], ['1664x2432','2k']],
+                portrait43: [['928x1216','1k'], ['1856x2432','2k']],
+                landscape43: [['1216x928','1k'], ['2432x1856','2k']],
+                landscape: [['1216x832','1k'], ['2432x1664','2k']],
+                story: [['768x1216','1k'], ['1536x2432','2k']],
+                wide: [['1216x768','1k'], ['2432x1536','2k']]
+            },
+            'seedream-3.0': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['832x1216','1k'], ['1664x2432','2k']],
+                portrait43: [['928x1216','1k'], ['1856x2432','2k']],
+                landscape43: [['1216x928','1k'], ['2432x1856','2k']],
+                landscape: [['1216x832','1k'], ['2432x1664','2k']],
+                story: [['768x1216','1k'], ['1536x2432','2k']],
+                wide: [['1216x768','1k'], ['2432x1536','2k']]
+            },
+
+            // ── Flux ──
+            'flux': {
+                square: [['1024x1024','1k'], ['1536x1536','2k']],
+                portrait: [['832x1216','1k'], ['1024x1536','2k']],
+                portrait43: [['896x1216','1k'], ['1152x1536','2k']],
+                landscape43: [['1216x896','1k'], ['1536x1152','2k']],
+                landscape: [['1216x832','1k'], ['1536x1024','2k']],
+                story: [['768x1344','1k'], ['1024x1792','2k']],
+                wide: [['1344x768','1k'], ['1792x1024','2k']]
+            },
+
+            // ── SDXL ──
+            'sdxl': {
+                square: [['1024x1024','1k']],
+                portrait: [['896x1152','1k']],
+                portrait43: [['896x1152','1k']],
+                landscape43: [['1152x896','1k']],
+                landscape: [['1152x896','1k']],
+                story: [['768x1344','1k']],
+                wide: [['1344x768','1k']]
+            },
+            'stable-diffusion-xl': {
+                square: [['1024x1024','1k']],
+                portrait: [['896x1152','1k']],
+                landscape: [['1152x896','1k']],
+                story: [['768x1344','1k']],
+                wide: [['1344x768','1k']]
+            },
+
+            // ── SD 1.5 / 2.1 ──
+            'stable-diffusion-2': {
+                square: [['768x768','1k']],
+                portrait: [['768x1152','1k']],
+                landscape: [['1152x768','1k']]
+            },
+            'stable-diffusion': {
+                square: [['512x512','1k']],
+                portrait: [['512x768','1k']],
+                landscape: [['768x512','1k']]
+            },
+
+            // ── Midjourney ──
+            'midjourney': {
+                square: [['1024x1024','1k']],
+                portrait: [['832x1216','1k']],
+                portrait43: [['896x1216','1k']],
+                landscape43: [['1216x896','1k']],
+                landscape: [['1216x832','1k']],
+                story: [['768x1344','1k']],
+                wide: [['1344x768','1k']]
+            },
+
+            // ── Ideogram ──
+            'ideogram': {
+                square: [['1024x1024','1k']],
+                portrait: [['896x1152','1k']],
+                portrait43: [['896x1216','1k']],
+                landscape43: [['1216x896','1k']],
+                landscape: [['1152x896','1k']],
+                story: [['768x1344','1k']],
+                wide: [['1344x768','1k']]
+            },
+
+            // ── Kolors ──
+            'kolors': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['768x1024','1k'], ['1536x2048','2k']],
+                landscape: [['1024x768','1k'], ['2048x1536','2k']]
+            },
+
+            // ── Hunyuan ──
+            'hunyuan': {
+                square: [['1024x1024','1k']],
+                portrait: [['768x1024','1k']],
+                landscape: [['1024x768','1k']]
+            },
+
+            // ── Recraft ──
+            'recraft': {
+                square: [['1024x1024','1k']],
+                portrait: [['1024x1536','1k']],
+                landscape: [['1536x1024','1k']]
+            },
+
+            // ── Playground ──
+            'playground': {
+                square: [['1024x1024','1k']],
+                portrait: [['832x1216','1k']],
+                landscape: [['1216x832','1k']]
+            }
+        };
+
+        function getSizeOptionsForModel(model) {
+            const m = String(model || '').toLowerCase();
+            for (const [key, sizes] of Object.entries(MODEL_SIZE_PRESETS)) {
+                if (m.includes(key)) return sizes;
+            }
+            return SIZE_OPTIONS;
+        }
+
+        function currentSizeOptions() {
+            return getSizeOptionsForModel(selectedModel);
+        }
         const RES_LONG_SIDE = { '1k': 1536, '2k': 2048, '4k': 3840 };
         const RES_PIXEL_LIMIT = { '1k': 1572864, '2k': 4194304, '4k': 8294400 };
 
@@ -451,9 +726,11 @@
             provider = next;
             selectedModel = providerModels(provider)[0] || selectedModel;
             renderProviderControls();
+            updateSizeUI();
         }
         function setModel(next){
             selectedModel = next;
+            updateSizeUI();
         }
         function escapeHtml(str){ return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
 
@@ -486,7 +763,7 @@
         function setRatio(next, preferredSize = ''){
             ratio = next;
             if (preferredSize) {
-                const match = SIZE_OPTIONS[next]?.find(([value]) => value === preferredSize);
+                const match = currentSizeOptions()[next]?.find(([value]) => value === preferredSize);
                 if (match) resolution = match[1];
             }
             if(next !== 'custom') {
@@ -533,6 +810,16 @@
             const sizeCustomWidthInput = document.getElementById('sizeCustomWidth');
             const sizeCustomHeightInput = document.getElementById('sizeCustomHeight');
             const fitImageSizeBtn = document.getElementById('fitImageSizeBtn');
+            // Hide unsupported ratio options for current model
+            const opts = currentSizeOptions();
+            Array.from(ratioSelect.options).forEach(opt => {
+                if (opt.value && opt.value !== 'custom') {
+                    opt.hidden = !opts[opt.value];
+                }
+            });
+            if (!opts[ratio]) {
+                ratio = Object.keys(opts)[0] || 'square';
+            }
             ratioSelect.value = ratio;
             ratioSelect.disabled = resolution === 'custom';
             ratioField.classList.toggle('custom', ratio === 'custom');
@@ -560,7 +847,8 @@
 
         function currentSize(){
             if(resolution === 'custom') return customSizeValue();
-            const options = SIZE_OPTIONS[ratio] || SIZE_OPTIONS.square;
+            const opts = currentSizeOptions();
+            const options = opts[ratio] || opts.square;
             if(ratio === 'custom'){
                 const parsed = customRatioValue();
                 const longSide = RES_LONG_SIDE[resolution] || 1024;
@@ -573,7 +861,7 @@
                     return `${Math.max(64, width)}x${Math.max(64, height)}`;
                 }
             }
-            const match = options.find(([, label]) => label === resolution) || SIZE_OPTIONS.square.find(([, label]) => label === resolution) || SIZE_OPTIONS.square[0];
+            const match = options.find(([, label]) => label === resolution) || opts.square.find(([, label]) => label === resolution) || opts.square[0];
             return match[0];
         }
 
@@ -717,8 +1005,9 @@
                 }).catch(() => {});
             });
             const size = currentLightboxData.params?.size || '1024x1024';
-            const matchedRatio = Object.keys(SIZE_OPTIONS).find(key => SIZE_OPTIONS[key].some(([value]) => value === size)) || 'square';
-            const matchedRes = SIZE_OPTIONS[matchedRatio]?.find(([value]) => value === size)?.[1];
+            const opts = currentSizeOptions();
+            const matchedRatio = Object.keys(opts).find(key => opts[key].some(([value]) => value === size)) || 'square';
+            const matchedRes = opts[matchedRatio]?.find(([value]) => value === size)?.[1];
             if(matchedRes) {
                 setRatio(matchedRatio, size);
                 setResolution(matchedRes);

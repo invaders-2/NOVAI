@@ -7979,13 +7979,15 @@ def apimart_upload_raw_file_payload(path: str):
 APIMART_UPLOAD_RETRY_ATTEMPTS = 3
 
 def is_transient_tls_error(exc) -> bool:
-    """识别可重试的瞬时 TLS/传输错误，如 SSLV3_ALERT_BAD_RECORD_MAC、EOF occurred 等，
-    这类错误多由连接池中被污染/复用坏掉的 TLS 连接引起，换新连接重试通常即可成功。"""
+    """识别可重试的瞬时 TLS/传输错误，如 SSLV3_ALERT_BAD_RECORD_MAC、EOF occurred、
+    [SSL] record layer failure 等，这类错误多由连接池中被污染/复用坏掉的 TLS 连接引起，
+    换新连接重试通常即可成功。"""
     if isinstance(exc, httpx.TransportError):
         return True
     msg = f"{type(exc).__name__}: {exc}".upper()
     return any(token in msg for token in (
         "SSL", "BAD RECORD MAC", "EOF OCCURRED", "DECRYPTION FAILED", "WRONG VERSION NUMBER",
+        "RECORD LAYER FAILURE", "TLSV1", "CERTIFICATE VERIFY FAILED",
     ))
 
 async def apimart_upload_post(client, upload_url, headers, file_tuple, timeout=60):
@@ -12812,9 +12814,18 @@ async def build_online_image_result(payload: OnlineImageRequest):
         friendly = friendly_image_error_detail(text, payload.size, model)
         detail = friendly or f"上游生图接口错误：{text[:300]}"
         raise HTTPException(status_code=exc.response.status_code, detail=detail) from exc
-    except httpx.HTTPError as exc:
-        log_net_error(f"生图 网络/TLS错误 provider={provider.get('id')} model={model}", exc)
-        raise HTTPException(status_code=502, detail=f"请求上游生图接口失败：{exc}") from exc
+    except (httpx.HTTPError, Exception) as exc:
+        if is_transient_tls_error(exc):
+            print(f"生图遇到瞬时 TLS/SSL 错误，重试一次：{exc}")
+            await asyncio.sleep(1.0)
+            try:
+                generated = await asyncio.gather(*(generate_one() for _ in range(count)))
+            except (httpx.HTTPError, Exception) as exc2:
+                log_net_error(f"生图 网络/TLS错误(重试后) provider={provider.get('id')} model={model}", exc2)
+                raise HTTPException(status_code=502, detail=f"请求上游生图接口失败(重试后)：{exc2}") from exc2
+        else:
+            log_net_error(f"生图 网络/TLS错误 provider={provider.get('id')} model={model}", exc)
+            raise HTTPException(status_code=502, detail=f"请求上游生图接口失败：{exc}") from exc
 
     local_urls = [url for urls, _items, _raw in generated for url in (urls or []) if url]
     local_items = [item for _urls, items, _raw in generated for item in (items or []) if item.get("url")]
@@ -16263,41 +16274,49 @@ async def chat_stream(payload: ChatRequest, request: Request, x_user_id: str = H
         content_parts = []
         raw_usage = None
         yield sse_event({"type": "meta", "conversation": conversation})
-        try:
-            async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
-                async with client.stream(
-                    "POST",
-                    f"{chat_base}/chat/completions",
-                    headers=chat_hdrs,
-                    json={"model": model, "messages": upstream_messages, "stream": True},
-                ) as response:
-                    if response.status_code >= 400:
-                        detail = await response.aread()
-                        body = detail.decode("utf-8", errors="ignore")
-                        friendly = friendly_chat_error_detail(body, model, _stream_provider)
-                        yield sse_event({"type": "error", "detail": friendly or f"上游接口错误：{body}"})
-                        return
-                    async for line in response.aiter_lines():
-                        if not line:
-                            continue
-                        if line.startswith("data:"):
-                            line = line[5:].strip()
-                        if line == "[DONE]":
-                            break
-                        try:
-                            chunk = json.loads(line)
-                        except json.JSONDecodeError:
-                            continue
-                        if isinstance(chunk, dict) and chunk.get("usage"):
-                            raw_usage = chunk.get("usage")
-                        delta = text_delta_from_chat_chunk(chunk)
-                        if delta:
-                            content_parts.append(delta)
-                            yield sse_event({"type": "delta", "delta": delta})
-        except httpx.HTTPError as exc:
-            log_net_error("对话(流式) 网络/TLS错误", exc)
-            yield sse_event({"type": "error", "detail": f"请求上游接口失败：{exc}"})
-            return
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+                    async with client.stream(
+                        "POST",
+                        f"{chat_base}/chat/completions",
+                        headers=chat_hdrs,
+                        json={"model": model, "messages": upstream_messages, "stream": True},
+                    ) as response:
+                        if response.status_code >= 400:
+                            detail = await response.aread()
+                            body = detail.decode("utf-8", errors="ignore")
+                            friendly = friendly_chat_error_detail(body, model, _stream_provider)
+                            yield sse_event({"type": "error", "detail": friendly or f"上游接口错误：{body}"})
+                            return
+                        async for line in response.aiter_lines():
+                            if not line:
+                                continue
+                            if line.startswith("data:"):
+                                line = line[5:].strip()
+                            if line == "[DONE]":
+                                break
+                            try:
+                                chunk = json.loads(line)
+                            except json.JSONDecodeError:
+                                continue
+                            if isinstance(chunk, dict) and chunk.get("usage"):
+                                raw_usage = chunk.get("usage")
+                            delta = text_delta_from_chat_chunk(chunk)
+                            if delta:
+                                content_parts.append(delta)
+                                yield sse_event({"type": "delta", "delta": delta})
+                break  # 成功完成，跳出重试循环
+            except (httpx.HTTPError, Exception) as exc:
+                if is_transient_tls_error(exc) and attempt < max_retries - 1:
+                    print(f"对话(流式) 遇到瞬时 TLS/SSL 错误，换新连接重试（第 {attempt + 1} 次）：{exc}")
+                    content_parts.clear()
+                    await asyncio.sleep(0.5 * (attempt + 1))
+                    continue
+                log_net_error("对话(流式) 网络/TLS错误", exc)
+                yield sse_event({"type": "error", "detail": f"请求上游接口失败：{exc}"})
+                return
 
         assistant_message = {
             "id": uuid.uuid4().hex,

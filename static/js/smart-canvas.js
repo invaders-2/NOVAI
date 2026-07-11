@@ -4296,6 +4296,7 @@ function promptTemplateCategoryLabel(category){
         character:tr('smart.tplCatCharacter'),
         product:tr('smart.tplCatProduct'),
         lighting:tr('smart.tplCatLighting'),
+        ecommerce:tr('smart.tplCatEcommerce'),
         custom:tr('smart.tplCatMine'),
         mine:tr('smart.tplCatMine')
     };

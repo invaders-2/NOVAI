@@ -1638,6 +1638,30 @@ PROMPT_TEMPLATE_EN = {
         "name": "360 Panorama VR Image",
         "scene": "Generate a seamless 360-degree VR panorama with continuous left and right edges and natural pole transitions.",
     },
+    "鞋子静物场景替换": {
+        "name": "Shoe Still-Life Scene Replacement",
+        "scene": "Replace shoes in a reference still-life scene with white-background product shoes while preserving scene, lighting, and angle.",
+    },
+    "模特上脚图鞋子替换": {
+        "name": "Model On-Foot Shoe Replacement",
+        "scene": "Replace shoes on a model's feet with white-background product shoes, distinguishing left/right feet.",
+    },
+    "脚模鞋子替换": {
+        "name": "Foot Model Shoe Replacement",
+        "scene": "Replace shoes in foot model close-up shots, preserving white-background shoe details.",
+    },
+    "电商海报设计": {
+        "name": "E-commerce Poster Design",
+        "scene": "Analyze a reference poster's design system and generate a new e-commerce poster matching its style.",
+    },
+    "字体设计": {
+        "name": "Typography Design",
+        "scene": "Generate stylized typography designs based on input text and specified style references.",
+    },
+    "模特生成与换脸": {
+        "name": "Model Generation & Face Swap",
+        "scene": "A) Generate e-commerce fashion models; B) Swap faces from reference portraits onto target models.",
+    },
 }
 
 def prompt_template_markdown_path() -> str:
@@ -1648,13 +1672,15 @@ def prompt_template_markdown_path() -> str:
 
 def prompt_template_category(name: str, scene: str) -> str:
     text = f"{name} {scene}"
+    if any(k in text for k in ["电商"]):
+        return "ecommerce"
     if any(k in text for k in ["光影", "灯光", "光效", "电影级"]):
         return "lighting"
     if any(k in text for k in ["视角", "全景", "VR", "镜头", "俯拍", "仰拍", "景别", "构图", "透视"]):
         return "view"
     if any(k in text for k in ["角色", "脸部", "表情", "Actor", "服装"]):
         return "character"
-    if any(k in name for k in ["产品", "电商", "工业"]):
+    if any(k in name for k in ["产品", "工业"]):
         return "product"
     return "storyboard"
 

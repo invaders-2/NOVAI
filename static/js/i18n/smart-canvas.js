@@ -17,6 +17,7 @@
         "smart.tplCatCharacter": { zh: "角色", en: "Character" },
         "smart.tplCatProduct": { zh: "产品", en: "Product" },
         "smart.tplCatLighting": { zh: "光影", en: "Lighting" },
+        "smart.tplCatEcommerce": { zh: "电商", en: "E-commerce" },
         "smart.tplCatMine": { zh: "我的", en: "Mine" },
         "smart.tplBuiltin": { zh: "内置", en: "Built-in" },
         "smart.tplMine": { zh: "我的", en: "Mine" },

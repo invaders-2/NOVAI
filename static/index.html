@@ -2101,11 +2101,6 @@
                             <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
                             <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                         </svg>
-                        <svg id="icon-auto" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                            <line x1="8" y1="21" x2="16" y2="21"></line>
-                            <line x1="12" y1="17" x2="12" y2="21"></line>
-                        </svg>
                         <span class="side-pill-text" data-i18n="common.darkMode">黑夜模式</span>
                     </button>
                     <button class="side-pill" onclick="toggleLanguage()" id="lang-toggle-btn" type="button" title="Language">
@@ -2601,30 +2596,13 @@
         function updateThemeIcon(theme) {
             const moon = document.getElementById('icon-moon');
             const sun = document.getElementById('icon-sun');
-            const autoIcon = document.getElementById('icon-auto');
-            const mode = window.StudioTheme ? window.StudioTheme.getMode() : 'auto';
             const dark = theme === 'dark';
-            
-            // 隐藏所有图标
-            if(moon) moon.style.display = 'none';
-            if(sun) sun.style.display = 'none';
-            if(autoIcon) autoIcon.style.display = 'none';
-            
-            if(mode === 'auto'){
-                // 自动模式：显示显示器图标
-                if(autoIcon) autoIcon.style.display = 'block';
-                const label = document.querySelector('#theme-toggle-btn .side-pill-text');
-                if(label) label.textContent = '跟随系统';
-            } else if(dark){
-                // 手动暗色：显示太阳图标（点击切换到亮色）
-                if(sun) sun.style.display = 'block';
-                const label = document.querySelector('#theme-toggle-btn .side-pill-text');
-                if(label) label.textContent = '白天模式';
+            if (dark) {
+                if (moon) moon.style.display = 'none';
+                if (sun) sun.style.display = 'block';
             } else {
-                // 手动亮色：显示月亮图标（点击切换到暗色）
-                if(moon) moon.style.display = 'block';
-                const label = document.querySelector('#theme-toggle-btn .side-pill-text');
-                if(label) label.textContent = '黑夜模式';
+                if (moon) moon.style.display = 'block';
+                if (sun) sun.style.display = 'none';
             }
         }
                 if (window.StudioI18n) label.textContent = window.StudioI18n.t(key);
@@ -2632,21 +2610,8 @@
         }
 
         function toggleTheme() {
-            const mode = window.StudioTheme ? window.StudioTheme.getMode() : 'auto';
             const current = window.StudioTheme ? window.StudioTheme.get() : 'light';
-            let next;
-            
-            if(mode === 'auto'){
-                // 自动模式 → 手动亮色
-                next = 'light';
-            } else if(current === 'light'){
-                // 手动亮色 → 手动暗色
-                next = 'dark';
-            } else {
-                // 手动暗色 → 自动模式
-                next = 'auto';
-            }
-            
+            const next = current === 'light' ? 'dark' : 'light';
             broadcastTheme(next);
         }
 

@@ -1,184 +1,75 @@
-# NOVAI - Infinite Canvas
+# Infinite-Canvas
+Supports comfyui/API calls/modelscope calls
 
-AI 创作工具，支持无限画布上的图像/视频生成与编辑。
+配套的chrome采集插件已经上线：https://chromewebstore.google.com/detail/infinite-canvas-%E5%9B%BE%E5%83%8F%E8%A7%86%E9%A2%91%E6%96%87%E5%AD%97%E6%8A%93%E5%8F%96%E5%B7%A5/ajfhnbklbmpfaaookhfakohabnpmlcic?authuser=0&hl=en
 
-## 截图预览
+详细教程：[https://youtu.be/1y9ShTvgC_w](https://youtu.be/r_y_9ALr7fg)
 
-![首页](static/images/screenshots/home.png)
+由于最近很多API网址关停，我找到一个稳定的网址：
 
-![无限画布](static/images/screenshots/canvas.png)
+https://apib.ai/register?aff=1uyAbb （包含所有生图模型/视频模型/LLM模型）
 
-![AI 生图](static/images/screenshots/generate.png)
+https://www.fhl.mom/register?aff=86L574B4T2N9  （包含codex和GPT image 2模型）
 
-![API 设置](static/images/screenshots/settings.png)
+功能请求/功能更新/视频教程/联系我，都可以在B站评论或私信：https://space.bilibili.com/78652351
 
-![资产管理](static/images/screenshots/assets.png)
+<img width="930" height="1446" alt="329b2d1c56c2fa0c37fe6369c2aa1a6b" src="https://github.com/user-attachments/assets/7db4c79a-3e1f-4c27-9593-992e32bb0860" />
 
----
 
-## 快速开始
+----
 
-### 环境要求
+【新增了version文件，我每次更新都会更新version的版本号，如果你下载version文件，打开项目后，导航栏的GitHub按键就会提示新版本，如果不想查看更新提示，就删除version文件】
 
-- Python 3.11+
-- Git（用于更新）
+【A version file has been added. I update the version number with each update. If you download the version file, the GitHub button in the navigation bar will indicate the new version after opening the project. If you don't want to see update notifications, delete the version file.】
 
----
+----
 
-### Windows 运行方法
+支持的功能：
+1. 支持几乎所有OpenAI协议的API/异步协议/Gemini协议/方舟协议
+2. RunningHub的工作流/AI应用/收费模型调用
+3. 火山引擎调用（人脸认证还在修复bug）
+4. Modelscope免费LLM模型和图像模型调用
+5. 即梦CLI调用，可直接调用即梦高级会员的积分，支持文生图/图生图/文生视频/图生视频
+6. 支持调用本地局域网的ComfyUI
+7. 扩展图片/360全景图预览截图/视频帧抽取/循环节点等诸多功能
+8. tools文件夹中，增加了chrome批量采集到素材库的插件，PS直连画布调用所有功能的插件
 
-#### 方法一：使用内置 Python（推荐）
-
-项目自带 Windows Python 运行时，无需额外安装：
-
-1. 下载或克隆项目到本地
-2. 双击运行 `python/python.exe main.py`
-3. 或打开命令提示符，进入项目目录执行：
-   ```cmd
-   python\python.exe main.py
-   ```
-4. 浏览器访问 `http://127.0.0.1:3000`
-
-#### 方法二：使用系统 Python
-
-1. 安装 [Python 3.11+](https://www.python.org/downloads/)
-2. 打开命令提示符，进入项目目录
-3. 安装依赖：
-   ```cmd
-   pip install -r requirements.txt
-   ```
-4. 启动服务：
-   ```cmd
-   python main.py
-   ```
-5. 浏览器访问 `http://127.0.0.1:3000`
-
----
-
-### Mac 运行方法
-
-1. 安装 [Python 3.11+](https://www.python.org/downloads/)（如未安装）
-   ```bash
-   brew install python@3.11
-   ```
-
-2. 克隆项目：
-   ```bash
-   git clone https://github.com/invaders-2/NOVAI.git
-   cd NOVAI
-   ```
-
-3. 安装依赖：
-   ```bash
-   pip3 install -r requirements.txt
-   ```
-
-4. 启动服务：
-   ```bash
-   python3 main.py
-   ```
-
-5. 浏览器访问 `http://127.0.0.1:3000`
-
----
-
-### 配置 API
-
-启动后在页面中配置你的 API 密钥（支持 OpenAI、Gemini、火山引擎等）
-
----
-
-## 使用说明
-
-### 首次启动
-
-1. 启动服务后，浏览器打开 `http://127.0.0.1:3000`
-2. 进入 **API 设置** 页面，配置你的 API 密钥
-   - 支持 OpenAI、Gemini、火山引擎、ComfyUI 等多种服务
-   - 推荐使用：https://apib.ai/register?aff=1uyAbb （包含所有生图/视频/LLM模型）
-
-### 主要功能
-
-| 功能 | 说明 |
-|------|------|
-| **无限画布** | 自由布局的创作空间，支持多图拼接与图层编辑 |
-| **在线生图** | AI 驱动的图像生成引擎，支持文生图、图生图等 |
-| **GPT 对话** | 智能 AI 助手，辅助创意构思与提示词优化 |
-| **素材库** | 集中管理生成作品与上传素材，快速检索与复用 |
-| **智能画布** | 增强版画布，支持更复杂的创作流程 |
-
-### 画布操作
-
-- **平移画布**：鼠标中键拖拽 / 触控板双指移动
-- **缩放画布**：鼠标滚轮 / 触控板捏合
-- **添加节点**：双击画布空白处
-- **连接节点**：从节点输出点拖拽到另一节点输入点
-
-### 更新项目
-
-```bash
-git pull origin main
-```
-
-或在应用内点击侧边栏「检查更新」按钮一键更新。
-
----
-
-## 配套工具
-
-- **Photoshop 直连插件**：PS 直连画布调用所有功能
-
----
-
-## 推荐 API 服务
-
-由于部分 API 地址关停，推荐以下稳定服务：
-
-- https://apib.ai/register?aff=1uyAbb （包含所有生图模型/视频模型/LLM模型）
-- https://www.fhl.mom/register?aff=86L574B4T2N9 （包含 Codex 和 GPT Image 2 模型）
-
----
-
-## 自动更新
-
-项目支持自动检查 GitHub 仓库更新：
-- 打开应用时自动检查新版本
-- 有新版本时侧边栏 GitHub 按钮显示提示
-- 点击按钮可查看更新说明并一键更新
-
-如不需要更新提示，可删除项目根目录的 `VERSION` 文件。
-
----
-
-## 支持的功能
-
-1. **多协议 API 支持**：OpenAI 协议 / 异步协议 / Gemini 协议 / 方舟协议
-2. **RunningHub 集成**：工作流 / AI 应用 / 收费模型调用
-3. **火山引擎调用**
-4. **即梦 CLI 调用**：支持文生图 / 图生图 / 文生视频 / 图生视频
-5. **ComfyUI 调用**：支持本地局域网 ComfyUI
-6. **扩展功能**：360 全景图预览 / 视频帧抽取 / 循环节点等
-7. **配套工具**：Chrome 批量采集插件 / PS 直连画布插件
-8. **Mac 触控板支持**：双指平移画布 / 捏合缩放画布
-
----
-
-## 技术栈
-
-- **后端**：Python + FastAPI
-- **前端**：原生 HTML/CSS/JavaScript
-- **样式**：Tailwind CSS
-- **3D**：Three.js
-
----
-
-## 许可证
+--------
 
 已经申请著作权，禁止商业用途
 
-* 可以自己使用和公司使用，禁止用于任何形式的修改封装成商业产品，商用须取得授权
+Commercial use is prohibited.
+
+
+* 可以自己使用和公司使用，禁止用于任何形式的修改封装成商业产品，商用须取得授权。
+
 * 根据代码二次开发的软件必须保持开源并注明来源作者
 
-*This software is for personal and company use only, but is prohibited from being modified or packaged into commercial products in any way. Commercial use requires authorization.*
+* This software is for personal and company use only, but is prohibited from being modified or packaged into commercial products in any way. Commercial use requires authorization.
 
-*Software developed based on this code must remain open source and the original author must be credited.*
+* Software developed based on this code must remain open source and the original author must be credited.
+
+--------
+
+
+<img width="2079" height="665" alt="image" src="https://github.com/user-attachments/assets/8469923b-f7a2-403c-9c37-e6e789211f28" />
+
+<img width="1865" height="1503" alt="image" src="https://github.com/user-attachments/assets/f4030201-67c6-4845-b08b-b6fdf304afaa" />
+
+
+<img width="1696" height="1350" alt="b68e144c5b04a322bfd035da4d89aba3" src="https://github.com/user-attachments/assets/0a6090fb-a8dd-4c3d-adee-b1f9233a2d91" />
+
+   
+<img width="1525" height="1473" alt="image" src="https://github.com/user-attachments/assets/6f61fcf9-746c-425b-9e36-cfc8d252da7c" />
+
+   <img width="1261" height="864" alt="image" src="https://github.com/user-attachments/assets/57f3e230-3134-488f-8179-d97e7d15383a" />
+<img width="1530" height="858" alt="image" src="https://github.com/user-attachments/assets/9990e42d-22d5-4a10-a1e1-ad35a634edd2" />
+
+<img width="1735" height="1400" alt="image" src="https://github.com/user-attachments/assets/d8328ff8-bbe0-4f1c-9ffa-7b56e8a1a51d" />
+<img width="2258" height="969" alt="image" src="https://github.com/user-attachments/assets/4a752d99-885d-4ba9-8b86-91b495786b5c" />
+
+
+<img width="1531" height="1374" alt="image" src="https://github.com/user-attachments/assets/0af79e38-0955-4740-9e65-5c9bb057f58c" />
+
+<img width="2196" height="1040" alt="image" src="https://github.com/user-attachments/assets/6d823668-cde2-4836-8332-1858efe5f520" />
+<img width="2214" height="771" alt="image" src="https://github.com/user-attachments/assets/52e10958-753f-45ba-a50e-3bbec27be436" />

@@ -2964,7 +2964,7 @@ async function probeAsync(){
         const rawJson = JSON.stringify(data.raw, null, 2);
         const probeMessage = String(data.message || '');
         const hideTasksEndpointTip = probeMessage.includes('/v1/tasks/');
-        const color = (isAsync || isOpenAiCompat || data.ok === true) ? '#15803d' : data.ok === null ? '#b45309' : '#585858';
+        const color = (isAsync || isOpenAiCompat || data.ok === true) ? '#15803d' : data.ok === null ? '#b45309' : '#64748b';
         const icon = (isAsync || isOpenAiCompat || data.ok === true) ? '✓' : '⚠';
         const proto = detectedProtocol === 'volcengine'
             ? '方舟/Ark 任务协议'

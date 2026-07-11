@@ -16,99 +16,12 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.46.1783791221"></script>
-    <script src="/static/vendor/js/lucide.js?v=1.0.46.1783673379"></script>
-    <script src="/static/js/theme.js?v=1.0.46.1783791221"></script>
-    <script src="/static/js/i18n.js?v=1.0.46.1783673379"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.46.1783791221">
-    <link rel="stylesheet" href="/static/css/api-settings.css?v=1.0.46.1783791221">
-
-<style>
-
-/* === Marvis 视觉风格统一注入 === */
-:root {
-    --bg: #f5f5f7;
-    --sidebar-bg: rgba(245, 245, 247, 0.72);
-    --stage-bg: #ffffff;
-    --border: transparent;
-    --text: #1d1d1f;
-    --muted: #86868b;
-    --nav-hover-bg: rgba(0, 0, 0, 0.04);
-    --divider: rgba(0, 0, 0, 0.06);
-    --scrollbar: rgba(0, 0, 0, 0.12);
-    --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-    --radius-sm: 10px;
-    --radius-md: 14px;
-    --radius-lg: 20px;
-    --radius-xl: 28px;
-    --font-sans: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
-    --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
-}
-
-html.theme-dark,
-html.studio-theme-dark,
-body.theme-dark,
-body.studio-theme-dark {
-    --bg: #0d0d0d;
-    --sidebar-bg: rgba(13,13,13,0.78);
-    --stage-bg: #161616;
-    --border: transparent;
-    --text: #f5f5f7;
-    --muted: #86868b;
-    --nav-hover-bg: rgba(255, 255, 255, 0.06);
-    --divider: rgba(255, 255, 255, 0.06);
-    --scrollbar: rgba(255, 255, 255, 0.16);
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.18);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.28);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.34);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.42);
-}
-
-* {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar) transparent;
-}
-
-*::-webkit-scrollbar { width: 6px; height: 6px; }
-*::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
-*::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-body {
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: var(--bg);
-    color: var(--text);
-}
-
-/* --- 页面特定覆盖 --- */
-
-        body { background: var(--bg) !important; color: var(--text) !important; }
-    
-
-
-/* --- Marvis 增强覆盖 (api-settings.html) --- */
-.page { background: var(--bg) !important; }
-.page-head { border-bottom-color: var(--divider) !important; }
-.sidebar { background: var(--stage-bg) !important; border-color: var(--border) !important; border-radius: var(--radius-xl) !important; }
-.block { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-xl) !important; box-shadow: var(--shadow-sm) !important; }
-.field-frame { background: var(--bg) !important; border-color: var(--border) !important; border-radius: var(--radius-sm) !important; }
-.field-frame input, .field-frame select { color: var(--text) !important; }
-.field-frame input:focus, .field-frame select:focus { border-color: var(--text) !important; }
-.action-btn { border-radius: var(--radius-sm) !important; }
-.save-btn { background: var(--text) !important; color: var(--bg) !important; }
-.provider-list .provider-item { color: var(--muted) !important; border-radius: var(--radius-sm) !important; }
-.provider-list .provider-item.active { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
-.model-list .model-item { background: var(--bg) !important; border-color: var(--border) !important; border-radius: var(--radius-sm) !important; }
-.picker-modal { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-xl) !important; box-shadow: var(--shadow-xl) !important; }
-.picker-search { background: var(--bg) !important; border-color: var(--border) !important; border-radius: var(--radius-lg) !important; color: var(--text) !important; }
-
-</style>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.6.1782696751"></script>
+    <script src="/static/vendor/js/lucide.js?v=2026.07.6.1782696749"></script>
+    <script src="/static/js/theme.js?v=2026.07.6.1783117645"></script>
+    <script src="/static/js/i18n.js?v=2026.07.6.1783116068"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.6.1782696682">
+    <link rel="stylesheet" href="/static/css/api-settings.css?v=2026.07.6.1783158442">
 </head>
 <body>
     <div class="page">
@@ -652,6 +565,6 @@ body {
         </div>
     </div>
 
-    <script src="/static/js/api-settings.js?v=1.0.46.1783791221"></script>
+    <script src="/static/js/api-settings.js?v=2026.07.6.1783323946"></script>
 </body>
 </html>

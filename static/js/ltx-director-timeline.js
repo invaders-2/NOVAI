@@ -138,7 +138,7 @@ const STYLES = `
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #848484;
+    color: #94a3b8;
     margin-bottom: 4px;
   }
   .pr-prompt-area {
@@ -1026,8 +1026,8 @@ class TimelineEditor {
     const updateToggleStyle = (isOn) => {
       toggleBtn.textContent = isOn ? "Custom Audio: ON" : "Custom Audio: OFF";
       if (isOn) {
-        toggleBtn.style.background = "#181818";
-        toggleBtn.style.borderColor = "#242424";
+        toggleBtn.style.background = "#1c222d";
+        toggleBtn.style.borderColor = "#283142";
         toggleBtn.style.color = "#e0e0e0";
       } else {
         toggleBtn.style.background = "#222";
@@ -1945,7 +1945,7 @@ class TimelineEditor {
         this.ctx.font = "bold 12px sans-serif";
         this.ctx.fillText("Drop to Place", startX + pxWidth / 2, RULER_HEIGHT + this.blockHeight / 2);
       } else {
-        this.ctx.fillStyle = seg.type === "text" ? "#0a0a0a" : "#000";
+        this.ctx.fillStyle = seg.type === "text" ? "#000b12" : "#000";
         this.ctx.fillRect(startX, RULER_HEIGHT + 1, pxWidth, this.blockHeight - 2);
       }
 
@@ -2007,7 +2007,7 @@ class TimelineEditor {
           // Text
           const fontSize = Math.min(11, overlayH * 0.58);
           this.ctx.font = `${fontSize}px sans-serif`;
-          this.ctx.fillStyle = "#cfcfcf";
+          this.ctx.fillStyle = "#e0e3ed";
           this.ctx.textAlign = "center";
           this.ctx.textBaseline = "middle";
 
@@ -2032,7 +2032,7 @@ class TimelineEditor {
           this.ctx.beginPath();
           this.ctx.rect(startX + pad, RULER_HEIGHT + pad, boxW, this.blockHeight - pad * 2);
           this.ctx.clip();
-          this.ctx.fillStyle = "#cfcfcf";
+          this.ctx.fillStyle = "#e0e3ed";
           this.ctx.font = "11px sans-serif";
           this.ctx.textAlign = "center";
           this.ctx.textBaseline = "top";

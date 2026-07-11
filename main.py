@@ -32,7 +32,6 @@ from threading import Lock, Thread
 import httpx
 from PIL import Image, ImageOps
 from io import BytesIO
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File, Form, Header, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.staticfiles import StaticFiles
@@ -67,31 +66,7 @@ class QuietAccessLogFilter(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(QuietAccessLogFilter())
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    global GLOBAL_LOOP
-    GLOBAL_LOOP = asyncio.get_running_loop()
-    sync_static_html_versions()
-    # 启动时整理资产库：给所有图片分组（含默认角色/场景）建好文件夹，并把根目录里的旧素材归整进去。
-    try:
-        await asyncio.to_thread(migrate_asset_library_into_dirs)
-    except Exception as exc:
-        print(f"资产库分组整理失败: {exc}")
-    # 修复历史遗留的双重扩展名素材（foo.png.png → foo.png），否则这些卡片无法显示
-    try:
-        await asyncio.to_thread(migrate_double_extension_uploads)
-    except Exception as exc:
-        print(f"修复双重扩展名素材失败: {exc}")
-    # 纠正内容与扩展名不符的图片（如 WebP 内容却叫 .png），否则严格客户端解不出来
-    try:
-        await asyncio.to_thread(migrate_mislabeled_image_extensions)
-    except Exception as exc:
-        print(f"纠正图片扩展名失败: {exc}")
-    yield
-    # Shutdown (if needed)
-
-app = FastAPI(lifespan=lifespan)
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -187,25 +162,41 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "1.0.30"
-GITHUB_REPO_URL = "https://github.com/invaders-2/NOVAI"
-GITHUB_VERSION_URL = "https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION"
-GITHUB_TREE_URL = "https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1"
-GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/invaders-2/NOVAI/main"
+APP_VERSION = "2026.06.03"
+GITHUB_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
+GITHUB_VERSION_URL = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION"
+GITHUB_TREE_URL = "https://api.github.com/repos/hero8152/Infinite-Canvas/git/trees/main?recursive=1"
+GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
-GITEE_REPO_URL = "https://gitee.com/invaders/novai"
-GITEE_VERSION_URL = "https://gitee.com/invaders/novai/raw/main/VERSION"
-GITEE_TREE_URL = "https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1"
-GITEE_RAW_ROOT = "https://gitee.com/invaders/novai/raw/main"
-GITEE_UPDATE_NOTES_URL = GITEE_RAW_ROOT + "/static/update-notes.json"
-MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/NOVAI"
-MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/NOVAI/raw/main"
+MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/Infinite-Canvas"
+MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/Infinite-Canvas/raw/main"
 # ModelScope 仓库默认分支为 master；raw 网页路径会返回 HTML，必须用仓库文件 API 才能拿到纯文本
 # 注意：.ai 站命名空间为小写 daniel8152，API 路径大小写敏感（推送/文件 API 用大写会 404/拒绝）
-MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.ai/api/v1/studio/daniel8152/NOVAI/repo?Revision=master&FilePath="
+MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infinite-Canvas/repo?Revision=master&FilePath="
 MODELSCOPE_VERSION_URL = MODELSCOPE_FILE_API_ROOT + "VERSION"
 MODELSCOPE_UPDATE_NOTES_URL = MODELSCOPE_FILE_API_ROOT + "static/update-notes.json"
-MODELSCOPE_TREE_URL = "https://www.modelscope.ai/api/v1/studio/daniel8152/NOVAI/repo/files?Revision=master&Recursive=true"
+MODELSCOPE_TREE_URL = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infinite-Canvas/repo/files?Revision=master&Recursive=true"
+
+@app.on_event("startup")
+async def startup_event():
+    global GLOBAL_LOOP
+    GLOBAL_LOOP = asyncio.get_running_loop()
+    sync_static_html_versions()
+    # 启动时整理资产库：给所有图片分组（含默认角色/场景）建好文件夹，并把根目录里的旧素材归整进去。
+    try:
+        await asyncio.to_thread(migrate_asset_library_into_dirs)
+    except Exception as exc:
+        print(f"资产库分组整理失败: {exc}")
+    # 修复历史遗留的双重扩展名素材（foo.png.png → foo.png），否则这些卡片无法显示
+    try:
+        await asyncio.to_thread(migrate_double_extension_uploads)
+    except Exception as exc:
+        print(f"修复双重扩展名素材失败: {exc}")
+    # 纠正内容与扩展名不符的图片（如 WebP 内容却叫 .png），否则严格客户端解不出来
+    try:
+        await asyncio.to_thread(migrate_mislabeled_image_extensions)
+    except Exception as exc:
+        print(f"纠正图片扩展名失败: {exc}")
 
 @app.websocket("/ws/stats")
 async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
@@ -1722,70 +1713,16 @@ def app_info():
                 "tree_url": GITHUB_TREE_URL,
                 "update_notes_url": GITHUB_UPDATE_NOTES_URL,
             },
-            "gitee": {
-                "label": "Gitee",
-                "repo_url": GITEE_REPO_URL,
-                "version_url": GITEE_VERSION_URL,
-                "tree_url": GITEE_TREE_URL,
-                "update_notes_url": GITEE_UPDATE_NOTES_URL,
+            "modelscope": {
+                "label": "ModelScope",
+                "repo_url": MODELSCOPE_REPO_URL,
+                "version_url": MODELSCOPE_VERSION_URL,
+                "tree_url": MODELSCOPE_TREE_URL,
+                "update_notes_url": MODELSCOPE_UPDATE_NOTES_URL,
             },
         },
         "update_notes": read_local_update_notes(version),
     }
-
-@app.get("/api/changelog")
-def api_changelog(limit: int = 50):
-    """从 git log 自动生成 changelog"""
-    limit = max(1, min(int(limit or 50), 200))
-    items = []
-    try:
-        repo_dir = os.path.dirname(os.path.abspath(__file__))
-        result = subprocess.run(
-            ["git", "log", f"--max-count={limit}", "--pretty=format:%H|%s|%ai|%an"],
-            capture_output=True, text=True, timeout=10, cwd=repo_dir,
-        )
-        if result.returncode != 0:
-            return {"version": current_app_version(), "items": [], "source": "git", "error": result.stderr.strip()}
-        for line in result.stdout.strip().split("\n"):
-            if not line.strip():
-                continue
-            parts = line.split("|", 3)
-            if len(parts) < 4:
-                continue
-            commit_hash, message, date_str, author = parts
-            msg = message.strip()
-            if not msg:
-                continue
-            # 解析 conventional commit 类型
-            commit_type = "update"
-            msg_lower = msg.lower()
-            if msg_lower.startswith("feat"):
-                commit_type = "feature"
-                msg = re.sub(r"^feat(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
-            elif msg_lower.startswith("fix"):
-                commit_type = "bugfix"
-                msg = re.sub(r"^fix(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
-            elif msg_lower.startswith("refine") or msg_lower.startswith("refactor"):
-                commit_type = "refine"
-                msg = re.sub(r"^(refine|refactor)(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
-            elif msg_lower.startswith("perf"):
-                commit_type = "perf"
-                msg = re.sub(r"^perf(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
-            elif msg_lower.startswith("chore") or msg_lower.startswith("docs") or msg_lower.startswith("style"):
-                commit_type = "chore"
-                msg = re.sub(r"^(chore|docs|style)(\([^)]*\))?\s*:\s*", "", msg, flags=re.IGNORECASE)
-            # 截取日期
-            date_clean = date_str.strip()[:10] if date_str else ""
-            items.append({
-                "type": commit_type,
-                "text": msg[:500],
-                "date": date_clean,
-                "hash": commit_hash[:8],
-                "author": author.strip(),
-            })
-    except Exception as exc:
-        return {"version": current_app_version(), "items": [], "source": "git", "error": str(exc)}
-    return {"version": current_app_version(), "items": items, "source": "git"}
 
 def connectivity_probe(name: str, url: str, timeout: float = 5.0) -> Dict[str, Any]:
     started = time.time()
@@ -1825,9 +1762,9 @@ def update_connectivity_targets() -> List[Tuple[str, str, str, bool]]:
         ("GitHub 更新列表", GITHUB_TREE_URL, "github", True),
         ("GitHub 版本文件", GITHUB_VERSION_URL, "github", True),
         ("GitHub 主页", "https://github.com/", "github", False),
-        ("Gitee 更新列表", GITEE_TREE_URL, "gitee", True),
-        ("Gitee 版本文件", GITEE_VERSION_URL, "gitee", True),
-        ("Gitee 主页", "https://gitee.com/", "gitee", False),
+        ("ModelScope 版本文件", MODELSCOPE_VERSION_URL, "modelscope", True),
+        ("ModelScope 空间页面", MODELSCOPE_REPO_URL, "modelscope", False),
+        ("ModelScope 主页", "https://modelscope.cn/", "modelscope", False),
         ("Google 连通性", "https://www.google.com/generate_204", "reference", False),
     ]
 
@@ -1852,7 +1789,7 @@ def update_connectivity():
         item["required"] = required
         results.append(item)
     sources = {}
-    for source in ("github", "gitee"):
+    for source in ("github", "modelscope"):
         source_required = [item for item in results if item.get("source") == source and item.get("required")]
         sources[source] = {
             "ok": all(item["ok"] for item in source_required),
@@ -1863,7 +1800,7 @@ def update_connectivity():
         "results": results,
         "sources": sources,
         "required": sources["github"]["required"],
-        "optional": ["GitHub 主页", "Gitee 主页", "Google 连通性"],
+        "optional": ["GitHub 主页", "ModelScope 空间页面", "ModelScope 主页", "Google 连通性"],
     }
 
 def fetch_remote_version(url: str, timeout: float = 5.0) -> Dict[str, Any]:
@@ -1907,9 +1844,9 @@ def version_gt(a: str, b: str) -> bool:
 
 @app.get("/api/check-update")
 def check_update():
-    """服务端检测 GitHub、Gitee 与 ModelScope 三个源的远端版本（走系统代理，避免浏览器跨域/被墙）。"""
+    """服务端检测 GitHub 与 ModelScope 两个源的远端版本（走系统代理，避免浏览器跨域/被墙）。"""
     current = current_app_version()
-    # 并发检测三个源，避免串行拖慢首屏更新提示
+    # 并发检测两个源，避免串行 8s+8s 拖慢首屏更新提示
     holder: Dict[str, Dict[str, Any]] = {}
     def _probe(key: str, url: str):
         item = fetch_remote_version(url, timeout=5.0)
@@ -1917,7 +1854,6 @@ def check_update():
         holder[key] = item
     threads = [
         Thread(target=_probe, args=("github", GITHUB_VERSION_URL), daemon=True),
-        Thread(target=_probe, args=("gitee", GITEE_VERSION_URL), daemon=True),
         Thread(target=_probe, args=("modelscope", MODELSCOPE_VERSION_URL), daemon=True),
     ]
     for t in threads:
@@ -1925,10 +1861,9 @@ def check_update():
     for t in threads:
         t.join(timeout=5.5)
     github = holder.get("github") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": GITHUB_VERSION_URL, "source": "github"}
-    gitee = holder.get("gitee") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": GITEE_VERSION_URL, "source": "gitee"}
     modelscope = holder.get("modelscope") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": MODELSCOPE_VERSION_URL, "source": "modelscope"}
     best: Dict[str, Any] = {}
-    for item in (github, gitee, modelscope):
+    for item in (github, modelscope):
         if item["ok"] and item["version"]:
             if not best or version_gt(item["version"], best["version"]):
                 best = {"source": item["source"], "version": item["version"]}
@@ -1940,13 +1875,12 @@ def check_update():
     return {
         "current": current,
         "github": github,
-        "gitee": gitee,
         "modelscope": modelscope,
         "latest": best,
         "update_notes": best.get("update_notes") if best else {},
         "update_notes_sources": notes_by_source,
         "update_available": update_available,
-        "reachable": bool(github["ok"] or gitee["ok"] or modelscope["ok"]),
+        "reachable": bool(github["ok"] or modelscope["ok"]),
     }
 
 def update_allowed_file(path: str) -> bool:
@@ -3383,19 +3317,6 @@ def list_canvases():
 def list_deleted_canvases():
     records = iter_canvas_records(include_deleted=True)
     return sorted(records, key=lambda item: item["deleted_at"], reverse=True)
-
-@app.get("/api/recent-canvases")
-def recent_canvases():
-    records = iter_canvas_records(include_deleted=False)
-    sorted_records = sorted(records, key=lambda item: -(item.get("updated_at") or item.get("created_at") or 0))
-    recent = sorted_records[:4]
-    return [
-        {
-            "name": r.get("title", "未命名画布"),
-            "lastOpened": r.get("updated_at") or r.get("created_at", 0),
-        }
-        for r in recent
-    ]
 
 def canvas_asset_url_value(value):
     if isinstance(value, str):
@@ -5114,27 +5035,6 @@ def is_lingjing_provider(provider):
     provider_id = str((provider or {}).get("id") or "").strip().lower()
     return provider_id == "lingjing" or "apistudio.vip" in base_url
 
-def is_lingjing_kling_model(model_id: str) -> bool:
-    """灵境 Kling 可灵视频模型"""
-    return bool(model_id and str(model_id).lower().startswith("kling-"))
-
-def is_lingjing_minimax_model(model_id: str) -> bool:
-    """灵境 MiniMax/海螺视频模型"""
-    return bool(model_id and str(model_id).lower().startswith("minimax-"))
-
-def is_lingjing_bailian_model(model_id: str) -> bool:
-    """灵境 阿里百炼/通义万象视频模型"""
-    m = str(model_id or "").lower()
-    return m.startswith("wan2.") or m.startswith("wanx") or m.startswith("happyhorse-")
-
-def is_lingjing_pixverse_model(model_id: str) -> bool:
-    """灵境 PixVerse 视频模型"""
-    return bool(model_id and str(model_id).lower().startswith("pixverse"))
-
-def is_lingjing_grok_video_model(model_id: str) -> bool:
-    """灵境 Grok 视频模型"""
-    return bool(model_id and str(model_id).lower().startswith("grok-imagine-"))
-
 def is_agnes_provider(provider, model=""):
     base_url = str((provider or {}).get("base_url") or "").lower()
     model_id = str(model or "").strip().lower()
@@ -6482,64 +6382,7 @@ def make_asset_library_item(src: str, name: str = "", subdir: str = "") -> Tuple
         "created_at": now_ms(),
     }
     return dest_name, item
-
-def make_asset_library_item_ref(src_url: str, name: str = "") -> Dict[str, Any]:
-    """Create an asset library item that references the original file without copying.
-    This avoids duplicate storage - the item points to the original /output/ or /assets/ path.
-    """
-    kind = asset_library_media_kind(src_url)
-    safe_name = sanitize_asset_name(name or os.path.basename(src_url), "asset")
-    if not os.path.splitext(safe_name)[1]:
-        ext = asset_library_safe_extension(src_url, kind)
-        safe_name += ext
-    item = {
-        "id": f"asset_{uuid.uuid4().hex[:12]}",
-        "name": os.path.splitext(safe_name)[0][:120],
-        "url": src_url,
-        "kind": kind,
-        "created_at": now_ms(),
-        "auto_synced": True,
-    }
-    return item
-
-def auto_sync_to_asset_library(urls: list, source: str = ""):
-    """Auto-sync generated images/videos to the asset library without copying files.
-    References the original file paths to avoid duplicate storage.
-    """
-    if not urls:
-        return
-    try:
-        lib = load_asset_library()
-        # Find the first image category in the default library
-        target_cat = None
-        for library in lib.get("libraries", []):
-            if library.get("id") == (lib.get("active_library_id") or "default"):
-                for cat in library.get("categories", []):
-                    if cat.get("type") == "image":
-                        target_cat = cat
-                        break
-                break
-        if not target_cat:
-            # Fallback to root categories
-            for cat in lib.get("categories", []):
-                if cat.get("type") == "image":
-                    target_cat = cat
-                    break
-        if not target_cat:
-            return
-        existing_urls = {item.get("url") for item in target_cat.get("items", []) if isinstance(item, dict)}
-        added = []
-        for url in urls:
-            if not url or url in existing_urls:
-                continue
-            item = make_asset_library_item_ref(url, name=f"{source}_{os.path.basename(url)}" if source else "")
-            target_cat.setdefault("items", []).append(item)
-            existing_urls.add(url)
-            added.append(item)
-        if added:
-            save_asset_library(lib)
-    except Exception as e:
-        print(f"[auto_sync] Failed to sync to asset library: {e}")
+    return lib
 
 ASSET_CLASSIFICATION_PROMPT = """请识别这张图片，输出严格 JSON，不要 Markdown，不要解释。
 目标是给素材库做非常全面的筛选分类。所有字段都用中文短标签数组，尽量具体但不要虚构。
@@ -7979,15 +7822,13 @@ def apimart_upload_raw_file_payload(path: str):
 APIMART_UPLOAD_RETRY_ATTEMPTS = 3
 
 def is_transient_tls_error(exc) -> bool:
-    """识别可重试的瞬时 TLS/传输错误，如 SSLV3_ALERT_BAD_RECORD_MAC、EOF occurred、
-    [SSL] record layer failure 等，这类错误多由连接池中被污染/复用坏掉的 TLS 连接引起，
-    换新连接重试通常即可成功。"""
+    """识别可重试的瞬时 TLS/传输错误，如 SSLV3_ALERT_BAD_RECORD_MAC、EOF occurred 等，
+    这类错误多由连接池中被污染/复用坏掉的 TLS 连接引起，换新连接重试通常即可成功。"""
     if isinstance(exc, httpx.TransportError):
         return True
     msg = f"{type(exc).__name__}: {exc}".upper()
     return any(token in msg for token in (
         "SSL", "BAD RECORD MAC", "EOF OCCURRED", "DECRYPTION FAILED", "WRONG VERSION NUMBER",
-        "RECORD LAYER FAILURE", "TLSV1", "CERTIFICATE VERIFY FAILED",
     ))
 
 async def apimart_upload_post(client, upload_url, headers, file_tuple, timeout=60):
@@ -12814,18 +12655,9 @@ async def build_online_image_result(payload: OnlineImageRequest):
         friendly = friendly_image_error_detail(text, payload.size, model)
         detail = friendly or f"上游生图接口错误：{text[:300]}"
         raise HTTPException(status_code=exc.response.status_code, detail=detail) from exc
-    except (httpx.HTTPError, Exception) as exc:
-        if is_transient_tls_error(exc):
-            print(f"生图遇到瞬时 TLS/SSL 错误，重试一次：{exc}")
-            await asyncio.sleep(1.0)
-            try:
-                generated = await asyncio.gather(*(generate_one() for _ in range(count)))
-            except (httpx.HTTPError, Exception) as exc2:
-                log_net_error(f"生图 网络/TLS错误(重试后) provider={provider.get('id')} model={model}", exc2)
-                raise HTTPException(status_code=502, detail=f"请求上游生图接口失败(重试后)：{exc2}") from exc2
-        else:
-            log_net_error(f"生图 网络/TLS错误 provider={provider.get('id')} model={model}", exc)
-            raise HTTPException(status_code=502, detail=f"请求上游生图接口失败：{exc}") from exc
+    except httpx.HTTPError as exc:
+        log_net_error(f"生图 网络/TLS错误 provider={provider.get('id')} model={model}", exc)
+        raise HTTPException(status_code=502, detail=f"请求上游生图接口失败：{exc}") from exc
 
     local_urls = [url for urls, _items, _raw in generated for url in (urls or []) if url]
     local_items = [item for _urls, items, _raw in generated for item in (items or []) if item.get("url")]
@@ -12849,8 +12681,6 @@ async def build_online_image_result(payload: OnlineImageRequest):
         "raw_usage": raw.get("usage") if isinstance(raw, dict) else None,
     }
     save_to_history(result)
-    # Auto-sync generated images to asset library (no file copy, just reference)
-    auto_sync_to_asset_library(local_urls, source="online")
     if GLOBAL_LOOP:
         asyncio.run_coroutine_threadsafe(manager.broadcast_new_image(result), GLOBAL_LOOP)
     return result
@@ -12899,8 +12729,6 @@ async def query_image_task(payload: ImageTaskQueryRequest):
                         "raw": raw,
                     }
                     save_to_history(result)
-                    # Auto-sync RunningHub generated images to asset library
-                    auto_sync_to_asset_library(local_urls, source="runninghub")
                     if GLOBAL_LOOP:
                         asyncio.run_coroutine_threadsafe(manager.broadcast_new_image(result), GLOBAL_LOOP)
                     return result
@@ -12968,9 +12796,6 @@ async def query_image_task(payload: ImageTaskQueryRequest):
             "raw": raw,
         }
         save_to_history(result)
-        # Auto-sync generated images/videos to asset library (no file copy, just reference)
-        all_media_urls = [u for u in (local_images + local_videos) if u]
-        auto_sync_to_asset_library(all_media_urls, source=req.type or "comfy")
         if GLOBAL_LOOP:
             asyncio.run_coroutine_threadsafe(manager.broadcast_new_image(result), GLOBAL_LOOP)
         return result
@@ -13602,430 +13427,6 @@ async def yuli_fetch_reference_bytes(client, ref_url):
         return (f"input_reference.{ext}", raw, mime)
     return None
 
-KLING_POLL_INTERVAL = 5
-KLING_POLL_TIMEOUT = 600
-
-def kling_model_name(model_id: str) -> str:
-    m = str(model_id or "").lower()
-    if "kling-3.0-turbo" in m or "kling-v2-5" in m:
-        return "kling-v2-5-turbo"
-    if "kling-v1-6" in m:
-        return "kling-v1-6"
-    return "kling-v2-5-turbo"
-
-def kling_duration(dur) -> int:
-    try:
-        v = int(dur)
-    except Exception:
-        return 5
-    return v if v in (5, 10) else 5
-
-def kling_aspect_ratio(size) -> str:
-    s = str(size or "").strip()
-    mapping = {
-        "16:9": "16:9", "9:16": "9:16", "1:1": "1:1",
-        "1024x576": "16:9", "576x1024": "9:16", "1024x1024": "1:1",
-    }
-    return mapping.get(s, "16:9")
-
-async def fetch_image_base64_for_kling(client, ref) -> str:
-    """将图片转为 base64 data URL 供 Kling API 使用"""
-    ref_url = str(getattr(ref, "url", "") or "").strip()
-    if not ref_url:
-        return ""
-    if ref_url.startswith("data:image/"):
-        return ref_url
-    path = output_file_from_url(ref_url)
-    if path:
-        ext = os.path.splitext(path)[1].lower().lstrip(".")
-        mime_map = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}
-        mime = mime_map.get(ext, "image/png")
-        try:
-            with open(path, "rb") as f:
-                b64 = base64.b64encode(f.read()).decode()
-            return f"data:{mime};base64,{b64}"
-        except Exception:
-            return ""
-    if ref_url.startswith("http://") or ref_url.startswith("https://"):
-        try:
-            resp = await client.get(ref_url)
-            resp.raise_for_status()
-            content_type = resp.headers.get("content-type", "image/png").split(";")[0].strip()
-            b64 = base64.b64encode(resp.content).decode()
-            return f"data:{content_type};base64,{b64}"
-        except Exception:
-            return ""
-    return ""
-
-async def poll_kling_video(client, query_url: str, headers: dict, task_id: str) -> dict:
-    deadline = time.time() + KLING_POLL_TIMEOUT
-    while time.time() < deadline:
-        await asyncio.sleep(KLING_POLL_INTERVAL)
-        resp = await client.get(query_url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        status = (data.get("data") or {}).get("task_status", "")
-        if status == "succeed":
-            return data
-        if status == "failed":
-            msg = (data.get("data") or {}).get("task_status_msg", "") or data.get("message", "unknown")
-            raise HTTPException(status_code=502, detail=f"Kling 视频生成失败（{task_id}）：{msg}")
-    raise HTTPException(status_code=504, detail=f"Kling 视频生成超时（{task_id}）")
-
-async def generate_lingjing_kling_video(client, payload, provider, base_url, model_id):
-    """灵境 Kling 视频生成：文生视频 / 图生视频"""
-    has_image = bool(payload.images and len(payload.images) > 0 and getattr(payload.images[0], 'url', None))
-    model_name = kling_model_name(model_id)
-    
-    if has_image:
-        submit_url = f"{base_url}/kling/v1/videos/image2video"
-        image_b64 = await fetch_image_base64_for_kling(client, payload.images[0])
-        body = {
-            "model_name": model_name,
-            "prompt": str(payload.prompt or ""),
-            "image": image_b64,
-            "duration": str(kling_duration(payload.duration)),
-            "aspect_ratio": kling_aspect_ratio(payload.aspect_ratio or payload.size),
-        }
-    else:
-        submit_url = f"{base_url}/kling/v1/videos/text2video"
-        body = {
-            "model_name": model_name,
-            "prompt": str(payload.prompt or ""),
-            "duration": kling_duration(payload.duration),
-            "aspect_ratio": kling_aspect_ratio(payload.aspect_ratio or payload.size),
-        }
-    
-    headers = api_headers(json_body=True, provider=provider)
-    resp = await client.post(submit_url, json=body, headers=headers)
-    resp.raise_for_status()
-    data = resp.json()
-    if data.get("code") != 0:
-        raise HTTPException(status_code=502, detail=f"Kling API 错误：{data.get('message', 'unknown')}")
-    
-    task_id = data["data"]["task_id"]
-    query_path = "image2video" if has_image else "text2video"
-    query_url = f"{base_url}/kling/v1/videos/{query_path}/{task_id}"
-    
-    result = await poll_kling_video(client, query_url, headers, task_id)
-    task_result = (result.get("data") or {}).get("task_result") or {}
-    urls = []
-    for video in task_result.get("videos", []):
-        url = video.get("url", "")
-        if url:
-            urls.append(url)
-    if not urls:
-        raise HTTPException(status_code=502, detail=f"Kling 视频生成成功但无视频URL：{result}")
-    
-    local_urls = [await save_remote_video_to_output(u) for u in urls]
-    return {"videos": local_urls, "task_id": task_id, "raw": result}
-
-MINIMAX_POLL_INTERVAL = 5
-MINIMAX_POLL_TIMEOUT = 600
-
-def minimax_duration(dur) -> int:
-    try:
-        v = int(dur)
-    except Exception:
-        return 6
-    return v if v in (6, 10) else 6
-
-async def poll_minimax_video(client, base_url: str, headers: dict, task_id: str) -> dict:
-    query_url = f"{base_url}/minimax/v1/query/video_generation?task_id={task_id}"
-    deadline = time.time() + MINIMAX_POLL_TIMEOUT
-    while time.time() < deadline:
-        await asyncio.sleep(MINIMAX_POLL_INTERVAL)
-        resp = await client.get(query_url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        base_resp = data.get("base_resp", {})
-        # 提交级错误才在这里捕获
-        if base_resp.get("status_code", 0) != 0:
-            raise HTTPException(status_code=502, detail=f"MiniMax API 错误：{base_resp.get('status_msg', 'unknown')}")
-        gen_status = data.get("status") or ""
-        if gen_status.lower() in ("success", "succeed", "completed", "done"):
-            return data
-        if gen_status.lower() in ("failed", "error"):
-            raise HTTPException(status_code=502, detail=f"MiniMax 视频生成失败（{task_id}）：status={gen_status}")
-    raise HTTPException(status_code=504, detail=f"MiniMax 视频生成超时（{task_id}）")
-
-async def generate_lingjing_minimax_video(client, payload, provider, base_url, model_id):
-    """灵境 MiniMax/海螺 视频生成"""
-    submit_url = f"{base_url}/minimax/v1/video_generation"
-    body = {
-        "model": str(model_id).strip() or "MiniMax-Hailuo-02",
-        "prompt": str(payload.prompt or ""),
-        "duration": minimax_duration(payload.duration),
-    }
-    
-    # 图生视频：添加 first_frame_image
-    if payload.images:
-        first_img = payload.images[0]
-        first_url = str(getattr(first_img, "url", "") or "").strip()
-        if first_url:
-            # 转为 base64 data URL
-            b64 = await fetch_image_base64_for_kling(client, first_img)
-            if b64:
-                body["first_frame_image"] = b64
-    
-    headers = api_headers(json_body=True, provider=provider)
-    resp = await client.post(submit_url, json=body, headers=headers)
-    resp.raise_for_status()
-    data = resp.json()
-    
-    base_resp = data.get("base_resp", {})
-    if base_resp.get("status_code", 0) != 0:
-        raise HTTPException(status_code=502, detail=f"MiniMax API 错误：{base_resp.get('status_msg', 'unknown')}")
-    
-    task_id = data.get("task_id", "")
-    if not task_id:
-        raise HTTPException(status_code=502, detail=f"MiniMax API 未返回 task_id：{data}")
-    
-    result = await poll_minimax_video(client, base_url, headers, task_id)
-    
-    try:
-        file_info = result.get("file") or result.get("data", {}).get("file") or {}
-        download_url = file_info.get("download_url") or file_info.get("backup_download_url") or ""
-    except (KeyError, TypeError):
-        download_url = ""
-    
-    if not download_url:
-        raise HTTPException(status_code=502, detail=f"MiniMax 视频生成成功但无视频URL：{result}")
-    
-    local_url = await save_remote_video_to_output(download_url)
-    return {"videos": [local_url], "task_id": task_id, "raw": result}
-
-BAILIAN_POLL_INTERVAL = 5
-BAILIAN_POLL_TIMEOUT = 600
-
-async def poll_bailian_video(client, base_url: str, headers: dict, task_id: str) -> dict:
-    query_url = f"{base_url}/alibailian/api/v1/tasks/{task_id}"
-    deadline = time.time() + BAILIAN_POLL_TIMEOUT
-    while time.time() < deadline:
-        await asyncio.sleep(BAILIAN_POLL_INTERVAL)
-        resp = await client.get(query_url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        output = data.get("output", {})
-        status = output.get("task_status", "")
-        if status == "SUCCEEDED":
-            return data
-        if status == "FAILED":
-            msg = output.get("message", "") or data.get("message", "unknown")
-            raise HTTPException(status_code=502, detail=f"阿里百炼视频生成失败（{task_id}）：{msg}")
-    raise HTTPException(status_code=504, detail=f"阿里百炼视频生成超时（{task_id}）")
-
-async def generate_lingjing_bailian_video(client, payload, provider, base_url, model_id):
-    """灵境 阿里百炼/通义万象 视频生成"""
-    submit_url = f"{base_url}/alibailian/api/v1/services/aigc/video-generation/video-synthesis"
-    
-    input_obj = {"prompt": str(payload.prompt or "")}
-    
-    # 图生视频：img_url
-    if payload.images:
-        first_url = str(getattr(payload.images[0], "url", "") or "").strip()
-        if first_url:
-            input_obj["img_url"] = first_url
-    
-    parameters = {}
-    dur = None
-    try:
-        dur = int(payload.duration) if payload.duration else None
-    except Exception:
-        pass
-    if dur:
-        parameters["duration"] = dur
-    
-    size = str(payload.aspect_ratio or payload.size or "").strip()
-    if size:
-        parameters["resolution"] = size
-    
-    body = {
-        "model": str(model_id).strip(),
-        "input": input_obj,
-        "parameters": parameters,
-    }
-    
-    headers = api_headers(json_body=True, provider=provider)
-    resp = await client.post(submit_url, json=body, headers=headers)
-    resp.raise_for_status()
-    data = resp.json()
-    
-    task_id = (data.get("output") or {}).get("task_id", "")
-    if not task_id:
-        raise HTTPException(status_code=502, detail=f"阿里百炼 API 未返回 task_id：{data}")
-    
-    result = await poll_bailian_video(client, base_url, headers, task_id)
-    video_url = (result.get("output") or {}).get("video_url", "")
-    if not video_url:
-        raise HTTPException(status_code=502, detail=f"阿里百炼视频生成成功但无 video_url：{result}")
-    
-    local_url = await save_remote_video_to_output(video_url)
-    return {"videos": [local_url], "task_id": task_id, "raw": result}
-
-PIXVERSE_POLL_INTERVAL = 5
-PIXVERSE_POLL_TIMEOUT = 600
-
-def pixverse_model_name(model_id: str) -> str:
-    return "v6"
-
-def pixverse_duration(dur) -> int:
-    try:
-        v = int(dur)
-    except Exception:
-        return 5
-    return max(1, min(v, 15))
-
-async def poll_pixverse_video(client, base_url: str, headers: dict, video_id: str) -> dict:
-    query_url = f"{base_url}/openapi/v2/video/result/{video_id}"
-    deadline = time.time() + PIXVERSE_POLL_TIMEOUT
-    while time.time() < deadline:
-        await asyncio.sleep(PIXVERSE_POLL_INTERVAL)
-        resp = await client.get(query_url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        err_msg = str(data.get("ErrMsg") or "").strip()
-        if err_msg and err_msg.lower() in ("success", "completed"):
-            return data
-        # 有 url 即为完成
-        resp_obj = data.get("Resp") or {}
-        if resp_obj.get("url"):
-            return data
-        if err_msg and err_msg.lower() in ("failed", "error"):
-            raise HTTPException(status_code=502, detail=f"PixVerse 视频生成失败（{video_id}）")
-    raise HTTPException(status_code=504, detail=f"PixVerse 视频生成超时（{video_id}）")
-
-def extract_pixverse_video_url(data: dict) -> str:
-    """从 PixVerse 返回中提取视频 URL"""
-    # PixVerse 返回结构: Resp.url
-    resp = data.get("Resp") or {}
-    for key in ("url", "video_url", "output_url", "download_url"):
-        v = resp.get(key)
-        if v:
-            return str(v)
-    for key in ("video_url", "url", "output_url", "result_url", "download_url"):
-        v = data.get(key)
-        if v:
-            return str(v)
-    d = data.get("data") or {}
-    if isinstance(d, dict):
-        for key in ("video_url", "url", "output_url", "result_url", "download_url", "videos"):
-            v = d.get(key)
-            if v:
-                if isinstance(v, list) and v:
-                    return str(v[0])
-                return str(v)
-    output = data.get("output") or {}
-    if isinstance(output, dict):
-        for key in ("video_url", "url", "result_url"):
-            v = output.get(key)
-            if v:
-                return str(v)
-    return ""
-
-async def generate_lingjing_pixverse_video(client, payload, provider, base_url, model_id):
-    """灵境 PixVerse 视频生成"""
-    submit_url = f"{base_url}/openapi/v2/video/text/generate"
-    
-    body = {
-        "model": pixverse_model_name(model_id),
-        "prompt": str(payload.prompt or ""),
-        "aspect_ratio": str(payload.aspect_ratio or payload.size or "16:9"),
-        "duration": pixverse_duration(payload.duration),
-        "quality": "720p",
-    }
-    
-    headers = api_headers(json_body=True, provider=provider)
-    resp = await client.post(submit_url, json=body, headers=headers)
-    resp.raise_for_status()
-    data = resp.json()
-    
-    video_id = (data.get("Resp") or {}).get("video_id") or data.get("video_id") or data.get("task_id") or ""
-    if not video_id:
-        video_id = str((data.get("data") or {}).get("video_id", "") or "")
-    if not video_id:
-        raise HTTPException(status_code=502, detail=f"PixVerse API 未返回 video_id：{data}")
-    
-    result = await poll_pixverse_video(client, base_url, headers, video_id)
-    video_url = extract_pixverse_video_url(result)
-    if not video_url:
-        raise HTTPException(status_code=502, detail=f"PixVerse 视频生成成功但未提取到视频URL：{result}")
-    
-    local_url = await save_remote_video_to_output(video_url)
-    return {"videos": [local_url], "task_id": video_id, "raw": result}
-
-GROK_POLL_INTERVAL = 5
-GROK_POLL_TIMEOUT = 600
-
-async def poll_grok_video(client, base_url: str, headers: dict, task_id: str) -> dict:
-    query_url = f"{base_url}/v1/video/query?id={task_id}"
-    deadline = time.time() + GROK_POLL_TIMEOUT
-    while time.time() < deadline:
-        await asyncio.sleep(GROK_POLL_INTERVAL)
-        resp = await client.get(query_url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json()
-        status = data.get("status") or data.get("task_status", "")
-        if status in ("completed", "success", "succeed", "done"):
-            return data
-        if status in ("failed", "error"):
-            msg = data.get("error", {}).get("message", "") if isinstance(data.get("error"), dict) else data.get("message", "")
-            raise HTTPException(status_code=502, detail=f"Grok 视频生成失败（{task_id}）：{msg}")
-    raise HTTPException(status_code=504, detail=f"Grok 视频生成超时（{task_id}）")
-
-async def generate_lingjing_grok_video(client, payload, provider, base_url, model_id):
-    """灵境 Grok 视频生成（/v1/videos 提交 + /v1/video/query 查询）"""
-    grok_size_map = {
-        "16:9": "1280x720", "9:16": "720x1280", "1:1": "1024x1024",
-        "1024x576": "1280x720", "576x1024": "720x1280", "1024x1024": "1024x1024",
-        "1280x720": "1280x720", "720x1280": "720x1280",
-    }
-    grok_size = grok_size_map.get(str(payload.aspect_ratio or payload.size or "").strip(), "1280x720")
-    
-    submit_url = f"{base_url}/v1/videos"
-    data_fields = {
-        "model": str(model_id).strip(),
-        "prompt": str(payload.prompt or ""),
-        "seconds": str(minimax_duration(payload.duration)),
-        "size": grok_size,
-        "watermark": "false",
-    }
-    
-    files = []
-    for ref in (payload.images or [])[:1]:
-        ref_file = await yuli_fetch_reference_bytes(client, getattr(ref, "url", ""))
-        if ref_file:
-            files.append(("input_reference", ref_file))
-    
-    headers = api_headers(json_body=False, provider=provider)
-    if files:
-        resp = await client.post(submit_url, headers=headers, data=data_fields, files=files)
-    else:
-        multipart_fields = [(k, (None, v)) for k, v in data_fields.items()]
-        resp = await client.post(submit_url, headers=headers, files=multipart_fields)
-    resp.raise_for_status()
-    
-    try:
-        raw = resp.json()
-    except Exception:
-        raw = {"text": (resp.text or "")[:500]}
-    
-    task_id = str(raw.get("id") or raw.get("task_id") or "").strip()
-    if not task_id:
-        raise HTTPException(status_code=502, detail=f"Grok API 未返回 task_id：{raw}")
-    
-    result = await poll_grok_video(client, base_url, headers, task_id)
-    video_url = result.get("video_url") or result.get("url") or ""
-    if not video_url:
-        # 尝试从 output 字段提取
-        out = result.get("output") or {}
-        video_url = out.get("video_url") or out.get("url") or ""
-    if not video_url:
-        raise HTTPException(status_code=502, detail=f"Grok 视频生成成功但无视频URL：{result}")
-    
-    local_url = await save_remote_video_to_output(video_url)
-    return {"videos": [local_url], "task_id": task_id, "raw": result}
-
 async def generate_lingjing_openai_video(client, payload, provider, base_url, requested_model):
     """灵境 API OpenAI 视频格式：POST /v1/videos，参考图走 multipart input_reference。"""
     submit_url = f"{base_url}/v1/videos"
@@ -14157,17 +13558,6 @@ async def canvas_video(payload: CanvasVideoRequest):
     if is_lingjing:
         try:
             async with httpx.AsyncClient(timeout=VIDEO_POLL_TIMEOUT) as lingjing_client:
-                if is_lingjing_kling_model(requested_model):
-                    return await generate_lingjing_kling_video(lingjing_client, payload, provider, base_url, requested_model)
-                if is_lingjing_minimax_model(requested_model):
-                    return await generate_lingjing_minimax_video(lingjing_client, payload, provider, base_url, requested_model)
-                if is_lingjing_bailian_model(requested_model):
-                    return await generate_lingjing_bailian_video(lingjing_client, payload, provider, base_url, requested_model)
-                if is_lingjing_pixverse_model(requested_model):
-                    return await generate_lingjing_pixverse_video(lingjing_client, payload, provider, base_url, requested_model)
-                if is_lingjing_grok_video_model(requested_model):
-                    return await generate_lingjing_grok_video(lingjing_client, payload, provider, base_url, requested_model)
-                # fallback 到通用 OpenAI 视频格式
                 return await generate_lingjing_openai_video(lingjing_client, payload, provider, base_url, requested_model)
         except httpx.HTTPStatusError as exc:
             text = exc.response.text
@@ -16274,49 +15664,41 @@ async def chat_stream(payload: ChatRequest, request: Request, x_user_id: str = H
         content_parts = []
         raw_usage = None
         yield sse_event({"type": "meta", "conversation": conversation})
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
-                    async with client.stream(
-                        "POST",
-                        f"{chat_base}/chat/completions",
-                        headers=chat_hdrs,
-                        json={"model": model, "messages": upstream_messages, "stream": True},
-                    ) as response:
-                        if response.status_code >= 400:
-                            detail = await response.aread()
-                            body = detail.decode("utf-8", errors="ignore")
-                            friendly = friendly_chat_error_detail(body, model, _stream_provider)
-                            yield sse_event({"type": "error", "detail": friendly or f"上游接口错误：{body}"})
-                            return
-                        async for line in response.aiter_lines():
-                            if not line:
-                                continue
-                            if line.startswith("data:"):
-                                line = line[5:].strip()
-                            if line == "[DONE]":
-                                break
-                            try:
-                                chunk = json.loads(line)
-                            except json.JSONDecodeError:
-                                continue
-                            if isinstance(chunk, dict) and chunk.get("usage"):
-                                raw_usage = chunk.get("usage")
-                            delta = text_delta_from_chat_chunk(chunk)
-                            if delta:
-                                content_parts.append(delta)
-                                yield sse_event({"type": "delta", "delta": delta})
-                break  # 成功完成，跳出重试循环
-            except (httpx.HTTPError, Exception) as exc:
-                if is_transient_tls_error(exc) and attempt < max_retries - 1:
-                    print(f"对话(流式) 遇到瞬时 TLS/SSL 错误，换新连接重试（第 {attempt + 1} 次）：{exc}")
-                    content_parts.clear()
-                    await asyncio.sleep(0.5 * (attempt + 1))
-                    continue
-                log_net_error("对话(流式) 网络/TLS错误", exc)
-                yield sse_event({"type": "error", "detail": f"请求上游接口失败：{exc}"})
-                return
+        try:
+            async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+                async with client.stream(
+                    "POST",
+                    f"{chat_base}/chat/completions",
+                    headers=chat_hdrs,
+                    json={"model": model, "messages": upstream_messages, "stream": True},
+                ) as response:
+                    if response.status_code >= 400:
+                        detail = await response.aread()
+                        body = detail.decode("utf-8", errors="ignore")
+                        friendly = friendly_chat_error_detail(body, model, _stream_provider)
+                        yield sse_event({"type": "error", "detail": friendly or f"上游接口错误：{body}"})
+                        return
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        if line.startswith("data:"):
+                            line = line[5:].strip()
+                        if line == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        if isinstance(chunk, dict) and chunk.get("usage"):
+                            raw_usage = chunk.get("usage")
+                        delta = text_delta_from_chat_chunk(chunk)
+                        if delta:
+                            content_parts.append(delta)
+                            yield sse_event({"type": "delta", "delta": delta})
+        except httpx.HTTPError as exc:
+            log_net_error("对话(流式) 网络/TLS错误", exc)
+            yield sse_event({"type": "error", "detail": f"请求上游接口失败：{exc}"})
+            return
 
         assistant_message = {
             "id": uuid.uuid4().hex,
@@ -17614,6 +16996,5 @@ if __name__ == "__main__":
     # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
     # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。
-    _port = int(os.getenv("DEPLOY_RUN_PORT", "3000"))
-    uvicorn.run(app, host="0.0.0.0", port=_port,
+    uvicorn.run(app, host="0.0.0.0", port=3000,
                 ws_ping_interval=None, ws_ping_timeout=None)

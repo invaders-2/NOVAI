@@ -17,17 +17,17 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.46.1783791221"></script>
-    <script src="/static/vendor/js/lucide.js?v=1.0.46.1783673379"></script>
-    <script src="/static/js/theme.js?v=1.0.46.1783791221"></script>
-    <script src="/static/js/i18n.js?v=1.0.46.1783673379"></script>
-    <script src="/static/js/image-preview.js?v=1.0.46.1783791221"></script>
-    <script src="/static/js/history-bulk-manager.js?v=1.0.46.1783791221"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.07.6.1782696751"></script>
+    <script src="/static/vendor/js/lucide.js?v=2026.07.6.1782696749"></script>
+    <script src="/static/js/theme.js?v=2026.07.6.1783117645"></script>
+    <script src="/static/js/i18n.js?v=2026.07.6.1783116068"></script>
+    <script src="/static/js/image-preview.js?v=2026.07.6.1782696713"></script>
+    <script src="/static/js/history-bulk-manager.js?v=2026.07.6.1782696703"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=1.0.46.1783673379');
+        @import url('/static/vendor/css/fonts.css?v=2026.07.6.1782696732');
 
         :root {
-            --accent: #1c1c1e;
+            --accent: #111827;
             --bg: #f9fafb;
             --card: #ffffff;
             --easing: cubic-bezier(0.4, 0, 0.2, 1);
@@ -83,7 +83,7 @@
 
         /* 统一组件风格 */
         .glass-btn {
-            background: #1c1c1e;
+            background: #111827;
             transition: all 0.3s var(--easing);
         }
 
@@ -99,7 +99,7 @@
 
         .upload-item {
             background: var(--card);
-            border: 1px dashed #d0d0d2;
+            border: 1px dashed #e2e8f0;
             transition: all 0.4s var(--easing);
         }
 
@@ -112,7 +112,7 @@
         .result-frame {
             background: #ffffff;
             border-radius: 32px;
-            border: 1px solid #e5e5e5;
+            border: 1px solid #f1f5f9;
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.02);
         }
 
@@ -120,7 +120,7 @@
             break-inside: avoid;
             margin-bottom: 1.25rem;
             background: #fff;
-            border: 1px solid #e5e5e5;
+            border: 1px solid #f1f5f9;
             border-radius: 24px;
             overflow: hidden;
             transition: all 0.5s var(--easing);
@@ -212,8 +212,8 @@
         }
 
         .engine-switch {
-            background: #f5f5f7;
-            border: 1px solid #dcdcde;
+            background: #f8fafc;
+            border: 1px solid #edf2f7;
             border-radius: 999px;
             padding: 3px;
             display: grid;
@@ -228,7 +228,7 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            color: #58585a;
+            color: #64748b;
             font-size: 10px;
             font-weight: 600;
             letter-spacing: .02em;
@@ -238,18 +238,18 @@
 
         .engine-btn.active {
             background: #fff;
-            color: #1c1c1e;
-            box-shadow: 0 1px 3px rgba(28,28,28,.08);
+            color: #111827;
+            box-shadow: 0 1px 3px rgba(15,23,42,.08);
         }
 
         .engine-btn:not(.active):hover {
-            color: #1c1c1e;
+            color: #111827;
             background: rgba(0,0,0,.04);
         }
 
         .engine-panel {
             background: #fff;
-            border: 1px solid #ececee;
+            border: 1px solid #edf0f3;
             border-radius: 24px;
             padding: 12px;
             display: flex;
@@ -261,93 +261,13 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            color: #848488;
+            color: #94a3b8;
             font-size: 10px;
             font-weight: 600;
             letter-spacing: .04em;
         }
     </style>
-<style>
-
-/* === Marvis 视觉风格统一注入 === */
-:root {
-    --bg: #f5f5f7;
-    --sidebar-bg: rgba(245, 245, 247, 0.72);
-    --stage-bg: #ffffff;
-    --border: transparent;
-    --text: #1d1d1f;
-    --muted: #86868b;
-    --nav-hover-bg: rgba(0, 0, 0, 0.04);
-    --divider: rgba(0, 0, 0, 0.06);
-    --scrollbar: rgba(0, 0, 0, 0.12);
-    --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-    --radius-sm: 10px;
-    --radius-md: 14px;
-    --radius-lg: 20px;
-    --radius-xl: 28px;
-    --font-sans: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
-    --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
-}
-
-html.theme-dark,
-html.studio-theme-dark,
-body.theme-dark,
-body.studio-theme-dark {
-    --bg: #0d0d0d;
-    --sidebar-bg: rgba(13,13,13,0.78);
-    --stage-bg: #161616;
-    --border: transparent;
-    --text: #f5f5f7;
-    --muted: #86868b;
-    --nav-hover-bg: rgba(255, 255, 255, 0.06);
-    --divider: rgba(255, 255, 255, 0.06);
-    --scrollbar: rgba(255, 255, 255, 0.16);
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.18);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.28);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.34);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.42);
-}
-
-* {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar) transparent;
-}
-
-*::-webkit-scrollbar { width: 6px; height: 6px; }
-*::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
-*::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-
-body {
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background-color: var(--bg);
-    color: var(--text);
-}
-
-/* --- 页面特定覆盖 --- */
-
-        :root { --accent: var(--text); --bg: #f5f5f7; --card: var(--stage-bg); }
-        body { background: var(--bg) !important; color: var(--text) !important; }
-        .container-box { margin-top: 60px; }
-        .glass-btn { background: var(--text) !important; border-radius: var(--radius-md) !important; }
-        .glass-btn:hover { background: var(--text) !important; opacity: 0.9; }
-        .upload-item { border-color: var(--border) !important; border-radius: var(--radius-lg) !important; }
-        .engine-panel { background: var(--stage-bg) !important; border-color: var(--border) !important; border-radius: var(--radius-xl) !important; box-shadow: var(--shadow-sm) !important; }
-        .engine-switch { background: var(--bg) !important; border-color: var(--border) !important; }
-        .engine-btn.active { background: var(--stage-bg) !important; color: var(--text) !important; }
-        .result-frame { background: var(--stage-bg) !important; border-color: var(--border) !important; border-radius: var(--radius-xl) !important; box-shadow: var(--shadow-sm) !important; }
-        .masonry-item { background: var(--stage-bg) !important; border-color: var(--border) !important; border-radius: var(--radius-xl) !important; }
-        html.theme-dark body { background: var(--bg) !important; }
-    
-</style>
-
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.46.1783791221">
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.07.6.1782696682">
 </head>
 
 <body class="selection:bg-black selection:text-white">

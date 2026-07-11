@@ -1777,8 +1777,8 @@ def update_connectivity_targets() -> List[Tuple[str, str, str, bool]]:
         ("Gitee 更新列表", GITEE_TREE_URL, "gitee", True),
         ("Gitee 版本文件", GITEE_VERSION_URL, "gitee", True),
         ("Gitee 主页", "https://gitee.com/", "gitee", False),
+        ("ModelScope 更新列表", MODELSCOPE_TREE_URL, "modelscope", True),
         ("ModelScope 版本文件", MODELSCOPE_VERSION_URL, "modelscope", True),
-        ("ModelScope 空间页面", MODELSCOPE_REPO_URL, "modelscope", False),
         ("ModelScope 主页", "https://modelscope.cn/", "modelscope", False),
         ("Google 连通性", "https://www.google.com/generate_204", "reference", False),
     ]

@@ -203,7 +203,7 @@
             cursor: pointer;
             flex-shrink: 0;
             margin-bottom: 4px;
-            padding: 4px 6px;
+            padding: 4px 0 4px 14px;
             border-radius: 8px;
             transition: all 0.35s var(--ease-out);
             white-space: nowrap;
@@ -215,6 +215,7 @@
             align-items: center;
             gap: 8px;
             justify-content: flex-start;
+            width: 48px;
         }
 
         .sidebar-logo-img {
@@ -226,7 +227,7 @@
         }
 
         .logo-text-label {
-            font-size: 14px;
+            font-size: 17px;
             font-weight: 600;
             letter-spacing: 0.06em;
             color: var(--text);
@@ -244,6 +245,7 @@
         .sidebar:hover .logo-text {
             font-size: 20px;
             letter-spacing: 0.06em;
+            width: 190px;
         }
 
         .sidebar:hover .logo-text-label {
@@ -1524,6 +1526,10 @@
             transition-delay: 0.1s;
         }
 
+        .sidebar.is-pinned .logo-text {
+            width: 190px;
+        }
+
         .sidebar.is-pinned .side-pill {
             width: 170px;
             gap: 8px;
@@ -1542,6 +1548,13 @@
         .sidebar.is-collapsing:hover .nav-item,
         .sidebar.is-collapsing:hover .nav-fold-toggle {
             width: 48px;
+        }
+        .sidebar.is-collapsing:hover .logo-text {
+            width: 48px;
+        }
+        .sidebar.is-collapsing:hover .logo-text-label {
+            opacity: 0;
+            max-width: 0;
         }
         .sidebar.is-collapsing:hover .nav-text {
             opacity: 0;

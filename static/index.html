@@ -754,17 +754,19 @@
             justify-content: flex-start;
             gap: 6px;
             width: 48px;
-            padding: 8px 0 8px 14px;
+            height: 0;
+            padding: 0;
             margin-top: auto;
             opacity: 0;
             overflow: hidden;
-            transition: opacity 0.25s ease, width 0.3s var(--fluid-ease) 0.3s;
+            transition: opacity 0.25s ease, height 0.3s var(--fluid-ease), padding 0.3s var(--fluid-ease);
         }
 
         .sidebar:hover .version-display,
         .sidebar.is-pinned .version-display {
             opacity: 1;
-            width: 190px;
+            height: auto;
+            padding: 8px 0 8px 14px;
             transition-delay: 0s;
         }
 

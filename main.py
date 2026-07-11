@@ -168,14 +168,14 @@ GITHUB_VERSION_URL = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas
 GITHUB_TREE_URL = "https://api.github.com/repos/hero8152/Infinite-Canvas/git/trees/main?recursive=1"
 GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
-MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/Infinite-Canvas"
-MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/Infinite-Canvas/raw/main"
+MODELSCOPE_REPO_URL = "https://modelscope.cn/studios/bllack/NOVAI-Canvas"
+MODELSCOPE_RAW_ROOT = "https://www.modelscope.cn/studios/bllack/NOVAI-Canvas/raw/main"
 # ModelScope 仓库默认分支为 master；raw 网页路径会返回 HTML，必须用仓库文件 API 才能拿到纯文本
-# 注意：.ai 站命名空间为小写 daniel8152，API 路径大小写敏感（推送/文件 API 用大写会 404/拒绝）
-MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infinite-Canvas/repo?Revision=master&FilePath="
+# 注意：API 路径大小写敏感（推送/文件 API 用大写会 404/拒绝）
+MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo?Revision=master&FilePath="
 MODELSCOPE_VERSION_URL = MODELSCOPE_FILE_API_ROOT + "VERSION"
 MODELSCOPE_UPDATE_NOTES_URL = MODELSCOPE_FILE_API_ROOT + "static/update-notes.json"
-MODELSCOPE_TREE_URL = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infinite-Canvas/repo/files?Revision=master&Recursive=true"
+MODELSCOPE_TREE_URL = "https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo/files?Revision=master&Recursive=true"
 
 @app.on_event("startup")
 async def startup_event():

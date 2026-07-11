@@ -339,7 +339,6 @@ let minimapRenderQueued = false;
 let linksRenderQueued = false;
 let zoomPreviewState = null;
 let resizeNode = null;
-let llmPaneDrag = null;
 let tempLink = null;
 let knifeActive = false;
 let knifePoint = null;
@@ -8198,6 +8197,18 @@ function bindScrollableText(el){
         if(textSelectionGuard?.el === el) textSelectionGuard.wheelUntil = Date.now() + 180;
     }, {passive:true});
 }
+// 全局 LLM 分隔条拖拽：使用单一 mousemove/mouseup 处理器，避免重复添加/移除
+let llmPaneDrag = null;
+let llmChatDrag = null;
+(function initLLMPaneGlobalDrag(){
+    window.addEventListener('mousemove', e => {
+        if(llmPaneDrag) onLLMPaneResize(e);
+        else if(llmChatDrag) onLLMChatResize(e);
+    });
+    window.addEventListener('mouseup', () => {
+        if(llmPaneDrag || llmChatDrag) endDrag();
+    });
+})();
 function startLLMPaneResize(e, node){
     e.preventDefault();
     e.stopPropagation();
@@ -8207,16 +8218,7 @@ function startLLMPaneResize(e, node){
         inputStart:Math.max(70, node.llmInputHeight || 110),
         outputStart:Math.max(70, node.llmOutputHeight || 150)
     };
-    const onMove = ev => onLLMPaneResize(ev);
-    const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-        endDrag();
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
 }
-let llmChatDrag = null;
 function startLLMChatResize(e, node){
     e.preventDefault();
     e.stopPropagation();
@@ -8226,14 +8228,6 @@ function startLLMChatResize(e, node){
         logStart:Math.max(80, node.llmChatLogHeight || 260),
         inputStart:Math.max(40, node.llmChatInputHeight || 60)
     };
-    const onMove = ev => onLLMChatResize(ev);
-    const onUp = () => {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
-        endLLMChatDrag();
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
 }
 function onLLMChatResize(e){
     if(!llmChatDrag) return;
@@ -8251,11 +8245,6 @@ function onLLMChatResize(e){
         if(logEl){ logEl.style.height = `${llmChatDrag.node.llmChatLogHeight}px`; logEl.style.flexBasis = `${llmChatDrag.node.llmChatLogHeight}px`; }
         if(inputEl){ inputEl.style.height = `${llmChatDrag.node.llmChatInputHeight}px`; inputEl.style.flexBasis = `${llmChatDrag.node.llmChatInputHeight}px`; }
     }
-}
-function endLLMChatDrag(){
-    llmChatDrag = null;
-    window.onmousemove = null;
-    window.onmouseup = null;
 }
 function onLLMPaneResize(e){
     if(!llmPaneDrag) return;

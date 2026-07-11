@@ -3,8 +3,23 @@
     const LEGACY_KEY = 'canvas_theme';
     const SCALE_KEY = 'studio_ui_scale_mode';
     const SCALE_OPTIONS = ['auto', '60', '65', '70', '75', '80', '85', '90', '95', '100', '115', '125', '140'];
+    const THEME_MODE_KEY = 'studio_theme_mode'; // 'auto' | 'manual'
+
+    function getSystemTheme(){
+        try {
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } catch(e) {
+            return 'light';
+        }
+    }
+
+    function getThemeMode(){
+        return localStorage.getItem(THEME_MODE_KEY) || 'auto';
+    }
 
     function currentTheme(){
+        const mode = getThemeMode();
+        if(mode === 'auto') return getSystemTheme();
         return localStorage.getItem(KEY) || localStorage.getItem(LEGACY_KEY) || 'light';
     }
 
@@ -231,13 +246,22 @@
 
     window.StudioTheme = {
         key: KEY,
+        modeKey: THEME_MODE_KEY,
         get: currentTheme,
+        getMode: getThemeMode,
+        getSystemTheme: getSystemTheme,
         apply: applyTheme,
         set(theme){
-            const next = theme === 'dark' ? 'dark' : 'light';
-            localStorage.setItem(KEY, next);
-            localStorage.setItem(LEGACY_KEY, next);
-            applyTheme(next);
+            if(theme === 'auto'){
+                localStorage.setItem(THEME_MODE_KEY, 'auto');
+                applyTheme(getSystemTheme());
+            } else {
+                const next = theme === 'dark' ? 'dark' : 'light';
+                localStorage.setItem(THEME_MODE_KEY, 'manual');
+                localStorage.setItem(KEY, next);
+                localStorage.setItem(LEGACY_KEY, next);
+                applyTheme(next);
+            }
         }
     };
 
@@ -267,11 +291,21 @@
         if(event.data?.type === 'studio-ui-scale-pause') pauseAutoScale(event.data.duration);
     });
     window.addEventListener('storage', event => {
-        if(event.key === KEY || event.key === LEGACY_KEY) applyTheme(currentTheme());
+        if(event.key === KEY || event.key === LEGACY_KEY || event.key === THEME_MODE_KEY) applyTheme(currentTheme());
         if(event.key === SCALE_KEY) applyScale(currentScaleMode());
     });
     window.addEventListener('resize', scheduleAutoScaleRefresh);
     window.addEventListener('scroll', lockScaledHorizontalScroll, { passive: true });
+
+    // 监听系统主题变化，自动跟随
+    try {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        mediaQuery.addEventListener('change', () => {
+            if(getThemeMode() === 'auto'){
+                applyTheme(getSystemTheme());
+            }
+        });
+    } catch(e) {}
 
     // ────── Tailwind CDN 中性色注入 ──────
     // 直接修改 window.tailwind.config，从源头替换 gray/slate 为中性色，

@@ -8088,6 +8088,7 @@ function renderLLMChatPane(container, node){
             const startLogH = chatLog.offsetHeight;
             const startInputH = chatInputEl.offsetHeight;
             const onMove = ev => {
+                if(!(ev.buttons & 1)){ onUp(); return; }
                 const dy = ev.clientY - startY;
                 const newLogH = Math.max(60, startLogH + dy);
                 const newInputH = Math.max(32, startInputH - dy);
@@ -8202,6 +8203,7 @@ let llmPaneDrag = null;
 let llmChatDrag = null;
 (function initLLMPaneGlobalDrag(){
     window.addEventListener('mousemove', e => {
+        if(!(e.buttons & 1)){ if(llmPaneDrag||llmChatDrag) endDrag(); return; }
         if(llmPaneDrag) onLLMPaneResize(e);
         else if(llmChatDrag) onLLMChatResize(e);
     });

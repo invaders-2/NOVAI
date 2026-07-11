@@ -162,12 +162,17 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "2026.06.03"
-GITHUB_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
-GITHUB_VERSION_URL = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION"
-GITHUB_TREE_URL = "https://api.github.com/repos/hero8152/Infinite-Canvas/git/trees/main?recursive=1"
-GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main"
+APP_VERSION = "1.0.49"
+GITHUB_REPO_URL = "https://github.com/invaders-2/NOVAI"
+GITHUB_VERSION_URL = "https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION"
+GITHUB_TREE_URL = "https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1"
+GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/invaders-2/NOVAI/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
+GITEE_REPO_URL = "https://gitee.com/invaders/novai"
+GITEE_VERSION_URL = "https://gitee.com/invaders/novai/raw/main/VERSION"
+GITEE_TREE_URL = "https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1"
+GITEE_RAW_ROOT = "https://gitee.com/invaders/novai/raw/main"
+GITEE_UPDATE_NOTES_URL = GITEE_RAW_ROOT + "/static/update-notes.json"
 MODELSCOPE_REPO_URL = "https://modelscope.cn/studios/bllack/NOVAI-Canvas"
 MODELSCOPE_RAW_ROOT = "https://www.modelscope.cn/studios/bllack/NOVAI-Canvas/raw/main"
 # ModelScope 仓库默认分支为 master；raw 网页路径会返回 HTML，必须用仓库文件 API 才能拿到纯文本
@@ -1706,19 +1711,26 @@ def app_info():
         "version_url": GITHUB_VERSION_URL,
         "tree_url": GITHUB_TREE_URL,
         "sources": {
-            "github": {
-                "label": "GitHub",
-                "repo_url": GITHUB_REPO_URL,
-                "version_url": GITHUB_VERSION_URL,
-                "tree_url": GITHUB_TREE_URL,
-                "update_notes_url": GITHUB_UPDATE_NOTES_URL,
-            },
             "modelscope": {
                 "label": "ModelScope",
                 "repo_url": MODELSCOPE_REPO_URL,
                 "version_url": MODELSCOPE_VERSION_URL,
                 "tree_url": MODELSCOPE_TREE_URL,
                 "update_notes_url": MODELSCOPE_UPDATE_NOTES_URL,
+            },
+            "gitee": {
+                "label": "Gitee",
+                "repo_url": GITEE_REPO_URL,
+                "version_url": GITEE_VERSION_URL,
+                "tree_url": GITEE_TREE_URL,
+                "update_notes_url": GITEE_UPDATE_NOTES_URL,
+            },
+            "github": {
+                "label": "GitHub",
+                "repo_url": GITHUB_REPO_URL,
+                "version_url": GITHUB_VERSION_URL,
+                "tree_url": GITHUB_TREE_URL,
+                "update_notes_url": GITHUB_UPDATE_NOTES_URL,
             },
         },
         "update_notes": read_local_update_notes(version),
@@ -1762,6 +1774,9 @@ def update_connectivity_targets() -> List[Tuple[str, str, str, bool]]:
         ("GitHub 更新列表", GITHUB_TREE_URL, "github", True),
         ("GitHub 版本文件", GITHUB_VERSION_URL, "github", True),
         ("GitHub 主页", "https://github.com/", "github", False),
+        ("Gitee 更新列表", GITEE_TREE_URL, "gitee", True),
+        ("Gitee 版本文件", GITEE_VERSION_URL, "gitee", True),
+        ("Gitee 主页", "https://gitee.com/", "gitee", False),
         ("ModelScope 版本文件", MODELSCOPE_VERSION_URL, "modelscope", True),
         ("ModelScope 空间页面", MODELSCOPE_REPO_URL, "modelscope", False),
         ("ModelScope 主页", "https://modelscope.cn/", "modelscope", False),

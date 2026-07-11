@@ -172,10 +172,10 @@ MODELSCOPE_REPO_URL = "https://modelscope.cn/studios/bllack/NOVAI-Canvas"
 MODELSCOPE_RAW_ROOT = "https://www.modelscope.cn/studios/bllack/NOVAI-Canvas/raw/main"
 # ModelScope 仓库默认分支为 master；raw 网页路径会返回 HTML，必须用仓库文件 API 才能拿到纯文本
 # 注意：API 路径大小写敏感（推送/文件 API 用大写会 404/拒绝）
-MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo?Revision=master&FilePath="
+MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo?Revision=main&FilePath="
 MODELSCOPE_VERSION_URL = MODELSCOPE_FILE_API_ROOT + "VERSION"
 MODELSCOPE_UPDATE_NOTES_URL = MODELSCOPE_FILE_API_ROOT + "static/update-notes.json"
-MODELSCOPE_TREE_URL = "https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo/files?Revision=master&Recursive=true"
+MODELSCOPE_TREE_URL = "https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo/files?Revision=main&Recursive=true"
 
 @app.on_event("startup")
 async def startup_event():

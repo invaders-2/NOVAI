@@ -909,7 +909,7 @@
             outline-offset:-1px;
             background:transparent;
             color:var(--muted);
-            display:flex;
+            display:none;
             align-items:center;
             justify-content:flex-start;
             font-size:9px;
@@ -936,6 +936,7 @@
 
         .sidebar:hover .project-version-badge {
             width:190px;
+            display:flex;
             transition-delay:0s;
         }
 
@@ -1544,6 +1545,7 @@
         }
         .sidebar.is-pinned .project-version-badge {
             width: 190px;
+            display: flex;
             transition-delay: 0s;
         }
         .sidebar.is-pinned .update-now-btn {

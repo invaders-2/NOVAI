@@ -156,19 +156,51 @@ function onBoardPanEnd(){
     panState = null;
     board.classList.remove('panning');
 }
+// 触控板捏合缩放阈值：累积 deltaY 超过该值才触发一次缩放，避免平移时轻微捏合噪声误触发
+const TRACKPAD_PINCH_THRESHOLD = 5;
+let trackpadPinchAccum = 0;
+let trackpadLastPinchTime = 0;
+// 判断是否为普通鼠标滚轮（非触控板）
+function isMouseWheel(e){
+    return e.deltaMode === 1 || Math.abs(e.deltaY) >= 100;
+}
+
 function onBoardWheel(e){
     e.preventDefault();
     const rect = board.getBoundingClientRect();
     const px = e.clientX - rect.left, py = e.clientY - rect.top;
-    // world point under cursor before zoom
-    const wx = (px - viewport.x) / viewport.scale;
-    const wy = (py - viewport.y) / viewport.scale;
-    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-    const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewport.scale * factor));
-    viewport.scale = next;
-    // keep the same world point under the cursor
-    viewport.x = px - wx * next;
-    viewport.y = py - wy * next;
+    const now = Date.now();
+    // 超过 200ms 没有新的捏合事件，重置累积器（新一轮手势）
+    if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
+    trackpadLastPinchTime = now;
+    if(e.ctrlKey || e.metaKey){
+        // 触控板捏合缩放：累积 deltaY，超过阈值才触发
+        trackpadPinchAccum += e.deltaY;
+        if(Math.abs(trackpadPinchAccum) < TRACKPAD_PINCH_THRESHOLD) return;
+        const wx = (px - viewport.x) / viewport.scale;
+        const wy = (py - viewport.y) / viewport.scale;
+        const factor = Math.exp(-trackpadPinchAccum * 0.01);
+        const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewport.scale * factor));
+        viewport.scale = next;
+        viewport.x = px - wx * next;
+        viewport.y = py - wy * next;
+        trackpadPinchAccum = 0;
+    } else if(isMouseWheel(e)){
+        // 普通鼠标滚轮 → 缩放
+        trackpadPinchAccum = 0;
+        const wx = (px - viewport.x) / viewport.scale;
+        const wy = (py - viewport.y) / viewport.scale;
+        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, viewport.scale * factor));
+        viewport.scale = next;
+        viewport.x = px - wx * next;
+        viewport.y = py - wy * next;
+    } else {
+        // 触控板双指平移
+        trackpadPinchAccum = 0;
+        viewport.x -= e.deltaX;
+        viewport.y -= e.deltaY;
+    }
     applyViewport();
 }
 
@@ -467,8 +499,8 @@ function openCanvas(c){
     const project = encodeURIComponent(c.project || currentProjectId || 'default');
     rememberProjectId(c.project || currentProjectId || 'default');
     window.location.href = (c.kind === 'smart')
-        ? `/static/smart-canvas.html?id=${enc}&project=${project}&v=2026.07.03.4`
-        : `/static/canvas.html?id=${enc}&project=${project}&v=2026.07.03.4`;
+        ? `/static/smart-canvas.html?id=${enc}&project=${project}&t=1783654693`
+        : `/static/canvas.html?id=${enc}&project=${project}&t=1783654693`;
 }
 
 /* ===== Card create flow ===== */

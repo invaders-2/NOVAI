@@ -1,3 +1,4 @@
+(function(){document.documentElement.style.touchAction='none';if(document.body)document.body.style.touchAction='none';else document.addEventListener('DOMContentLoaded',function(){document.body.style.touchAction='none';});})();
 const params = new URLSearchParams(location.search);
 const canvasId = params.get('id') || '';
 const sourceProjectId = params.get('project') || '';
@@ -6140,7 +6141,7 @@ function renderConnections(){
             isHistory ? 'conn-history' : '',
             isSelectedLine ? 'conn-selected' : ''
         ].filter(Boolean).join(' ');
-        const color = isCascade ? '#16a34a' : isHistory ? 'rgba(100,116,139,0.46)' : kind === 'input' ? 'rgba(100,116,139,0.62)' : 'rgba(148,163,184,0.62)';
+        const color = isCascade ? '#16a34a' : isHistory ? 'rgba(88, 88, 88, 0.46)' : kind === 'input' ? 'rgba(88, 88, 88, 0.62)' : 'rgba(132, 132, 132, 0.62)';
         const opacity = isPendingLine ? '.82' : '1';
         const width = kind === 'input' ? '1.9' : '1.6';
         return `<path class="${cls}" d="${curve}" stroke="${color}" stroke-width="${width}" fill="none" opacity="${opacity}"></path><path class="conn-hit" data-conn-index="${dataIndex}" d="${curve}" stroke="transparent" stroke-width="14" fill="none"></path><circle cx="${tx}" cy="${ty}" r="3.5" fill="${color}" opacity=".66"></circle><g class="conn-cut" data-conn-index="${dataIndex}" transform="translate(${mx} ${my})"><circle r="8" fill="var(--card)" stroke="${color}" stroke-width="1.4"></circle><path d="M-3 -3 L3 3 M3 -3 L-3 3" stroke="${color}" stroke-width="1.5" stroke-linecap="round"></path></g>`;
@@ -7621,7 +7622,7 @@ function ensurePortDragPathElement(){
     if(!path){
         path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('class', 'port-drag-temp conn-pending');
-        path.setAttribute('stroke', 'rgba(100,116,139,0.92)');
+        path.setAttribute('stroke', 'rgba(88, 88, 88, 0.92)');
         path.setAttribute('stroke-width', '1.9');
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke-linecap', 'round');
@@ -8671,10 +8672,10 @@ function renderEditTextCanvas(){
         if(selected){
             ctx.setLineDash([7, 5]);
             ctx.lineWidth = 1.5;
-            ctx.strokeStyle = 'rgba(15,23,42,.72)';
+            ctx.strokeStyle = 'rgba(28, 28, 28, .72)';
             ctx.strokeRect(box.x, box.y, box.w, box.h);
             ctx.setLineDash([]);
-            ctx.fillStyle = 'rgba(15,23,42,.92)';
+            ctx.fillStyle = 'rgba(28, 28, 28, .92)';
             ctx.beginPath();
             ctx.arc(item.x + box.w / 2 - box.pad, item.y - box.h / 2 + box.pad, 3.5, 0, Math.PI * 2);
             ctx.fill();
@@ -15994,20 +15995,97 @@ window.onmouseup = e => {
         scheduleConnectionLayerRefresh();
     }
 };
+
+// Mac触摸板手势处理：Safari 通过 gesturechange 缩放，Chrome 通过 wheel 缩放。
+// gestureActive 标志用于防止 Chrome 中 gesture 和 wheel 双重缩放。
+let gestureActive = false, gestureState = null;
+// 触控板捏合缩放阈值：累积 deltaY 超过该值才触发一次缩放，避免平移时轻微捏合噪声误触发
+const TRACKPAD_PINCH_THRESHOLD = 5;
+let trackpadPinchAccum = 0;
+let trackpadLastPinchTime = 0;
+// 判断是否为普通鼠标滚轮（非触控板）
+function isMouseWheel(e){
+    return e.deltaMode === 1 || Math.abs(e.deltaY) >= 100;
+}
+
+document.addEventListener('gesturestart', e => {
+    e.preventDefault();
+    gestureActive = true;
+    trackpadPinchAccum = 0;
+    const rect = shell.getBoundingClientRect();
+    gestureState = {
+        startScale: viewport.scale,
+        originX: e.pageX - rect.left,
+        originY: e.pageY - rect.top,
+        worldX: (e.pageX - rect.left - viewport.x) / viewport.scale,
+        worldY: (e.pageY - rect.top - viewport.y) / viewport.scale,
+    };
+}, { capture: true });
+document.addEventListener('gesturechange', e => {
+    e.preventDefault();
+    if(!gestureState) return;
+    const newScale = safeScale(gestureState.startScale * e.scale);
+    viewport.scale = newScale;
+    viewport.x = gestureState.originX - gestureState.worldX * newScale;
+    viewport.y = gestureState.originY - gestureState.worldY * newScale;
+    applyViewport();
+    scheduleSave();
+});
+document.addEventListener('gestureend', e => {
+    gestureActive = false;
+    gestureState = null;
+    trackpadPinchAccum = 0;
+    scheduleSave();
+});
+// 阻止浏览器默认的页面缩放（Ctrl/Cmd + 滚轮、触控板捏合），防止整个网页被放大
+document.addEventListener('wheel', e => {
+    if (e.ctrlKey || e.metaKey) e.preventDefault();
+}, { capture: true, passive: false });
 shell.addEventListener('wheel', e => {
     if(e.target.closest('.composer,.smart-back,.image-edit-modal,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.workflow-transfer-panel,.log-modal,.shortcut-modal,.prompt-node-segments,.prompt-node-text,.prompt-node-llm,.smart-group-list,[data-thumb-scroll]')) return;
     e.preventDefault();
-    const rect = shell.getBoundingClientRect();
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-    const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
-    const factor = Math.exp(-e.deltaY * 0.001);
-    viewport.scale = safeScale(viewport.scale * factor);
-    viewport.x = sx - before.x * viewport.scale;
-    viewport.y = sy - before.y * viewport.scale;
-    applyViewport();
+    const now = Date.now();
+    // 超过 200ms 没有新的捏合事件，重置累积器（新一轮手势）
+    if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
+    trackpadLastPinchTime = now;
+    if(e.ctrlKey || e.metaKey){
+        // gesture 活跃时跳过，避免 Chrome 上 gesture + wheel 双重缩放
+        if(gestureActive){ trackpadPinchAccum = 0; return; }
+        // ctrlKey+wheel = 缩放（Mac触摸板捏合手势到达此处时为ctrlKey+wheel）
+        // 累积 deltaY，超过阈值才触发缩放
+        trackpadPinchAccum += e.deltaY;
+        if(Math.abs(trackpadPinchAccum) < TRACKPAD_PINCH_THRESHOLD) return;
+        const rect = shell.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+        const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
+        const factor = Math.exp(-trackpadPinchAccum * 0.01);
+        viewport.scale = safeScale(viewport.scale * factor);
+        viewport.x = sx - before.x * viewport.scale;
+        viewport.y = sy - before.y * viewport.scale;
+        trackpadPinchAccum = 0;
+        applyViewport();
+    } else if(isMouseWheel(e)){
+        // 普通鼠标滚轮 → 缩放
+        trackpadPinchAccum = 0;
+        const rect = shell.getBoundingClientRect();
+        const sx = e.clientX - rect.left;
+        const sy = e.clientY - rect.top;
+        const before = {x:(sx - viewport.x) / viewport.scale, y:(sy - viewport.y) / viewport.scale};
+        const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+        viewport.scale = safeScale(viewport.scale * factor);
+        viewport.x = sx - before.x * viewport.scale;
+        viewport.y = sy - before.y * viewport.scale;
+        applyViewport();
+    } else {
+        // 触控板双指平移
+        trackpadPinchAccum = 0;
+        viewport.x -= e.deltaX;
+        viewport.y -= e.deltaY;
+        applyViewport();
+    }
     scheduleSave();
-}, {passive:false});
+}, { passive: false, capture: true });
 shell.ondragover = e => setSmartDropCopyEffect(e, true);
 shell.ondrop = async e => {
     e.preventDefault();
@@ -16904,6 +16982,7 @@ window.addEventListener('studio-lang-change', () => {
     render();
 });
 window.onload = async () => {
+    shell.style.touchAction = 'none';
     applyTheme(localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light');
     loadPromptPresets();
     loadPromptTemplateGroups();

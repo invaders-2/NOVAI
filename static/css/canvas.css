@@ -660,9 +660,8 @@ input[type=range].canvas-range::-webkit-slider-runnable-track { height:3px; bord
 .llm-mode { background:#f5f5f5; border:1px solid transparent; border-radius:999px; padding:3px; display:flex; gap:2px; }
 .llm-mode button { height:28px; border-radius:999px; padding:0 10px; color:#585858; border:1px solid transparent; font-size:10px; font-weight:700; }
 .llm-mode button.active { background:#fff; color:#1c1c1c; border-color:transparent; box-shadow:0 1px 4px rgba(28, 28, 28, .12); }
-.llm-system,.llm-chat-input { width:100%; border:1px solid transparent; border-radius:14px; outline:none; padding:10px; background:#f8f8f8; color:#1c1c1c; font-size:12px; line-height:1.5; }
-.llm-system { resize:none; height:74px; }
-.llm-chat-input { resize:vertical; min-height:40px; }
+.llm-system,.llm-chat-input { width:100%; resize:none; border:1px solid transparent; border-radius:14px; outline:none; padding:10px; background:#f8f8f8; color:#1c1c1c; font-size:12px; line-height:1.5; }
+.llm-system { height:74px; }
 .llm-chat-log { min-height:82px; max-height:150px; overflow:auto; display:flex; flex-direction:column; gap:8px; padding:8px; border-radius:14px; background:#f5f5f5; border:1px solid transparent; user-select:text; cursor:text; }
 .node.sized.llm-node .llm-chat-log { flex:1; max-height:none; }
 .llm-bubble { max-width:86%; border-radius:14px; padding:7px 9px; font-size:12px; line-height:1.45; white-space:pre-wrap; user-select:text; cursor:text; }

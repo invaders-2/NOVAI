@@ -8073,12 +8073,42 @@ function renderLLMChatPane(container, node){
     const messages = node.messages || [];
     container.innerHTML = `
         <div class="llm-chat-log">${messages.length ? messages.map((msg, mi) => `<div class="llm-bubble ${msg.role === 'user' ? 'user' : 'assistant'}" data-msg-idx="${mi}">${escapeHtml(msg.content || '')}${msg.role === 'assistant' ? `<button class="llm-bubble-copy" type="button" title="复制"><i data-lucide="copy" style="width:11px;height:11px;display:inline-block;vertical-align:middle"></i></button>` : ''}</div>`).join('') : `<div class="text-[11px] text-gray-300">${tr('canvas.startChat')}</div>`}</div>
-        <textarea class="llm-chat-input mt-2" rows="2" placeholder="${tr('canvas.chatInput')}">${escapeHtml(node.chatInput || '')}</textarea>
+        <div class="llm-pane-resizer" style="margin:4px 0"></div>
+        <textarea class="llm-chat-input" rows="2" placeholder="${tr('canvas.chatInput')}">${escapeHtml(node.chatInput || '')}</textarea>
         <button class="llm-run mt-2" ${node.running ? 'disabled' : ''}><i data-lucide="send" class="w-4 h-4"></i>${node.running ? tr('canvas.sending') : 'Send'}</button>
     `;
     bindScrollableText(container.querySelector('.llm-chat-log'));
     bindScrollableText(container.querySelector('.llm-chat-input'));
+    const chatResizer = container.querySelector('.llm-pane-resizer');
+    const chatLog = container.querySelector('.llm-chat-log');
     const chatInputEl = container.querySelector('.llm-chat-input');
+    if(chatResizer && chatLog && chatInputEl){
+        chatResizer.onmousedown = e => {
+            e.stopPropagation(); e.preventDefault();
+            const startY = e.clientY;
+            const startLogH = chatLog.offsetHeight;
+            const startInputH = chatInputEl.offsetHeight;
+            const onMove = ev => {
+                const dy = ev.clientY - startY;
+                const newLogH = Math.max(60, startLogH + dy);
+                const newInputH = Math.max(32, startInputH - dy);
+                chatLog.style.flex = 'none';
+                chatLog.style.height = newLogH + 'px';
+                chatInputEl.style.height = newInputH + 'px';
+            };
+            const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                node.chatLogH = chatLog.offsetHeight;
+                node.chatInputH = chatInputEl.offsetHeight;
+                scheduleSave();
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        };
+    }
+    if(node.chatLogH) { chatLog.style.flex = 'none'; chatLog.style.height = node.chatLogH + 'px'; }
+    if(node.chatInputH) chatInputEl.style.height = node.chatInputH + 'px';
     chatInputEl.oninput = e => { node.chatInput = e.target.value; scheduleSave(); };
     chatInputEl.onkeydown = e => {
         if(e.key === 'Enter' && !e.shiftKey && !e.isComposing){

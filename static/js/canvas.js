@@ -14786,6 +14786,21 @@ board.addEventListener('mousedown', e => {
 // gestureActive 标志用于防止 Chrome 中 gesture 和 wheel 双重缩放。
 let gestureActive = false, gestureState = null;
 document.addEventListener('gesturestart', e => {
+    // 当 lightbox 打开且非视频模式时，手势缩放应作用于 lightbox 图片而非画布
+    if(outputLightbox.classList.contains('open') && outputLightboxVideo.style.display !== 'block'){
+        e.preventDefault();
+        gestureActive = true;
+        const rect = outputPreview.getBoundingClientRect();
+        gestureState = {
+            isLightbox: true,
+            startZoom: outputPreviewZoom,
+            startPanX: outputPreviewPan.x,
+            startPanY: outputPreviewPan.y,
+            localX: e.clientX - rect.left,
+            localY: e.clientY - rect.top,
+        };
+        return;
+    }
     e.preventDefault();
     gestureActive = true;
     const rect = board.getBoundingClientRect();
@@ -14799,7 +14814,22 @@ document.addEventListener('gesturestart', e => {
 }, { capture: true });
 document.addEventListener('gesturechange', e => {
     e.preventDefault();
-    if(!gestureState || !canvas) return;
+    if(!gestureState) return;
+    if(gestureState.isLightbox){
+        const before = {
+            x: (gestureState.localX - gestureState.startPanX) / gestureState.startZoom,
+            y: (gestureState.localY - gestureState.startPanY) / gestureState.startZoom,
+        };
+        const nextZoom = Math.max(1, Math.min(6, gestureState.startZoom * e.scale));
+        outputPreviewZoom = nextZoom;
+        outputPreviewPan = nextZoom <= 1.001 ? {x: 0, y: 0} : {
+            x: gestureState.localX - before.x * nextZoom,
+            y: gestureState.localY - before.y * nextZoom,
+        };
+        applyOutputPreviewZoom();
+        return;
+    }
+    if(!canvas) return;
     const newScale = Math.max(0.06, Math.min(8, gestureState.startScale * e.scale));
     viewport.scale = newScale;
     viewport.x = gestureState.originX - gestureState.worldX * newScale;
@@ -14810,6 +14840,11 @@ document.addEventListener('gesturechange', e => {
     scheduleViewportSave();
 }, { capture: true });
 document.addEventListener('gestureend', e => {
+    if(gestureState?.isLightbox){
+        gestureActive = false;
+        gestureState = null;
+        return;
+    }
     gestureActive = false;
     gestureState = null;
     scheduleViewportSave();

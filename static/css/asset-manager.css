@@ -52,7 +52,7 @@ button { border:0; cursor:pointer; }
 .asset-tabs button.active { background:var(--strong); color:var(--strong-text); }
 .asset-tabs svg,.asset-btn svg,.asset-icon-btn svg,.asset-row-icon svg,.detail-empty svg { width:14px; height:14px; }
 .asset-manager-root { min-height:0; flex:1; display:grid; grid-template-columns:360px minmax(640px, 1fr) 360px; gap:14px; }
-.asset-panel { min-height:0; border:1px solid rgba(132, 132, 132, .2); border-radius:16px; background:var(--panel); box-shadow:0 10px 28px var(--shadow); backdrop-filter:blur(28px); overflow:hidden; }
+.asset-panel { min-height:0; border:1px solid transparent; border-radius:16px; background:var(--panel); box-shadow:0 10px 28px var(--shadow); backdrop-filter:blur(28px); overflow:hidden; }
 .asset-nav { display:flex; flex-direction:column; }
 .asset-content,.asset-detail { display:flex; flex-direction:column; }
 .panel-head { flex:0 0 auto; min-height:52px; padding:12px; border-bottom:1px solid rgba(132, 132, 132, .18); display:flex; align-items:center; justify-content:space-between; gap:10px; }

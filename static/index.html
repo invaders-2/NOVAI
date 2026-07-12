@@ -165,7 +165,7 @@
             flex-direction: column;
             align-items: center;
             border-right: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 28px;
             margin: 12px 0 12px 12px;
             padding: 32px 0 8px 0;
             transition: width 0.4s var(--ease-out) 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s;
@@ -497,7 +497,7 @@
         .stage {
             flex: 1;
             background: var(--stage-bg);
-            margin: 12px 12px 12px 0;
+            margin: 12px 12px 12px 8px;
             border-radius: 28px;
             overflow: hidden;
             border: 1px solid var(--stage-border);
@@ -513,7 +513,7 @@
 
         body.studio-scale-host .stage {
             margin: max(10px, calc(12px * var(--studio-ui-scale, 1)));
-            margin-left: 0;
+            margin-left: max(6px, calc(8px * var(--studio-ui-scale, 1)));
             border-radius: max(20px, calc(28px * var(--studio-ui-scale, 1)));
         }
 

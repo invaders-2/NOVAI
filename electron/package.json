@@ -1,7 +1,7 @@
 {
   "name": "novai",
-  "version": "1.0.56",
-  "description": "NOVAI - 无限画布 AI 图像生成工具",
+  "version": "1.0.57",
+  "description": "NOVAI - \u65e0\u9650\u753b\u5e03 AI \u56fe\u50cf\u751f\u6210\u5de5\u5177",
   "main": "main.js",
   "author": "invaders",
   "license": "MIT",
@@ -85,5 +85,8 @@
       "installerIcon": "icon.ico",
       "uninstallerIcon": "icon.ico"
     }
+  },
+  "dependencies": {
+    "sharp": "^0.35.3"
   }
 }

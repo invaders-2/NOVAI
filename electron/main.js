@@ -24,9 +24,10 @@ let mainWindow = null;
 function findPython() {
   const candidates = isWin ? ['python', 'python3', 'py'] : ['python3', 'python'];
   const { execSync } = require('child_process');
+  const env = { ...process.env, PATH: `/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:${process.env.PATH || ''}` };
   for (const cmd of candidates) {
     try {
-      execSync(`${cmd} --version`, { stdio: 'ignore' });
+      execSync(`${cmd} --version`, { stdio: 'ignore', env });
       return cmd;
     } catch (e) { /* continue */ }
   }
@@ -95,16 +96,39 @@ function checkAndInstallDeps() {
   });
 }
 
+function killPortIfUsed(port) {
+  return new Promise((resolve) => {
+    try {
+      const { execSync } = require('child_process');
+      if (isWin) {
+        const out = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        const match = out.trim().match(/(\d+)\s*$/m);
+        if (match) execSync(`taskkill /F /PID ${match[1]}`, { stdio: 'ignore' });
+      } else {
+        const out = execSync(`lsof -ti :${port}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+        const pids = out.trim().split('\n').filter(Boolean);
+        pids.forEach(pid => { try { process.kill(parseInt(pid), 'SIGKILL'); } catch(e) {} });
+      }
+    } catch(e) { /* no process on port */ }
+    // Brief wait for OS to release the port
+    setTimeout(resolve, 300);
+  });
+}
+
 function startBackend() {
   return new Promise((resolve, reject) => {
     const pythonCmd = findPython();
+    console.log('[NOVAI] findPython result:', pythonCmd);
     if (!pythonCmd) {
       reject(new Error('未找到 Python。请安装 Python 3.10+ 后重试。'));
       return;
     }
 
-    const env = { ...process.env, DEPLOY_RUN_PORT: String(PORT) };
-    pythonProcess = spawn(pythonCmd, ['main.py'], {
+    console.log('[NOVAI] killPortIfUsed starting...');
+    killPortIfUsed(PORT).then(() => {
+      console.log('[NOVAI] killPortIfUsed done, spawning:', pythonCmd, 'main.py');
+      const env = { ...process.env, DEPLOY_RUN_PORT: String(PORT), PATH: `/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:${process.env.PATH || ''}` };
+      pythonProcess = spawn(pythonCmd, ['main.py'], {
       cwd: backendDir,
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -148,6 +172,7 @@ function startBackend() {
       }
     });
   });
+});
 }
 
 function waitForServer(retries = 30) {
@@ -183,7 +208,7 @@ function createWindow() {
     },
     show: false,
     titleBarStyle: isWin ? 'default' : 'hiddenInset',
-    trafficLightPosition: isWin ? undefined : { x: 16, y: 54 },
+    trafficLightPosition: isWin ? undefined : { x: 16, y: 18 },
   });
 
   mainWindow.once('ready-to-show', () => {

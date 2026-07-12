@@ -162,7 +162,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 GLOBAL_LOOP = None
-APP_VERSION = "1.0.57"
+APP_VERSION = "1.0.58"
 GITHUB_REPO_URL = "https://github.com/invaders-2/NOVAI"
 GITHUB_VERSION_URL = "https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION"
 GITHUB_TREE_URL = "https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1"
@@ -550,8 +550,8 @@ COMFYUI_HISTORY_TIMEOUT = int(float(os.getenv("COMFYUI_HISTORY_TIMEOUT", "1800")
 # 导致 generate() 不返回、画布卡片一直转圈拿不到结果。给得足够大以容纳大视频/大图的正常下载。
 COMFYUI_DOWNLOAD_TIMEOUT = float(os.getenv("COMFYUI_DOWNLOAD_TIMEOUT", "120"))
 APIMART_IMAGE_TASK_TIMEOUT = float(os.getenv("APIMART_IMAGE_TASK_TIMEOUT", "1800"))
-APIMART_IMAGE_POLL_INTERVAL = float(os.getenv("APIMART_IMAGE_POLL_INTERVAL", "5"))
-APIMART_IMAGE_INITIAL_POLL_DELAY = float(os.getenv("APIMART_IMAGE_INITIAL_POLL_DELAY", "10"))
+APIMART_IMAGE_POLL_INTERVAL = float(os.getenv("APIMART_IMAGE_POLL_INTERVAL", "3"))
+APIMART_IMAGE_INITIAL_POLL_DELAY = float(os.getenv("APIMART_IMAGE_INITIAL_POLL_DELAY", "5"))
 VIDEO_POLL_TIMEOUT = float(os.getenv("VIDEO_POLL_TIMEOUT", "1800"))
 ONLINE_IMAGE_PROMPT_MAX_LENGTH = int(os.getenv("ONLINE_IMAGE_PROMPT_MAX_LENGTH", "20000"))
 VIDEO_PROMPT_MAX_LENGTH = int(os.getenv("VIDEO_PROMPT_MAX_LENGTH", "4000"))
@@ -4671,7 +4671,7 @@ async def codex_prepare_local_media(ref_url):
         temp_paths.append(path)
         return path, temp_paths
     if text.startswith(("http://", "https://")):
-        async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=20.0), follow_redirects=True) as client:
+        async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=20.0), follow_redirects=True) as client:
             response = await client.get(text)
             response.raise_for_status()
             clean_path = urllib.parse.urlparse(text).path
@@ -5726,7 +5726,7 @@ async def jimeng_prepare_local_media(ref_url, kind="image"):
         temp_paths.append(path)
         return path, temp_paths
     if text.startswith(("http://", "https://")):
-        async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=20.0), follow_redirects=True) as client:
+        async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=20.0), follow_redirects=True) as client:
             response = await client.get(text)
             response.raise_for_status()
             clean_path = urllib.parse.urlparse(text).path
@@ -7532,7 +7532,7 @@ async def video_reference_to_frame_data_urls(value, max_frames=6, max_size=768):
         fd, cleanup_path = tempfile.mkstemp(prefix="canvas_llm_video_", suffix=suffix)
         os.close(fd)
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=120.0, write=30.0, pool=10.0)) as client:
+            async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=120.0, write=30.0, pool=10.0)) as client:
                 response = await client.get(value)
                 response.raise_for_status()
                 with open(cleanup_path, "wb") as f:
@@ -7881,7 +7881,7 @@ async def apimart_upload_post(client, upload_url, headers, file_tuple, timeout=6
         try:
             if attempt == 0:
                 return await client.post(upload_url, headers=headers, files=files, timeout=timeout)
-            async with httpx.AsyncClient(
+            async with httpx.AsyncClient(http2=False,
                 timeout=httpx.Timeout(connect=20.0, read=max(120.0, float(timeout)), write=120.0, pool=20.0),
                 follow_redirects=True,
             ) as fresh:
@@ -8101,7 +8101,7 @@ async def submit_apimart_avatar_asset(provider, public_url: str, name: str, kind
         "group": {"name": (group_name or name or "数字人素材")[:60]},
         "assets": [{"url": public_url, "name": (name or "asset")[:60]}],
     }
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(http2=False, timeout=120) as client:
         resp = await client.post(register_url, headers=api_headers(provider=provider), json=body, timeout=120)
         if resp.status_code not in (200, 201):
             raise HTTPException(status_code=502, detail=f"APIMart 数字人注册失败（{resp.status_code}）：{resp.text[:300]}")
@@ -8121,7 +8121,7 @@ async def check_apimart_avatar_task(provider, task_id: str) -> Dict[str, Any]:
     if not base_url:
         raise HTTPException(status_code=400, detail=f"{provider.get('name') or provider['id']} 未配置 Base URL")
     task_url = f"{base_url}/v1/tasks/{task_id}"
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(http2=False, timeout=60) as client:
         resp = await client.get(task_url, headers=api_headers(provider=provider), timeout=60)
         if resp.status_code not in (200, 201):
             raise HTTPException(status_code=502, detail=f"查询审核状态失败（{resp.status_code}）：{resp.text[:200]}")
@@ -8244,7 +8244,7 @@ async def volcengine_ensure_asset_group(client, project_name: str, group_name: s
 async def submit_volcengine_avatar_asset(public_url: str, name: str, kind: str,
                                          project_name: str = "default", group_name: str = "") -> str:
     """把公网可访问素材提交到火山 Ark 私域素材库（异步）。返回 Asset Id 作为任务 ID。"""
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(http2=False, timeout=120) as client:
         group_id = await volcengine_ensure_asset_group(client, project_name, group_name)
         created = await volcengine_ark_asset_call(client, "CreateAsset", {
             "GroupId": group_id,
@@ -8260,7 +8260,7 @@ async def submit_volcengine_avatar_asset(public_url: str, name: str, kind: str,
 
 async def check_volcengine_avatar_task(asset_id: str, project_name: str = "default") -> Dict[str, Any]:
     """查询一次火山素材状态。返回 {status: Active/Processing/Failed, asset_uri, detail}。"""
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(http2=False, timeout=60) as client:
         info = await volcengine_ark_asset_call(client, "GetAsset", {
             "Id": asset_id,
             "ProjectName": (project_name or "default").strip() or "default",
@@ -8310,7 +8310,7 @@ async def upload_video_to_litterbox(path: str, source_url: str) -> Dict[str, str
     time_value = os.getenv("LITTERBOX_TIME", "72h").strip() or "72h"
     ct = content_type_for_path(path)
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=600.0, write=600.0, pool=20.0), follow_redirects=True) as client:
+        async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=600.0, write=600.0, pool=20.0), follow_redirects=True) as client:
             with open(path, "rb") as fh:
                 files = {"fileToUpload": (os.path.basename(path), fh, ct)}
                 data = {"reqtype": "fileupload", "time": time_value}
@@ -8330,7 +8330,7 @@ async def upload_video_to_temp_sh(path: str, source_url: str) -> Dict[str, str]:
     upload_url = os.getenv("TEMP_SH_UPLOAD_URL", "https://temp.sh/upload").strip() or "https://temp.sh/upload"
     ct = content_type_for_path(path)
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=600.0, write=600.0, pool=20.0), follow_redirects=True) as client:
+        async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=600.0, write=600.0, pool=20.0), follow_redirects=True) as client:
             with open(path, "rb") as fh:
                 files = {"file": (os.path.basename(path), fh, ct)}
                 response = await client.post(upload_url, files=files)
@@ -8386,7 +8386,7 @@ async def save_ai_image_to_output(image_data, prefix="online_", category="output
     value = rewrite_runninghub_file_url(value)
     try:
         timeout = httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=20.0)
-        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(http2=False, timeout=timeout, follow_redirects=True) as client:
             response = await client.get(value)
             response.raise_for_status()
             content_type = response.headers.get("Content-Type", "")
@@ -8453,7 +8453,7 @@ async def save_remote_video_to_output(url, prefix="video_", category="output"):
             "User-Agent": "ComfyUI-API-Modelscope/1.0",
             "Accept": "video/*,application/octet-stream,*/*;q=0.8",
         }
-        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as client:
+        async with httpx.AsyncClient(http2=False, timeout=timeout, follow_redirects=True, headers=headers) as client:
             response = await client.get(url)
             response.raise_for_status()
             content_type = (response.headers.get("Content-Type") or "").lower()
@@ -8789,7 +8789,7 @@ async def generate_modelscope_provider_image(prompt, size, model, reference_imag
         payload["image_url"] = refs
 
     api_root = modelscope_image_api_root()
-    async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+    async with httpx.AsyncClient(http2=False, timeout=AI_REQUEST_TIMEOUT) as client:
         submit_res = await client.post(f"{api_root}/images/generations", headers=headers, json=payload)
         submit_res.raise_for_status()
         raw = submit_res.json()
@@ -8869,7 +8869,7 @@ async def generate_gemini_provider_image(prompt, size, model, reference_images=N
             "imageConfig": gemini_image_config(size),
         },
     }
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0)) as client:
         response = await client.post(endpoint, headers=api_headers(provider=provider), json=body)
         response.raise_for_status()
         raw = response.json()
@@ -8897,7 +8897,7 @@ async def generate_volcengine_provider_image(prompt, size, model, reference_imag
     images = [value for value in images if value]
     if images:
         body["image"] = images
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0)) as client:
         response = await client.post(endpoint, headers=api_headers(provider=provider), json=body)
         response.raise_for_status()
         raw = response.json()
@@ -9192,7 +9192,7 @@ def runninghub_registry_model_from_id(model_id, output_type=""):
 async def fetch_runninghub_llm_models(provider=None):
     headers = runninghub_api_headers(provider)
     errors = []
-    async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+    async with httpx.AsyncClient(http2=False, timeout=20, follow_redirects=True) as client:
         for url in RUNNINGHUB_LLM_MODELS_URLS:
             try:
                 resp = await client.get(url, headers=headers)
@@ -9219,7 +9219,7 @@ async def fetch_runninghub_model_registry(provider=None, include_fallback=True, 
     errors = []
     source = ""
     items = []
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+    async with httpx.AsyncClient(http2=False, timeout=30, follow_redirects=True) as client:
         for source_name, url in urls:
             try:
                 if source_name == "local":
@@ -9805,7 +9805,7 @@ async def generate_runninghub_entry_image(prompt, size, model, reference_images,
         if height and "height" in names:
             return height
         return None
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with httpx.AsyncClient(http2=False, timeout=timeout) as client:
         uploaded = []
         for ref in (reference_images or [])[:ONLINE_IMAGE_REFERENCE_MAX]:
             ref_url = ref.get("url") if isinstance(ref, dict) else ref
@@ -9914,7 +9914,7 @@ async def generate_runninghub_provider_image(prompt, size, model, reference_imag
     quality_field = runninghub_schema_field(params, "quality")
     if quality_field:
         body["quality"] = runninghub_schema_value(quality_field, "medium")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=1800.0, write=180.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=1800.0, write=180.0, pool=20.0)) as client:
         image_urls = []
         for ref in (reference_images or [])[:ONLINE_IMAGE_REFERENCE_MAX]:
             url = await runninghub_upload_reference(client, provider, ref)
@@ -9984,7 +9984,7 @@ async def generate_runninghub_video(payload, provider):
         body["generateAudio"] = bool(payload.generate_audio)
     if runninghub_schema_field(params, "watermark"):
         body["watermark"] = bool(payload.watermark)
-    async with httpx.AsyncClient(timeout=VIDEO_POLL_TIMEOUT) as client:
+    async with httpx.AsyncClient(http2=False, timeout=VIDEO_POLL_TIMEOUT) as client:
         image_urls = []
         for ref in (payload.images or [])[:10]:
             ref_url = getattr(ref, "url", "") or ""
@@ -10054,7 +10054,7 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
     image_refs = [ref for ref in refs if ref not in mask_refs]
     image_request_mode = effective_image_request_mode(provider, model)
     request_timeout = httpx.Timeout(connect=20.0, read=1800.0, write=120.0, pool=20.0) if (is_gpt2 or is_apimart or image_request_mode in {"openai-json", "openai-video-proxy", "openai-responses"}) else AI_REQUEST_TIMEOUT
-    async with httpx.AsyncClient(timeout=request_timeout) as client:
+    async with httpx.AsyncClient(http2=False, timeout=request_timeout) as client:
         response = None
         async def post_openai_edits(edit_files=None):
             data = {"model": model, "prompt": prompt, "size": size}
@@ -10402,7 +10402,7 @@ async def decide_chat_agent_action(payload, conversation, refs):
         )
     })
     try:
-        async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+        async with httpx.AsyncClient(http2=False, timeout=AI_REQUEST_TIMEOUT) as client:
             req_body = {"model": model, "messages": upstream_messages}
             if is_apimart_provider(provider_cfg):
                 req_body["stream"] = False
@@ -10457,7 +10457,7 @@ async def build_chat_text_reply(payload, conversation):
         if msg:
             upstream_messages.append(msg)
     try:
-        async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+        async with httpx.AsyncClient(http2=False, timeout=AI_REQUEST_TIMEOUT) as client:
             req_body = {"model": model, "messages": upstream_messages}
             if is_apimart:
                 req_body["stream"] = False
@@ -10999,7 +10999,7 @@ async def import_local_assets_from_urls(payload: LocalAssetUrlImportRequest):
     folder_rel, folder_abs = _local_upload_safe_folder(payload.folder)
     os.makedirs(folder_abs, exist_ok=True)
     timeout = httpx.Timeout(connect=20.0, read=120.0, write=30.0, pool=20.0)
-    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers={"User-Agent": "Infinite-Canvas-Asset-Importer/1.0"}) as client:
+    async with httpx.AsyncClient(http2=False, timeout=timeout, follow_redirects=True, headers={"User-Agent": "Infinite-Canvas-Asset-Importer/1.0"}) as client:
         for entry in (payload.items or [])[:200]:
             src_url = str(entry.url or "").strip()
             inline_data = str(entry.data or "").strip()
@@ -11324,7 +11324,7 @@ async def runninghub_app_info(webappId: str = ""):
     provider = runninghub_provider()
     api_key = runninghub_api_key(provider)
     url = runninghub_endpoint_url(provider, f"/api/webapp/apiCallDemo?apiKey={urllib.parse.quote(api_key)}&webappId={urllib.parse.quote(webapp_id)}")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=120.0, write=30.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=120.0, write=30.0, pool=20.0)) as client:
         try:
             response = await client.get(url, headers=runninghub_app_headers(False))
             raw = response.json()
@@ -11355,7 +11355,7 @@ async def runninghub_submit(payload: RunningHubSubmitRequest):
     if instance_type:
         body["instanceType"] = instance_type
     url = runninghub_endpoint_url(provider, "/task/openapi/ai-app/run")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=180.0, write=120.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=180.0, write=120.0, pool=20.0)) as client:
         try:
             response = await client.post(url, headers=runninghub_app_headers(True, payload.useWallet), json=body)
             raw = response.json()
@@ -11391,7 +11391,7 @@ async def runninghub_workflow_submit(payload: RunningHubWorkflowSubmitRequest):
         else:
             body["workflow"] = str(workflow_payload)
     url = runninghub_endpoint_url(provider, "/task/openapi/create")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=180.0, write=120.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=180.0, write=120.0, pool=20.0)) as client:
         try:
             response = await client.post(url, headers=runninghub_app_headers(True, payload.useWallet), json=body)
             raw = response.json()
@@ -11415,7 +11415,7 @@ async def runninghub_workflow_info(workflowId: str = ""):
     api_key = runninghub_api_key(provider)
     url = runninghub_endpoint_url(provider, "/api/openapi/getJsonApiFormat")
     body = {"apiKey": api_key, "workflowId": workflow_id}
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=20.0)) as client:
         try:
             response = await client.post(url, headers=runninghub_app_headers(True), json=body)
             raw = response.json()
@@ -11502,7 +11502,7 @@ async def fetch_runninghub_workflow(payload: RunningHubWorkflowConfig):
     api_key = runninghub_api_key(provider)
     url = runninghub_endpoint_url(provider, "/api/openapi/getJsonApiFormat")
     body = {"apiKey": api_key, "workflowId": workflow_id}
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=180.0, write=60.0, pool=20.0)) as client:
         try:
             response = await client.post(url, headers=runninghub_app_headers(True), json=body)
             raw = response.json()
@@ -11574,7 +11574,7 @@ async def runninghub_query(taskId: str = ""):
     provider = runninghub_provider()
     api_key = runninghub_api_key(provider)
     url = runninghub_endpoint_url(provider, "/task/openapi/outputs")
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client:
         try:
             response = await client.post(url, headers=runninghub_app_headers(True), json={"apiKey": api_key, "taskId": task_id})
             raw = response.json()
@@ -11615,7 +11615,7 @@ async def runninghub_upload_asset(payload: RunningHubUploadAssetRequest):
     filename = "asset.bin"
     content_type = "application/octet-stream"
     content = b""
-    async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=240.0, pool=20.0), follow_redirects=True) as client:
+    async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=240.0, write=240.0, pool=20.0), follow_redirects=True) as client:
         path = runninghub_local_asset_path(source_url)
         if path:
             filename = os.path.basename(path)
@@ -12317,7 +12317,7 @@ async def test_provider_connection(payload: TestConnectionPayload):
         raise HTTPException(status_code=400, detail=f"请先填写或保存 {key_name}")
     url = upstream_models_url(base_url, protocol)
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(http2=False, timeout=15) as client:
             resp = await client.get(url, headers=upstream_model_headers(api_key, protocol))
             if resp.status_code in (301, 302, 303, 307, 308):
                 location = resp.headers.get("Location") or resp.headers.get("location") or ""
@@ -12360,7 +12360,7 @@ async def test_provider_connection(payload: TestConnectionPayload):
     except httpx.HTTPError as e:
         if protocol == "volcengine":
             try:
-                async with httpx.AsyncClient(timeout=15) as client:
+                async with httpx.AsyncClient(http2=False, timeout=15) as client:
                     detected, probe = await probe_volcengine_auto_detect(client, base_url, api_key)
                     if detected:
                         message = f"{probe.get('message') or '方舟任务接口可达'}；但模型列表请求失败。请按实际方舟控制台模型名称手动填写视频模型。"
@@ -12400,7 +12400,7 @@ async def probe_async_endpoint(payload: TestConnectionPayload):
         raise HTTPException(status_code=400, detail="请先填写或保存 API Key")
     if protocol == "volcengine":
         try:
-            async with httpx.AsyncClient(timeout=15) as client:
+            async with httpx.AsyncClient(http2=False, timeout=15) as client:
                 task_ok, task_probe = await probe_volcengine_task_endpoint(client, base_url, api_key)
                 if task_ok:
                     return {
@@ -12431,7 +12431,7 @@ async def probe_async_endpoint(payload: TestConnectionPayload):
     tasks_base = base_url if base_url.endswith("/v1") else f"{base_url}/v1"
     probe_url = f"{tasks_base}/tasks/healthcheck_probe_do_not_submit"
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(http2=False, timeout=15) as client:
             resp = await client.get(probe_url, headers={"Authorization": bearer_auth_value(api_key), "Accept": "application/json"})
             try:
                 body = resp.json()
@@ -12550,7 +12550,7 @@ async def fetch_models_from_upstream(base_url: str, api_key: str, protocol: str 
         raise HTTPException(status_code=400, detail=f"请先填写或保存 {key_name}")
     url = upstream_models_url(base_url, protocol)
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(http2=False, timeout=30) as client:
             resp = await client.get(url, headers=upstream_model_headers(api_key, protocol))
             endpoint_label = "/v1beta/models" if protocol == "gemini" else "/api/v3/models" if protocol == "volcengine" else "/openapi/v2/models" if protocol == "runninghub" else "/v1/models"
             if resp.status_code in (301, 302, 303, 307, 308):
@@ -12601,7 +12601,7 @@ async def fetch_models_from_upstream(base_url: str, api_key: str, protocol: str 
     except httpx.HTTPError as e:
         if protocol == "volcengine":
             try:
-                async with httpx.AsyncClient(timeout=15) as client:
+                async with httpx.AsyncClient(http2=False, timeout=15) as client:
                     detected, probe = await probe_volcengine_auto_detect(client, base_url, api_key)
                     if detected:
                         payload = volcengine_default_model_payload(
@@ -12738,7 +12738,7 @@ async def query_image_task(payload: ImageTaskQueryRequest):
         api_key = runninghub_api_key(provider)
         url = runninghub_endpoint_url(provider, "/task/openapi/outputs")
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client:
+            async with httpx.AsyncClient(http2=False, timeout=httpx.Timeout(connect=20.0, read=240.0, write=30.0, pool=20.0)) as client:
                 response = await client.post(url, headers=runninghub_app_headers(True), json={"apiKey": api_key, "taskId": task_id})
                 response.raise_for_status()
                 raw = response.json()
@@ -12797,7 +12797,7 @@ async def query_image_task(payload: ImageTaskQueryRequest):
             raise HTTPException(status_code=502, detail=f"查询 RunningHub 任务失败：{exc}") from exc
     timeout = httpx.Timeout(connect=20.0, read=300.0, write=60.0, pool=20.0)
     try:
-        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+        async with httpx.AsyncClient(http2=False, timeout=timeout, follow_redirects=True) as client:
             raw = await fetch_image_task_payload(client, task_id, provider)
     except httpx.HTTPStatusError as exc:
         log_net_error(f"查询生图任务 HTTP状态错误 provider={provider.get('id')} task_id={task_id}", exc)
@@ -13588,7 +13588,7 @@ async def canvas_video(payload: CanvasVideoRequest):
     is_veo31 = is_apimart and is_apimart_veo31_model(requested_model)
     if is_agnes:
         try:
-            async with httpx.AsyncClient(timeout=VIDEO_POLL_TIMEOUT) as agnes_client:
+            async with httpx.AsyncClient(http2=False, timeout=VIDEO_POLL_TIMEOUT) as agnes_client:
                 return await generate_agnes_video(agnes_client, payload, provider, base_url, requested_model)
         except httpx.HTTPStatusError as exc:
             text = exc.response.text
@@ -13598,7 +13598,7 @@ async def canvas_video(payload: CanvasVideoRequest):
             raise HTTPException(status_code=502, detail=f"请求 Agnes 视频接口失败：{exc}") from exc
     if is_lingjing:
         try:
-            async with httpx.AsyncClient(timeout=VIDEO_POLL_TIMEOUT) as lingjing_client:
+            async with httpx.AsyncClient(http2=False, timeout=VIDEO_POLL_TIMEOUT) as lingjing_client:
                 return await generate_lingjing_openai_video(lingjing_client, payload, provider, base_url, requested_model)
         except httpx.HTTPStatusError as exc:
             text = exc.response.text
@@ -13610,7 +13610,7 @@ async def canvas_video(payload: CanvasVideoRequest):
     # 沿用下方原生 /v1/video/create JSON 流程。
     if is_yuli and yuli_is_veo_openai_model(requested_model):
         try:
-            async with httpx.AsyncClient(timeout=VIDEO_POLL_TIMEOUT) as yuli_client:
+            async with httpx.AsyncClient(http2=False, timeout=VIDEO_POLL_TIMEOUT) as yuli_client:
                 return await generate_yuli_openai_video(yuli_client, payload, provider, base_url, requested_model)
         except httpx.HTTPStatusError as exc:
             text = exc.response.text
@@ -13619,7 +13619,7 @@ async def canvas_video(payload: CanvasVideoRequest):
             log_net_error(f"视频(玉玉) 网络/TLS错误 model={requested_model}", exc)
             raise HTTPException(status_code=502, detail=f"请求上游视频接口失败：{exc}") from exc
     try:
-        async with httpx.AsyncClient(timeout=VIDEO_POLL_TIMEOUT) as client:
+        async with httpx.AsyncClient(http2=False, timeout=VIDEO_POLL_TIMEOUT) as client:
             # --- 构造图片载荷 ---
             if is_apimart:
                 # APIMart 只接受 http/https 或 asset:// URL，先上传本地图片取回网络 URL
@@ -14078,7 +14078,7 @@ async def canvas_llm(payload: CanvasLLMRequest):
         upstream_messages.append({"role": "user", "content": payload.message})
     raw = None
     try:
-        async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+        async with httpx.AsyncClient(http2=False, timeout=AI_REQUEST_TIMEOUT) as client:
             req_body = {"model": model, "messages": upstream_messages}
             if _is_apimart:
                 req_body["stream"] = False   # APIMart 默认流式，强制关闭
@@ -15044,7 +15044,7 @@ async def caption_image_with_provider(abs_path, prompt, provider_id, model, ms_m
     }]
     raw = None
     try:
-        async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+        async with httpx.AsyncClient(http2=False, timeout=AI_REQUEST_TIMEOUT) as client:
             req_body = {"model": resolved_model, "messages": messages}
             if is_apimart:
                 req_body["stream"] = False
@@ -15140,7 +15140,7 @@ async def register_asset_library_avatar(item_id: str, payload: AssetAvatarRegist
         kind = "image"
     if platform == "apimart":
         project_name = str(payload.project_name or "default").strip() or "default"
-        async with httpx.AsyncClient(timeout=VIDEO_POLL_TIMEOUT) as client:
+        async with httpx.AsyncClient(http2=False, timeout=VIDEO_POLL_TIMEOUT) as client:
             public_url = await upload_media_for_apimart(client, provider, target_item.get("url") or "", kind)
         if not valid_apimart_video_image_input(public_url):
             reason = public_url[4:] if isinstance(public_url, str) and public_url.startswith("ERR:") else "无法获取公网可访问地址"
@@ -15490,7 +15490,7 @@ async def chat(payload: ChatRequest, request: Request, x_user_id: str = Header(d
             if msg:
                 upstream_messages.append(msg)
         try:
-            async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+            async with httpx.AsyncClient(http2=False, timeout=AI_REQUEST_TIMEOUT) as client:
                 conv_req_body = {"model": model, "messages": upstream_messages}
                 if _conv_is_apimart:
                     conv_req_body["stream"] = False
@@ -15706,7 +15706,7 @@ async def chat_stream(payload: ChatRequest, request: Request, x_user_id: str = H
         raw_usage = None
         yield sse_event({"type": "meta", "conversation": conversation})
         try:
-            async with httpx.AsyncClient(timeout=AI_REQUEST_TIMEOUT) as client:
+            async with httpx.AsyncClient(http2=False, timeout=AI_REQUEST_TIMEOUT) as client:
                 async with client.stream(
                     "POST",
                     f"{chat_base}/chat/completions",
@@ -15848,7 +15848,7 @@ async def poll_angle_cloud(req: CloudPollRequest):
     print(f"Resuming polling for Angle Task: {task_id}")
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(http2=False, timeout=30) as client:
             for i in range(300):
                 await asyncio.sleep(2)
                 result = await client.get(
@@ -15863,7 +15863,7 @@ async def poll_angle_cloud(req: CloudPollRequest):
                     img_url = data["output_images"][0]
                     local_path = ""
                     try:
-                        async with httpx.AsyncClient() as dl_client:
+                        async with httpx.AsyncClient(http2=False, ) as dl_client:
                             img_res = await dl_client.get(img_url)
                             if img_res.status_code == 200:
                                 filename = f"cloud_angle_{int(time.time())}.png"
@@ -15927,7 +15927,7 @@ async def generate_angle_cloud(req: CloudGenRequest):
         payload["loras"] = req.loras
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(http2=False, timeout=30) as client:
             submit_res = await client.post(f"{api_root}/images/generations", headers=headers, json=payload)
             if submit_res.status_code != 200:
                 try:
@@ -15953,7 +15953,7 @@ async def generate_angle_cloud(req: CloudGenRequest):
                     img_url = data["output_images"][0]
                     local_path = ""
                     try:
-                        async with httpx.AsyncClient() as dl_client:
+                        async with httpx.AsyncClient(http2=False, ) as dl_client:
                             img_res = await dl_client.get(img_url)
                             if img_res.status_code == 200:
                                 filename = f"cloud_angle_{int(time.time())}.png"
@@ -16018,7 +16018,7 @@ async def generate_cloud(req: CloudGenRequest):
         payload["loras"] = req.loras
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(http2=False, timeout=30) as client:
             submit_res = await client.post(
                 f"{api_root}/images/generations",
                 headers={**headers, "X-ModelScope-Async-Mode": "true"},
@@ -16051,7 +16051,7 @@ async def generate_cloud(req: CloudGenRequest):
                     img_url = data["output_images"][0]
                     local_path = ""
                     try:
-                        async with httpx.AsyncClient() as dl_client:
+                        async with httpx.AsyncClient(http2=False, ) as dl_client:
                             img_res = await dl_client.get(img_url)
                             if img_res.status_code == 200:
                                 filename = f"cloud_{int(time.time())}.png"
@@ -16114,7 +16114,7 @@ async def ms_generate(req: MsGenerateRequest):
         payload["loras"] = req.loras
 
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
+        async with httpx.AsyncClient(http2=False, timeout=30) as client:
             submit_res = await client.post(
                 f"{api_root}/images/generations",
                 headers=headers,
@@ -16147,7 +16147,7 @@ async def ms_generate(req: MsGenerateRequest):
                         img_url = data["output_images"][0]
                         local_path = ""
                         try:
-                            async with httpx.AsyncClient() as dl_client:
+                            async with httpx.AsyncClient(http2=False, ) as dl_client:
                                 img_res = await dl_client.get(img_url)
                                 if img_res.status_code == 200:
                                     filename = f"ms_{req.model.replace('/', '_').replace(':', '_')}_{int(time.time())}.png"

@@ -4161,6 +4161,7 @@ function defaultPromptTemplateGroups(){
         {id:'character', name:tr('smart.tplCatCharacter')},
         {id:'product', name:tr('smart.tplCatProduct')},
         {id:'lighting', name:tr('smart.tplCatLighting')},
+        {id:'ecommerce', name:tr('smart.tplCatEcommerce')},
         {id:'mine', name:tr('smart.tplCatMine')}
     ];
 }

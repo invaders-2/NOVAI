@@ -1,6 +1,6 @@
 {
   "name": "novai",
-  "version": "1.0.39",
+  "version": "1.0.56",
   "description": "NOVAI - 无限画布 AI 图像生成工具",
   "main": "main.js",
   "author": "invaders",
@@ -50,8 +50,20 @@
       "category": "public.app-category.graphics-design",
       "icon": "icon.icns",
       "target": [
-        { "target": "dmg", "arch": ["arm64", "x64"] },
-        { "target": "zip", "arch": ["arm64", "x64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false
@@ -59,7 +71,12 @@
     "win": {
       "icon": "icon.ico",
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {

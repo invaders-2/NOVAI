@@ -1,0 +1,92 @@
+{
+  "name": "novai",
+  "version": "1.0.57",
+  "description": "NOVAI - \u65e0\u9650\u753b\u5e03 AI \u56fe\u50cf\u751f\u6210\u5de5\u5177",
+  "main": "main.js",
+  "author": "invaders",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:all": "electron-builder --mac --win"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.invaders.novai",
+    "productName": "NOVAI",
+    "directories": {
+      "output": "../dist-desktop"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "backend/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!electron/**",
+          "!dist-desktop/**",
+          "!node_modules/**",
+          "!.git/**",
+          "!__pycache__/**",
+          "!*.pyc",
+          "!backups/**",
+          "!vendor/**",
+          "!get-pip.py",
+          "!data/history.json",
+          "!data/**/history.json"
+        ]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "icon": "icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "win": {
+      "icon": "icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico"
+    }
+  },
+  "dependencies": {
+    "sharp": "^0.35.3"
+  }
+}

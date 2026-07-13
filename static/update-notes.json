@@ -1,7 +1,11 @@
 {
-  "version": "1.0.76",
-  "updated_at": "2026-07-13T21:00:00+08:00",
+  "version": "1.0.77",
+  "updated_at": "2026-07-14T12:00:00+08:00",
   "items": [
+    {
+      "type": "feature",
+      "text": "即梦CLI脚本加入更新白名单，可通过更新机制自动推送"
+    },
     {
       "type": "bugfix",
       "text": "修复即梦CLI headless登录流程：改用checklogin轮询device_code授权兑换"

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-studio-scale="off">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="/static/images/logo.png" type="image/png">
+    <title>项目工作台</title>
+    <script>
+        (function(){
+            try {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
+                if(theme === 'dark') {
+                    document.documentElement.classList.add('studio-theme-dark');
+                    document.documentElement.classList.add('theme-dark');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.76.1783947775"></script>
+    <script src="/static/vendor/js/lucide.js?v=1.0.76.1783947775"></script>
+    <script src="/static/js/theme.js?v=1.0.76.1783947771"></script>
+    <script src="/static/js/touch-mouse.js?v=1.0.76.1783947771"></script>
+    <script src="/static/js/i18n.js?v=1.0.76.1783947769"></script>
+    <link rel="stylesheet" href="/static/css/canvas-list.css?v=1.0.76.1783947764">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.76.1783947764">
+
+<style>
+
+/* === Marvis 视觉风格统一注入 === */
+:root {
+    --bg: #f5f5f7;
+    --sidebar-bg: rgba(245, 245, 247, 0.72);
+    --stage-bg: #ffffff;
+    --border: transparent;
+    --text: #1d1d1f;
+    --muted: #86868b;
+    --nav-hover-bg: rgba(0, 0, 0, 0.04);
+    --divider: rgba(0, 0, 0, 0.06);
+    --scrollbar: rgba(0, 0, 0, 0.12);
+    --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --font-sans: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
+    --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
+}
+
+html.theme-dark,
+html.studio-theme-dark,
+body.theme-dark,
+body.studio-theme-dark {
+    --bg: #0d0d0d;
+    --sidebar-bg: rgba(13,13,13,0.78);
+    --stage-bg: #161616;
+    --border: transparent;
+    --text: #f5f5f7;
+    --muted: #86868b;
+    --nav-hover-bg: rgba(255, 255, 255, 0.06);
+    --divider: rgba(255, 255, 255, 0.06);
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.18);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.28);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.34);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.42);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+}
+
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+html, body { touch-action: none; }
+
+body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+/* --- 页面特定覆盖 --- */
+
+        body { background: var(--bg) !important; color: var(--text) !important; }
+    
+
+
+/* --- Marvis 增强覆盖 (canvas-list.html) --- */
+.page-head { background: var(--sidebar-bg) !important; backdrop-filter: blur(28px) !important; border-bottom: 1px solid var(--divider) !important; }
+.card { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-xl) !important; box-shadow: var(--shadow-sm) !important; }
+.card:hover { box-shadow: var(--shadow-md) !important; }
+.btn-create { background: var(--text) !important; color: var(--bg) !important; border-radius: var(--radius-md) !important; }
+
+</style>
+</head>
+<body>
+    <div id="workspace" class="workspace">
+        <!-- LEFT: project sidebar -->
+        <aside id="sidebar" class="ws-sidebar">
+            <div class="ws-side-head">
+                <div class="ws-side-title">项目</div>
+                <button id="newProjectBtn" class="ws-side-add" type="button" title="新建项目" aria-label="新建项目">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div id="newProjectRow" class="ws-newproj-row">
+                <input id="newProjectInput" class="ws-newproj-input" type="text" maxlength="60" placeholder="项目名称">
+                <button id="newProjectConfirm" class="ws-mini-btn primary" type="button" title="确定" aria-label="确定"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
+                <button id="newProjectCancel" class="ws-mini-btn" type="button" title="取消" aria-label="取消"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div id="projectList" class="ws-project-list"></div>
+            <div class="ws-side-foot">
+                <button id="trashEntry" class="ws-trash-entry" type="button">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    <span class="ws-trash-label">回收站</span>
+                    <span id="trashBadge" class="ws-trash-badge">0</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- RIGHT: board -->
+        <main class="ws-main">
+            <div class="ws-topbar">
+                <div class="ws-topbar-left">
+                    <div id="boardProjectName" class="ws-board-name">默认项目</div>
+                    <span id="boardCanvasCount" class="ws-board-count">0</span>
+                </div>
+                <div class="ws-topbar-right">
+                    <button id="pasteCanvasBtn" class="ws-paste-btn" type="button" title="粘贴到此项目" style="display:none"><i data-lucide="clipboard-paste" class="w-4 h-4"></i><span>粘贴到此项目</span></button>
+                    <button id="boardResetView" class="ws-icon-btn" type="button" title="重置视图" aria-label="重置视图"><i data-lucide="locate-fixed" class="w-4 h-4"></i></button>
+                    <button id="boardRefresh" class="ws-icon-btn" type="button" title="刷新" aria-label="刷新"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+                    <button id="newCanvasBtn" class="ws-primary-btn" type="button"><i data-lucide="plus" class="w-4 h-4"></i><span>新建画布</span></button>
+                </div>
+            </div>
+
+            <!-- Board (pan/zoom) -->
+            <div id="board" class="ws-board">
+                <div id="boardWorld" class="ws-board-world"></div>
+                <div id="boardEmptyHint" class="ws-board-empty">
+                    <div class="ws-board-empty-icon"><i data-lucide="mouse-pointer-click" class="w-7 h-7"></i></div>
+                    <div class="ws-board-empty-text">暂无画布</div>
+                    <div class="ws-board-empty-sub">为当前项目创建第一块画布</div>
+                    <div class="ws-board-empty-actions">
+                        <button id="emptyCreateCanvasBtn" class="ws-primary-btn" type="button"><i data-lucide="plus" class="w-4 h-4"></i><span>新建画布</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trash panel (overlay over the board area) -->
+            <div id="trashPanel" class="ws-trash-panel">
+                <div class="ws-trash-head">
+                    <div class="ws-trash-head-title"><i data-lucide="trash-2" class="w-4 h-4"></i><span>回收站</span></div>
+                    <button id="trashClose" class="ws-icon-btn" type="button" title="关闭" aria-label="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
+                </div>
+                <div class="ws-trash-note"><i data-lucide="info" class="w-3.5 h-3.5"></i><span>回收站中的画布会在 30 天后自动清理。</span></div>
+                <div id="trashList" class="ws-trash-list"></div>
+            </div>
+
+            <div id="boardStatus" class="ws-status"></div>
+        </main>
+    </div>
+    <script src="/static/js/canvas-list.js?v=1.0.76.1783947769"></script>
+    <script>
+        document.addEventListener('gesturestart', e => { e.preventDefault(); }, { capture: true });
+        document.addEventListener('gesturechange', e => { e.preventDefault(); }, { capture: true });
+        document.addEventListener('gestureend', e => { e.preventDefault(); }, { capture: true });
+    </script>
+</body>
+</html>

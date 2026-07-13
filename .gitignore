@@ -1,0 +1,6 @@
+﻿logs/
+__pycache__/
+*.pyc
+.claude/
+.env
+node_modules/

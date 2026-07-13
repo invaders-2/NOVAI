@@ -1,0 +1,22 @@
+{
+  "version": "1.0.76",
+  "updated_at": "2026-07-13T21:00:00+08:00",
+  "items": [
+    {
+      "type": "bugfix",
+      "text": "修复即梦CLI headless登录流程：改用checklogin轮询device_code授权兑换"
+    },
+    {
+      "type": "bugfix",
+      "text": "修复 Safari 下图片预览缩放时画布跟随缩放的问题"
+    },
+    {
+      "type": "bugfix",
+      "text": "修复上传图片预览时无法拖拽平移的问题"
+    },
+    {
+      "type": "feature",
+      "text": "即梦CLI安装/登录脚本升级为原生方案（Windows exe直装，Mac curl方案），移除WSL依赖"
+    }
+  ]
+}

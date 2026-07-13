@@ -59,6 +59,8 @@
     if (tab === 'settings') setTimeout(() => { try { els.server.focus(); } catch (e) {} }, 30);
     if (tab === 'generate' && DX.generate) DX.generate.ensureLoaded();   // 首次进入生成页时拉平台列表
     if (tab === 'agent' && DX.agent) DX.agent.ensureLoaded();
+    // 进资产页自动补齐空白缩略图（只重试没加载出来的，不重拉整页，无闪烁）
+    if (tab === 'assets' && state.connected) setTimeout(() => { if (!loading) retryBlanks(true); }, 60);
   }
 
   /* ---------- 当前视图数据 ---------- */
@@ -171,33 +173,44 @@
   // 并发 6；单图 6s 超时也放行（个别图 load/error 不触发或挂起时，释放槽位继续后面的）。
   const THUMB_CONCURRENCY = 6;
   function loadThumbs(token) {
-    const imgs = Array.prototype.slice.call(els.grid.querySelectorAll('img[data-src]'));
+    let imgs = Array.prototype.slice.call(els.grid.querySelectorAll('img[data-src]'));
     let i = 0;
     let active = 0;
     function startOne(img) {
       const src = img.getAttribute('data-src');
       img.removeAttribute('data-src');
+      const tries = Number(img.dataset.tries || 0);
       active += 1;
       let settled = false; let to = null;
       const done = () => { if (settled) return; settled = true; if (to) clearTimeout(to); active -= 1; pump(); };
-      img.addEventListener('load', done);
-      img.addEventListener('error', () => {
+      // 失败/超时：还有重试机会就恢复 data-src 重新排队；用尽才判「无预览」
+      const fail = () => {
+        if (settled) return;
+        if (tries < 1) { img.dataset.tries = tries + 1; img.setAttribute('data-src', src); done(); return; }
         const thumb = img.parentElement;
         if (thumb) thumb.innerHTML = '<div class="thumb-ph">无预览</div>';
         done();
-      });
-      to = setTimeout(done, 6000);
+      };
+      img.addEventListener('load', done);
+      img.addEventListener('error', fail);
+      to = setTimeout(fail, 8000);   // 弱网留足时间；超时按失败处理（会重试一次）
       img.src = src;
     }
     function pump() {
       if (token !== gridToken) return;
       while (active < THUMB_CONCURRENCY && i < imgs.length) startOne(imgs[i++]);
+      // 初始队列跑完、又没有在飞的图时，捞一遍被 fail() 恢复 data-src 的待重试图
+      if (i >= imgs.length && active === 0) {
+        const again = Array.prototype.slice.call(els.grid.querySelectorAll('img[data-src]'));
+        if (again.length) { imgs = again; i = 0; pump(); }
+      }
     }
     pump();
   }
 
   // 刷新按钮：扫描空白/失败的缩略图，只重试这些（保留已加载的，不动缓存里成功的图）
-  function retryBlanks() {
+  // silent=true（进资产页自动补齐时用）：没有空白时不打扰、不覆盖上传目标提示
+  function retryBlanks(silent) {
     const root = els.grid.querySelector('.grid-inner') || els.grid;
     let count = 0;
     root.querySelectorAll('.thumb[data-url]').forEach((th) => {
@@ -207,8 +220,8 @@
       th.innerHTML = `<img data-src="${escapeHtml(th.getAttribute('data-url'))}" alt="">`;
       count += 1;
     });
-    if (count) { setPushMsg(`正在重试 ${count} 张未加载的图 …`); loadThumbs(gridToken); }
-    else setPushMsg('当前没有空白卡片。', 'ok');
+    if (count) { if (!silent) setPushMsg(`正在重试 ${count} 张未加载的图 …`); loadThumbs(gridToken); }
+    else if (!silent) setPushMsg('当前没有空白卡片。', 'ok');
   }
 
   // 下载按钮（置入图层）：选中图片即可用；上传按钮（上传当前图层）：连接 + 有文档 + 目标可写

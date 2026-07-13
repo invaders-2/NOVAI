@@ -485,13 +485,13 @@
       if (f.type === 'refs' || f.type === 'notice') continue;
       if (f.type === 'size') {
         const v = g.values[f.key] || {};
-        const r8 = (x) => Math.max(64, Math.round((Number(x) || 0) / 8) * 8);
+        const r16 = (x) => Math.max(64, Math.ceil((Number(x) || 0) / 16) * 16);
         let W, H;
         if (v.res === 'auto') { out[f.key] = 'auto'; continue; }
         if (v.res === 'custom') { W = Number(v.w) || 1024; H = Number(v.h) || 1024; }
         else if (v.res === 'doc') { const d = ps.docSize() || { w: 1024, h: 1024 }; W = d.w; H = d.h; }
         else { const [rw, rh] = String(v.ratio || '1:1').split(':').map(Number); const base = BASE[v.res] || 1024; if (rw >= rh) { W = base; H = Math.round(base * rh / rw); } else { H = base; W = Math.round(base * rw / rh); } }
-        out[f.key] = `${r8(W)}x${r8(H)}`;
+        out[f.key] = `${r16(W)}x${r16(H)}`;
       } else if (g.values[f.key] !== undefined) out[f.key] = g.values[f.key];
     }
     return out;

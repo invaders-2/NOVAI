@@ -20,6 +20,8 @@
                 cursor: grab;
                 user-select: none;
                 touch-action: none;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
             }
             .studio-preview-frame.panning { cursor: grabbing; }
             .studio-preview-frame.panning .studio-preview-img { transition: none; }

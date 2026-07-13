@@ -1,14 +1,26 @@
 {
-  "version": "1.0.56",
-  "updated_at": "2026-07-12T05:00:00+08:00",
+  "version": "1.0.77",
+  "updated_at": "2026-07-14T12:00:00+08:00",
   "items": [
     {
       "type": "feature",
-      "text": "提示词库新增「电商」独立分类，预设11-16独立展示"
+      "text": "即梦CLI脚本加入更新白名单，可通过更新机制自动推送"
+    },
+    {
+      "type": "bugfix",
+      "text": "修复即梦CLI headless登录流程：改用checklogin轮询device_code授权兑换"
+    },
+    {
+      "type": "bugfix",
+      "text": "修复 Safari 下图片预览缩放时画布跟随缩放的问题"
+    },
+    {
+      "type": "bugfix",
+      "text": "修复上传图片预览时无法拖拽平移的问题"
     },
     {
       "type": "feature",
-      "text": "更新应用 Logo 为黑白双环嵌套几何设计，同步桌面版图标"
+      "text": "即梦CLI安装/登录脚本升级为原生方案（Windows exe直装，Mac curl方案），移除WSL依赖"
     }
   ]
 }

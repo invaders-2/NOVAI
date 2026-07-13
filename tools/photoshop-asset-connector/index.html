@@ -146,6 +146,7 @@
           <div class="agent-bar">
             <button id="agNew" class="btn" type="button">＋ 新对话</button>
             <sp-picker id="agHistory" size="s"><sp-menu slot="options"></sp-menu></sp-picker>
+            <button id="agDelete" class="btn danger" type="button" disabled>删除</button>
           </div>
 
           <div id="agModels" class="agent-models">
@@ -168,9 +169,13 @@
           <div id="agAttach" class="agent-attach"></div>
 
           <div class="panel-foot agent-foot">
+            <div class="agent-tools">
+              <button id="agRegionBtn" class="mode-btn" type="button" title="只改选区：先用矩形选框框住要改的地方，再发送">▣ 选区</button>
+              <button id="agRetryBtn" class="mode-btn" type="button" title="用上一次的内容重新发送">↻ 重试</button>
+            </div>
             <div class="agent-input">
               <button id="agAttachBtn" class="icon-btn" type="button" title="上传当前画面用于编辑">＋</button>
-              <textarea id="agInput" rows="2" placeholder="例如：把当前图层改成夜景"></textarea>
+              <textarea id="agInput" rows="2" placeholder="例如：把当前图层改成夜景（回车发送，Shift+回车换行）"></textarea>
               <button id="agSend" class="primary" type="button" disabled>发送</button>
             </div>
             <div id="agStatus" class="push-msg"></div>

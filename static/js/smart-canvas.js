@@ -9537,6 +9537,7 @@ function refreshComparePanel(){
         currentVideo.style.display = 'none';
     }
     currentImg.style.display = 'block';
+    currentImg.draggable = false;
     currentImg.onload = onCurrentLoaded;
     currentImg.onerror = () => {
         if(currentImg.dataset.proxyFallbackTried === '1') return;
@@ -10749,6 +10750,7 @@ function openImageEditor(nodeId, imageIndex=0){
     syncGridCustomUndoBtn(); updateZoomLabel();
     const img = document.getElementById('cropImage');
     img.style.width = ''; img.style.height = ''; img.style.maxWidth = ''; img.style.maxHeight = '';
+    img.draggable = false;
     imageEditModal.classList.add('open');
     previewCompareOn = false;
     previewCompareIndex = -1;

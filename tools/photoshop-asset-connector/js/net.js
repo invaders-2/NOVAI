@@ -85,20 +85,19 @@
     return out;
   }
 
-  // 用 base64 JSON 上传 PNG 字节，返回 /assets 地址（避开 UXP 的 FormData 问题）。
-  // 首选 /api/ai/upload-base64（落 assets/input，不污染本地素材）；
-  // 若后端没有该接口或失败，回退到老接口 /api/local-assets/import-urls（已验证可用）。
-  async function uploadInputBase64(buffer, name) {
-    const b64 = toBase64(buffer);
-    if (!b64) throw new Error('图层导出为空，无法上传');
+  // 上传一段已编码好的 base64 图片（指定 content_type），返回 /assets 地址（避开 UXP 的 FormData 问题）。
+  // 首选 /api/ai/upload-base64（落 assets/input，不污染本地素材）；失败回退 /api/local-assets/import-urls。
+  async function uploadBase64Raw(b64, name, mime) {
+    if (!b64) throw new Error('图片为空，无法上传');
+    const contentType = mime || 'image/png';
     try {
-      const data = await apiSend('POST', '/api/ai/upload-base64', { data: b64, name, content_type: 'image/png' });
+      const data = await apiSend('POST', '/api/ai/upload-base64', { data: b64, name, content_type: contentType });
       const f = (data.files || [])[0];
       if (f && f.url) return f.url;
     } catch (e) { /* 回退到 import-urls */ }
     const data = await apiSend('POST', '/api/local-assets/import-urls', {
       folder: '',
-      items: [{ data: `data:image/png;base64,${b64}`, name, content_type: 'image/png' }],
+      items: [{ data: `data:${contentType};base64,${b64}`, name, content_type: contentType }],
     });
     const f = (data.files || [])[0];
     if (f && f.url) return f.url;
@@ -106,5 +105,10 @@
     throw new Error((r && r.error) || '上传失败，后端未返回地址');
   }
 
-  DX.net = { parseHost, httpBase, wsBase, absUrl, thumbUrl, displayUrl, needsJpeg, apiGet, apiSend, fetchBytes, toBase64, uploadInputBase64 };
+  // 用 base64 JSON 上传 PNG 字节（buffer 版），返回 /assets 地址。
+  async function uploadInputBase64(buffer, name) {
+    return uploadBase64Raw(toBase64(buffer), name, 'image/png');
+  }
+
+  DX.net = { parseHost, httpBase, wsBase, absUrl, thumbUrl, displayUrl, needsJpeg, apiGet, apiSend, fetchBytes, toBase64, uploadInputBase64, uploadBase64Raw };
 })();

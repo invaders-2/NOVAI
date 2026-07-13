@@ -80,7 +80,7 @@ const MS_BUILTIN_IMAGE_MODELS = [
 const MS_DEFAULT_BASE_URL = 'https://api-inference.modelscope.cn/v1';
 const RH_DEFAULT_BASE_URL = 'https://www.runninghub.cn';
 const LINGJING_DEFAULT_BASE_URL = 'https://apistudio.vip';
-const LINGJING_REGISTER_URL = 'https://apistudio.vip/register?aff=g1CT';
+const LINGJING_REGISTER_URL = 'https://apistudio.vip/register?aff=AWfN';
 const VIP_GPT_DEFAULT_BASE_URL = 'https://www.vip-gpt.net';
 const VIP_GPT_REGISTER_URL = 'https://www.vip-gpt.net/vip-gpt/register?aff=YGMS7BDKNY5Y';
 const EXAMPLE_BASE_URL = 'https://api.example.com/v1';
@@ -161,7 +161,7 @@ const RECOMMENDED_APIS = [
         // 异步协议 + 异步生图模式：提交 /v1/videos、轮询 /v1/videos/{id}，参考图自动走图床短链
         protocol:'apimart',
         image_request_mode:'openai-video-proxy',
-        register_url:'https://new.exellome.online/register?aff=r2dZ',
+        register_url:'https://new.exellome.online/register?aff=D5j7',
         tagKeys:['GPT-Image2','Nano-Banana'],
         icons:['IMG'],
         summaryKey:'api.recommendExellomeSummary',
@@ -180,7 +180,7 @@ const RECOMMENDED_APIS = [
         protocol:'openai',
         // FHL 生图只支持 OpenAI RS 协议（/v1/images/* 不可用），默认预填 RS 模式
         image_request_mode:'openai-responses',
-        register_url:'https://www.fhl.mom/register?aff=86L574B4T2N9',
+        register_url:'https://www.fhl.mom/register?aff=2AE4ZATYBEFE',
         tagKeys:['Codex','Claude','api.tagGptImage2'],
         icons:['CODEX','GPT','IMG'],
         summaryKey:'api.recommendFhlSummary',
@@ -2583,11 +2583,25 @@ function renderJimengLoginBox(data){
     if(!jimengLoginBox) return;
     const text = data?.text || '';
     const qrUrl = data?.qr_url || '';
-    const qrHtml = qrUrl && qrUrl.startsWith('http')
-        ? `<img class="jimeng-qr-img" src="${escapeHtml(qrUrl)}" alt="即梦登录二维码">`
-        : '';
+    const loggedIn = data?.logged_in || false;
+    if(loggedIn){
+        jimengLoginBox.hidden = false;
+        jimengLoginBox.innerHTML = `<div style="color:#22c55e;padding:12px 0;">✓ ${escapeHtml(text || '已登录，无需重复扫码')}</div>`;
+        return;
+    }
+    // 判断是二维码图片还是网页链接
+    let qrHtml = '';
+    if(qrUrl){
+        if(qrUrl.startsWith('data:image') || qrUrl.includes('qrserver.com') || qrUrl.includes('qr-code')){
+            // 二维码图片
+            qrHtml = `<img class="jimeng-qr-img" src="${escapeHtml(qrUrl)}" alt="即梦登录二维码">`;
+        } else if(qrUrl.startsWith('http')){
+            // 网页链接 - 由于安全策略无法嵌入iframe，改为按钮打开新窗口
+            qrHtml = `<div style="padding:12px 0;text-align:center;"><p style="margin-bottom:12px;color:#666;">点击按钮在浏览器中打开登录页面，扫码后返回即可：</p><a href="${escapeHtml(qrUrl)}" target="_blank" rel="noopener" style="display:inline-block;padding:10px 24px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;font-weight:500;">打开登录页面 →</a></div>`;
+        }
+    }
     jimengLoginBox.hidden = false;
-    jimengLoginBox.innerHTML = `${qrHtml}<pre>${escapeHtml(text || '等待 CLI 输出登录二维码...')}</pre>`;
+    jimengLoginBox.innerHTML = `${qrHtml}<pre style="display:none;">${escapeHtml(text || '')}</pre>`;
 }
 let jimengLoginTimer = null;
 async function refreshJimengStatus(showCredit=true){

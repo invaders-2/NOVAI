@@ -6310,9 +6310,9 @@ function renderNode(node){
     el.querySelector('.resize-handle').onmousedown = e => { if(e.button === 0 && !e.shiftKey) startNodeResize(e, node); };
     el.ondragstart = e => { e.preventDefault(); e.stopPropagation(); };
     const out = el.querySelector('.port.out');
-    if(out) out.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'out'); };
+    if(out) out.onmousedown = e => { if(e.button === 0 && !e.shiftKey){ e.preventDefault(); startLink(e, node.id, 'out'); } };
     const inp = el.querySelector('.port.in');
-    if(inp) inp.onmousedown = e => { if(e.button === 0 && !e.shiftKey) startLink(e, node.id, 'in'); };
+    if(inp) inp.onmousedown = e => { if(e.button === 0 && !e.shiftKey){ e.preventDefault(); startLink(e, node.id, 'in'); } };
     return el;
 }
 function bindOutputWrap(wrap, node){
@@ -14049,6 +14049,7 @@ function onNodeResize(e){
     scheduleMinimapRender();
 }
 function startLink(e, originId, originKind){
+    e.preventDefault();
     e.stopPropagation();
     originKind = originKind || 'out';
     const src = portPoint(originId, originKind);
@@ -14868,6 +14869,7 @@ function isMouseWheel(e){
 }
 board.onwheel = e => {
     if(!canvas) return;
+    if(outputLightbox?.classList.contains('open')) return;
     e.preventDefault();
     e.stopPropagation();
     const rect = board.getBoundingClientRect();

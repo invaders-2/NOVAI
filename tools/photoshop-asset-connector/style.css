@@ -391,6 +391,16 @@ sp-picker.compact-picker {
   padding: 0 12px;
 }
 
+.btn.danger {
+  color: var(--danger);
+  border-color: rgba(248, 113, 113, .32);
+}
+
+.btn.danger:hover {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, .55);
+}
+
 .btn.wide {
   width: 100%;
 }
@@ -1127,6 +1137,11 @@ button[disabled], .primary[disabled], .primary-sm[disabled], .btn[disabled], .ic
   flex: 0 0 auto;
 }
 
+#agDelete {
+  min-width: 44px;
+  padding: 0 9px;
+}
+
 .agent-panel > .panel-head .icon-btn {
   width: auto;
   min-width: 48px;
@@ -1190,6 +1205,15 @@ button[disabled], .primary[disabled], .primary-sm[disabled], .btn[disabled], .ic
   white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.55;
+}
+
+/* 选区上传提示：显示"上传选区 W×H"，方便排查上传的是不是框选区域 */
+.agent-note {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--muted);
+  opacity: .9;
 }
 
 .agent-imgtile {
@@ -1274,6 +1298,74 @@ button[disabled], .primary[disabled], .primary-sm[disabled], .btn[disabled], .ic
   font-weight: 900;
   line-height: 1;
   border-radius: 10px;
+}
+
+/* 模式工具条：改选区 / 扩图 / 重试，单独一行，不挤压输入框 */
+.agent-tools {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px 6px;
+}
+
+.agent-tools .mode-btn {
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--soft);
+  color: var(--strong);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.agent-tools .mode-btn:hover {
+  border-color: var(--line-2);
+  color: var(--text);
+}
+
+.agent-tools .mode-btn.active {
+  border-color: var(--strong);
+  background: var(--strong);
+  color: var(--strong-text);
+}
+
+/* 重试按钮：默认隐藏，失败后加 .show 才显示（UXP 对 hidden 属性支持不稳，用 class 控制） */
+#agRetryBtn { display: none; margin-left: auto; }
+#agRetryBtn.show { display: inline-block; }
+
+/* 扩图方向参数条：默认隐藏，开「⬜ 扩图」时加 .show 显示 */
+.agent-outpaint-bar {
+  display: none;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 10px 8px;
+}
+.agent-outpaint-bar.show { display: flex; }
+.agent-outpaint-bar .op-label { font-size: 11px; color: var(--muted); font-weight: 800; }
+.agent-outpaint-bar .op-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--strong);
+  font-weight: 800;
+}
+.agent-outpaint-bar .op-px {
+  width: 64px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft-2);
+  color: var(--strong);
+  font-size: 12px;
+  text-align: center;
 }
 
 .agent-input textarea {

@@ -1907,6 +1907,7 @@ def check_update():
         holder[key] = item
     threads = [
         Thread(target=_probe, args=("github", GITHUB_VERSION_URL), daemon=True),
+        Thread(target=_probe, args=("gitee", GITEE_VERSION_URL), daemon=True),
         Thread(target=_probe, args=("modelscope", MODELSCOPE_VERSION_URL), daemon=True),
     ]
     for t in threads:
@@ -1914,9 +1915,10 @@ def check_update():
     for t in threads:
         t.join(timeout=5.5)
     github = holder.get("github") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": GITHUB_VERSION_URL, "source": "github"}
+    gitee = holder.get("gitee") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": GITEE_VERSION_URL, "source": "gitee"}
     modelscope = holder.get("modelscope") or {"version": "", "ok": False, "error": "检测超时（超过 5s）", "url": MODELSCOPE_VERSION_URL, "source": "modelscope"}
     best: Dict[str, Any] = {}
-    for item in (github, modelscope):
+    for item in (github, gitee, modelscope):
         if item["ok"] and item["version"]:
             if not best or version_gt(item["version"], best["version"]):
                 best = {"source": item["source"], "version": item["version"]}
@@ -1928,12 +1930,13 @@ def check_update():
     return {
         "current": current,
         "github": github,
+        "gitee": gitee,
         "modelscope": modelscope,
         "latest": best,
         "update_notes": best.get("update_notes") if best else {},
         "update_notes_sources": notes_by_source,
         "update_available": update_available,
-        "reachable": bool(github["ok"] or modelscope["ok"]),
+        "reachable": bool(github["ok"] or gitee["ok"] or modelscope["ok"]),
     }
 
 def update_allowed_file(path: str) -> bool:

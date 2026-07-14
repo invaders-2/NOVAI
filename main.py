@@ -5635,7 +5635,7 @@ def jimeng_video_ratio_arg(aspect_ratio):
 def jimeng_append_model_resolution_args(args, payload: CanvasVideoRequest, include_model=False):
     model_version = jimeng_video_model_version(payload.model)
     if include_model and model_version:
-        args.append(f"--model_version={model_version}")
+        args.append(f"--model={model_version}")
     if payload.resolution:
         args.append(f"--video_resolution={jimeng_video_resolution_arg(payload.model, payload.resolution)}")
 
@@ -5790,7 +5790,7 @@ async def generate_jimeng_provider_image(prompt, size, model, reference_images=N
                 f"--poll={jimeng_poll_seconds()}",
             ]
             if model_version:
-                args.append(f"--model_version={model_version}")
+                args.append(f"--model={model_version}")
         else:
             model_version = jimeng_image_model_version(model, "text2image")
             args = [
@@ -5801,7 +5801,7 @@ async def generate_jimeng_provider_image(prompt, size, model, reference_images=N
                 f"--poll={jimeng_poll_seconds()}",
             ]
             if model_version:
-                args.append(f"--model_version={model_version}")
+                args.append(f"--model={model_version}")
         raw = await run_jimeng_cli(args, timeout=jimeng_poll_seconds() + 120)
         urls = await jimeng_store_outputs(raw, "image")
         return {"type": "url", "value": urls[0]}, raw
@@ -5916,7 +5916,7 @@ async def generate_jimeng_video(payload: CanvasVideoRequest, provider):
             ]
             model_version = jimeng_video_model_version(payload.model)
             if model_version:
-                args.append(f"--model_version={model_version}")
+                args.append(f"--model={model_version}")
         raw = await run_jimeng_cli(args, timeout=jimeng_poll_seconds() + 180)
         urls = await jimeng_store_outputs(raw, "video")
         return {"videos": urls, "task_id": jimeng_submit_id(raw) or None, "raw": raw}

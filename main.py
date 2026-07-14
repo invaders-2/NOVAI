@@ -5313,6 +5313,8 @@ async def run_jimeng_cli(args, timeout=120, raw_text=False):
     out_text, clean_err_text = jimeng_decode_cli_output(stdout, stderr)
     if proc.returncode != 0:
         message = clean_err_text or out_text or f"exit={proc.returncode}"
+        if not message.strip() or message == f"exit={proc.returncode}":
+            message = "CLI 无响应（可能未登录、会员不含 CLI 权限、或 CLI 版本不兼容）。请在 API 设置中检查即梦账户状态，或尝试开启 WSL 模式。"
         raise HTTPException(status_code=502, detail=f"即梦 CLI 调用失败：{message[:1000]}")
     # 帮助等纯文本输出不应被 JSON 提取吞掉（如 [0.5, 8] 会被误判为结果）
     if raw_text:

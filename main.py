@@ -5533,6 +5533,24 @@ def jimeng_ratio_from_size(size, fallback="1:1"):
 JIMENG_TEXT2IMAGE_MODELS = {"3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "5.0"}
 JIMENG_IMAGE2IMAGE_MODELS = {"4.0", "4.1", "4.5", "4.6", "5.0"}
 
+# 新版 CLI 把 --model_version 改成了 --model，旧版仍是 --model_version。
+# 通过解析 help 输出自动适配，避免跨平台兼容问题。
+_JIMENG_MODEL_FLAG_CACHE: Dict[str, str] = {}
+
+def jimeng_model_flag(subcommand: str) -> str:
+    cached = _JIMENG_MODEL_FLAG_CACHE.get(subcommand)
+    if cached:
+        return cached
+    try:
+        exe = jimeng_cli_executable()
+        proc = subprocess.run([exe, subcommand, "--help"], capture_output=True, text=True, timeout=10)
+        help_text = (proc.stdout or "") + (proc.stderr or "")
+        flag = "--model" if "--model " in help_text else "--model_version"
+    except Exception:
+        flag = "--model_version"
+    _JIMENG_MODEL_FLAG_CACHE[subcommand] = flag
+    return flag
+
 def jimeng_normalize_image_model(model):
     match = re.search(r"(\d+\.\d+)", str(model or ""))
     return match.group(1) if match else ""
@@ -5638,7 +5656,7 @@ def jimeng_video_ratio_arg(aspect_ratio):
 def jimeng_append_model_resolution_args(args, payload: CanvasVideoRequest, include_model=False):
     model_version = jimeng_video_model_version(payload.model)
     if include_model and model_version:
-        args.append(f"--model={model_version}")
+        args.append(f"{jimeng_model_flag('text2video')}={model_version}")
     if payload.resolution:
         args.append(f"--video_resolution={jimeng_video_resolution_arg(payload.model, payload.resolution)}")
 
@@ -5793,7 +5811,7 @@ async def generate_jimeng_provider_image(prompt, size, model, reference_images=N
                 f"--poll={jimeng_poll_seconds()}",
             ]
             if model_version:
-                args.append(f"--model={model_version}")
+                args.append(f"{jimeng_model_flag('image2image')}={model_version}")
         else:
             model_version = jimeng_image_model_version(model, "text2image")
             args = [
@@ -5804,7 +5822,7 @@ async def generate_jimeng_provider_image(prompt, size, model, reference_images=N
                 f"--poll={jimeng_poll_seconds()}",
             ]
             if model_version:
-                args.append(f"--model={model_version}")
+                args.append(f"{jimeng_model_flag('text2image')}={model_version}")
         raw = await run_jimeng_cli(args, timeout=jimeng_poll_seconds() + 120)
         urls = await jimeng_store_outputs(raw, "image")
         return {"type": "url", "value": urls[0]}, raw
@@ -5919,7 +5937,7 @@ async def generate_jimeng_video(payload: CanvasVideoRequest, provider):
             ]
             model_version = jimeng_video_model_version(payload.model)
             if model_version:
-                args.append(f"--model={model_version}")
+                args.append(f"{jimeng_model_flag('text2video')}={model_version}")
         raw = await run_jimeng_cli(args, timeout=jimeng_poll_seconds() + 180)
         urls = await jimeng_store_outputs(raw, "video")
         return {"videos": urls, "task_id": jimeng_submit_id(raw) or None, "raw": raw}

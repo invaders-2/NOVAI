@@ -1442,6 +1442,16 @@ os.makedirs(CANVAS_DIR, exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
+
+CHANGELOG_PATH = os.path.join(STATIC_DIR, "update-notes.json")
+
+@app.get("/api/changelog")
+def get_changelog():
+    try:
+        with open(CHANGELOG_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"version": "", "items": []}
 app.mount("/assets", StaticFiles(directory=ASSETS_DIR), name="assets")
 
 # --- Pydantic 模型 ---

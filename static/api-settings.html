@@ -16,12 +16,12 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.76.1783947775"></script>
-    <script src="/static/vendor/js/lucide.js?v=1.0.76.1783947775"></script>
-    <script src="/static/js/theme.js?v=1.0.76.1783947771"></script>
-    <script src="/static/js/i18n.js?v=1.0.76.1783947769"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.76.1783947764">
-    <link rel="stylesheet" href="/static/css/api-settings.css?v=1.0.76.1783947763">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.77.1783947775"></script>
+    <script src="/static/vendor/js/lucide.js?v=1.0.77.1783947775"></script>
+    <script src="/static/js/theme.js?v=1.0.77.1783947771"></script>
+    <script src="/static/js/i18n.js?v=1.0.77.1783947769"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.77.1783947764">
+    <link rel="stylesheet" href="/static/css/api-settings.css?v=1.0.77.1783947763">
 
 <style>
 
@@ -309,6 +309,10 @@ body {
                                     <button class="action-btn" type="button" onclick="openJimengHelp()"><i data-lucide="terminal" class="w-3.5 h-3.5"></i><span>帮助</span></button>
                                     <button class="action-btn danger-btn" type="button" onclick="logoutJimeng()"><i data-lucide="log-out" class="w-3.5 h-3.5"></i><span>退出登录</span></button>
                                 </div>
+                                <label class="rh-api-switch" style="margin-top:8px;display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <span style="font-size:13px;color:var(--text-secondary);">WSL 模式（Windows CLI 异常时启用）</span>
+                                    <input type="checkbox" id="jimengWslMode" onchange="toggleJimengWsl(this.checked)" style="accent-color:var(--accent);">
+                                </label>
                                 <div id="jimengCredit" class="jimeng-credit"></div>
                                 <div id="jimengLoginBox" class="jimeng-output" hidden></div>
                             </div>
@@ -652,6 +656,6 @@ body {
         </div>
     </div>
 
-    <script src="/static/js/api-settings.js?v=1.0.76.1783947768"></script>
+    <script src="/static/js/api-settings.js?v=1.0.77.1783966785"></script>
 </body>
 </html>

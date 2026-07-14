@@ -1417,6 +1417,16 @@ def update_env_values(updates):
     with open(API_ENV_FILE, "w", encoding="utf-8") as f:
         f.write("\n".join(next_lines).rstrip() + "\n")
 
+@app.get("/api/jimeng/wsl-mode")
+def get_jimeng_wsl_mode():
+    return {"enabled": jimeng_use_wsl()}
+
+@app.post("/api/jimeng/wsl-mode")
+def set_jimeng_wsl_mode(data: Dict[str, Any]):
+    enabled = bool(data.get("enabled", False))
+    update_env_values({"JIMENG_USE_WSL": "1" if enabled else "0"})
+    return {"enabled": enabled}
+
 BACKEND_LOCAL_LOAD = {addr: 0 for addr in COMFYUI_INSTANCES}
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)

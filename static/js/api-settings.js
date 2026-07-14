@@ -2529,7 +2529,7 @@ function renderEditor(){
     if(jimengCliPanel){
         jimengCliPanel.hidden = !isJimeng;
         jimengCliPanel.style.display = isJimeng ? 'flex' : 'none';
-        if(isJimeng) refreshJimengStatus(false);
+        if(isJimeng){ refreshJimengStatus(false); initJimengWslMode(); }
     }
     if(codexCliPanel){
         codexCliPanel.hidden = !isCodex;
@@ -2697,6 +2697,25 @@ function openJimengHelp(){
 }
 function closeJimengHelp(){
     if(jimengHelpOverlay) jimengHelpOverlay.style.display = 'none';
+}
+async function toggleJimengWsl(enabled){
+    try {
+        await fetch('/api/jimeng/wsl-mode', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({enabled})
+        });
+    } catch(e){
+        console.error('WSL 模式切换失败', e);
+    }
+}
+async function initJimengWslMode(){
+    try {
+        const resp = await fetch('/api/jimeng/wsl-mode');
+        const data = await resp.json();
+        const cb = document.getElementById('jimengWslMode');
+        if(cb) cb.checked = data.enabled;
+    } catch(e){}
 }
 async function loadJimengHelp(){
     if(!jimengHelpOutput) return;

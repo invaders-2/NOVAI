@@ -13,34 +13,44 @@ function Pause-End {
 }
 
 try {
-    Write-Host "=== Jimeng CLI Login/Check (Windows) ==="
-    Write-Host "Workspace: $root"
+    Write-Host "========================================"
+    Write-Host "  NOVAI - 即梦 CLI 登录 (WSL 模式)"
+    Write-Host "========================================"
     Write-Host ""
 
-    $binDir = Join-Path $env:USERPROFILE "bin"
-    $dreaminaExe = Join-Path $binDir "dreamina.exe"
+    $wslList = & wsl.exe --list --verbose 2>&1
+    $ubuntuDistro = $null
+    foreach ($line in $wslList) {
+        if ($line -match '^\s*\*?\s*(Ubuntu\S*)\s+') {
+            $ubuntuDistro = $Matches[1]
+            break
+        }
+    }
 
-    if (-not (Test-Path $dreaminaExe)) {
-        Write-Host "dreamina CLI not found. Run install_jimeng_cli.bat first."
-        Write-Host "Expected path: $dreaminaExe"
+    if (-not $ubuntuDistro) {
+        Write-Host "[错误] 未找到 Ubuntu WSL 发行版。请先运行 install_jimeng_cli.bat"
         Pause-End
         exit 1
     }
 
-    Write-Host "Found dreamina: $dreaminaExe"
+    Write-Host "发行版: $ubuntuDistro"
     Write-Host ""
 
-    Write-Host "Logging in..."
-    & $dreaminaExe login
+    $loginCmd = 'export PATH="$HOME/.local/bin:$PATH"; dreamina login 2>&1'
+    Write-Host "正在启动登录流程..."
+    Write-Host "请在弹出的浏览器窗口中扫码完成登录。"
+    Write-Host ""
+    & wsl.exe -d $ubuntuDistro -- bash -c $loginCmd
+
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Login failed, exit code: $LASTEXITCODE"
-        Pause-End
-        exit $LASTEXITCODE
+        Write-Host ""
+        Write-Host "[警告] 登录返回非零退出码，请检查上方输出。"
     }
-    Write-Host ""
 
-    Write-Host "Checking credits..."
-    & $dreaminaExe user_credit
+    Write-Host ""
+    Write-Host "正在查询积分..."
+    $creditCmd = 'export PATH="$HOME/.local/bin:$PATH"; dreamina user_credit 2>&1'
+    & wsl.exe -d $ubuntuDistro -- bash -c $creditCmd
     Write-Host ""
 
     $apiDir = Join-Path $root "API"
@@ -49,16 +59,14 @@ try {
     $lines = @()
     if (Test-Path $envPath) { $lines = Get-Content -LiteralPath $envPath }
     $lines = @($lines | Where-Object { $_ -notmatch '^\s*JIMENG_USE_WSL\s*=' })
-    $lines = @($lines | Where-Object { $_ -notmatch '^\s*DREAMINA_BIN\s*=' })
-    $lines += "JIMENG_USE_WSL=0"
-    $lines += "DREAMINA_BIN=$dreaminaExe"
+    $lines += "JIMENG_USE_WSL=1"
     [System.IO.File]::WriteAllLines($envPath, $lines, [System.Text.UTF8Encoding]::new($false))
-    Write-Host "Updated API\.env: JIMENG_USE_WSL=0, DREAMINA_BIN=$dreaminaExe"
+    Write-Host "API\.env: JIMENG_USE_WSL=1"
     Write-Host ""
-    Write-Host "Done."
+    Write-Host "完成！启动 NOVAI 后即可使用即梦功能。"
     Pause-End
 } catch {
-    Write-Host "Error: $($_.Exception.Message)"
+    Write-Host "[错误] $($_.Exception.Message)"
     Pause-End
     exit 1
 }

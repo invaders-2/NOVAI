@@ -1,195 +1,54 @@
-const { app, BrowserWindow, dialog, shell } = require('electron');
-const path = require('path');
+const { app, BrowserWindow, dialog } = require('electron');
 const { spawn } = require('child_process');
+const path = require('path');
 const http = require('http');
-const fs = require('fs');
-
-// Determine paths
-const isDev = !app.isPackaged;
-const isWin = process.platform === 'win32';
-
-let backendDir;
-if (isDev) {
-  backendDir = path.join(__dirname, '..');
-} else {
-  backendDir = path.join(process.resourcesPath, 'backend');
-}
 
 const PORT = 3000;
-const BASE_URL = `http://localhost:${PORT}`;
+const APP_NAME = process.platform === 'win32' ? 'NOVAI.exe' : 'NOVAI';
 
-let pythonProcess = null;
+// 获取可执行文件路径
+function getExePath() {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, APP_NAME);
+  }
+  return path.join(__dirname, '..', 'dist-desktop', APP_NAME);
+}
+
+// 等待服务器就绪
+function waitForServer(url, timeout = 30000) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const poll = () => {
+      http.get(url, (res) => {
+        if (res.statusCode >= 200 && res.statusCode < 500) resolve();
+        else retry();
+      }).on('error', retry);
+    };
+    const retry = () => {
+      if (Date.now() - start > timeout) reject(new Error('服务器启动超时'));
+      else setTimeout(poll, 500);
+    };
+    poll();
+  });
+}
+
+let serverProcess = null;
 let mainWindow = null;
 
-function findPython() {
-  const candidates = isWin ? ['python', 'python3', 'py'] : ['python3', 'python'];
-  const { execSync } = require('child_process');
-  const env = { ...process.env, PATH: `/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:${process.env.PATH || ''}` };
-  for (const cmd of candidates) {
-    try {
-      execSync(`${cmd} --version`, { stdio: 'ignore', env });
-      return cmd;
-    } catch (e) { /* continue */ }
-  }
-  return null;
-}
-
-function checkPythonVersion(pythonCmd) {
-  const { execSync } = require('child_process');
-  try {
-    const output = execSync(`${pythonCmd} --version`, { encoding: 'utf-8' });
-    const match = output.match(/Python\s+(\d+)\.(\d+)/);
-    if (match) {
-      const major = parseInt(match[1], 10);
-      const minor = parseInt(match[2], 10);
-      return major > 3 || (major === 3 && minor >= 10);
-    }
-    return false;
-  } catch (e) {
-    return false;
-  }
-}
-
-function checkAndInstallDeps() {
-  return new Promise((resolve) => {
-    const markerPath = path.join(backendDir, '.deps_installed');
-
-    // Already installed, skip
-    if (fs.existsSync(markerPath)) {
-      console.log('[NOVAI] 依赖标记文件已存在，跳过安装。');
-      resolve();
-      return;
-    }
-
-    const pythonCmd = findPython();
-    if (!pythonCmd) {
-      dialog.showErrorBox('环境错误', '未找到 Python。请安装 Python 3.10+ 后重试。');
-      app.quit();
-      return;
-    }
-
-    if (!checkPythonVersion(pythonCmd)) {
-      dialog.showErrorBox('Python 版本过低', '需要 Python 3.10 或更高版本，请升级后重试。');
-      app.quit();
-      return;
-    }
-
-    console.log('[NOVAI] 正在安装 Python 依赖，请稍候...');
-    console.log(`[NOVAI] pip install -r requirements.txt (目录: ${backendDir})`);
-
-    const { execSync } = require('child_process');
-    try {
-      execSync(`${pythonCmd} -m pip install -r requirements.txt`, {
-        cwd: backendDir,
-        stdio: 'inherit',
-        encoding: 'utf-8',
-      });
-      // Mark as installed
-      fs.writeFileSync(markerPath, new Date().toISOString());
-      console.log('[NOVAI] 依赖安装完成。');
-      resolve();
-    } catch (err) {
-      const msg = err.stderr || err.message || String(err);
-      dialog.showErrorBox('依赖安装失败', `pip install 执行失败:\n${msg}`);
-      app.quit();
-    }
+async function startServer() {
+  const exePath = getExePath();
+  console.log('启动服务:', exePath);
+  serverProcess = spawn(exePath, [], {
+    stdio: 'pipe',
+    env: { ...process.env, NOVAI_PORT: String(PORT) }
   });
-}
-
-function killPortIfUsed(port) {
-  return new Promise((resolve) => {
-    try {
-      const { execSync } = require('child_process');
-      if (isWin) {
-        const out = execSync(`netstat -ano | findstr :${port} | findstr LISTENING`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-        const match = out.trim().match(/(\d+)\s*$/m);
-        if (match) execSync(`taskkill /F /PID ${match[1]}`, { stdio: 'ignore' });
-      } else {
-        const out = execSync(`lsof -ti :${port}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
-        const pids = out.trim().split('\n').filter(Boolean);
-        pids.forEach(pid => { try { process.kill(parseInt(pid), 'SIGKILL'); } catch(e) {} });
-      }
-    } catch(e) { /* no process on port */ }
-    // Brief wait for OS to release the port
-    setTimeout(resolve, 300);
-  });
-}
-
-function startBackend() {
-  return new Promise((resolve, reject) => {
-    const pythonCmd = findPython();
-    console.log('[NOVAI] findPython result:', pythonCmd);
-    if (!pythonCmd) {
-      reject(new Error('未找到 Python。请安装 Python 3.10+ 后重试。'));
-      return;
+  serverProcess.stdout.on('data', (d) => console.log('[NOVAI]', d.toString().trim()));
+  serverProcess.stderr.on('data', (d) => console.error('[NOVAI]', d.toString().trim()));
+  serverProcess.on('exit', (code) => {
+    console.log('服务退出:', code);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('server-status', { running: false, code });
     }
-
-    console.log('[NOVAI] killPortIfUsed starting...');
-    killPortIfUsed(PORT).then(() => {
-      console.log('[NOVAI] killPortIfUsed done, spawning:', pythonCmd, 'main.py');
-      const env = { ...process.env, DEPLOY_RUN_PORT: String(PORT), PATH: `/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin:${process.env.PATH || ''}` };
-      pythonProcess = spawn(pythonCmd, ['main.py'], {
-      cwd: backendDir,
-      env,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true,
-    });
-
-    let started = false;
-    const timeout = setTimeout(() => {
-      if (!started) reject(new Error('后端启动超时（30秒）'));
-    }, 30000);
-
-    pythonProcess.stdout.on('data', (data) => {
-      const text = data.toString();
-      if (!started && (text.includes('Uvicorn running') || text.includes('Application startup complete'))) {
-        started = true;
-        clearTimeout(timeout);
-        // Give it a moment, then resolve
-        setTimeout(resolve, 500);
-      }
-    });
-
-    pythonProcess.stderr.on('data', (data) => {
-      // Uvicorn logs to stderr
-      const text = data.toString();
-      if (!started && (text.includes('Uvicorn running') || text.includes('Application startup complete'))) {
-        started = true;
-        clearTimeout(timeout);
-        setTimeout(resolve, 500);
-      }
-    });
-
-    pythonProcess.on('error', (err) => {
-      clearTimeout(timeout);
-      reject(new Error(`无法启动 Python: ${err.message}`));
-    });
-
-    pythonProcess.on('exit', (code) => {
-      clearTimeout(timeout);
-      if (!started) {
-        reject(new Error(`Python 进程异常退出 (code: ${code})`));
-      }
-    });
-  });
-});
-}
-
-function waitForServer(retries = 30) {
-  return new Promise((resolve, reject) => {
-    function check() {
-      http.get(BASE_URL, (res) => {
-        resolve();
-      }).on('error', () => {
-        retries--;
-        if (retries <= 0) {
-          reject(new Error('服务器启动后无法连接'));
-          return;
-        }
-        setTimeout(check, 1000);
-      });
-    }
-    check();
   });
 }
 
@@ -197,70 +56,43 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
-    minWidth: 900,
+    minWidth: 800,
     minHeight: 600,
-    title: 'NOVAI',
-    icon: path.join(backendDir, 'static', 'images', 'logo.png'),
+    title: 'NOVAI 智能画布',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-    },
-    show: false,
-    titleBarStyle: isWin ? 'default' : 'hiddenInset',
-    trafficLightPosition: isWin ? undefined : { x: 16, y: 18 },
+      preload: path.join(__dirname, 'preload.js')
+    }
   });
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
-
-  mainWindow.loadURL(BASE_URL);
-
-  // Open external links in default browser
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+  mainWindow.loadURL(`http://localhost:${PORT}`);
+  mainWindow.on('closed', () => { mainWindow = null; });
+  // 移除菜单栏
+  mainWindow.setMenuBarVisibility(false);
 }
 
-function killBackend() {
-  if (pythonProcess) {
-    pythonProcess.kill('SIGTERM');
-    setTimeout(() => {
-      try { pythonProcess.kill('SIGKILL'); } catch (e) { /* ignore */ }
-    }, 3000);
-    pythonProcess = null;
-  }
-}
-
-app.whenReady().then(async () => {
+app.on('ready', async () => {
   try {
-    await checkAndInstallDeps();
-    await startBackend();
-    await waitForServer();
+    await startServer();
+    await waitForServer(`http://localhost:${PORT}/`);
     createWindow();
-  } catch (err) {
-    dialog.showErrorBox('启动失败', err.message);
+  } catch (e) {
+    dialog.showErrorBox('启动失败', e.message);
     app.quit();
   }
 });
 
 app.on('window-all-closed', () => {
-  killBackend();
-  app.quit();
+  if (serverProcess) {
+    serverProcess.kill();
+    serverProcess = null;
+  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('before-quit', () => {
-  killBackend();
-});
-
-app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+  if (serverProcess) {
+    serverProcess.kill();
+    serverProcess = null;
   }
 });

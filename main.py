@@ -183,7 +183,7 @@ GITHUB_TREE_URL = "https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?
 GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/invaders-2/NOVAI/main"
 GITHUB_UPDATE_NOTES_URL = GITHUB_RAW_ROOT + "/static/update-notes.json"
 GITEE_REPO_URL = "https://gitee.com/invaders/novai"
-GITEE_VERSION_URL = "https://gitee.com/invaders/novai/raw/main/VERSION"
+GITEE_VERSION_URL = "https://gitee.com/invaders/novai/raw/master/VERSION"
 GITEE_TREE_URL = "https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1"
 GITEE_RAW_ROOT = "https://gitee.com/invaders/novai/raw/main"
 GITEE_UPDATE_NOTES_URL = GITEE_RAW_ROOT + "/static/update-notes.json"

@@ -10,3 +10,14 @@ data/canvases/
 data/media_previews/
 history.json
 data/update_backups/
+
+# 运行生成的文件
+assets/output/
+data/canvases/
+data/media_previews/
+data/update_backups/
+history.json
+
+# API 配置(含密钥)
+data/api_providers.json
+data/projects.json

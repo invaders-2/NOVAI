@@ -39,6 +39,8 @@ if %errorlevel% neq 0 (
 
 echo.
 echo ========================================
-echo   安装完成！双击 run.bat 启动
+echo   安装完成！正在启动...
 echo ========================================
+start http://127.0.0.1:3000/
+venv\Scripts\python main.py
 pause

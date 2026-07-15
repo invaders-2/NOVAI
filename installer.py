@@ -34,10 +34,12 @@ def install():
     
     print(f"安装 {APP_NAME} 到 {INSTALL_DIR}")
     
-    def create_shortcut(target, shortcut_path, desc=""):
+    def create_shortcut(target, shortcut_path, desc="", work_dir=""):
         shell = Dispatch('WScript.Shell')
         s = shell.CreateShortCut(shortcut_path)
-        s.TargetPath = target; s.WorkingDirectory = os.path.dirname(target); s.Description = desc
+        s.TargetPath = target
+        s.WorkingDirectory = work_dir or os.path.dirname(target)
+        s.Description = desc
         s.IconLocation = target if target.endswith('.exe') else (sys.executable + ',0')
         s.Save()
     

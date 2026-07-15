@@ -16,11 +16,11 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/lucide.js?v=1.0.76.1783947775"></script>
-    <script src="/static/js/theme.js?v=1.0.76.1783947771"></script>
-    <script src="/static/js/touch-mouse.js?v=1.0.76.1783947771"></script>
-    <script src="/static/js/i18n.js?v=1.0.76.1783947769"></script>
-    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.76.1783947764">
+    <script src="/static/vendor/js/lucide.js?v=1.0.79.1783947775"></script>
+    <script src="/static/js/theme.js?v=1.0.79.1783947771"></script>
+    <script src="/static/js/touch-mouse.js?v=1.0.79.1783947771"></script>
+    <script src="/static/js/i18n.js?v=1.0.79.1783947769"></script>
+    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.76.1784132536">
 
 <style>
 
@@ -109,6 +109,9 @@ body {
 </head>
 <body>
     <div id="shell" class="shell">
+        <div id="snapGuides" class="snap-guides"></div>
+        <div id="slashMenu" class="slash-menu"></div>
+        <div id="slashSub" class="slash-sub"></div>
         <div id="world" class="world">
             <div id="composer" class="composer">
                 <div class="composer-card">
@@ -218,6 +221,7 @@ body {
             <div id="promptTemplateBody" class="prompt-template-body"></div>
         </div>
         <button id="smartArrangeBtn" class="minimap-arrange-btn" type="button" title="整理选中节点" aria-label="整理选中节点"><i data-lucide="layout-grid"></i><span>整理选中</span></button>
+        <button id="chatToggleBtn" class="chat-toggle" onclick="toggleChatPanel()" title="画布对话助手"><i data-lucide="message-square"></i></button>
         <div id="minimap" class="smart-minimap" aria-hidden="true">
             <div id="minimapContent" class="smart-minimap-content">
                 <div id="minimapViewport" class="smart-minimap-viewport"></div>
@@ -522,6 +526,22 @@ body {
         <div id="toast" class="toast"></div>
         <div id="mentionPreview" class="mention-preview"><img alt="preview"></div>
     </div>
-    <script src="/static/js/smart-canvas.js?v=1.0.76.1783947771"></script>
+    <div id="chatModal" class="chat-modal" style="left:50%;top:50%;transform:translate(-50%,-50%)">
+        <div class="chat-modal-header">
+            <span class="chat-modal-title"><i data-lucide="sparkles" class="w-4 h-4"></i> 画布动画</span>
+            <div style="display:flex;align-items:center;gap:6px">
+                <select id="chatModelSelect" class="chat-model-select" onchange="changeChatModel(this.value)"></select>
+                <button class="chat-modal-close" onclick="toggleChatPanel()"><i data-lucide="x"></i></button>
+            </div>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-row">
+            <textarea id="chatInput" class="chat-input" placeholder="描述你想做什么..." rows="1"></textarea>
+            <button id="chatSendBtn" class="chat-send" onclick="sendChatMessage()"><i data-lucide="send"></i></button>
+        </div>
+        <div id="chatContext" class="chat-context"></div>
+        <div class="chat-resize"></div>
+    </div>
+    <script src="/static/js/smart-canvas.js?v=1.0.76.1784132536"></script>
 </body>
 </html>

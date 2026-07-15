@@ -4,19 +4,42 @@ import os, sys, shutil, pythoncom
 from win32com.client import Dispatch
 
 APP_NAME = "NOVAI 智能画布"
-INSTALL_DIR = os.path.join(os.environ.get("ProgramFiles", "C:\\Program Files"), "NOVAI")
+INSTALL_DIR = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "NOVAI")
 
-def create_shortcut(target, shortcut_path, description="", working_dir=""):
-    shell = Dispatch('WScript.Shell')
-    shortcut = shell.CreateShortCut(shortcut_path)
-    shortcut.TargetPath = target
-    shortcut.WorkingDirectory = working_dir or os.path.dirname(target)
-    shortcut.Description = description
-    shortcut.IconLocation = target
-    shortcut.Save()
+def is_admin():
+    try: return os.getuid() == 0
+    except: return False
+
+def request_admin():
+    """重新以管理员身份运行"""
+    import ctypes
+    if ctypes.windll.shell32.IsUserAnAdmin(): return True
+    ctypes.windll.shell32.ShellExecuteW(
+        None, "runas", sys.executable, " ".join(sys.argv), None, 1
+    )
+    sys.exit(0)
 
 def install():
+    # 尝试管理员安装到 Program Files
+    try_admin = False
+    try:
+        import ctypes
+        if not ctypes.windll.shell32.IsUserAnAdmin():
+            request_admin()
+            return
+        global INSTALL_DIR
+        INSTALL_DIR = os.path.join(os.environ.get("ProgramFiles", "C:\\Program Files"), "NOVAI")
+    except:
+        pass
+    
     print(f"安装 {APP_NAME} 到 {INSTALL_DIR}")
+    
+    def create_shortcut(target, shortcut_path, desc=""):
+        shell = Dispatch('WScript.Shell')
+        s = shell.CreateShortCut(shortcut_path)
+        s.TargetPath = target; s.WorkingDirectory = os.path.dirname(target); s.Description = desc
+        s.IconLocation = target if target.endswith('.exe') else (sys.executable + ',0')
+        s.Save()
     
     # 创建安装目录
     os.makedirs(INSTALL_DIR, exist_ok=True)

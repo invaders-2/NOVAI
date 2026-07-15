@@ -5,3 +5,8 @@ __pycache__/
 .env
 node_modules/
 venv/
+assets/output/
+data/canvases/
+data/media_previews/
+history.json
+data/update_backups/

@@ -6,7 +6,19 @@
 .env
 __pycache__/
 assets/output/
-build/\ndist/\ndist-desktop/NOVAI.exe\ndist-desktop/NOVAI\nNOVAI-*.zip\n*.spec\nelectron/node_modules/\n__pycache__/
+build/
+dist/
+dist-desktop/NOVAI.exe
+dist-desktop/NOVAI
+NOVAI-*.zip
+*.spec
+electron/node_modules/
+__pycache__/
+dist-desktop/NOVAI-Setup.exe
+dist-desktop/data/
+dist-desktop/output/
+assets/
+smart-canvas.js.bak
 data/api_providers.json
 data/canvases/
 data/media_previews/
@@ -16,3 +28,4 @@ history.json
 ﻿logs/
 node_modules/
 venv/
+logs/

@@ -325,6 +325,9 @@ const logList = document.getElementById('logList');
 const errorModal = document.getElementById('errorModal');
 const errorTitle = document.getElementById('errorTitle');
 const errorMessage = document.getElementById('errorMessage');
+const snapGuides = document.getElementById('snapGuides');
+const slashMenu = document.getElementById('slashMenu');
+const slashSub = document.getElementById('slashSub');
 let canvases = [];
 let deletedCanvases = [];
 let canvas = null;
@@ -332,6 +335,7 @@ let nodes = [];
 let connections = [];
 let viewport = {x: -1800, y: -1000, scale: 1};
 let dragNode = null;
+let snapState = null;
 let dragBoard = null;
 let minimapDrag = false;
 let minimapState = null;
@@ -6225,6 +6229,8 @@ function renderNode(node){
         bindScrollableText(textarea);
         textarea.oninput = e => {
             node.text = e.target.value;
+            var v = e.target.value || '';
+            if(v === '/' || v.endsWith('\n/')){ slashTarget = e.target; openSlashMenu(e.target); }
             refreshPromptCounter(body, node.text);
             scheduleSave();
             scheduleGeneratorInputSync();
@@ -13986,24 +13992,130 @@ function startNodeDrag(e, node){
     }
     const children = [...collected.values()];
     dragNode = {node: dragTarget, children, sx:e.clientX, sy:e.clientY, ox:dragTarget.x, oy:dragTarget.y};
+    snapState = computeSnapCandidates(dragTarget.id);
     document.body.classList.add('canvas-node-drag');
     window.onmousemove = onNodeDrag;
     window.onmouseup = endDrag;
 }
+// ── 吸附对齐 ──
+const SNAP_IN = 5;
+let snapRaf = 0;
+function clearSnapLines(){ snapGuides.innerHTML = ''; }
+function renderSnapLines(lines){
+    if(snapRaf) return;
+    snapRaf = requestAnimationFrame(() => {
+        snapRaf = 0;
+        let html = '';
+        for(const l of (lines || [])){
+            if(l.type === 'h') html += '<div class="snap-line-h" style="top:' + (l.pos * viewport.scale + viewport.y) + 'px"></div>';
+            else html += '<div class="snap-line-v" style="left:' + (l.pos * viewport.scale + viewport.x) + 'px"></div>';
+        }
+        snapGuides.innerHTML = html;
+    });
+}
+function findSnap(points, targets, threshold){
+    let best = null;
+    for(const p of points) for(const t of targets){
+        const d = Math.abs(p - t);
+        if(d <= threshold && (!best || d < best.diff)) best = {value: p, target: t, diff: d};
+    }
+    return best;
+}
+function computeSnapCandidates(excludeId){
+    const xEdges = [], xCenters = [], yEdges = [], yCenters = [];
+    for(const n of nodes){
+        if(n.id === excludeId) continue;
+        const r = estimatedNodeRect(n);
+        xEdges.push(r.x, r.x + r.w);
+        xCenters.push(r.x + r.w / 2);
+        yEdges.push(r.y, r.y + r.h);
+        yCenters.push(r.y + r.h / 2);
+    }
+    return {xEdges, xCenters, yEdges, yCenters};
+}
+// ── 斜杠指令 ──
+const SLASH_COMMANDS = [
+  {id:'scene',title:'场景参考',sub:'四视图 / 全景图',icon:'◇',children:[
+    {id:'scene-four-view',title:'场景四视图',sub:'顶视+轴测+立面',icon:'◇',template:'生成一张四宫格场景图（没有人物）包含（顶视图 (Plan View)，轴测图/45° 俯视图 (Axonometric View)，2个多个正交立面图 (Elevations)）\n{{ 文章内容 }}'},
+    {id:'scene-panorama',title:'360°全景图',sub:'VR无缝全景',icon:'◇',template:'360-degree equirectangular panorama, spherical panorama for VR viewing, seamless 360° wrap-around environment 场景为：\n{{ 文章内容 }}'}
+  ]},
+  {id:'character',title:'人设参考',sub:'三视图 / 脸部 / 解析图 / 8向',icon:'◎',children:[
+    {id:'char-three-view',title:'人物三视图',sub:'正面+侧面+背面',icon:'◎',template:'生成全身三视图，右边放正视图，45度的侧视图，后视图，\n{{ 文章内容 }}'},
+    {id:'char-three-view-face',title:'三视图+脸部',sub:'带脸部特写',icon:'◎',template:'生成全身三视图以及一张脸部特写，右边三分之二放正视图、侧视图、后视图，最左边三分之一是上半身特写\n{{ 文章内容 }}'},
+    {id:'char-design-sheet',title:'人设解析图',sub:'细节拆解设定集',icon:'◎',template:'生成人设解析图，包含正视图、侧视图、背视图，以及服装细节拆解、面部特征特写，排版紧凑，\n{{ 文章内容 }}'},
+    {id:'char-8dir-run',title:'角色8向·奔跑',sub:'9:16 2K',icon:'◎',template:"generate five variants in the blank grid spaces.\nconstraint: 角色奔跑动作\nLayout: {Row1:[Ref,Right],Row2:[Front,Back],Row3:[Facing BR,Facing TL]}\nAll features consistent; only orientation changes. green bg. No text.\n{{ 文章内容 }}"},
+    {id:'char-8dir-walk',title:'角色8向·行走',sub:'9:16 2K',icon:'◎',template:"generate five variants in the blank grid spaces.\nconstraint: 角色行走动作\nLayout: {Row1:[Ref,Right],Row2:[Front,Back],Row3:[Facing BR,Facing TL]}\nAll features consistent; only orientation changes. green bg. No text.\n{{ 文章内容 }}"}
+  ]},
+  {id:'grid',title:'多宫格',sub:'4 / 9 / 16 / 25宫格',icon:'⊞',children:[
+    {id:'grid-4',title:'4宫格',sub:'2×2 起承转合',icon:'⊞',template:'生成一张无缝的四宫格（2x2）的连贯剧情分镜图。故事/描述：\n{{ 文章内容 }}'},
+    {id:'grid-9',title:'9宫格',sub:'3×3 情绪递进',icon:'⊞',template:'生成一张无缝的九宫格（3x3）的连贯剧情分镜图。故事/描述：\n{{ 文章内容 }}'},
+    {id:'grid-16',title:'16宫格',sub:'4×4 密集节奏',icon:'⊞',template:'生成一张无缝的十六宫格（4x4）的连贯剧情分镜图。故事/描述：\n{{ 文章内容 }}'},
+    {id:'grid-25',title:'25宫格',sub:'5×5 完整片段',icon:'⊞',template:'生成一张无缝的二十五宫格（5x5）的连贯剧情分镜图。故事/描述：\n{{ 文章内容 }}'}
+  ]},
+  {id:'storyboard',title:'故事板',sub:'竖版 / 横版分镜',icon:'▣',children:[
+    {id:'sb-vertical',title:'竖版故事分镜',sub:'从上到下',icon:'▣',template:'请根据【用户输入】生成一张专业影视分镜设定板。竖版、黑灰底细线分栏。\n#【用户输入】\n{{ 文章内容 }}'},
+    {id:'sb-horizontal',title:'横版故事分镜',sub:'从左到右',icon:'▣',template:'请根据【用户输入】生成一张横版专业影视故事板。横版16:9表格。\n#【用户输入】\n{{ 文章内容 }}'}
+  ]}
+];
+function fillSlashTemplate(t,c){ return t.includes('{{ 文章内容 }}')?t.replace('{{ 文章内容 }}',c||''):(c?c+'\n\n'+t:t); }
+let slashTarget=null,slashCloseTimer=0;
+function closeSlashMenu(){ slashMenu.classList.remove('open');slashSub.classList.remove('open');slashMenu.innerHTML='';slashSub.innerHTML='';slashTarget=null; }
+function openSlashMenu(ta){
+    var el = ta.closest('.node');
+    var r = el ? el.getBoundingClientRect() : ta.getBoundingClientRect();
+    slashMenu.style.top=(r.bottom+4)+'px';slashMenu.style.left=r.left+'px';
+    slashSub.style.top=slashMenu.style.top;slashSub.style.left=(r.left+248)+'px';
+    slashMenu.innerHTML=SLASH_COMMANDS.map(function(item,i){
+        return '<div class="slash-item"><span class="slash-item-icon">'+item.icon+'</span><div class="slash-item-body"><span class="slash-item-label">'+item.title+'</span><span class="slash-item-sub">'+(item.sub||'')+'</span></div>'+(item.children?'<span class="slash-item-arrow">›</span>':'')+'</div>';
+    }).join('');
+    slashMenu.querySelectorAll('.slash-item').forEach(function(el,i){
+        var item=SLASH_COMMANDS[i];
+        if(item.children){
+            el.addEventListener('mouseenter',function(){
+                slashSub.innerHTML=item.children.map(function(c){ return '<div class="slash-item"><span class="slash-item-icon">'+c.icon+'</span><div class="slash-item-body"><span class="slash-item-label">'+c.title+'</span><span class="slash-item-sub">'+(c.sub||'')+'</span></div></div>'; }).join('');
+                slashSub.querySelectorAll('.slash-item').forEach(function(se,si){ se.addEventListener('click',function(e){ e.stopPropagation();e.preventDefault(); selectSlashItem(item.children[si]); }); });
+                slashSub.classList.add('open');
+            });
+        }else{ el.addEventListener('click',function(e){ e.stopPropagation();e.preventDefault(); selectSlashItem(item); }); }
+    });
+    slashMenu.classList.add('open');
+}
+function selectSlashItem(item){ var t=slashTarget||{}; t.value=fillSlashTemplate(item.template,t.value||''); t.dispatchEvent(new Event('input',{bubbles:true})); closeSlashMenu(); scheduleSave(); }
+function checkSlashClose(){ slashCloseTimer=setTimeout(function(){ if(!slashMenu.matches(':hover')&&!slashSub.matches(':hover')){slashSub.classList.remove('open');slashSub.innerHTML='';} },200); }
+slashMenu.addEventListener('mouseleave',checkSlashClose);
+slashSub.addEventListener('mouseenter',function(){clearTimeout(slashCloseTimer);});
+slashSub.addEventListener('mouseleave',checkSlashClose);
 function onNodeDrag(e){
     if(!dragNode) return;
     const dx = (e.clientX - dragNode.sx) / viewport.scale;
     const dy = (e.clientY - dragNode.sy) / viewport.scale;
-    dragNode.node.x = dragNode.ox + dx;
-    dragNode.node.y = dragNode.oy + dy;
+    let adjDx = dx, adjDy = dy;
+    const snapLines = [];
+    if(snapState){
+        const r = estimatedNodeRect(dragNode.node);
+        const ox = dragNode.ox, oy = dragNode.oy;
+        const p = {
+            left: ox + dx, right: ox + r.w + dx, centerX: ox + r.w/2 + dx,
+            top: oy + dy, bottom: oy + r.h + dy, centerY: oy + r.h/2 + dy
+        };
+        const xs = findSnap([p.left, p.right], snapState.xEdges, SNAP_IN)
+            || findSnap([p.centerX], snapState.xCenters, SNAP_IN);
+        if(xs){ adjDx = dx + (xs.target - xs.value); snapLines.push({type:'v', pos:xs.target}); }
+        const ys = findSnap([p.top, p.bottom], snapState.yEdges, SNAP_IN)
+            || findSnap([p.centerY], snapState.yCenters, SNAP_IN);
+        if(ys){ adjDy = dy + (ys.target - ys.value); snapLines.push({type:'h', pos:ys.target}); }
+        renderSnapLines(snapLines);
+    }
+    dragNode.node.x = dragNode.ox + adjDx;
+    dragNode.node.y = dragNode.oy + adjDy;
     const el = nodesEl.querySelector(`.node[data-id="${dragNode.node.id}"]`);
     if(el){
         el.style.left = `${dragNode.node.x}px`;
         el.style.top = `${dragNode.node.y}px`;
     }
     (dragNode.children || []).forEach(childDrag => {
-        childDrag.node.x = childDrag.ox + dx;
-        childDrag.node.y = childDrag.oy + dy;
+        childDrag.node.x = childDrag.ox + adjDx;
+        childDrag.node.y = childDrag.oy + adjDy;
         const childEl = nodesEl.querySelector(`.node[data-id="${childDrag.node.id}"]`);
         if(childEl){
             childEl.style.left = `${childDrag.node.x}px`;
@@ -14173,6 +14285,7 @@ function endDrag(event=null){
         if(!draggedGroup) updateGroupMembership(moved);
     }
     dragNode = null;
+    clearSnapLines(); snapState = null;
     dragBoard = null;
     resizeNode = null;
     llmPaneDrag = null;

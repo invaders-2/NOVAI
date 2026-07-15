@@ -9,6 +9,8 @@ const composer = document.getElementById('composer');
 const createMenu = document.getElementById('createMenu');
 const promptInput = document.getElementById('promptInput');
 const mentionPicker = document.getElementById('mentionPicker');
+const slashMenu = document.getElementById('slashMenu');
+const slashSub = document.getElementById('slashSub');
 const mentionPreview = document.getElementById('mentionPreview');
 const engineSelect = document.getElementById('engineSelect');
 const dynamicParams = document.getElementById('dynamicParams');
@@ -25,6 +27,7 @@ const minimapContent = document.getElementById('minimapContent');
 const smartArrangeBtn = document.getElementById('smartArrangeBtn');
 const imageEditModal = document.getElementById('imageEditModal');
 const smartLogModal = document.getElementById('smartLogModal');
+const snapGuides = document.getElementById('snapGuides');
 const smartLogList = document.getElementById('smartLogList');
 const smartShortcutModal = document.getElementById('smartShortcutModal');
 const smartWorkflowToggle = document.getElementById('smartWorkflowToggle');
@@ -229,6 +232,7 @@ let cropAspectPreset = 'free';
 let cropAspectRatio = null;
 let imageEditMode = 'crop';
 let imageEditModeTouched = false;
+let snapState = null;
 let imageResizeScale = 0.5;
 let editDrawState = null;
 let editTextItems = [];
@@ -4154,6 +4158,331 @@ function loadPromptPresets(){
 function savePromptPresets(){
     localStorage.setItem(PROMPT_PRESETS_KEY, JSON.stringify(promptPresets));
 }
+
+// ── 斜杠指令 ──
+const SLASH_COMMANDS = [
+  {id:'scene',title:'场景参考',sub:'四视图 / 全景图',icon:'◇',children:[
+    {id:'scene-four-view',title:'场景四视图',sub:'顶视+轴测+立面',icon:'◇',template:'生成一张四宫格场景图（没有人物）包含（顶视图 (Plan View)，轴测图/45° 俯视图 (Axonometric View)，2个多个正交立面图 (Elevations)）\n{{ 文章内容 }}'},
+    {id:'scene-panorama',title:'360°全景图',sub:'VR无缝全景',icon:'◇',template:'360-degree equirectangular panorama, spherical panorama for VR viewing, seamless 360° wrap-around environment 场景为：\n{{ 文章内容 }}'}
+  ]},
+  {id:'character',title:'人设参考',sub:'三视图 / 脸部 / 解析图 / 8向',icon:'◎',children:[
+    {id:'char-three-view',title:'人物三视图',sub:'正面+侧面+背面',icon:'◎',template:'生成全身三视图，右边放正视图，45度的侧视图，后视图，\n{{ 文章内容 }}'},
+    {id:'char-three-view-face',title:'三视图+脸部',sub:'带脸部特写',icon:'◎',template:'生成全身三视图以及一张脸部特写，右边三分之二放正视图、侧视图、后视图，最左边三分之一是上半身特写\n{{ 文章内容 }}'},
+    {id:'char-design-sheet',title:'人设解析图',sub:'细节拆解设定集',icon:'◎',template:'生成人设解析图，包含正视图、侧视图、背视图，以及服装细节拆解、面部特征特写，排版紧凑，\n{{ 文章内容 }}'},
+    {id:'char-8dir-run',title:'角色8向·奔跑',sub:'9:16 2K',icon:'◎',template:"generate five variants in the blank grid spaces. The arrows represent the character's facing direction.\nconstraint: 角色奔跑动作，迈开双腿，一前一后\nLayout: {\n   \"Row 1\": [\"Reference image, keep unchanged\", \"Right side view, facing right\"],\n   \"Row 2 (Flat view)\": [\"Absolute front view\", \"Back view\"],\n   \"Row 3 (Isometric 45° view)\": [\"Facing bottom-right, face visible\", \"Facing top-left, face not visible\"]\n   }\n   All character features must remain consistent; only the orientation should change. green background. No text.\n{{ 文章内容 }}"},
+    {id:'char-8dir-walk',title:'角色8向·行走',sub:'9:16 2K',icon:'◎',template:"generate five variants in the blank grid spaces. The arrows represent the character's facing direction.\nconstraint: 角色行走动作\nLayout: {\n   \"Row 1\": [\"Reference image, keep unchanged\", \"Right side view, facing right\"],\n   \"Row 2 (Flat view)\": [\"Absolute front view\", \"Back view\"],\n   \"Row 3 (Isometric 45° view)\": [\"Facing bottom-right, face visible\", \"Facing top-left, face not visible\"]\n   }\n   All character features must remain consistent; only the orientation should change. green background. No text.\n{{ 文章内容 }}"}
+  ]},
+  {id:'grid',title:'多宫格',sub:'4 / 9 / 16 / 25宫格',icon:'⊞',children:[
+    {id:'grid-4',title:'4宫格',sub:'2×2 起承转合',icon:'⊞',template:'生成一张无缝的四宫格（2x2）的连贯剧情分镜图。角色外观一致；场景光影统一；镜头从左上到右下推进；每格有明确动作与主体。故事/描述：\n{{ 文章内容 }}'},
+    {id:'grid-9',title:'9宫格',sub:'3×3 情绪递进',icon:'⊞',template:'生成一张无缝的九宫格（3x3）的连贯剧情分镜图。角色一致性极强；每格推进一个小动作或情绪变化。故事/描述：\n{{ 文章内容 }}'},
+    {id:'grid-16',title:'16宫格',sub:'4×4 密集节奏',icon:'⊞',template:'生成一张无缝的十六宫格（4x4）的连贯剧情分镜图。角色一致性极强；场景基调延续。故事/描述：\n{{ 文章内容 }}'},
+    {id:'grid-25',title:'25宫格',sub:'5×5 完整片段',icon:'⊞',template:'生成一张无缝的二十五宫格（5x5）的连贯剧情分镜图。故事/描述：\n{{ 文章内容 }}'}
+  ]},
+  {id:'storyboard',title:'故事板',sub:'竖版 / 横版分镜',icon:'▣',children:[
+    {id:'sb-vertical',title:'竖版故事分镜',sub:'从上到下',icon:'▣',template:'请根据【用户输入】生成一张"专业影视分镜设定板"。\n要求：竖版、黑灰底细线分栏、顶部标题+中部4-6个CUT（CUT编号/画面/描述/镜头/台词/音效）+底部补充区。分镜画面叙事连贯、角色场景一致。\n\n#【用户输入】\n{{ 文章内容 }}'},
+    {id:'sb-horizontal',title:'横版故事分镜',sub:'从左到右',icon:'▣',template:'请根据【用户输入】生成一张"横版专业影视故事板"。\n要求：横版16:9表格，表头CUT|秒数|图片|场景|主体|动作|描述|镜头|台词|音效|色彩。每个CUT对应16:9电影感画面。黑灰底细线分栏。\n\n#【用户输入】\n{{ 文章内容 }}'}
+  ]}
+];
+function fillSlashTemplate(template, current){
+    return template.includes('{{ 文章内容 }}') ? template.replace('{{ 文章内容 }}', current || '') : (current ? current + '\n\n' + template : template);
+}
+let slashTarget = null;
+function closeSlashMenu(){ slashMenu.classList.remove('open'); slashSub.classList.remove('open'); slashMenu.innerHTML=''; slashSub.innerHTML=''; slashTarget = null; }
+function openSlashMenu(){
+    var rect;
+    if(slashTarget && slashTarget.type === 'smart-prompt'){
+        var el = document.querySelector('.image-node[data-id="'+CSS.escape(slashTarget.id)+'"]');
+        rect = el ? el.getBoundingClientRect() : promptInput.getBoundingClientRect();
+    } else {
+        var card = promptInput.closest('.composer-card');
+        rect = card ? card.getBoundingClientRect() : promptInput.getBoundingClientRect();
+    }
+    slashMenu.style.top = (rect.bottom + 4) + 'px';
+    slashMenu.style.left = rect.left + 'px';
+    slashSub.style.top = slashMenu.style.top;
+    slashSub.style.left = (rect.left + 248) + 'px';
+    renderSlashItems(SLASH_COMMANDS, slashMenu, true);
+    slashMenu.classList.add('open');
+}
+function selectSlashItem(item){
+    if(slashTarget && slashTarget.type === 'smart-prompt'){
+        slashTarget.text = fillSlashTemplate(item.template, slashTarget.text || '');
+        render();
+        scheduleSave();
+    } else {
+        promptInput.textContent = fillSlashTemplate(item.template, promptInput.textContent || '');
+    }
+    closeSlashMenu();
+}
+function buildItemHtml(item){ return '<div class="slash-item"><span class="slash-item-icon">'+item.icon+'</span><div class="slash-item-body"><span class="slash-item-label">'+item.title+'</span><span class="slash-item-sub">'+(item.sub||'')+'</span></div>'+(item.children?'<span class="slash-item-arrow">›</span>':'')+'</div>'; }
+function renderSlashItems(items, target, isRoot){
+    target.innerHTML = items.map(buildItemHtml).join('');
+    target.querySelectorAll('.slash-item').forEach((el, i) => {
+        const item = items[i];
+        if(item.children && isRoot){
+            el.addEventListener('mouseenter', () => {
+                renderSlashItems(item.children, slashSub, false);
+                slashSub.classList.add('open');
+            });
+        } else if(!item.children){
+            el.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); selectSlashItem(item); });
+        }
+    });
+}
+let slashCloseTimer = 0;
+function checkSlashClose(){
+    slashCloseTimer = setTimeout(() => {
+        if(!slashMenu.matches(':hover') && !slashSub.matches(':hover')){
+            slashSub.classList.remove('open'); slashSub.innerHTML='';
+        }
+    }, 200);
+}
+slashMenu.addEventListener('mouseleave', checkSlashClose);
+slashSub.addEventListener('mouseenter', () => { clearTimeout(slashCloseTimer); });
+slashSub.addEventListener('mouseleave', checkSlashClose);
+
+// ── 画布对话助手 ──
+const chatModal = document.getElementById('chatModal');
+const chatContext = document.getElementById('chatContext');
+const chatModelSelect = document.getElementById('chatModelSelect');
+let chatMessages = [], chatDrag = false, chatResize = false, chatDX = 0, chatDY = 0, chatW = 0, chatH = 0, chatSX = 0, chatSY = 0;
+let chatRefs = [], chatProvider = '', chatModel = '';
+function initChatModel(){
+    var allModels = [];
+    (apiProviders||[]).forEach(function(p){
+        if(!p.enabled) return;
+        var models = p.chat_models || [];
+        if(!models.length) models = p.models || [];
+        if(!models.length && p.image_models) models = p.image_models;
+        if(!models.length && p.model_protocols) models = Object.keys(p.model_protocols);
+        models.forEach(function(m){
+            if(!allModels.some(function(x){return x.name===m})) allModels.push({name:m, provider:p.id});
+        });
+    });
+    if(!allModels.length) allModels.push({name:'gpt-4o-mini', provider:'openai'});
+    chatModel = allModels[0].name;
+    chatProvider = allModels[0].provider;
+    chatModelSelect.innerHTML = allModels.map(function(m){
+        return '<option value="'+escapeHtml(m.name)+'" data-provider="'+escapeHtml(m.provider)+'">'+escapeHtml(m.name)+'</option>';
+    }).join('');
+    chatModelSelect.value = chatModel;
+}
+function changeChatModel(val){
+    chatModel = val;
+    var sel = chatModelSelect.selectedOptions[0];
+    if(sel) chatProvider = sel.dataset.provider || resolveChatProviderId();
+}
+initChatModel();
+function refreshChatModels(){
+    initChatModel();
+}
+function currentChatModel(){ return chatModel || 'gpt-4o-mini'; }
+function executeChatActions(actions){
+    if(!canvas) return;
+    pushUndo();
+    var createdIds = []; // 记录创建的节点 id，支持 {0} {1} 引用
+    actions.forEach(function(a){
+        if(a.cmd === 'create_node'){
+            var nx = Number(a.x) || 300, ny = Number(a.y) || 200;
+            var node = null;
+            if(a.type === 'prompt') node = createPromptNode(nx, ny, {skipUndo:true});
+            else if(a.type === 'loop') node = createLoopNode(nx, ny, {skipUndo:true});
+            else { var imgNode = createImageNodeAt({x:nx, y:ny}, [], {skipUndo:true}); node = imgNode; }
+            if(node) createdIds.push(node.id);
+        } else if(a.cmd === 'connect'){
+            var fromId = a.from || '';
+            var toId = a.to || '';
+            // 支持 {0} {1} 引用已创建的节点
+            var m = fromId.match(/^\{(\d+)\}$/);
+            if(m) fromId = createdIds[parseInt(m[1])] || fromId;
+            m = toId.match(/^\{(\d+)\}$/);
+            if(m) toId = createdIds[parseInt(m[1])] || toId;
+            if(fromId && toId) addConnection(fromId, toId, a.kind || 'flow');
+        }
+    });
+    render();
+    scheduleSave();
+}
+function toggleChatPanel(){
+    chatModal.classList.toggle('open');
+    var inp = document.getElementById('chatInput');
+    if(chatModal.classList.contains('open') && inp){ setTimeout(function(){ inp.focus(); syncChatContext(); refreshChatModels(); }, 200); }
+}
+function syncChatContext(){
+    if(!chatModal.classList.contains('open')) return;
+    var sel = selectedNode();
+    if(sel && sel.id && !chatRefs.some(function(r){return r.id === sel.id})){
+        var imgs = (sel.images||[]).map(function(img){
+            var kind = img.kind || mediaKindForItem(img) || 'image';
+            var url = img.url || '';
+            return { url:url, preview:img.preview || img.thumbnail || (kind==='video'&&url?smartMediaPreviewUrl(img,256):'') || url, kind:kind };
+        });
+        var firstImg = imgs[0] || {};
+        var thumbUrl = firstImg.preview || firstImg.url || '';
+        chatRefs.push({id:sel.id, name:sel.title || (sel.type||'node'), thumbUrl:thumbUrl, type:sel.type, images:imgs});
+    }
+    renderChatContext();
+}
+function removeChatRef(id){ chatRefs = chatRefs.filter(function(r){return r.id !== id}); renderChatContext(); }
+function renderChatContext(){
+    if(!chatRefs.length){ chatContext.innerHTML = ''; chatContext.classList.remove('has-items'); return; }
+    var html = chatRefs.map(function(r){
+        var isVideo = (r.images||[])[0] && (r.images[0]).kind === 'video';
+        var thumb;
+        if(r.thumbUrl){
+            thumb = '<img src="'+escapeHtml(r.thumbUrl)+'" alt="" style="'+(isVideo?'opacity:.7':'')+'">';
+        } else {
+            var icon = r.type==='smart-prompt'?'P':r.type==='smart-loop'?'L':r.type==='storyboard'?'S':'?';
+            thumb = '<span style="width:28px;height:28px;border-radius:4px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">'+icon+'</span>';
+        }
+        return '<div class="chat-ctx-chip">'+thumb+'<span class="chat-ctx-name">'+escapeHtml(r.name)+'</span><span class="chat-ctx-remove" onclick="removeChatRef(\''+escapeHtml(r.id)+'\')">×</span></div>';
+    }).join('');
+    html += '<span class="chat-ctx-clear" onclick="chatRefs=[];renderChatContext()">清除</span>';
+    chatContext.innerHTML = html;
+    chatContext.classList.add('has-items');
+}
+function chatContextImages(){
+    var urls = [];
+    chatRefs.forEach(function(r){
+        (r.images||[]).forEach(function(img){ if(img.url) urls.push(img.url); });
+    });
+    return urls;
+}
+// 拖拽弹窗
+chatModal.querySelector('.chat-modal-header').addEventListener('mousedown', function(e){
+    if(e.target.closest('.chat-modal-close')) return;
+    chatDrag = true; chatDX = e.clientX; chatDY = e.clientY;
+    var r = chatModal.getBoundingClientRect();
+    chatSX = r.left; chatSY = r.top;
+    chatModal.style.transform = 'none'; chatModal.style.left = chatSX + 'px'; chatModal.style.top = chatSY + 'px';
+});
+// 缩放弹窗
+chatModal.querySelector('.chat-resize').addEventListener('mousedown', function(e){
+    chatResize = true; chatDX = e.clientX; chatDY = e.clientY;
+    var r = chatModal.getBoundingClientRect();
+    chatW = r.width; chatH = r.height;
+    e.stopPropagation(); e.preventDefault();
+});
+window.addEventListener('mousemove', function(e){
+    if(chatDrag){
+        chatModal.style.left = (chatSX + e.clientX - chatDX) + 'px';
+        chatModal.style.top = (chatSY + e.clientY - chatDY) + 'px';
+    }
+    if(chatResize){
+        var w = Math.max(280, chatW + e.clientX - chatDX), h = Math.max(240, chatH + e.clientY - chatDY);
+        chatModal.style.width = w + 'px'; chatModal.style.height = h + 'px';
+    }
+});
+window.addEventListener('mouseup', function(){ chatDrag = false; chatResize = false; });
+function addChatMessage(role, text, images){
+    chatMessages.push({role:role, text:text, images:images||[]});
+    var div = document.createElement('div');
+    div.className = 'chat-msg ' + role;
+    var imgsHtml = (images||[]).length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">'+images.map(function(u){return '<img src="'+escapeHtml(u)+'" style="width:60px;height:60px;object-fit:cover;border-radius:6px">'}).join('')+'</div>' : '';
+    div.innerHTML = imgsHtml + '<span>' + text + '</span>';
+    document.getElementById('chatMessages').appendChild(div);
+    div.scrollIntoView({behavior:'smooth',block:'end'});
+}
+async function sendChatMessage(){
+    var inp = document.getElementById('chatInput');
+    var text = inp.value.trim();
+    if(!text) return;
+    refreshChatModels();
+    inp.value = ''; inp.style.height = 'auto';
+    addChatMessage('user', text, chatContextImages());
+    var sel = selectedNode();
+    var ctx = sel ? ('当前选中: ' + (sel.title || sel.type || '') + ', 类型:' + (sel.type || 'image') + ', 图片:' + ((sel.images||[]).length) + '张') : '未选中节点';
+    var msgDiv = document.createElement('div');
+    msgDiv.className = 'chat-msg assistant';
+    msgDiv.textContent = '...';
+    document.getElementById('chatMessages').appendChild(msgDiv);
+    msgDiv.scrollIntoView({behavior:'smooth',block:'end'});
+    try {
+        var sysP = '你是 NOVAI 智能画布助手，请用中文自然对话。如果用户要求你操作画布（如创建节点、建立连接），在回复末尾附加 JSON：{"actions":[{"cmd":"create_node","type":"image","x":300,"y":200},{"cmd":"connect","from":"{0}","to":"{1}"}]}。{0}表示第1个创建的节点，{1}第2个。可创建 image|prompt|loop 类型节点。';
+        var fullMsg = text;
+        if(chatRefs.length) fullMsg += '\n\n[引用的画布节点: '+chatRefs.map(function(r){return r.name+'('+r.type+')'}).join(', ')+']';
+        var provider = chatProvider || resolveChatProviderId();
+        var model = currentChatModel();
+        var resp = await fetch('/api/canvas-llm', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({message:fullMsg, messages:[], images:chatContextImages(), videos:[], model:model, provider:provider, ms_model: provider==='modelscope'?model:'', system_prompt:sysP})
+        });
+        if(!resp.ok){ msgDiv.textContent = '请求失败: HTTP ' + resp.status; chatMessages.push({role:'assistant', text:msgDiv.textContent}); return; }
+        var data = await resp.json();
+        var reply = (data.text || '').trim();
+        if(!reply){ msgDiv.textContent = '收到了，但模型返回了空内容，请重试或切换模型。'; chatMessages.push({role:'assistant', text:msgDiv.textContent}); return; }
+        // 解析画布操作指令
+        var actionMatch = reply.match(/\{"actions"\s*:\s*\[[\s\S]*?\]\s*\}/);
+        if(actionMatch){
+            try {
+                var cmd = JSON.parse(actionMatch[0]);
+                reply = reply.replace(actionMatch[0], '').trim();
+                executeChatActions(cmd.actions);
+                reply = (reply || '已执行') + '\n\n✅ 操作完成';
+            } catch(ex){ reply += '\n\n⚠️ 指令解析失败'; }
+        }
+        msgDiv.textContent = reply;
+        chatMessages.push({role:'assistant', text:reply});
+    } catch(e){
+        msgDiv.textContent = '失败: ' + (e.message || '未知');
+        chatMessages.push({role:'assistant', text:msgDiv.textContent});
+    }
+}
+// 输入框自动撑高 + @ 引用节点
+var chatInput = document.getElementById('chatInput');
+if(chatInput) chatInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChatMessage(); }
+});
+if(chatInput) chatInput.addEventListener('input', function(){
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    // @ 引用
+    var val = this.value, cursor = this.selectionStart;
+    var atIdx = val.lastIndexOf('@', cursor);
+    if(atIdx >= 0 && (atIdx === 0 || val[atIdx-1] === ' ')){
+        var q = val.slice(atIdx+1, cursor).toLowerCase();
+        var matches = chatRefs.filter(function(n){return (n.name||'').toLowerCase().includes(q) || (n.type||'').toLowerCase().includes(q)}).slice(0,5);
+        showChatMentions(matches, this, atIdx);
+    } else { hideChatMentions(); }
+});
+var chatMentionBox = null;
+function showChatMentions(matches, inp, atIdx){
+    hideChatMentions();
+    if(!matches.length) return;
+    var box = document.createElement('div');
+    box.className = 'chat-mention-box';
+    box.style.cssText = 'position:fixed;z-index:200;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px var(--shadow);padding:4px;max-height:200px;overflow-y:auto;font-size:12px';
+    var r = inp.getBoundingClientRect();
+    box.style.left = r.left + 'px'; box.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+    matches.forEach(function(n){
+        var el = document.createElement('div');
+        el.style.cssText = 'padding:6px 10px;cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:8px';
+        var thumbHtml = '';
+        if(n.thumbUrl){
+            var isVid = (n.images||[])[0] && n.images[0].kind === 'video';
+            thumbHtml = '<img src="'+escapeHtml(n.thumbUrl)+'" style="width:24px;height:24px;border-radius:4px;object-fit:cover;flex-shrink:0'+(isVid?';opacity:.7':'')+'">';
+        }
+        el.innerHTML = thumbHtml + '<span style="font-weight:600">' + escapeHtml(n.name||n.type||'') + '</span><span style="color:var(--muted);font-size:10px">' + escapeHtml(n.type||'') + '</span>';
+        el.addEventListener('mousedown', function(e){ e.preventDefault();
+            var v = inp.value, before = v.slice(0, atIdx), after = v.slice(inp.selectionStart);
+            inp.value = before + '@' + (n.name||n.id) + ' ' + after;
+            inp.focus();
+            hideChatMentions();
+            syncChatContext();
+        });
+        box.appendChild(el);
+    });
+    document.body.appendChild(box);
+    chatMentionBox = box;
+}
+function hideChatMentions(){ if(chatMentionBox){ chatMentionBox.remove(); chatMentionBox = null; } }
+// 点击其他地方关闭 mention
+document.addEventListener('mousedown', function(e){ if(chatMentionBox && !e.target.closest('.chat-mention-box') && e.target !== chatInput) hideChatMentions(); });
+promptInput.addEventListener('input', () => {
+    const text = promptInput.textContent || '';
+    if(text === '/' || text.endsWith('\n/')){ slashTarget = null; openSlashMenu(); }
+    else if(slashMenu.classList.contains('open') && !text.includes('/')) closeSlashMenu();
+});
 function defaultPromptTemplateGroups(){
     return [
         {id:'view', name:tr('smart.tplCatView')},
@@ -6175,6 +6504,45 @@ function scheduleInteractionLayerRefresh(){
         renderMinimap();
     });
 }
+// ── 吸附对齐 ──
+const SNAP_IN = 5;
+let snapRaf = 0;
+function clearSnapLines(){ snapGuides.innerHTML = ''; }
+function renderSnapLines(lines){
+    if(snapRaf) return;
+    snapRaf = requestAnimationFrame(() => {
+        snapRaf = 0;
+        let html = '';
+        for(const l of (lines || [])){
+            if(l.type === 'h') html += `<div class="snap-line-h" style="top:${l.pos * viewport.scale + viewport.y}px"></div>`;
+            else html += `<div class="snap-line-v" style="left:${l.pos * viewport.scale + viewport.x}px"></div>`;
+        }
+        snapGuides.innerHTML = html;
+    });
+}
+function nodeBounds(n){
+    const r = nodeRect(n);
+    return {left: r.x, right: r.x + r.width, centerX: r.x + r.width/2, top: r.y, bottom: r.y + r.height, centerY: r.y + r.height/2};
+}
+function computeSnapCandidates(excludeIds){
+    const set = new Set(excludeIds || []);
+    const xEdges = [], xCenters = [], yEdges = [], yCenters = [];
+    for(const n of nodes){
+        if(set.has(n.id)) continue;
+        const b = nodeBounds(n);
+        xEdges.push(b.left, b.right); xCenters.push(b.centerX);
+        yEdges.push(b.top, b.bottom); yCenters.push(b.centerY);
+    }
+    return {xEdges, xCenters, yEdges, yCenters};
+}
+function findSnap(points, targets, threshold){
+    let best = null;
+    for(const p of points) for(const t of targets){
+        const d = Math.abs(p - t);
+        if(d <= threshold && (!best || d < best.diff)) best = {value: p, target: t, diff: d};
+    }
+    return best;
+}
 function moveNodeElementsDuringDrag(){
     if(!dragState) return;
     const groupItems = dragState.group || [{id:dragState.id}];
@@ -7649,6 +8017,8 @@ function bindPromptNodeControls(el, node){
         textEl.oninput = e => {
             const prevExtra = promptNodeSplitExtraHeight(node);
             node.text = e.target.value;
+            const val = e.target.value || '';
+            if(val === '/' || val.endsWith('\n/')){ slashTarget = node; openSlashMenu(); }
             refreshPromptNodeSegmentsUi(el, node);
             if(node.promptSplitEnabled === true){
                 syncPromptNodeHeightForSplit(node, prevExtra);
@@ -8074,6 +8444,7 @@ function bindNodeEvents(){
             selectedIds = [];
             selectedImage = {nodeId:'', index:-1};
             if(smartCascadeAnyRunning()) smartCascadeSilentSelection = false;
+            syncChatContext();
             if(alreadySelected){
                 syncSelectionUi();
                 updateComposer();
@@ -8345,6 +8716,7 @@ function bindNodeEvents(){
                 return n ? {id:n.id, ox:Number(n.x) || 0, oy:Number(n.y) || 0} : null;
             }).filter(Boolean);
             dragState = {id:node.id, startX:e.clientX, startY:e.clientY, ox:node.x || 0, oy:node.y || 0, group, groupIds:group.map(item => item.id), ctrlGroup:Boolean(e.ctrlKey)};
+            snapState = computeSnapCandidates(dragState.groupIds);
             document.body.classList.add('smart-node-drag');
             capturePendingUndo();
         };
@@ -12140,6 +12512,7 @@ function stripImageGenerationMeta(img){
     return img;
 }
 function addConnection(fromId, toId, kind='flow'){
+    if(!canvas) return;
     if(!fromId || !toId || fromId === toId) return;
     canvas.connections = canvas.connections || [];
     if(canvas.connections.some(c => c.from === fromId && c.to === toId && (c.kind || 'flow') === kind)) return;
@@ -15467,14 +15840,14 @@ function createNodeFromMenu(type){
 shell.addEventListener('mousedown', e => {
     if(!zoomPreviewState) return;
     if(e.button !== 0) return;
-    if(e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap')) return;
+    if(e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.slash-menu,.slash-sub,.smart-minimap')) return;
     e.preventDefault();
     e.stopPropagation();
 }, true);
 shell.addEventListener('click', e => {
     if(!zoomPreviewState) return;
     if(e.button !== 0) return;
-    if(e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap')) return;
+    if(e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.slash-menu,.slash-sub,.smart-minimap')) return;
     e.preventDefault();
     e.stopPropagation();
     const nodeEl = e.target.closest('.image-node');
@@ -15482,8 +15855,8 @@ shell.addEventListener('click', e => {
     else exitZoomPreview(screenToWorld(e));
 }, true);
 shell.onmousedown = e => {
-    if(zoomPreviewState && e.button === 0 && !e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap')) return;
-    if(e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.create-menu,.smart-minimap')) return;
+    if(zoomPreviewState && e.button === 0 && !e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.slash-menu,.slash-sub,.smart-minimap')) return;
+    if(e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.create-menu,.slash-menu,.slash-sub,.smart-minimap')) return;
     closeCreateMenu();
     if(e.button === 0 && isRKeyDown){
         e.preventDefault();
@@ -15511,7 +15884,7 @@ shell.oncontextmenu = e => {
         e.stopPropagation();
         return;
     }
-    if(didPan || e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.smart-minimap')) return;
+    if(didPan || e.target.closest('.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.slash-menu,.slash-sub,.smart-minimap')) return;
     if(document.getElementById('imageEditModal')?.classList.contains('open')) return;
     e.preventDefault();
     e.stopPropagation();
@@ -15527,14 +15900,14 @@ shell.oncontextmenu = e => {
     openCreateMenu(e);
 };
 shell.ondblclick = e => {
-    if(didPan || e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu')) return;
+    if(didPan || e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.slash-menu,.slash-sub')) return;
     if(document.getElementById('imageEditModal')?.classList.contains('open')) return;
     e.preventDefault();
     openCreateMenu(e);
 };
 shell.onclick = e => {
     if(selectionJustFinished) return;
-    if(didPan || e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu')) return;
+    if(didPan || e.target.closest('.image-node,.composer,.smart-back,.asset-panel,.asset-toggle,.smart-log-toggle,.smart-shortcut-toggle,.smart-workflow-toggle,.log-modal,.shortcut-modal,.image-edit-modal,.create-menu,.slash-menu,.slash-sub')) return;
     if(document.getElementById('imageEditModal')?.classList.contains('open')) return;
     closeCreateMenu();
     clearSelection();
@@ -15795,11 +16168,32 @@ window.onmousemove = e => {
     if(!node) return;
     const moveDx = (e.clientX - dragState.startX) / viewport.scale;
     const moveDy = (e.clientY - dragState.startY) / viewport.scale;
+    // 吸附对齐
+    let adjustedDx = moveDx, adjustedDy = moveDy;
+    const snapLines = [];
+    if(snapState && !dragState.ctrlGroup){
+        // 基于拖拽起点计算 proposed，不用 nodeBounds（位置已被上帧修改会漂移）
+        const r = nodeRect(node);
+        const ox = dragState.ox, oy = dragState.oy;
+        const proposed = {
+            left: ox + moveDx, right: ox + r.width + moveDx, centerX: ox + r.width/2 + moveDx,
+            top: oy + moveDy, bottom: oy + r.height + moveDy, centerY: oy + r.height/2 + moveDy
+        };
+        const xSnap = findSnap([proposed.left, proposed.right], snapState.xEdges, SNAP_IN)
+            || findSnap([proposed.centerX], snapState.xCenters, SNAP_IN);
+        if(xSnap){ adjustedDx = moveDx + (xSnap.target - xSnap.value); snapLines.push({type:'v', pos:xSnap.target}); }
+        const ySnap = findSnap([proposed.top, proposed.bottom], snapState.yEdges, SNAP_IN)
+            || findSnap([proposed.centerY], snapState.yCenters, SNAP_IN);
+        if(ySnap){ adjustedDy = moveDy + (ySnap.target - ySnap.value); snapLines.push({type:'h', pos:ySnap.target}); }
+        renderSnapLines(snapLines);
+    } else {
+        clearSnapLines();
+    }
     (dragState.group || [{id:dragState.id, ox:dragState.ox, oy:dragState.oy}]).forEach(item => {
         const n = nodes.find(x => x.id === item.id);
         if(!n) return;
-        n.x = item.ox + moveDx;
-        n.y = item.oy + moveDy;
+        n.x = item.ox + adjustedDx;
+        n.y = item.oy + adjustedDy;
     });
     if(assetLibraryOpen){
         const hit = document.elementFromPoint(e.clientX, e.clientY);
@@ -15908,6 +16302,7 @@ window.onmouseup = e => {
             discardPendingUndo();
             clearDropHighlight();
             dragState = null;
+            clearSnapLines(); snapState = null;
             document.body.classList.remove('smart-node-drag');
             render();
             scheduleSave();
@@ -15995,6 +16390,7 @@ window.onmouseup = e => {
         clearDropHighlight();
         loopInsertPreview = null;
         dragState = null;
+        clearSnapLines(); snapState = null;
         scheduleSave();
         scheduleConnectionLayerRefresh();
     }

@@ -4,3 +4,4 @@ __pycache__/
 .claude/
 .env
 node_modules/
+venv/

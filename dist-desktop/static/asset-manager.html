@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/images/logo.png" type="image/png">
+    <title>素材库管理</title>
+    <script>
+        (function(){
+            try {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
+                if(theme === 'dark') {
+                    document.documentElement.classList.add('studio-theme-dark');
+                    document.documentElement.classList.add('theme-dark');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <script src="/static/vendor/js/lucide.js?v=1.0.81.1783947775"></script>
+    <script src="/static/js/theme.js?v=1.0.81.1783947771"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.81.1783947764">
+    <link rel="stylesheet" href="/static/css/asset-manager.css?v=1.0.81.1783947764">
+
+<style>
+
+/* === Marvis 视觉风格统一注入 === */
+:root {
+    --bg: #f5f5f7;
+    --sidebar-bg: rgba(245, 245, 247, 0.72);
+    --stage-bg: #ffffff;
+    --border: transparent;
+    --text: #1d1d1f;
+    --muted: #86868b;
+    --nav-hover-bg: rgba(0, 0, 0, 0.04);
+    --divider: rgba(0, 0, 0, 0.06);
+    --scrollbar: rgba(0, 0, 0, 0.12);
+    --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --font-sans: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
+    --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
+}
+
+html.theme-dark,
+html.studio-theme-dark,
+body.theme-dark,
+body.studio-theme-dark {
+    --bg: #0d0d0d;
+    --sidebar-bg: rgba(13,13,13,0.78);
+    --stage-bg: #161616;
+    --border: transparent;
+    --text: #f5f5f7;
+    --muted: #86868b;
+    --nav-hover-bg: rgba(255, 255, 255, 0.06);
+    --divider: rgba(255, 255, 255, 0.06);
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.18);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.28);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.34);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.42);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+}
+
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+/* --- 页面特定覆盖 --- */
+
+        body { background: var(--bg) !important; color: var(--text) !important; }
+    
+
+
+/* --- Marvis 增强覆盖 (asset-manager.html) --- */
+header { background: var(--sidebar-bg) !important; backdrop-filter: blur(28px) !important; border-bottom: 1px solid var(--divider) !important; }
+.card { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; }
+.card:hover { box-shadow: var(--shadow-md) !important; }
+button.primary { background: var(--text) !important; color: var(--bg) !important; border-radius: var(--radius-md) !important; }
+input, select { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; color: var(--text) !important; }
+
+</style>
+</head>
+<body>
+    <div class="asset-page">
+        <header class="asset-page-head">
+            <div>
+                <div class="asset-title">素材库管理</div>
+                <div class="asset-sub">按库、分组、内容和预览管理素材与提示词。</div>
+            </div>
+            <div class="asset-head-actions">
+                <div id="assetStatus" class="asset-status">准备就绪</div>
+                <button id="refreshBtn" class="asset-btn" type="button"><i data-lucide="refresh-cw"></i><span>刷新</span></button>
+            </div>
+        </header>
+
+        <div class="asset-tabs">
+            <button id="assetTabAssets" class="active" type="button" data-tab="assets"><i data-lucide="image"></i><span>图片资产</span></button>
+            <button id="assetTabWorkflows" type="button" data-tab="workflows"><i data-lucide="workflow"></i><span>工作流管理</span></button>
+            <button id="assetTabPrompts" type="button" data-tab="prompts"><i data-lucide="text-cursor-input"></i><span>提示词库</span></button>
+            <button id="assetTabCanvasAssets" type="button" data-tab="canvas-assets"><i data-lucide="layout-dashboard"></i><span>画布资产</span></button>
+            <button id="assetTabLocal" type="button" data-tab="local"><i data-lucide="folder-open"></i><span>本地素材</span></button>
+        </div>
+
+        <main id="assetManagerRoot" class="asset-manager-root"></main>
+    </div>
+
+    <input id="assetUploadInput" type="file" accept="image/*,video/*,audio/*,.json,.zip,application/json,application/zip" multiple hidden>
+    <script src="/static/js/asset-manager.js?v=1.0.81.1783947768"></script>
+</body>
+</html>

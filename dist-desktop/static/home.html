@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOVAI - 首页</title>
+    <style>
+        :root {
+            --bg: #f5f5f7;
+            --text: #1d1d1f;
+            --muted: #656569;
+            --card-bg: rgba(255, 255, 255, 0.72);
+            --card-shadow: rgba(0, 0, 0, 0.06);
+            --card-shadow-hover: rgba(0, 0, 0, 0.1);
+            --btn-bg: #1d1d1f;
+            --btn-text: #ffffff;
+            --focus-ring: #0071e3;
+            --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+            --ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .theme-dark, [data-theme="dark"] {
+            --bg: #0c0c0c;
+            --text: #f5f5f7;
+            --muted: #96969a;
+            --card-bg: rgba(30, 30, 30, 0.6);
+            --card-shadow: rgba(0, 0, 0, 0.3);
+            --card-shadow-hover: rgba(0, 0, 0, 0.5);
+            --btn-bg: #f5f5f7;
+            --btn-text: #1d1d1f;
+            --focus-ring: #0a84ff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 0 24px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .home-container {
+            width: 100%;
+            max-width: 780px;
+            padding: 80px 0 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* ===== Hero 区 ===== */
+        .hero {
+            text-align: center;
+            animation: fadeUp 0.7s var(--ease-out) both;
+        }
+
+        .hero-title {
+            font-size: 52px;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+            line-height: 1.1;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--text) 0%, var(--muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 17px;
+            font-weight: 500;
+            color: var(--muted);
+            margin-bottom: 12px;
+            letter-spacing: 0.01em;
+        }
+
+        .hero-desc {
+            font-size: 14px;
+            color: var(--muted);
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== 功能卡片区 ===== */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            animation: fadeUp 0.7s var(--ease-out) 0.08s both;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid transparent;
+            border-radius: 16px;
+            padding: 24px 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--card-shadow);
+            transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out), border-color 0.35s var(--ease-out);
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card:nth-child(2) { animation-delay: 0.14s; }
+        .feature-card:nth-child(3) { animation-delay: 0.2s; }
+        .feature-card:nth-child(4) { animation-delay: 0.26s; }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--card-shadow-hover);
+            border-color: var(--border);
+        }
+
+        .feature-card:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .feature-card:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+        }
+
+        .feature-card-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: var(--bg);
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .feature-card-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .feature-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .feature-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--text);
+            letter-spacing: 0.01em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .feature-card-arrow {
+            width: 14px;
+            height: 14px;
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: opacity 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+            color: var(--muted);
+        }
+
+        .feature-card:hover .feature-card-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .feature-card-desc {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        /* ===== CTA 区 ===== */
+        .cta-section {
+            text-align: center;
+            animation: fadeUp 0.7s var(--ease-out) 0.32s both;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: none;
+            border-radius: 12px;
+            padding: 14px 32px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.35s var(--ease-out);
+            text-decoration: none;
+            letter-spacing: 0.01em;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px -6px var(--card-shadow-hover);
+        }
+
+        .cta-button:active {
+            transform: scale(0.97);
+        }
+
+        .cta-button:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 3px;
+        }
+
+        .cta-button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ===== 最近项目 ===== */
+        .recent-section {
+            animation: fadeUp 0.7s var(--ease-out) 0.38s both;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding-left: 4px;
+        }
+
+        .recent-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .recent-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            padding: 12px 14px;
+            cursor: pointer;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 2px 8px -2px var(--card-shadow);
+            transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), border-color 0.3s var(--ease-out);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .recent-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -6px var(--card-shadow-hover);
+            border-color: var(--border);
+        }
+
+        .recent-card:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+        }
+
+        .recent-card-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .recent-card-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .recent-card-info {
+            min-width: 0;
+        }
+
+        .recent-card-name {
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .recent-card-time {
+            font-size: 10px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .recent-empty {
+            font-size: 13px;
+            color: var(--muted);
+            padding: 24px 0;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
+
+        /* ===== 底部状态 ===== */
+        .status-bar {
+            text-align: center;
+            animation: fadeUp 0.7s var(--ease-out) 0.44s both;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #34c759;
+            animation: nano-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes nano-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 640px) {
+            .home-container {
+                padding: 48px 0 32px;
+                gap: 32px;
+            }
+            .hero-title { font-size: 40px; }
+            .hero-subtitle { font-size: 15px; }
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            .recent-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-title { font-size: 34px; }
+            .feature-card { padding: 18px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="home-container">
+        <!-- Hero 区 -->
+        <section class="hero">
+            <h1 class="hero-title">NOVAI</h1>
+            <p class="hero-subtitle">AI 图像与视频生成平台</p>
+            <p class="hero-desc">
+                一站式 AI 创作工作台，集在线生图、智能对话、无限画布与素材管理于一体，让你的创意即刻落地。
+            </p>
+        </section>
+
+        <!-- 功能卡片区 -->
+        <section class="cards-grid">
+            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'online'},'*')">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                </div>
+                <div class="feature-card-content">
+                    <div class="feature-card-title">
+                        在线生图
+                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    <div class="feature-card-desc">AI 驱动的图像生成引擎，支持文生图、图生图等多种模式</div>
+                </div>
+            </div>
+
+            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'gpt-chat'},'*')">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <div class="feature-card-content">
+                    <div class="feature-card-title">
+                        GPT 对话
+                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    <div class="feature-card-desc">智能 AI 助手，辅助创意构思与提示词优化</div>
+                </div>
+            </div>
+
+            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                </div>
+                <div class="feature-card-content">
+                    <div class="feature-card-title">
+                        无限画布
+                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    <div class="feature-card-desc">自由布局的创作空间，支持多图拼接与图层编辑</div>
+                </div>
+            </div>
+
+            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'asset-manager'},'*')">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5V6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v12.7"/>
+                        <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5V8.8A2.8 2.8 0 0 0 17.2 6H6.8A2.8 2.8 0 0 0 4 8.8v10.7z"/>
+                    </svg>
+                </div>
+                <div class="feature-card-content">
+                    <div class="feature-card-title">
+                        素材库
+                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    <div class="feature-card-desc">集中管理生成作品与上传素材，快速检索与复用</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 快捷入口区 -->
+        <section class="cta-section">
+            <button class="cta-button" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                开始创作
+            </button>
+        </section>
+
+        <!-- 最近项目 -->
+        <section class="recent-section">
+            <div class="section-title">最近项目</div>
+            <div class="recent-grid" id="recentProjects">
+                <div class="recent-empty">暂无最近项目，开始创作后这里将显示你最近访问的画布</div>
+            </div>
+        </section>
+
+        <!-- 底部状态 -->
+        <section class="status-bar">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                系统就绪
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Listen for theme changes from parent
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'studio-theme') {
+                if (e.data.theme === 'dark') {
+                    document.documentElement.classList.add('theme-dark');
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('theme-dark');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                }
+            }
+        });
+
+        // 最近项目
+        function renderRecentProjects() {
+            var grid = document.getElementById('recentProjects');
+            if (!grid) return;
+            fetch('/api/recent-canvases', { cache: 'no-store' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(function(projects) {
+                    if (!projects || !Array.isArray(projects) || !projects.length) {
+                        console.log('[home] No recent projects');
+                        return;
+                    }
+                    console.log('[home] Recent projects:', projects);
+                    var html = '';
+                    projects.forEach(function(p) {
+                        try {
+                            var name = escapeHtml(p.name || p.title || '未命名画布');
+                            var canvasId = p.id || '';
+                            var timeAgo = getTimeAgo(p.lastOpened);
+                            var onclick = canvasId
+                                ? "parent.postMessage({type:'navigate',route:'canvas',canvasId:'" + canvasId + "'},'*')"
+                                : "parent.postMessage({type:'navigate',route:'canvas'},'*')";
+                            html += '<div class="recent-card" onclick="' + onclick + '">' +
+                                '<div class="recent-card-icon">' +
+                                '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+                                '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>' +
+                                '<rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' +
+                                '</svg></div>' +
+                                '<div class="recent-card-info">' +
+                                '<div class="recent-card-name">' + name + '</div>' +
+                                '<div class="recent-card-time">' + timeAgo + '</div>' +
+                                '</div></div>';
+                        } catch(e) {
+                            console.warn('[home] Failed to render project card:', e, p);
+                        }
+                    });
+                    if (html) grid.innerHTML = html;
+                })
+                .catch(function(err) { console.error('[home] Failed to load recent projects:', err); });
+        }
+
+        // 监听从父页面发来的刷新消息（如切换回首页时）
+        window.addEventListener('message', function(e) {
+            if (e.data && e.data.type === 'canvas-focus') {
+                renderRecentProjects();
+            }
+        });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderRecentProjects);
+        } else {
+            renderRecentProjects();
+        }
+
+        function getTimeAgo(timestamp) {
+            if (!timestamp) return '';
+            var diff = Date.now() - timestamp;
+            var mins = Math.floor(diff / 60000);
+            if (mins < 1) return '刚刚';
+            if (mins < 60) return mins + ' 分钟前';
+            var hours = Math.floor(mins / 60);
+            if (hours < 24) return hours + ' 小时前';
+            var days = Math.floor(hours / 24);
+            if (days < 30) return days + ' 天前';
+            return new Date(timestamp).toLocaleDateString();
+        }
+
+        function escapeHtml(str) {
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

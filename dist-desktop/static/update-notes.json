@@ -1,0 +1,34 @@
+{
+  "version": "1.0.80",
+  "updated_at": "2026-07-15T10:00:00+08:00",
+  "items": [
+    {
+      "type": "feature",
+      "text": "新增画布对话助手（画布动画）：弹窗模式，拖拽缩放，AI 可直接操作画布建立工作流"
+    },
+    {
+      "type": "feature",
+      "text": "新增 / 斜杠指令菜单：输入框打 / 弹出模板库，hover 子菜单，支持节点输入框触发"
+    },
+    {
+      "type": "feature",
+      "text": "新增节点吸附对齐：拖拽节点自动吸附，淡蓝色引导线，智能画布 + 普通画布双支持"
+    },
+    {
+      "type": "important",
+      "text": "⚠️ 即梦 CLI 全面切换为 WSL 模式。Windows 用户更新后请重新运行「安装即梦CLI.bat」完成 WSL 环境配置。"
+    },
+    {
+      "type": "feature",
+      "text": "即梦 CLI 安装/登录脚本改为 WSL 模式，彻底解决 Windows 原生 CLI 兼容问题"
+    },
+    {
+      "type": "feature",
+      "text": "即梦 CLI 模型参数自动检测（--model / --model_version），兼容新旧版本 CLI"
+    },
+    {
+      "type": "feature",
+      "text": "更新检测新增 Gitee 源，国内用户检测速度大幅提升"
+    }
+  ]
+}

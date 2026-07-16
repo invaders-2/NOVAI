@@ -1,0 +1,3515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <link rel="icon" href="/static/images/logo.png" type="image/png">
+    <title>AI Studio</title>
+    <style>
+        html.studio-route-booting body {
+            visibility: hidden !important;
+        }
+    </style>
+    <script>
+        (function(){
+            try {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
+                if(theme === 'dark') {
+                    document.documentElement.classList.add('studio-theme-dark');
+                    document.documentElement.classList.add('theme-dark');
+                }
+                document.documentElement.classList.add('studio-route-booting');
+            } catch(e) {}
+        })();
+    </script>
+    <script>document.title="NOVAI";</script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.81.1783947775"></script>
+    <script src="/static/js/theme.js?v=1.0.81.1783947771"></script>
+    <script src="/static/js/i18n.js?v=1.0.81.1783947769"></script>
+    <style>
+        @import url('/static/vendor/css/fonts.css?v=1.0.81.1783947773');
+
+        /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
+        .w-1\.5 { width: 0.375rem; }
+        .h-1\.5 { height: 0.375rem; }
+        .w-4 { width: 1rem; }
+        .h-4 { height: 1rem; }
+        .w-5 { width: 1.25rem; }
+        .h-5 { height: 1.25rem; }
+        .flex-shrink-0 { flex-shrink: 0; }
+        .rounded-full { border-radius: 9999px; }
+        .mb-12 { margin-bottom: 3rem; }
+        .transition-colors { transition-property: color, background-color, border-color, fill, stroke; transition-duration: 150ms; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+        .animate-pulse { animation: studio-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes studio-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+        :root {
+            --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-in: cubic-bezier(0.55, 0, 0.68, 0.25);
+            --ease-hover: cubic-bezier(0.25, 0.1, 0.25, 1);
+            --bg: #f5f5f7;
+            --sidebar-bg: rgba(255,255,255,0.55);
+            --stage-bg: #ffffff;
+            --border: transparent;
+            --stage-border: transparent;
+            --text: #1c1c1e;
+            --muted: #656569;
+            --nav-hover-bg: rgba(0, 0, 0, 0.04);
+            --monitor-bg: rgba(255, 255, 255, 0.88);
+            --monitor-border: transparent;
+            --monitor-shadow: rgba(0, 0, 0, 0.06);
+            --divider: transparent;
+            --scrollbar: rgba(0, 0, 0, 0.12);
+            --scrollbar-hover: rgba(0, 0, 0, 0.22);
+            --focus-ring: rgba(59, 130, 246, 0.5);
+            --card-shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
+            --card-shadow-md: 0 4px 16px -4px rgba(0,0,0,0.06);
+            --card-shadow-lg: 0 8px 28px -6px rgba(0,0,0,0.1);
+        }
+
+        html.theme-dark,
+        body.theme-dark {
+            --bg: #0c0c0c;
+            --sidebar-bg: rgba(18,18,18,0.6);
+            --stage-bg: #141416;
+            --border: transparent;
+            --stage-border: transparent;
+            --text: #f5f5f7;
+            --muted: #96969a;
+            --nav-hover-bg: rgba(255, 255, 255, 0.05);
+            --monitor-bg: rgba(18,18,18,0.88);
+            --monitor-border: transparent;
+            --monitor-shadow: rgba(0, 0, 0, 0.3);
+            --divider: transparent;
+            --scrollbar: rgba(255, 255, 255, 0.12);
+            --scrollbar-hover: rgba(255, 255, 255, 0.22);
+            --focus-ring: rgba(96, 165, 250, 0.5);
+            --card-shadow-sm: 0 1px 2px rgba(0,0,0,0.15);
+            --card-shadow-md: 0 4px 16px -4px rgba(0,0,0,0.25);
+            --card-shadow-lg: 0 8px 28px -6px rgba(0,0,0,0.35);
+        }
+
+        /* 极简滚动条 */
+        html,
+        body {
+            overscroll-behavior: auto;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        *::-webkit-scrollbar {
+            width: 6px !important;
+            height: 6px !important;
+            background: transparent !important;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar) !important;
+            border: 1px solid transparent !important;
+            border-right-width: 1px !important;
+            background-clip: padding-box !important;
+            border-radius: 10px !important;
+            min-height: 36px;
+        }
+
+        *::-webkit-scrollbar-thumb:hover {
+            background-color: var(--scrollbar-hover) !important;
+        }
+
+        *::-webkit-scrollbar-corner {
+            background: transparent !important;
+        }
+
+        * {
+            scrollbar-width: thin !important;
+            scrollbar-color: var(--scrollbar) transparent !important;
+        }
+
+        /* ===== 自定义标题栏（frameless 窗口） ===== */
+        .titlebar {
+            height: 36px;
+            width: 100%;
+            background: transparent;
+            -webkit-app-region: drag;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1100;
+            border: none;
+            pointer-events: none;
+        }
+        .titlebar-controls {
+            display: flex;
+            height: 100%;
+            -webkit-app-region: no-drag;
+            pointer-events: auto;
+        }
+        .titlebar-btn {
+            width: 46px;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: #555;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+            outline: none;
+            border-radius: 0;
+        }
+        .titlebar-btn:hover {
+            background: rgba(0,0,0,0.08);
+        }
+        .titlebar-btn.titlebar-close:hover {
+            background: #e81123;
+            color: #fff;
+        }
+
+        body {
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: background 0.5s var(--ease-out), color 0.5s var(--ease-out);
+        }
+
+        .app-shell {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            background: var(--bg);
+            position: relative;
+            transition: background 0.3s;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 80px;
+            min-width: 80px;
+            height: calc(100vh - 24px);
+            max-height: calc(100vh - 24px);
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-right: 1px solid var(--border);
+            border-radius: 28px;
+            margin: 12px 0 12px 12px;
+            padding: 12px 0 8px 0;
+            transition: width 0.4s var(--ease-out) 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s;
+            z-index: 50;
+            overflow-y: auto;
+            box-shadow: var(--card-shadow-sm);
+            -webkit-app-region: drag;
+        }
+
+        /* 侧边栏内所有交互元素禁止拖拽穿透 */
+        .sidebar button,
+        .sidebar .nav-item,
+        .sidebar .side-pill,
+        .sidebar .nav-fold-toggle,
+        .sidebar .logo-text,
+        .sidebar .project-version-badge,
+        .sidebar .version-display {
+            -webkit-app-region: no-drag;
+        }
+
+        .sidebar:hover {
+            width: 220px;
+            transition-delay: 0s;
+            box-shadow: 4px 0 24px -8px var(--monitor-shadow);
+        }
+
+        body.studio-scale-host .sidebar {
+            height: calc(100vh / var(--studio-ui-scale, 1));
+            max-height: calc(100vh / var(--studio-ui-scale, 1));
+            zoom: var(--studio-ui-scale, 1);
+        }
+
+        /* 首次加载时与 iframe 的 0.5s 淡入同步播放，避免侧栏"焊死"在原地造成视觉断层 */
+        @keyframes sidebar-enter {
+            from { opacity: 0; transform: translateX(-6px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        html:not(.studio-route-booting) .sidebar {
+            animation: sidebar-enter 0.5s var(--fluid-ease);
+        }
+
+        .logo-text {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            color: var(--text);
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-bottom: 4px;
+            padding: 4px 0 4px 14px;
+            border-radius: 8px;
+            transition: all 0.35s var(--ease-out);
+            white-space: nowrap;
+            text-align: left;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: flex-start;
+            width: 48px;
+        }
+
+        .sidebar-logo-img {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+            border-radius: 4px;
+            transition: all 0.35s var(--ease-out);
+        }
+
+        .logo-text-label {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            color: var(--text);
+            opacity: 0;
+            max-width: 0;
+            overflow: hidden;
+            transition: opacity 0.3s var(--ease-out) 0.3s, max-width 0.3s var(--ease-out) 0.3s;
+        }
+
+        .sidebar:hover .sidebar-logo-img {
+            width: 32px;
+            height: 32px;
+        }
+
+        .sidebar:hover .logo-text {
+            font-size: 20px;
+            letter-spacing: 0.06em;
+            width: 190px;
+        }
+
+        .sidebar:hover .logo-text-label {
+            opacity: 1;
+            max-width: 100px;
+            transition-delay: 0.1s;
+        }
+
+        .logo-version {
+            font-size: 10px;
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 8px;
+            transition: all 0.35s var(--ease-out);
+            white-space: nowrap;
+            opacity: 0;
+        }
+
+        .sidebar:hover .logo-version {
+            opacity: 1;
+        }
+
+        /* 导航项 */
+        .nav-item {
+            position: relative;
+            width: 48px;
+            height: 48px;
+            flex: 0 0 48px;
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: width 0.3s var(--ease-out) 0.3s, background 0.2s var(--ease-hover), color 0.2s var(--ease-hover), transform 0.2s var(--ease-hover), box-shadow 0.2s var(--ease-hover);
+            color: var(--muted);
+            overflow: hidden;
+            padding-left: 14px;
+        }
+
+        /* 侧边栏收起时增大点击热区 */
+        .sidebar:not(:hover) .nav-item {
+            position: relative;
+        }
+        .sidebar:not(:hover) .nav-item::after {
+            content: '';
+            position: absolute;
+            inset: -4px -8px;
+            /* 扩展热区超出视觉边界 */
+        }
+
+        .sidebar:hover .nav-item {
+            width: 190px;
+            transition-delay: 0s;
+        }
+
+        .nav-item:hover {
+            background: var(--nav-hover-bg);
+            color: var(--text);
+            transform: translateX(2px);
+        }
+
+        .nav-item:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+            background: var(--nav-hover-bg);
+            color: var(--text);
+        }
+
+        .nav-item.active {
+            background: var(--text);
+            color: var(--bg);
+            box-shadow: var(--card-shadow-sm), 0 4px 16px -2px rgba(0, 0, 0, 0.12);
+        }
+
+        .nav-item.active:hover {
+            transform: translateX(0);
+            box-shadow: var(--card-shadow-sm), 0 6px 16px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-item.active:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 3px;
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 18px;
+            border-radius: 3px;
+            background: var(--text);
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .sidebar:hover .nav-item.active::before {
+            opacity: 1;
+        }
+
+        html.theme-dark .nav-item.active,
+        body.theme-dark .nav-item.active {
+            background: var(--text);
+            color: var(--bg);
+            box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-text {
+            opacity: 0;
+            margin-left: 16px;
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+            transition: opacity 0.3s var(--ease-out) 0.3s;
+        }
+
+        .sidebar:hover .nav-text {
+            opacity: 1;
+            transition-delay: 0.1s;
+        }
+
+        .nav-divider {
+            width: 32px;
+            height: 1px;
+            background: var(--divider);
+            margin: 8px auto;
+            transition: width 0.3s var(--ease-out);
+        }
+
+        .sidebar:hover .nav-divider { width: 160px; }
+
+        .nav-fold-toggle {
+            position: relative;
+            width: 48px;
+            height: 36px;
+            flex: 0 0 36px;
+            margin: 0 0 8px;
+            padding-left: 14px;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            background: transparent;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            cursor: pointer;
+            overflow: hidden;
+            transition: width 0.3s var(--ease-out) 0.5s, background-color 0.2s var(--ease-hover), color 0.2s var(--ease-hover), border-color 0.2s var(--ease-hover);
+        }
+
+        .sidebar:hover .nav-fold-toggle {
+            width: 190px;
+            transition-delay: 0s;
+        }
+
+        .nav-fold-toggle:hover {
+            background: var(--nav-hover-bg);
+            color: var(--text);
+            border-color: var(--stage-border);
+        }
+
+        .nav-fold-toggle:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+        }
+
+        .nav-fold-icon {
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
+            transition: transform 0.25s var(--ease-out);
+        }
+
+        .nav-fold-toggle[aria-expanded="false"] .nav-fold-icon {
+            transform: rotate(-90deg);
+        }
+
+        .nav-fold-group {
+            width: 100%;
+            flex: 0 0 auto;
+            max-height: 720px;
+            opacity: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: max-height 0.3s var(--ease-out), opacity 0.2s var(--ease-in);
+        }
+
+        .nav-fold-group.is-collapsed {
+            max-height: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar nav {
+            width: 100%;
+            min-height: 0;
+            flex: 1 1 auto;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 0 6px;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(148, 163, 184, .34) transparent;
+        }
+
+        .sidebar::-webkit-scrollbar { width: 4px !important; }
+        .sidebar::-webkit-scrollbar-track { background: transparent !important; }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, .34) !important;
+            border: 0 !important;
+            border-radius: 999px !important;
+        }
+
+        .sidebar nav::-webkit-scrollbar { width: 4px !important; }
+        .sidebar nav::-webkit-scrollbar-track { background: transparent !important; }
+        .sidebar nav::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, .34) !important;
+            border: 0 !important;
+            border-radius: 999px !important;
+        }
+
+        .sidebar nav > * {
+            flex-shrink: 0;
+        }
+
+        /* 主舞台区 */
+        .stage {
+            flex: 1;
+            background: var(--stage-bg);
+            margin: 12px 12px 12px 8px;
+            border-radius: 28px;
+            overflow: hidden;
+            border: 1px solid var(--stage-border);
+            position: relative;
+            transition: background 0.3s var(--ease-out), border-color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px var(--stage-border), var(--card-shadow-sm);
+        }
+
+        html.theme-dark .stage,
+        body.theme-dark .stage {
+            box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--stage-border), var(--card-shadow-sm);
+        }
+
+        body.studio-scale-host .stage {
+            margin: max(10px, calc(12px * var(--studio-ui-scale, 1)));
+            margin-left: max(6px, calc(8px * var(--studio-ui-scale, 1)));
+            border-radius: max(20px, calc(28px * var(--studio-ui-scale, 1)));
+        }
+
+        iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            opacity: 0;
+            transform: scale(1.01);
+            filter: blur(3px);
+            transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out), filter 0.4s var(--ease-out);
+            pointer-events: none;
+        }
+
+        iframe.active {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0);
+            pointer-events: auto;
+        }
+
+        /* 页面切换骨架屏 */
+        .stage-skeleton {
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            padding: 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            background: var(--stage-bg);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s var(--ease-in);
+        }
+        .stage-skeleton.is-visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .skeleton-block {
+            border-radius: 12px;
+            background: linear-gradient(90deg, var(--nav-hover-bg) 25%, rgba(128,128,128,0.08) 50%, var(--nav-hover-bg) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.4s ease infinite;
+        }
+        .skeleton-block.sk-hero { height: 48px; max-width: 320px; margin: 0 auto; }
+        .skeleton-block.sk-text { height: 16px; max-width: 480px; margin: 0 auto; }
+        .skeleton-block.sk-text-sm { height: 12px; max-width: 360px; margin: 0 auto; }
+        .skeleton-row {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .skeleton-card {
+            width: 140px;
+            height: 100px;
+            border-radius: 16px;
+            background: linear-gradient(90deg, var(--nav-hover-bg) 25%, rgba(128,128,128,0.08) 50%, var(--nav-hover-bg) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.4s ease infinite;
+        }
+        @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* 左下角监视器 */
+        .nano-monitor {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--monitor-bg);
+            backdrop-filter: blur(24px) saturate(200%);
+            -webkit-backdrop-filter: blur(24px) saturate(200%);
+            padding: 8px 14px;
+            border-radius: 14px;
+            border: 1px solid transparent;
+            box-shadow: var(--card-shadow-sm), 0 4px 16px -2px var(--monitor-shadow);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            transition: all 0.3s var(--ease-out);
+        }
+
+        .nano-monitor:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--card-shadow-sm), 0 8px 24px -4px var(--monitor-shadow);
+        }
+
+        .nano-monitor.is-busy {
+            background: #1c1c1e;
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.3);
+        }
+
+        html.theme-dark .nano-monitor.is-busy,
+        body.theme-dark .nano-monitor.is-busy {
+            background: #1a1a1a;
+        }
+
+        .stat-group {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .stat-group:first-child {
+            gap: 8px;
+        }
+
+        .nano-monitor.is-busy .stat-group {
+            color: #fff;
+        }
+
+        .divider {
+            width: 1px;
+            height: 12px;
+            background: var(--divider);
+        }
+
+        .is-busy .divider {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .pulse-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            margin-right: 2px;
+            flex: 0 0 auto;
+        }
+
+        .nano-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #34c759;
+            flex-shrink: 0;
+            animation: nano-pulse 2s var(--fluid-ease) infinite;
+        }
+
+        @keyframes nano-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(52, 199, 89, 0); }
+        }
+
+        .nano-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .spinner-nano {
+            width: 10px;
+            height: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        .is-busy .spinner-nano { display: block; }
+        .is-busy .pulse-dot { display: none; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .label-nano {
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.5;
+            font-size: 9px;
+        }
+
+        .side-actions {
+            margin-top:auto;
+            margin-bottom:0;
+            padding-bottom:16px;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:8px;
+            width:100%;
+            flex:0 0 auto;
+        }
+
+        .side-pill {
+            width:48px;
+            height:38px;
+            border-radius:999px;
+            background: transparent;
+            outline: 1px solid transparent;
+            outline-offset: -1px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            cursor: pointer;
+            transition: width 0.3s var(--fluid-ease) 0.3s, gap 0.3s var(--fluid-ease) 0.3s, background-color 0.2s, color 0.2s, outline-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            flex-shrink: 0;
+            overflow:hidden;
+            gap:8px;
+            position:relative;
+            padding-left: 14px;
+        }
+
+        .sidebar:hover .side-pill {
+            width: 190px;
+            transition-delay: 0s;
+        }
+
+        .side-pill:hover {
+            background: var(--nav-hover-bg);
+            color: var(--text);
+            outline-color: var(--stage-border);
+            transform: translateX(2px);
+        }
+
+        .side-pill.active {
+            background: var(--text);
+            color: var(--bg);
+            outline-color: var(--text);
+            box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.12);
+        }
+
+        .side-pill.active:hover {
+            transform: translateX(0);
+            box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.2);
+        }
+
+        .side-pill.update-available {
+            outline-color:#22c55e;
+            color:#16a34a;
+            overflow:visible;
+        }
+
+        /* 版本显示样式 */
+        .version-display {
+            display: none;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 6px;
+            padding: 8px 0 8px 14px;
+            margin-top: auto;
+        }
+
+        .sidebar:hover .version-display,
+        .sidebar.is-pinned .version-display {
+            display: flex;
+        }
+
+        .version-text {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .version-check-btn {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: 4px;
+            color: var(--muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .version-check-btn:hover {
+            background: var(--nav-hover-bg);
+            color: var(--text);
+        }
+
+        .version-check-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .version-check-btn.checking {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .version-check-btn.has-update {
+            color: #22c55e;
+        }
+
+        html.theme-dark .side-pill.update-available,
+        body.theme-dark .side-pill.update-available {
+            border-color:#86efac;
+            color:#86efac;
+        }
+
+        .side-pill.update-available::after {
+            content:"NEW";
+            position:absolute;
+            top:-7px;
+            right:-9px;
+            min-width:28px;
+            height:16px;
+            padding:0 5px;
+            border-radius:999px;
+            background:#22c55e;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#fff;
+            font-size:9px;
+            font-weight:900;
+            letter-spacing:.02em;
+            box-shadow:0 6px 16px rgba(34,197,94,.28), 0 0 0 3px rgba(34,197,94,.12);
+            pointer-events:none;
+        }
+
+        html.theme-dark .side-pill.update-available::after,
+        body.theme-dark .side-pill.update-available::after {
+            background:#4ade80;
+            color:#052e16;
+            box-shadow:0 6px 16px rgba(74,222,128,.22), 0 0 0 3px rgba(74,222,128,.12);
+        }
+
+        .side-pill svg { width: 20px; height: 20px; flex:0 0 auto; }
+        .settings-fold-chevron {
+            width: 13px !important;
+            height: 13px !important;
+            margin-left: -2px;
+            opacity: 0;
+            max-width: 0;
+            overflow: hidden;
+            transition: opacity 0.3s 0.5s, max-width 0.3s var(--fluid-ease) 0.5s, transform .22s var(--fluid-ease);
+        }
+        .sidebar:hover .settings-fold-chevron,
+        .sidebar.is-pinned .settings-fold-chevron {
+            opacity: .72;
+            max-width: 16px;
+            transition-delay: .15s, .15s, 0s;
+        }
+        .settings-fold-toggle[aria-expanded="true"] .settings-fold-chevron {
+            transform: rotate(180deg);
+        }
+        .settings-fold-group {
+            width: 100%;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+            transition: max-height .28s var(--fluid-ease), opacity .18s ease;
+        }
+        .settings-fold-group:not(.is-collapsed) {
+            max-height: 132px;
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .side-pill-text {
+            opacity:0;
+            max-width:0;
+            font-size:14px;
+            font-weight:600;
+            letter-spacing:.02em;
+            white-space:nowrap;
+            overflow:hidden;
+            transition: opacity 0.3s 0.5s, max-width 0.3s var(--fluid-ease) 0.5s;
+        }
+        .sidebar:hover .side-pill-text {
+            opacity:1;
+            max-width:120px;
+            transition-delay:.15s;
+        }
+        /* 更新按钮文字在侧边栏动画中自适应缩小，防止挤压溢出 */
+        .side-pill.update-now-btn .side-pill-text {
+            font-size: clamp(10px, 1.5vw, 12px);
+            text-overflow: ellipsis;
+        }
+        /* 折叠态去除 gap，避免图标被推偏 */
+        .side-pill { gap:0; min-width:0; }
+        .sidebar:hover .side-pill { gap:8px; }
+
+        .project-version-badge {
+            width:48px;
+            min-height:18px;
+            padding:0 0 0 14px;
+            border-radius:999px;
+            outline:1px solid transparent;
+            outline-offset:-1px;
+            background:transparent;
+            color:var(--muted);
+            display:none;
+            align-items:center;
+            justify-content:flex-start;
+            font-size:9px;
+            font-weight:800;
+            line-height:1;
+            white-space:nowrap;
+            overflow:hidden;
+            cursor:pointer;
+            transition:width 0.3s var(--fluid-ease) 0.5s, color .2s, outline-color .2s, background-color .2s;
+        }
+        .project-version-badge:hover { color:var(--text); outline-color:var(--accent, #6366f1); }
+        .project-version-badge.checking { opacity:.6; animation:badge-pulse 1s ease-in-out infinite; }
+        .project-version-badge.has-update {
+            color: #fff;
+            background: #f59e0b;
+            outline-color: #f59e0b;
+            animation: update-glow 2s ease-in-out infinite;
+        }
+        @keyframes update-glow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 12px 2px rgba(245, 158, 11, 0.25); }
+        }
+        @keyframes badge-pulse { 0%,100%{opacity:.5;} 50%{opacity:1;} }
+
+        .sidebar:hover .project-version-badge {
+            width:190px;
+            display:flex;
+            transition-delay:0s;
+        }
+
+        .project-version-full { display:none; }
+        .sidebar:hover .project-version-compact { display:none; }
+        .sidebar:hover .project-version-full { display:inline; }
+
+        .update-now-btn {
+            display:none;
+            width:48px;
+            min-height:24px;
+            padding:0 0 0 14px;
+            border-radius:999px;
+            outline:1px solid rgba(34,197,94,.35);
+            outline-offset:-1px;
+            background:rgba(34,197,94,.1);
+            color:#16a34a;
+            align-items:center;
+            justify-content:flex-start;
+            gap:5px;
+            font-size:9px;
+            font-weight:900;
+            overflow:hidden;
+            transition:width 0.3s var(--fluid-ease) 0.5s, background-color .2s, color .2s, outline-color .2s;
+        }
+        .update-now-btn.show { display:flex; }
+        .sidebar:hover .update-now-btn { width:190px; transition-delay:0s; }
+        .update-now-btn:hover { background:#16a34a; color:#fff; border-color:#16a34a; }
+        .update-now-btn[disabled] { opacity:.7; cursor:wait; }
+        .update-now-btn svg { display:none; width:14px; height:14px; flex:0 0 auto; }
+        .sidebar:hover .update-now-btn svg { display:block; }
+        .update-now-text {
+            opacity:1;
+            max-width:42px;
+            white-space:nowrap;
+            overflow:hidden;
+            transition: opacity 0.3s 0.5s, max-width 0.3s var(--fluid-ease) 0.5s;
+        }
+        .update-action-prefix { display:none; }
+        .update-version-full { display:none; }
+        .sidebar:hover .update-version-compact { display:none; }
+        .sidebar:hover .update-version-full { display:inline; }
+        .sidebar:hover .update-action-prefix { display:inline; }
+        .sidebar:hover .update-now-text { max-width:130px; transition-delay:.15s; }
+        html.theme-dark .update-now-btn,
+        body.theme-dark .update-now-btn {
+            border-color:rgba(134,239,172,.42);
+            background:rgba(74,222,128,.12);
+            color:#86efac;
+        }
+        html.theme-dark .update-now-btn:hover,
+        body.theme-dark .update-now-btn:hover {
+            background:#86efac;
+            color:#052e16;
+        }
+
+        @media (max-height: 760px) {
+            .sidebar {
+                padding: 18px 0 14px;
+                overflow-y:hidden;
+                overflow-x:hidden;
+                overscroll-behavior:contain;
+                -webkit-overflow-scrolling:touch;
+                scrollbar-width:thin;
+                scrollbar-color:rgba(132,132,132,.34) transparent;
+            }
+            .sidebar nav {
+                flex:1 1 auto;
+                min-height:0;
+                overflow-y:auto;
+                overflow-x:hidden;
+                padding-bottom:0;
+            }
+            .logo-ring { margin-bottom: 16px !important; }
+            .nav-item {
+                height: 42px;
+                flex-basis: 42px;
+                margin: 5px 0;
+                border-radius: 15px;
+            }
+            .nav-fold-toggle {
+                height: 32px;
+                flex-basis: 32px;
+                margin-bottom: 4px;
+                border-radius: 14px;
+            }
+            .nav-fold-group { max-height: 720px; }
+            .side-actions {
+                margin-top:auto;
+                margin-bottom:6px;
+                gap:5px;
+                padding-top:8px;
+                border-top:1px solid var(--border);
+            }
+            .settings-fold-group {
+                gap: 5px;
+            }
+            .settings-fold-group:not(.is-collapsed) {
+                max-height: 105px;
+            }
+            .side-pill {
+                height:30px;
+                flex-basis:30px;
+                width:48px;
+            }
+        }
+
+        @media (max-height: 660px) {
+            .sidebar { padding: 12px 0; }
+            .sidebar nav {
+                flex:1 1 auto;
+                min-height:0;
+                overflow-y:auto;
+                overflow-x:hidden;
+                padding-bottom:0;
+            }
+            .logo-ring {
+                width:32px;
+                height:32px;
+                border-radius:10px;
+                margin-bottom:10px !important;
+            }
+            .nav-item {
+                height:38px;
+                flex-basis:38px;
+                margin:3px 0;
+                border-radius:14px;
+            }
+            .nav-fold-toggle { height:30px; flex-basis:30px; }
+            .nav-fold-group { max-height: 720px; }
+            .side-actions {
+                margin-top:auto;
+                margin-bottom:4px;
+                gap:4px;
+                padding-top:6px;
+            }
+            .settings-fold-group {
+                gap: 4px;
+            }
+            .settings-fold-group:not(.is-collapsed) {
+                max-height: 102px;
+            }
+            .side-pill {
+                height:30px;
+                flex-basis:30px;
+                width:48px;
+            }
+            .side-pill svg { width:20px; height:20px; }
+        }
+
+        .studio-modal[hidden] {
+            display:none !important;
+        }
+
+        .studio-modal {
+            position:fixed;
+            inset:0;
+            z-index:500;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:24px;
+            background:rgba(28,28,28,.38);
+            backdrop-filter:blur(15px);
+        }
+
+        .studio-modal-panel {
+            width:min(560px, 100%);
+            max-height:min(760px, calc(100vh - 48px));
+            display:flex;
+            flex-direction:column;
+            overflow:hidden;
+            border-radius:8px;
+            border:1px solid transparent;
+            background:#fff;
+            color:#1c1c1e;
+            box-shadow:0 24px 70px rgba(28,28,28,.24);
+        }
+
+        .studio-modal-head {
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:16px;
+            padding:20px 20px 14px;
+            border-bottom:1px solid transparent;
+        }
+
+        .studio-modal-kicker {
+            font-size:11px;
+            font-weight:900;
+            letter-spacing:.08em;
+            color:#16a34a;
+            text-transform:uppercase;
+            margin-bottom:6px;
+        }
+
+        .studio-modal-title {
+            font-size:20px;
+            line-height:1.25;
+            font-weight:900;
+            margin:0;
+            letter-spacing:0;
+        }
+
+        .studio-modal-close {
+            width:32px;
+            height:32px;
+            border-radius:8px;
+            border:1px solid transparent;
+            background:#fff;
+            color:#58585a;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            cursor:pointer;
+            flex:0 0 auto;
+        }
+
+        .studio-modal-close:hover {
+            color:#1c1c1e;
+            border-color:transparent;
+            background:#f5f5f7;
+        }
+
+        .studio-modal-body {
+            padding:18px 20px;
+            overflow:auto;
+        }
+
+        .studio-modal-copy {
+            margin:0 0 14px;
+            color:#3a3a3c;
+            font-size:13px;
+            line-height:1.7;
+        }
+
+        .update-modal-summary {
+            display:flex;
+            align-items:flex-start;
+            gap:10px;
+            margin-top:16px;
+            padding:12px;
+            border:1px solid transparent;
+            border-radius:8px;
+            background:#f5f5f7;
+            color:#2a2a2a;
+            font-size:12px;
+            line-height:1.55;
+        }
+
+        .update-modal-summary strong {
+            display:block;
+            color:#1c1c1e;
+            margin-bottom:2px;
+            font-size:12px;
+        }
+
+        .update-modal-dot {
+            width:9px;
+            height:9px;
+            margin-top:4px;
+            border-radius:99px;
+            background:#848488;
+            flex:0 0 auto;
+        }
+
+        .update-modal-summary.ok .update-modal-dot { background:#22c55e; }
+        .update-modal-summary.warn .update-modal-dot { background:#f59e0b; }
+        .update-modal-summary.fail .update-modal-dot { background:#ef4444; }
+
+        /* 更新弹窗：双卡片需要更宽的面板，避免左右布局被裁剪 */
+        #project-update-modal .studio-modal-panel { width:min(880px, 100%); max-height:min(840px, calc(100vh - 48px)); }
+        .update-notes-box { margin:2px 0 14px; padding:12px; border:1px solid #e5e5e5; border-radius:8px; background:#f8f8fa; }
+        .update-notes-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+        .update-notes-head strong { font-size:12px; color:#1c1c1e; font-weight:950; }
+        .update-notes-version { color:#58585a; font-size:11px; font-weight:800; white-space:nowrap; }
+        .update-notes-list { margin:0; padding:0 0 0 16px; display:grid; gap:6px; color:#2a2a2a; font-size:12px; line-height:1.55; }
+        .update-notes-empty { margin:0; color:#848488; font-size:12px; line-height:1.55; }
+        .update-source-list { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:14px; align-items:stretch; }
+        @media (max-width: 900px) { .update-source-list { grid-template-columns:1fr 1fr; } }
+        @media (max-width: 600px) { .update-source-list { grid-template-columns:1fr; } }
+        .update-source-card { width:100%; min-width:0; border:1px solid #e5e5e5; border-radius:10px; background:#fff; color:#1c1c1e; text-align:left; padding:12px; display:flex; flex-direction:column; gap:10px; cursor:pointer; transition:border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease; }
+        .update-source-card:hover { transform:translateY(-1px); border-color:transparent; box-shadow:0 12px 28px rgba(28,28,28,.08); }
+        .update-source-card.active { border-color:#16a34a; box-shadow:0 0 0 2px rgba(22,163,74,.20); background:#f0fdf4; }
+        .update-source-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+        .update-source-title { min-width:0; display:flex; flex-direction:column; gap:4px; }
+        .update-source-title strong { color:#1c1c1e; font-size:13px; line-height:1.2; font-weight:950; }
+        .update-source-title span { color:#58585a; font-size:11px; line-height:1.35; font-weight:700; }
+        .update-source-head-right { flex:0 0 auto; display:flex; align-items:center; gap:8px; }
+        .update-source-check { display:none; flex:0 0 auto; width:22px; height:22px; border-radius:999px; background:#16a34a; color:#fff; align-items:center; justify-content:center; }
+        .update-source-check svg { width:14px; height:14px; }
+        .update-source-card.active .update-source-check { display:flex; }
+        .update-source-badge { flex:0 0 auto; min-width:56px; height:24px; border-radius:999px; background:#e5e5e5; color:#58585a; display:flex; align-items:center; justify-content:center; padding:0 9px; font-size:10px; font-weight:900; }
+        .update-source-badge.ok { background:#16a34a; color:#fff; }
+        .update-source-badge.bad { background:#dc2626; color:#fff; }
+        .connectivity-list { display:grid; gap:8px; min-width:0; }
+
+        .connectivity-row {
+            display:grid;
+            grid-template-columns:12px minmax(0, 1fr) auto;
+            align-items:center;
+            gap:10px;
+            min-height:42px;
+            padding:9px 10px;
+            border:1px solid #f0f0f2;
+            border-radius:8px;
+            background:#fff;
+        }
+        .connectivity-row > div { min-width:0; }
+
+        .connectivity-indicator {
+            width:9px;
+            height:9px;
+            border-radius:99px;
+            background:#848488;
+        }
+
+        .connectivity-row.ok .connectivity-indicator { background:#22c55e; }
+        .connectivity-row.fail .connectivity-indicator { background:#ef4444; }
+        .connectivity-row.pending .connectivity-indicator {
+            background:#848488;
+            animation: studio-pulse 1s ease-in-out infinite;
+        }
+
+        .connectivity-name {
+            font-size:12px;
+            font-weight:900;
+            color:#1c1c1e;
+            line-height:1.25;
+        }
+
+        .connectivity-url {
+            margin-top:3px;
+            max-width:100%;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+            font-size:10px;
+            color:#848488;
+        }
+
+        .connectivity-status {
+            justify-self:end;
+            font-size:11px;
+            font-weight:900;
+            color:#58585a;
+            white-space:nowrap;
+        }
+        .connectivity-row.ok .connectivity-status { color:#16a34a; }
+        .connectivity-row.fail .connectivity-status { color:#ef4444; }
+
+        .connectivity-error {
+            grid-column:2 / 4;
+            margin-top:-4px;
+            color:#ef4444;
+            font-size:11px;
+            line-height:1.45;
+            word-break:break-word;
+        }
+
+        .studio-modal-actions {
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            padding:14px 20px 18px;
+            border-top:1px solid #f0f0f2;
+            background:#fff;
+        }
+
+        .studio-modal-btn {
+            min-height:36px;
+            padding:0 14px;
+            border-radius:8px;
+            border:1px solid transparent;
+            background:#fff;
+            color:#2a2a2a;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:7px;
+            font-size:12px;
+            font-weight:900;
+            cursor:pointer;
+        }
+
+        .studio-modal-btn svg {
+            width:15px;
+            height:15px;
+            flex:0 0 auto;
+        }
+
+        .studio-modal-btn:hover {
+            background:#f5f5f7;
+            border-color:transparent;
+        }
+
+        #connectivity-test-btn {
+            border-color:rgba(37,99,235,.24);
+            background:#eff6ff;
+            color:#1d4ed8;
+            transition:transform .16s ease, background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+        }
+
+        #connectivity-test-btn:hover {
+            transform:translateY(-1px);
+            border-color:#2563eb;
+            background:#2563eb;
+            color:#fff;
+            box-shadow:0 10px 22px rgba(37,99,235,.20);
+        }
+
+        #connectivity-test-btn:hover svg {
+            transform:rotate(24deg);
+        }
+
+        #connectivity-test-btn:active {
+            transform:translateY(0);
+            box-shadow:0 5px 12px rgba(37,99,235,.16);
+        }
+
+        #connectivity-test-btn svg {
+            transition:transform .18s ease;
+        }
+
+        .studio-modal-btn.primary {
+            background:#1c1c1e;
+            border-color:#1c1c1e;
+            color:#fff;
+        }
+
+        .studio-modal-btn.primary:hover {
+            background:#16a34a;
+            border-color:#16a34a;
+        }
+
+        .studio-modal-btn[disabled] {
+            opacity:.58;
+            cursor:wait;
+        }
+
+        html.theme-dark .studio-modal,
+        body.theme-dark .studio-modal {
+            background:rgba(6,6,6,.56);
+        }
+
+        html.theme-dark .studio-modal-panel,
+        body.theme-dark .studio-modal-panel,
+        html.theme-dark .studio-modal-close,
+        body.theme-dark .studio-modal-close,
+        html.theme-dark .connectivity-row,
+        body.theme-dark .connectivity-row,
+        html.theme-dark .studio-modal-actions,
+        body.theme-dark .studio-modal-actions,
+        html.theme-dark .studio-modal-btn,
+        body.theme-dark .studio-modal-btn {
+            background:#0e0e10;
+            border-color:#222224;
+            color:#e8e8ea;
+        }
+
+        html.theme-dark .update-source-card,
+        body.theme-dark .update-source-card {
+            background:#0e0e10;
+            border-color:#222224;
+            color:#e8e8ea;
+        }
+
+        html.theme-dark .update-source-card.active,
+        body.theme-dark .update-source-card.active {
+            border-color:#22c55e;
+            box-shadow:0 0 0 2px rgba(34,197,94,.35);
+            background:rgba(34,197,94,.12);
+        }
+
+        html.theme-dark .studio-modal-head,
+        body.theme-dark .studio-modal-head,
+        html.theme-dark .studio-modal-actions,
+        body.theme-dark .studio-modal-actions {
+            border-color:#222224;
+        }
+
+        html.theme-dark .studio-modal-copy,
+        body.theme-dark .studio-modal-copy,
+        html.theme-dark .connectivity-status,
+        body.theme-dark .connectivity-status {
+            color:#808082;
+        }
+
+        html.theme-dark .update-modal-summary,
+        body.theme-dark .update-modal-summary {
+            background:#0a0a0c;
+            border-color:#222224;
+            color:#8a8a8c;
+        }
+
+        html.theme-dark .update-notes-box,
+        body.theme-dark .update-notes-box {
+            background:#0a0a0c;
+            border-color:#222224;
+        }
+
+        html.theme-dark .update-modal-summary strong,
+        body.theme-dark .update-modal-summary strong,
+        html.theme-dark .update-notes-head strong,
+        body.theme-dark .update-notes-head strong,
+        html.theme-dark .update-source-title strong,
+        body.theme-dark .update-source-title strong,
+        html.theme-dark .connectivity-name,
+        body.theme-dark .connectivity-name {
+            color:#e8e8ea;
+        }
+
+        html.theme-dark .update-notes-list,
+        body.theme-dark .update-notes-list {
+            color:#d1d1d6;
+        }
+
+        html.theme-dark .update-notes-version,
+        body.theme-dark .update-notes-version,
+        html.theme-dark .update-notes-empty,
+        body.theme-dark .update-notes-empty,
+        html.theme-dark .update-source-title span,
+        body.theme-dark .update-source-title span {
+            color:#808082;
+        }
+
+        html.theme-dark .studio-modal-btn.primary,
+        body.theme-dark .studio-modal-btn.primary {
+            background:#dcdcdc;
+            border-color:#dcdcdc;
+            color:#0e0e10;
+        }
+
+        html.theme-dark #connectivity-test-btn,
+        body.theme-dark #connectivity-test-btn {
+            background:rgba(96,165,250,.12);
+            border-color:rgba(96,165,250,.34);
+            color:#93c5fd;
+        }
+
+        html.theme-dark #connectivity-test-btn:hover,
+        body.theme-dark #connectivity-test-btn:hover {
+            background:#60a5fa;
+            border-color:#60a5fa;
+            color:#0a0a0c;
+            box-shadow:0 10px 24px rgba(96,165,250,.18);
+        }
+
+        html.theme-dark .studio-modal-btn.primary:hover,
+        body.theme-dark .studio-modal-btn.primary:hover {
+            background:#86efac;
+            border-color:#86efac;
+            color:#052e16;
+        }
+
+        @media (max-width: 640px) {
+            .studio-modal {
+                align-items:flex-end;
+                padding:12px;
+            }
+            .studio-modal-panel {
+                max-height:calc(100vh - 24px);
+            }
+            .studio-modal-actions {
+                flex-wrap:wrap;
+            }
+            .studio-modal-btn {
+                flex:1 1 130px;
+            }
+        }
+
+        .sidebar.is-pinned {
+            width: 220px;
+            transition-delay: 0s;
+        }
+
+        .sidebar.is-pinned .nav-item,
+        .sidebar.is-pinned .nav-fold-toggle {
+            width: 190px;
+            transition-delay: 0s;
+        }
+        .sidebar.is-pinned .nav-text {
+            opacity: 1;
+            transition-delay: 0.1s;
+        }
+
+        .sidebar.is-pinned .logo-text-label {
+            opacity: 1;
+            max-width: 100px;
+            transition-delay: 0.1s;
+        }
+
+        .sidebar.is-pinned .logo-text {
+            width: 190px;
+        }
+
+        .sidebar.is-pinned .side-pill {
+            width: 190px;
+            gap: 8px;
+            transition-delay: 0s;
+        }
+        .sidebar.is-pinned .side-pill-text {
+            opacity: 1;
+            max-width: 120px;
+            transition-delay: .15s;
+        }
+        .sidebar.is-pinned .project-version-badge {
+            width: 190px;
+            display: flex;
+            transition-delay: 0s;
+        }
+        .sidebar.is-pinned .update-now-btn {
+            width: 190px;
+            transition-delay: 0s;
+        }
+
+        .sidebar.is-collapsing:hover {
+            width: 80px;
+        }
+
+        .sidebar.is-collapsing:hover .nav-item,
+        .sidebar.is-collapsing:hover .nav-fold-toggle {
+            width: 48px;
+        }
+        .sidebar.is-collapsing:hover .logo-text {
+            width: 48px;
+        }
+        .sidebar.is-collapsing:hover .logo-text-label {
+            opacity: 0;
+            max-width: 0;
+        }
+        .sidebar.is-collapsing:hover .nav-text {
+            opacity: 0;
+        }
+        .sidebar.is-collapsing:hover .side-pill {
+            width: 48px;
+            gap: 0;
+        }
+        .sidebar.is-collapsing:hover .version-display {
+            width: 48px;
+        }
+        .sidebar.is-collapsing:hover .project-version-badge {
+            width: 48px;
+        }
+        .sidebar.is-collapsing:hover .update-now-btn {
+            width: 48px;
+        }
+        .sidebar.is-collapsing:hover .side-pill-text {
+            opacity: 0;
+            max-width: 0;
+        }
+
+        /* ===== 首页 ===== */
+        .homepage {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            z-index: 1000;
+            transition: opacity 0.5s var(--fluid-ease);
+            overflow: hidden;
+        }
+
+        .homepage::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 30% 20%, rgba(80,80,80,0.06) 0%, transparent 50%),
+                        radial-gradient(ellipse at 70% 70%, rgba(40,40,40,0.05) 0%, transparent 50%),
+                        radial-gradient(ellipse at 40% 80%, rgba(60,60,60,0.04) 0%, transparent 40%);
+            pointer-events: none;
+            animation: homepage-bg-drift 20s ease-in-out infinite alternate;
+        }
+
+        @keyframes homepage-bg-drift {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-2%, 1%) rotate(1deg); }
+        }
+
+        .homepage.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .homepage-content {
+            position: relative;
+            z-index: 1;
+            max-width: 880px;
+            text-align: center;
+            padding: 0 32px;
+        }
+
+        .homepage-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 999px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            margin-bottom: 32px;
+            transition: all 0.3s var(--fluid-ease);
+        }
+
+        .homepage-badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #34c759;
+            box-shadow: 0 0 8px rgba(52,199,89,0.3);
+        }
+
+        .homepage-title {
+            font-size: clamp(48px, 8vw, 80px);
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            line-height: 1.05;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        .homepage-logo {
+            width: 72px;
+            height: 72px;
+            color: var(--text);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .homepage-subtitle {
+            font-size: 18px;
+            color: var(--muted);
+            margin-bottom: 56px;
+            line-height: 1.6;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+            font-weight: 500;
+        }
+
+        .homepage-features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 56px;
+            max-width: 780px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .homepage-feature {
+            position: relative;
+            text-align: left;
+            padding: 28px 24px 24px;
+            background: var(--sidebar-bg);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            transition: all 0.35s var(--fluid-ease);
+            cursor: default;
+        }
+
+        .homepage-feature:hover {
+            transform: translateY(-4px);
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(255,255,255,0.14);
+            box-shadow: 0 12px 40px -12px rgba(0,0,0,0.2), 0 0 0 1px rgba(255,255,255,0.06);
+        }
+
+        html.theme-dark .homepage-feature:hover,
+        body.theme-dark .homepage-feature:hover {
+            background: rgba(24,24,24,0.72);
+            border-color: rgba(255,255,255,0.1);
+            box-shadow: 0 12px 40px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+        }
+
+        .homepage-feature-icon {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--nav-hover-bg);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            transition: all 0.35s var(--fluid-ease);
+        }
+
+        .homepage-feature:hover .homepage-feature-icon {
+            background: rgba(255,255,255,0.08);
+            transform: scale(1.05);
+        }
+
+        .homepage-feature-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 6px;
+            letter-spacing: -0.01em;
+        }
+
+        .homepage-feature-desc {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .homepage-start {
+            position: relative;
+            font-size: 16px;
+            font-weight: 700;
+            padding: 14px 44px 14px 36px;
+            border-radius: 999px;
+            background: var(--text);
+            color: var(--bg);
+            border: none;
+            cursor: pointer;
+            letter-spacing: 0.02em;
+            transition: all 0.35s var(--fluid-ease);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08), 0 0 0 0 rgba(0,0,0,0);
+        }
+
+        .homepage-start::after {
+            content: '';
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            margin-left: 4px;
+            vertical-align: -2px;
+            background: currentColor;
+            mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='5' y1='12' x2='19' y2='12'%3E%3C/line%3E%3Cpolyline points='12 5 19 12 12 19'%3E%3C/polyline%3E%3C/svg%3E");
+            mask-size: contain;
+            mask-repeat: no-repeat;
+            mask-position: center;
+            transition: transform 0.35s var(--fluid-ease);
+        }
+
+        .homepage-start:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px -8px rgba(0,0,0,0.24), 0 0 0 4px rgba(128,128,128,0.12);
+        }
+
+        .homepage-start:hover::after {
+            transform: translateX(3px);
+        }
+
+        .homepage-start:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.16);
+        }
+
+        @media (max-width: 720px) {
+            .homepage-features {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .homepage-feature {
+                padding: 20px 18px;
+            }
+            .homepage-subtitle {
+                font-size: 15px;
+            }
+        }
+
+        /* ===== 引导弹窗 ===== */
+        .onboarding-modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s var(--fluid-ease);
+        }
+
+        .onboarding-modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .onboarding-card {
+            background: var(--stage-bg);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 720px;
+            width: 90%;
+            border: 1px solid var(--border);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.12);
+        }
+
+        .onboarding-title {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .onboarding-description {
+            font-size: 16px;
+            color: var(--muted);
+            margin-bottom: 40px;
+        }
+
+        .onboarding-features {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .onboarding-feature {
+            flex: 1;
+            text-align: center;
+            padding: 24px 16px;
+            background: var(--sidebar-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .onboarding-feature-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--nav-hover-bg);
+            border-radius: 12px;
+        }
+
+        .onboarding-feature-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .onboarding-feature-desc {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .onboarding-action {
+            text-align: center;
+        }
+
+        .onboarding-button {
+            font-size: 16px;
+            font-weight: 600;
+            padding: 16px 48px;
+            border-radius: 14px;
+            background: var(--text);
+            color: var(--bg);
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s var(--fluid-ease);
+        }
+
+        .onboarding-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        /* === Desktop 版本专属：隐藏 Logo 和版本号 === */
+        .sidebar .logo-text,
+        .logo-text,
+        .sidebar:hover .logo-text,
+        .sidebar.is-pinned .logo-text,
+        .sidebar.is-collapsing:hover .logo-text {
+            display: none !important;
+        }
+
+        .sidebar .logo-text-label,
+        .logo-text-label,
+        .sidebar:hover .logo-text-label,
+        .sidebar.is-pinned .logo-text-label,
+        .sidebar.is-collapsing:hover .logo-text-label {
+            display: none !important;
+        }
+
+        .sidebar .version-display,
+        .version-display,
+        .sidebar:hover .version-display,
+        .sidebar.is-pinned .version-display,
+        .sidebar.is-collapsing:hover .version-display {
+            display: none !important;
+        }
+
+        .sidebar .project-version-badge,
+        .project-version-badge,
+        .sidebar:hover .project-version-badge,
+        .sidebar.is-pinned .project-version-badge,
+        .sidebar.is-collapsing:hover .project-version-badge {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ===== 自定义标题栏（仅窗口控制按钮） ===== -->
+    <div class="titlebar">
+        <div class="titlebar-controls">
+            <button class="titlebar-btn" onclick="titlebarMinimize()" title="最小化">
+                <svg width="16" height="16" viewBox="0 0 16 16"><rect y="8" width="16" height="2" fill="currentColor"/></svg>
+            </button>
+            <button class="titlebar-btn" onclick="titlebarMaximize()" title="最大化">
+                <svg width="16" height="16" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+            <button class="titlebar-btn titlebar-close" onclick="titlebarClose()" title="关闭">
+                <svg width="16" height="16" viewBox="0 0 16 16"><line x1="2" y1="2" x2="14" y2="14" stroke="currentColor" stroke-width="1.5"/><line x1="14" y1="2" x2="2" y2="14" stroke="currentColor" stroke-width="1.5"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- ===== 首页 ===== -->
+    <div class="homepage" id="homepage">
+        <div class="homepage-content">
+            
+            <div class="homepage-title">
+                <svg class="homepage-logo" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M869.44,200.5L494.98,39.39c-98.45-42.36-208.12,29.86-208.12,137.03v14.48l82.33,35.42v-56.49c0-52.07,53.28-87.15,101.11-66.57l356.27,153.28c16.53,7.11,16.53,30.54,0,37.67l-48.96,21.05c-84.31,36.27-179.84,36.27-264.15,0l-267.88-115.26c-99.7-42.89-210.74,30.23-210.74,138.74v323.08c0,68.38,40.7,130.21,103.52,157.23l384.4,165.37c99.82,42.94,211.01-30.26,211.01-138.93v-2.62l-82.33-35.42v33.92c0,58.62-59.98,98.12-113.84,74.95l-345.18-148.51c-14.35-6.18-14.35-26.53,0-32.7l76.43-32.95c64.04-27.6,136.62-27.63,200.69-.07l278.94,120.01c113.84,48.98,240.66-34.51,240.66-158.45v-281.37c0-79.07-47.06-150.55-119.71-181.8ZM906.83,663.69c0,71.74-73.39,120.06-139.28,91.72l-33.77-14.53-82.33-35.42-155.17-66.76c-77.12-33.18-127.09-109.07-127.09-193.03v-91.04l-82.33-35.42v175.86c0,75.82-45.13,144.37-114.77,174.34l-24.08,10.36c-14.59,6.28-30.84-4.42-30.84-20.3v-326.53c0-53.75,54.99-89.95,104.37-68.7l298.17,128.27c79.94,34.39,131.73,113.06,131.73,200.08v85.91l82.33,35.42v-168.65c0-82.93,49.36-157.9,125.54-190.66l13.46-5.8c16.11-6.94,34.06,4.89,34.06,22.41v292.46Z"/></svg>
+            </div>
+            <div class="homepage-subtitle">支持 OpenAI API · ComfyUI · 火山引擎 · 即梦 CLI</div>
+            <div class="homepage-features">
+                <div class="homepage-feature">
+                    <div class="homepage-feature-icon">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                    </div>
+                    <div class="homepage-feature-title">AI 在线生图</div>
+                    <div class="homepage-feature-desc">多模型切换，实时预览，支持 Stable Diffusion、DALL·E 等主流模型</div>
+                </div>
+                <div class="homepage-feature">
+                    <div class="homepage-feature-icon">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="homepage-feature-title">GPT 对话</div>
+                    <div class="homepage-feature-desc">智能提示词辅助与创意激发，优化生成指令，提升创作效率</div>
+                </div>
+                <div class="homepage-feature">
+                    <div class="homepage-feature-icon">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                    </div>
+                    <div class="homepage-feature-title">无限画布</div>
+                    <div class="homepage-feature-desc">自由布局，批量创作，支持图层管理与多画板协同</div>
+                </div>
+            </div>
+            <button class="homepage-start" onclick="dismissOnboarding();switchUI(null,'canvas')">开始使用</button>
+        </div>
+    </div>
+
+    <!-- ===== 引导弹窗 ===== -->
+    <div class="onboarding-modal" id="onboarding-modal">
+        <div class="onboarding-card">
+            <div class="onboarding-title">快速上手</div>
+            <div class="onboarding-description">NOVAI 集成了多种 AI 图像生成能力，几步即可开始创作。</div>
+            <div class="onboarding-features">
+                <div class="onboarding-feature">
+                    <div class="onboarding-feature-icon">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                    </div>
+                    <div class="onboarding-feature-title">在线生图</div>
+                    <div class="onboarding-feature-desc">多模型切换，输入提示词即可生成高质量图像</div>
+                </div>
+                <div class="onboarding-feature">
+                    <div class="onboarding-feature-icon">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="onboarding-feature-title">GPT 对话</div>
+                    <div class="onboarding-feature-desc">智能提示词助手，帮你优化创作指令</div>
+                </div>
+                <div class="onboarding-feature">
+                    <div class="onboarding-feature-icon">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"/>
+                            <rect x="14" y="3" width="7" height="7"/>
+                            <rect x="14" y="14" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                    </div>
+                    <div class="onboarding-feature-title">无限画布</div>
+                    <div class="onboarding-feature-desc">自由拖拽布局，支持批量生成与管理</div>
+                </div>
+            </div>
+            <div class="onboarding-action">
+                <button class="onboarding-button" onclick="dismissOnboarding()">开始体验</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-shell">
+        <aside class="sidebar" id="studioSidebar">
+            <button class="logo-text" title="固定导航栏">
+                <svg class="sidebar-logo-img" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M869.44,200.5L494.98,39.39c-98.45-42.36-208.12,29.86-208.12,137.03v14.48l82.33,35.42v-56.49c0-52.07,53.28-87.15,101.11-66.57l356.27,153.28c16.53,7.11,16.53,30.54,0,37.67l-48.96,21.05c-84.31,36.27-179.84,36.27-264.15,0l-267.88-115.26c-99.7-42.89-210.74,30.23-210.74,138.74v323.08c0,68.38,40.7,130.21,103.52,157.23l384.4,165.37c99.82,42.94,211.01-30.26,211.01-138.93v-2.62l-82.33-35.42v33.92c0,58.62-59.98,98.12-113.84,74.95l-345.18-148.51c-14.35-6.18-14.35-26.53,0-32.7l76.43-32.95c64.04-27.6,136.62-27.63,200.69-.07l278.94,120.01c113.84,48.98,240.66-34.51,240.66-158.45v-281.37c0-79.07-47.06-150.55-119.71-181.8ZM906.83,663.69c0,71.74-73.39,120.06-139.28,91.72l-33.77-14.53-82.33-35.42-155.17-66.76c-77.12-33.18-127.09-109.07-127.09-193.03v-91.04l-82.33-35.42v175.86c0,75.82-45.13,144.37-114.77,174.34l-24.08,10.36c-14.59,6.28-30.84-4.42-30.84-20.3v-326.53c0-53.75,54.99-89.95,104.37-68.7l298.17,128.27c79.94,34.39,131.73,113.06,131.73,200.08v85.91l82.33,35.42v-168.65c0-82.93,49.36-157.9,125.54-190.66l13.46-5.8c16.11-6.94,34.06,4.89,34.06,22.41v292.46Z"/></svg>
+                <span class="logo-text-label">NOVAI</span>
+            </button>
+
+            <nav>
+
+                <!-- 分隔线 -->
+                <div class="nav-divider" style="width:32px;height:1px;background:var(--border);margin:8px auto;transition:width 0.35s var(--fluid-ease);"></div>
+
+                <div class="nav-item active" data-route="home" onclick="switchUI(this, 'home')">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span class="nav-text">首页</span>
+                </div>
+
+                <div class="nav-item" onclick="switchUI(this, 'online')">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"></path>
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                    <span class="nav-text" data-i18n="nav.online">在线生图</span>
+                </div>
+                <div class="nav-item" onclick="switchUI(this, 'gpt-chat')">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span class="nav-text" data-i18n="nav.gpt">GPT 对话</span>
+                </div>
+                <div class="nav-item" onclick="switchUI(this, 'canvas')">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span class="nav-text" data-i18n="nav.canvas">无限画布</span>
+                </div>
+                <div class="nav-item" onclick="switchUI(this, 'asset-manager')">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5V6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v12.7"></path>
+                        <path d="M7 8h10"></path>
+                        <path d="M7 12h10"></path>
+                        <path d="M7 16h6"></path>
+                    </svg>
+                    <span class="nav-text" data-i18n="nav.assetManager">素材库</span>
+                </div>
+            </nav>
+
+            <div class="side-actions">
+                <button class="side-pill" onclick="switchUI(this, 'api-settings')" type="button" title="API 设置">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 7h3a5 5 0 0 1 0 10h-3"></path>
+                        <path d="M9 17H6A5 5 0 0 1 6 7h3"></path>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    <span class="side-pill-text" data-i18n="common.apiSettings">API 设置</span>
+                </button>
+                <button class="side-pill settings-fold-toggle" id="settings-fold-toggle" onclick="toggleSidebarSettings()" type="button" title="更多设置" aria-expanded="false">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.36 1.08V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.08-.36H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .36-1.08V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.22.38.58.69 1 .86.2.08.42.13.65.14H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"></path>
+                    </svg>
+                    <span class="side-pill-text" data-i18n="common.moreSettings">更多设置</span>
+                    <svg class="settings-fold-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <div class="settings-fold-group is-collapsed" id="settings-fold-group">
+                    <button class="side-pill" onclick="toggleTheme()" id="theme-toggle-btn" type="button" title="切换夜间模式">
+                        <svg id="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                        </svg>
+                        <svg id="icon-sun" style="display:none" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5"></circle>
+                            <line x1="12" y1="1" x2="12" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="23"></line>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                            <line x1="1" y1="12" x2="3" y2="12"></line>
+                            <line x1="21" y1="12" x2="23" y2="12"></line>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                        </svg>
+                        <span class="side-pill-text" data-i18n="common.darkMode">黑夜模式</span>
+                    </button>
+                    <button class="side-pill" onclick="toggleLanguage()" id="lang-toggle-btn" type="button" title="Language">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M2 12h20"></path>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        </svg>
+                        <span class="side-pill-text" data-i18n="common.language">中文</span>
+                    </button>
+                    <button class="side-pill" onclick="switchUI(this, 'comfyui-settings')" type="button" title="工作流设置">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                            <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                            <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                            <path d="M14 14h7v7h-7z"></path>
+                            <line x1="10" y1="6.5" x2="14" y2="6.5"></line>
+                            <line x1="6.5" y1="10" x2="6.5" y2="14"></line>
+                        </svg>
+                        <span class="side-pill-text" data-i18n="common.comfyuiSettings">工作流设置</span>
+                    </button>
+                </div>
+
+                <!-- GitHub 入口 -->
+                <button id="update-now-btn" class="update-now-btn" onclick="runProjectUpdate()" type="button" title="一键更新">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                        <path d="M21 3v6h-6"></path>
+                    </svg>
+                    <span id="update-now-text" class="update-now-text">一键更新</span>
+                </button>
+                <div id="project-version-badge" class="project-version-badge" title="点击检测更新" role="button" tabindex="0" onclick="checkForUpdates(true)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();checkForUpdates(true);}">检查更新</div>
+
+            </div>
+
+            <!-- 版本显示 -->
+            <div class="version-display" id="versionDisplay">
+                <span class="version-text">检查更新</span>
+                <button class="version-check-btn" id="versionCheckBtn" onclick="checkForUpdates()" title="检查更新">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                </button>
+            </div>
+        </aside>
+        <script>
+            /* 在侧栏 DOM 解析完后立即把 active 类移到当前页对应的入口，避免首屏先在文生图上闪一下 */
+            (function(){
+                try {
+                    var pageId = localStorage.getItem('studio_active_page');
+                    if(pageId && pageId !== 'zimage') {
+                        document.querySelectorAll('.nav-item.active, .side-pill.active').forEach(function(n){
+                            n.classList.remove('active');
+                        });
+                        var target = document.querySelector('[onclick*="\'' + pageId + '\'"]');
+                        if(target) target.classList.add('active');
+                    }
+                } catch(e) {}
+            })();
+        </script>
+
+        <main class="stage">
+            <!-- 页面切换骨架屏 -->
+            <div class="stage-skeleton" id="stageSkeleton">
+                <div class="skeleton-block sk-hero"></div>
+                <div class="skeleton-block sk-text"></div>
+                <div class="skeleton-block sk-text-sm"></div>
+                <div style="flex:1"></div>
+                <div class="skeleton-row">
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
+            </div>
+            <iframe id="frame-home" data-src="/static/home.html?v=1.0.81.1783947765" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.81.1784135874" scrolling="yes"></iframe>
+            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+            <iframe id="frame-online" data-src="/static/online.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.81.1784135873" scrolling="yes"></iframe>
+
+        </main>
+    </div>
+
+    <div id="project-update-modal" class="studio-modal" hidden role="dialog" aria-modal="true" aria-labelledby="project-update-title">
+        <div class="studio-modal-panel">
+            <div class="studio-modal-head">
+                <div>
+                    <div class="studio-modal-kicker" data-i18n="update.available">发现更新</div>
+                    <h2 id="project-update-title" class="studio-modal-title">一键更新</h2>
+                </div>
+                <button class="studio-modal-close" type="button" onclick="closeProjectUpdateModal()" title="关闭" aria-label="关闭">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="studio-modal-body">
+                <p id="project-update-copy" class="studio-modal-copy"></p>
+                <div id="project-update-notes" class="update-notes-box" hidden>
+                    <div class="update-notes-head">
+                        <strong id="project-update-notes-title">本次更新内容</strong>
+                        <span id="project-update-notes-version" class="update-notes-version"></span>
+                    </div>
+                    <ol id="project-update-notes-list" class="update-notes-list"></ol>
+                    <p id="project-update-notes-empty" class="update-notes-empty" hidden>暂未获取到更新说明。</p>
+                </div>
+                <div id="update-source-list" class="update-source-list">
+                    <button id="update-source-modelscope" class="update-source-card" type="button" data-update-source="modelscope" onclick="setUpdateSource('modelscope')">
+                        <div class="update-source-head">
+                            <div class="update-source-title">
+                                <strong>ModelScope 下载源</strong>
+                                <span>ModelScope API / raw 文件，国内网络推荐，无需代理。</span>
+                            </div>
+                            <div class="update-source-head-right">
+                                <span class="update-source-check" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </span>
+                                <span class="update-source-badge">待测试</span>
+                            </div>
+                        </div>
+                        <div class="connectivity-list" data-connectivity-source="modelscope"></div>
+                    </button>
+                    <button id="update-source-gitee" class="update-source-card" type="button" data-update-source="gitee" onclick="setUpdateSource('gitee')">
+                        <div class="update-source-head">
+                            <div class="update-source-title">
+                                <strong>Gitee 下载源</strong>
+                                <span>Gitee API / raw 文件，国内网络推荐，无需代理。</span>
+                            </div>
+                            <div class="update-source-head-right">
+                                <span class="update-source-check" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </span>
+                                <span class="update-source-badge">待测试</span>
+                            </div>
+                        </div>
+                        <div class="connectivity-list" data-connectivity-source="gitee"></div>
+                    </button>
+                    <button id="update-source-github" class="update-source-card" type="button" data-update-source="github" onclick="setUpdateSource('github')">
+                        <div class="update-source-head">
+                            <div class="update-source-title">
+                                <strong>GitHub 下载源</strong>
+                                <span>GitHub API / raw 文件 / GitHub 网页，Google 仅作外网参考。</span>
+                            </div>
+                            <div class="update-source-head-right">
+                                <span class="update-source-check" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </span>
+                                <span class="update-source-badge">待测试</span>
+                            </div>
+                        </div>
+                        <div class="connectivity-list" data-connectivity-source="github"></div>
+                    </button>
+                </div>
+                <div id="project-update-summary" class="update-modal-summary warn">
+                    <span class="update-modal-dot" aria-hidden="true"></span>
+                    <div>
+                        <strong id="project-update-summary-title">建议先测试连通性</strong>
+                        <span id="project-update-summary-text"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="studio-modal-actions">
+                <button id="connectivity-test-btn" class="studio-modal-btn" type="button" onclick="runUpdateConnectivityTest()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                        <path d="M21 3v6h-6"></path>
+                    </svg>
+                    <span id="connectivity-test-text">测试连通性</span>
+                </button>
+                <button class="studio-modal-btn" type="button" onclick="closeProjectUpdateModal()">
+                    <span id="project-update-cancel-text">取消</span>
+                </button>
+                <button id="project-update-confirm-btn" class="studio-modal-btn primary" type="button" onclick="confirmProjectUpdate()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                        <path d="M21 3v6h-6"></path>
+                    </svg>
+                    <span id="project-update-confirm-text">开始更新</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 首页 & 引导初始化 =====
+        (function() {
+            const visited = localStorage.getItem('novai-visited');
+            const homepage = document.getElementById('homepage');
+            const onboarding = document.getElementById('onboarding-modal');
+
+            if (visited) {
+                homepage.classList.add('hidden');
+                setTimeout(function() { homepage.style.display = 'none'; }, 400);
+            }
+        })();
+
+        function showOnboarding() {
+            const onboarding = document.getElementById('onboarding-modal');
+            onboarding.classList.add('active');
+        }
+
+        function dismissOnboarding() {
+            localStorage.setItem('novai-visited', '1');
+            const homepage = document.getElementById('homepage');
+            const onboarding = document.getElementById('onboarding-modal');
+
+            onboarding.classList.remove('active');
+            setTimeout(function() {
+                onboarding.style.display = 'none';
+                homepage.classList.add('hidden');
+                setTimeout(function() { homepage.style.display = 'none'; }, 400);
+            }, 300);
+        }
+
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                try { return crypto.randomUUID(); } catch (e) { }
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+        const CID = localStorage.getItem("client_id") || generateUUID();
+        localStorage.setItem("client_id", CID);
+        const ACTIVE_PAGE_KEY = 'studio_active_page';
+        const SIDEBAR_SETTINGS_COLLAPSED_KEY = 'studio_sidebar_settings_collapsed';
+        const SIDEBAR_PINNED_KEY = 'studio_sidebar_pinned';
+        const DEFAULT_PAGE_ID = 'zimage';
+        const PAGE_IDS = ['home','zimage','enhance','klein','angle','online','gpt-chat','canvas','asset-manager','api-settings','comfyui-settings'];
+        const PROJECT_URL = 'https://github.com/invaders-2/NOVAI';
+        let appInfo = { version:'', repo_url:PROJECT_URL, version_url:'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION' };
+        let updateConnectivityResult = null;
+        let projectUpdateRunning = false;
+        let projectUpdateAbort = null;  // 当前更新请求的 AbortController，便于用户中途取消
+        let updateSource = localStorage.getItem('studio_update_source') || 'github';
+        let projectUpdateNotes = null;
+
+        function setSidebarPinned(pinned, options = {}) {
+            const sidebar = document.getElementById('studioSidebar');
+            const logo = document.getElementById('sidebarLogoToggle');
+            if(!sidebar) return;
+            pauseScaleInFrames();
+            sidebar.classList.toggle('is-pinned', pinned);
+            if(!pinned) {
+                sidebar.classList.add('is-collapsing');
+                window.setTimeout(() => sidebar.classList.remove('is-collapsing'), 360);
+            } else {
+                sidebar.classList.remove('is-collapsing');
+            }
+            if(logo) {
+                logo.setAttribute('aria-pressed', pinned ? 'true' : 'false');
+                logo.title = pinned ? '收起导航栏' : '固定导航栏';
+            }
+            if(!options.skipRemember) localStorage.setItem(SIDEBAR_PINNED_KEY, pinned ? '1' : '0');
+        }
+
+        function toggleSidebarPinned(event) {
+            event?.preventDefault?.();
+            event?.stopPropagation?.();
+            const sidebar = document.getElementById('studioSidebar');
+            setSidebarPinned(!sidebar?.classList.contains('is-pinned'));
+        }
+
+        function restoreSidebarPinned() {
+            setSidebarPinned(localStorage.getItem(SIDEBAR_PINNED_KEY) === '1', { skipRemember:true });
+        }
+
+
+        function setSidebarSettingsCollapsed(collapsed, options = {}) {
+            const group = document.getElementById('settings-fold-group');
+            const toggle = document.getElementById('settings-fold-toggle');
+            if(group) group.classList.toggle('is-collapsed', collapsed);
+            if(toggle) {
+                toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                toggle.title = collapsed ? '展开更多设置' : '收起更多设置';
+            }
+            if(!options.skipRemember) localStorage.setItem(SIDEBAR_SETTINGS_COLLAPSED_KEY, collapsed ? '1' : '0');
+        }
+
+        function toggleSidebarSettings() {
+            const group = document.getElementById('settings-fold-group');
+            setSidebarSettingsCollapsed(!group?.classList.contains('is-collapsed'));
+        }
+
+        function restoreSidebarSettings(id) {
+            const savedCollapsed = localStorage.getItem(SIDEBAR_SETTINGS_COLLAPSED_KEY) !== '0';
+            setSidebarSettingsCollapsed(savedCollapsed && id !== 'comfyui-settings', { skipRemember:true });
+        }
+
+        function resetStudioRootScroll() {
+            try {
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+            } catch(e) {}
+        }
+
+        function switchUI(el, id, options = {}) {
+            resetStudioRootScroll();
+            if(!PAGE_IDS.includes(id)) id = DEFAULT_PAGE_ID;
+            document.querySelectorAll('.nav-item,.side-pill').forEach(n => n.classList.remove('active'));
+            if(el) el.classList.add('active');
+            document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
+            const target = document.getElementById('frame-' + id);
+            // 显示骨架屏
+            const skeleton = document.getElementById('stageSkeleton');
+            const needsLoad = !target.src;
+            if (skeleton && needsLoad) {
+                skeleton.classList.add('is-visible');
+            }
+            target.classList.add('active');
+            if (needsLoad) {
+                target.addEventListener('load', function onLoad() {
+                    target.removeEventListener('load', onLoad);
+                    if (skeleton) skeleton.classList.remove('is-visible');
+                });
+            } else {
+                if (skeleton) skeleton.classList.remove('is-visible');
+            }
+            if (!target.src) target.src = target.dataset.src;
+            if(!options.skipRemember) localStorage.setItem(ACTIVE_PAGE_KEY, id);
+            // sync theme to newly activated iframe
+            syncThemeToFrame(target);
+            syncLanguageToFrame(target);
+            syncScaleToFrame(target);
+            if(id === 'comfyui-settings') {
+                setSidebarSettingsCollapsed(false, { skipRemember:true });
+            }
+            // 切换到画布时通知刷新工作流列表（防止在 comfyui-settings 修改后画布未及时更新）
+            if (id === 'canvas' && target.src) {
+                try { target.contentWindow?.postMessage({ type: 'canvas-focus' }, '*'); } catch(e) {}
+            }
+            // 切换到首页时刷新最近项目列表
+            if (id === 'home' && target.src) {
+                try { target.contentWindow?.postMessage({ type: 'canvas-focus' }, '*'); } catch(e) {}
+            }
+            resetStudioRootScroll();
+        }
+
+        function forwardStudioApiChange(data) {
+            if(!data || !['providers-changed','workflows-changed','comfy-instances-changed'].includes(data.type)) return;
+            document.querySelectorAll('iframe').forEach(iframe => {
+                try {
+                    if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(data, '*');
+                } catch(e) {}
+            });
+        }
+
+        window.addEventListener('message', event => {
+            if (event.origin && event.origin !== location.origin) return;
+            // 处理子页面（如 home.html）的导航请求
+            if (event.data && event.data.type === 'navigate' && event.data.route) {
+                const route = event.data.route;
+                if (PAGE_IDS.includes(route)) {
+                    const trigger = document.querySelector(`[onclick*="'${route}'"],[onclick*='"${route}"']`);
+                    switchUI(trigger, route);
+                    // 如果携带了 canvasId，在导航完成后转发给目标 iframe
+                    if (event.data.canvasId) {
+                        const targetFrame = document.getElementById('frame-' + route);
+                        if (targetFrame && targetFrame.contentWindow) {
+                            setTimeout(() => {
+                                try { targetFrame.contentWindow.postMessage({ type: 'open-canvas', canvasId: event.data.canvasId }, '*'); } catch(e) {}
+                            }, 300);
+                        }
+                    }
+                }
+                return;
+            }
+            forwardStudioApiChange(event.data);
+        });
+
+        try {
+            const studioApiChannel = new BroadcastChannel('studio-api');
+            studioApiChannel.onmessage = event => forwardStudioApiChange(event.data);
+        } catch(e) {}
+
+        function restoreActivePage() {
+            restoreSidebarPinned();
+            const id = PAGE_IDS.includes(localStorage.getItem(ACTIVE_PAGE_KEY)) ? localStorage.getItem(ACTIVE_PAGE_KEY) : DEFAULT_PAGE_ID;
+            restoreSidebarSettings(id);
+            const trigger = document.querySelector(`[onclick*="'${id}'"],[onclick*='"${id}"']`);
+            switchUI(trigger, id, { skipRemember:true });
+            document.documentElement.classList.remove('studio-route-booting');
+        }
+        document.addEventListener('DOMContentLoaded', restoreActivePage, { once:true });
+
+        async function syncStatus() {
+            try {
+                const res = await fetch(`/api/queue_status?client_id=${CID}`);
+                const data = await res.json();
+                const monitor = document.getElementById('nano-monitor');
+                const queueVal = document.getElementById('queue-val');
+                const logoDot = document.getElementById('logo-dot');
+                const total = data.total || 0;
+                const pos = data.position || 0;
+                if (pos > 0) {
+                    monitor?.classList.add('is-busy');
+                    if (queueVal) queueVal.innerText = `${pos}/${total}`;
+                    if (logoDot) logoDot.style.backgroundColor = '#3b82f6';
+                } else {
+                    monitor?.classList.remove('is-busy');
+                    if (queueVal) queueVal.innerText = total > 0 ? total : '0';
+                    if (logoDot) logoDot.style.backgroundColor = 'var(--text)';
+                }
+            } catch (e) { }
+        }
+
+        const host = window.location.host;
+        if (host) {
+            const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+            const ws = new WebSocket(`${protocol}://${host}/ws/stats?client_id=${CID}`);
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'stats') {
+                    const ov = document.getElementById('online-val');
+                    if (ov) ov.innerText = data.online_count;
+                } else if (data.type === 'cloud_status') {
+                    const iframe = document.querySelector('iframe.active');
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage(data, '*');
+                    }
+                } else if (data.type === 'canvas_updated') {
+                    const iframe = document.querySelector('iframe.active');
+                    if (iframe && iframe.contentWindow) {
+                        iframe.contentWindow.postMessage(data, '*');
+                    }
+                } else if (data.type === 'asset_library_updated') {
+                    document.querySelectorAll('iframe').forEach(iframe => {
+                        if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage(data, '*');
+                    });
+                }
+            };
+            setInterval(syncStatus, 2000);
+        }
+
+        // --- 夜间模式 ---
+
+        function syncThemeToFrame(iframe) {
+            const theme = (window.StudioTheme || {get: () => 'light'}).get();
+            try {
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({ type: 'studio-theme', theme }, '*');
+                }
+            } catch (e) {}
+        }
+
+        function syncScaleToFrame(iframe) {
+            const mode = (window.StudioScale || {getMode: () => 'auto'}).getMode();
+            const cssScale = Number(getComputedStyle(document.documentElement).getPropertyValue('--studio-ui-scale'));
+            const scale = Number.isFinite(cssScale) && cssScale > 0 ? cssScale : ((window.StudioScale || {getScale: () => 1}).getScale());
+            try {
+                if (iframe && iframe.contentWindow) {
+                    iframe.contentWindow.postMessage({ type: 'studio-ui-scale', mode, scale }, '*');
+                }
+            } catch (e) {}
+        }
+
+        function pauseScaleInFrame(frame, duration = 650) {
+            try {
+                frame?.contentWindow?.postMessage({ type:'studio-ui-scale-pause', duration }, '*');
+            } catch(e) {}
+        }
+
+        function pauseScaleInFrames(duration = 650) {
+            document.querySelectorAll('iframe').forEach(frame => pauseScaleInFrame(frame, duration));
+        }
+
+        function broadcastScaleToFrames() {
+            document.querySelectorAll('iframe').forEach(frame => syncScaleToFrame(frame));
+        }
+
+        function broadcastTheme(theme) {
+            if (window.StudioTheme) {
+                window.StudioTheme.set(theme);
+            }
+            document.querySelectorAll('iframe').forEach(f => syncThemeToFrame(f));
+            updateThemeIcon(theme);
+        }
+
+        function updateThemeIcon(theme) {
+            const moon = document.getElementById('icon-moon');
+            const sun = document.getElementById('icon-sun');
+            const dark = theme === 'dark';
+            if (dark) {
+                moon.style.display = 'none';
+                sun.style.display = 'block';
+            } else {
+                moon.style.display = 'block';
+                sun.style.display = 'none';
+            }
+            // 标签随当前主题切换：暗色时提示切到白天，亮色时提示切到黑夜
+            const label = document.querySelector('#theme-toggle-btn .side-pill-text');
+            if (label) {
+                const key = dark ? 'common.lightMode' : 'common.darkMode';
+                label.dataset.i18n = key;
+                if (window.StudioI18n) label.textContent = window.StudioI18n.t(key);
+            }
+        }
+
+        function toggleTheme() {
+            const current = window.StudioTheme ? window.StudioTheme.get() : 'light';
+            broadcastTheme(current === 'dark' ? 'light' : 'dark');
+        }
+
+        function toggleLanguage() {
+            if(!window.StudioI18n) return;
+            window.StudioI18n.toggle();
+            document.querySelectorAll('iframe').forEach(frame => syncLanguageToFrame(frame));
+            updateProjectUpdateTitle();
+            refreshUpdateButtonText();
+            refreshProjectUpdateModalText();
+        }
+
+        function syncLanguageToFrame(frame) {
+            if(!window.StudioI18n) return;
+            try {
+                frame.contentWindow?.postMessage({ type:'studio-lang', lang:window.StudioI18n.lang() }, '*');
+            } catch(e) {}
+        }
+
+        function broadcastLanguage() {
+            document.querySelectorAll('iframe').forEach(frame => {
+                try {
+                    frame.contentWindow?.postMessage({ type:'studio-lang', lang:window.StudioI18n.lang() }, '*');
+                } catch(e) {}
+            });
+        }
+
+        // listen for theme changes triggered by theme.js
+        window.addEventListener('studio-theme-change', (e) => {
+            updateThemeIcon(e.detail.theme);
+        });
+
+        window.addEventListener('studio-ui-scale-change', () => {
+            broadcastScaleToFrames();
+        });
+
+        // init icon state on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const theme = window.StudioTheme ? window.StudioTheme.get() : 'light';
+            updateThemeIcon(theme);
+            if(window.StudioI18n) window.StudioI18n.apply();
+            broadcastLanguage();
+            const sidebar = document.getElementById('studioSidebar');
+            if(sidebar) {
+                sidebar.addEventListener('mouseenter', () => pauseScaleInFrames());
+                sidebar.addEventListener('mouseleave', () => pauseScaleInFrames());
+            }
+            checkForUpdates();
+        });
+
+        // sync theme when iframe loads
+        document.querySelectorAll('iframe').forEach(f => {
+            f.addEventListener('load', () => {
+                syncThemeToFrame(f);
+                syncLanguageToFrame(f);
+                syncScaleToFrame(f);
+            });
+        });
+
+        function openProjectPage() {
+            window.open(appInfo.repo_url || PROJECT_URL, '_blank', 'noopener');
+        }
+
+        function versionParts(value) {
+            return String(value || '').match(/\d+/g)?.map(Number) || [];
+        }
+
+        function compareVersions(a, b) {
+            const aa = versionParts(a);
+            const bb = versionParts(b);
+            const len = Math.max(aa.length, bb.length);
+            for(let i = 0; i < len; i++){
+                const diff = (aa[i] || 0) - (bb[i] || 0);
+                if(diff) return diff;
+            }
+            return String(a || '').trim() === String(b || '').trim() ? 0 : 1;
+        }
+
+        function compactVersion(value) {
+            const text = String(value || '').trim();
+            const parts = text.match(/\d+/g) || [];
+            if(parts.length >= 3) return `${parts[1]}.${parts[2]}`;
+            return text.replace(/^v/i, '') || '-';
+        }
+
+        function versionLabel(value, mode = 'full') {
+            const text = String(value || '').trim();
+            if(!text) return 'v-';
+            return mode === 'compact' ? `v${compactVersion(text)}` : `v${text.replace(/^v/i, '')}`;
+        }
+
+        function setProjectVersionBadge(version) {
+            const logoVersion = document.querySelector('.logo-version');
+            const full = versionLabel(version);
+            if(logoVersion) logoVersion.textContent = full;
+            const versionDisplay = document.getElementById('versionDisplay');
+            if(versionDisplay) {
+                versionDisplay.title = window.StudioI18n?.lang?.() === 'en'
+                    ? `Current version: ${full}`
+                    : `当前版本：${full}`;
+            }
+            // 更新 project-version-badge 显示版本号
+            const badge = document.getElementById('project-version-badge');
+            if(badge && version) {
+                badge.textContent = full;
+            }
+        }
+
+        function refreshUpdateButtonText() {
+            const btn = document.getElementById('update-now-btn');
+            const text = document.getElementById('update-now-text');
+            if(!btn || !text || !btn.classList.contains('show')) return;
+            const remoteVersion = btn.dataset.remoteVersion || '';
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            text.removeAttribute('data-i18n');
+            if(remoteVersion) {
+                const prefix = isEn ? 'Update to' : '更新到';
+                text.replaceChildren();
+                const prefixSpan = document.createElement('span');
+                prefixSpan.className = 'update-action-prefix';
+                prefixSpan.textContent = `${prefix} `;
+                const compactSpan = document.createElement('span');
+                compactSpan.className = 'update-version-compact';
+                compactSpan.textContent = versionLabel(remoteVersion, 'compact');
+                const fullSpan = document.createElement('span');
+                fullSpan.className = 'update-version-full';
+                fullSpan.textContent = versionLabel(remoteVersion);
+                text.append(prefixSpan, compactSpan, fullSpan);
+                btn.setAttribute('aria-label', `${prefix} ${versionLabel(remoteVersion)}`);
+            } else {
+                text.textContent = isEn ? 'Update' : '一键更新';
+                btn.setAttribute('aria-label', text.textContent);
+            }
+        }
+
+        function updateProjectUpdateTitle() {
+            const updateBtn = document.getElementById('update-now-btn');
+            const badge = document.getElementById('project-version-badge');
+            const localVer = updateBtn?.dataset.localVersion || appInfo.version || '';
+            const remoteVer = updateBtn?.dataset.remoteVersion || '';
+            setProjectVersionBadge(localVer);
+            if(!updateBtn?.classList.contains('show')) return;
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            updateBtn.title = remoteVer
+                ? (isEn ? `Update to ${versionLabel(remoteVer)}` : `更新到 ${versionLabel(remoteVer)}`)
+                : (isEn ? 'Update main.py and static files from GitHub' : '从 GitHub 更新 main.py 和 static 文件');
+            refreshUpdateButtonText();
+        }
+
+        function showUpdateNotice(localVersion, remoteVersion) {
+            const badge = document.getElementById('project-version-badge');
+            const updateBtn = document.getElementById('update-now-btn');
+            if(!updateBtn) return;
+            updateBtn.classList.add('show');
+            updateBtn.dataset.localVersion = localVersion || '';
+            updateBtn.dataset.remoteVersion = remoteVersion || '';
+            if(badge) {
+                badge.classList.add('has-update');
+                badge.dataset.localVersion = localVersion || '';
+                badge.dataset.remoteVersion = remoteVersion || '';
+            }
+            updateProjectUpdateTitle();
+        }
+
+        function setProjectUpdateNotes(notes) {
+            projectUpdateNotes = notes && typeof notes === 'object' ? notes : null;
+            renderProjectUpdateNotes();
+        }
+
+        function renderProjectUpdateNotes() {
+            const box = document.getElementById('project-update-notes');
+            if(!box) return;
+            const titleEl = document.getElementById('project-update-notes-title');
+            const versionEl = document.getElementById('project-update-notes-version');
+            const list = document.getElementById('project-update-notes-list');
+            const empty = document.getElementById('project-update-notes-empty');
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            const notes = projectUpdateNotes || {};
+            const items = Array.isArray(notes.items) ? notes.items.filter(Boolean) : [];
+            if(titleEl) titleEl.textContent = isEn ? 'What changed' : '本次更新内容';
+            if(versionEl) versionEl.textContent = notes.version ? versionLabel(notes.version) : '';
+            if(list) {
+                list.replaceChildren();
+                items.slice(0, 8).forEach(item => {
+                    const text = typeof item === 'string' ? item : item.text;
+                    if(!text) return;
+                    const li = document.createElement('li');
+                    li.textContent = String(text);
+                    list.append(li);
+                });
+            }
+            const hasItems = !!(list && list.children.length);
+            if(empty) {
+                empty.hidden = hasItems;
+                empty.textContent = isEn ? 'No update notes were found for this version.' : '暂未获取到这个版本的更新说明。';
+            }
+            box.hidden = !(notes.version || hasItems);
+        }
+
+        function describeNetworkError(err, isEn){
+            const msg = String(err?.message || err || '');
+            const isNetwork = (err instanceof TypeError) || /Failed to fetch|NetworkError|ERR_|timed? ?out|超时|无法连接|GitHub|HTTP 4|HTTP 5/i.test(msg);
+            if(isNetwork){
+                return isEn
+                    ? 'Cannot reach the selected update source. Check your network, proxy, or DNS, then try again.'
+                    : '无法连接当前选择的更新源。请检查网络、代理或 DNS 后重试。';
+            }
+            return msg || (isEn ? 'Update failed' : '更新失败');
+        }
+
+        function updateUiText(zh, en) {
+            return window.StudioI18n?.lang?.() === 'en' ? en : zh;
+        }
+
+        function updateSourceLabel(source = updateSource) {
+            const labels = { github: 'GitHub', gitee: 'Gitee', modelscope: 'ModelScope' };
+            return labels[source] || 'GitHub';
+        }
+
+        function setUpdateSource(source) {
+            const valid = ['github', 'gitee', 'modelscope'];
+            updateSource = valid.includes(source) ? source : 'github';
+            localStorage.setItem('studio_update_source', updateSource);
+            refreshProjectUpdateModalText();
+        }
+
+        function sourceConnectivityStats(source, results = []) {
+            const sourceItems = (results || []).filter(item => item.source === source);
+            const required = sourceItems.filter(item => item.required);
+            const okRequired = required.length ? required.every(item => item.ok) : false;
+            const okItems = sourceItems.filter(item => item.ok);
+            const avg = okItems.length
+                ? Math.round(okItems.reduce((sum, item) => sum + Number(item.elapsed_ms || 0), 0) / okItems.length)
+                : 999999;
+            return {source, ok:okRequired, avg, okItems:okItems.length, total:sourceItems.length};
+        }
+
+        function bestUpdateSourceFromConnectivity(data) {
+            const sources = data.sources || {};
+            // 优先选可用的源，ModelScope 优先（国内最快），其次 Gitee，最后 GitHub
+            if (sources.modelscope && sources.modelscope.ok) return 'modelscope';
+            if (sources.gitee && sources.gitee.ok) return 'gitee';
+            if (sources.github && sources.github.ok) return 'github';
+            return 'github';
+        }
+
+        function updateTargetLabel(name) {
+            const labels = {
+                'GitHub 更新列表': ['GitHub 更新列表', 'GitHub update API'],
+                'GitHub 版本文件': ['GitHub 版本文件', 'GitHub version file'],
+                'GitHub 主页': ['GitHub 主页', 'GitHub home page'],
+                'Gitee 更新列表': ['Gitee 更新列表', 'Gitee update API'],
+                'Gitee 版本文件': ['Gitee 版本文件', 'Gitee version file'],
+                'Gitee 主页': ['Gitee 主页', 'Gitee home page'],
+                'ModelScope 更新列表': ['ModelScope 更新列表', 'ModelScope update API'],
+                'ModelScope 版本文件': ['ModelScope 版本文件', 'ModelScope version file'],
+                'ModelScope 主页': ['ModelScope 主页', 'ModelScope home page'],
+                'Google 连通性': ['Google 连通性', 'Google connectivity'],
+            };
+            const item = labels[name] || [name, name];
+            return window.StudioI18n?.lang?.() === 'en' ? item[1] : item[0];
+        }
+
+        function updateStatusLabel(item) {
+            if(item.pending) return updateUiText('检测中...', 'Testing...');
+            if(item.ok) return `${updateUiText('正常', 'OK')} · ${item.elapsed_ms || 0}ms`;
+            if(item.timed_out) return updateUiText('失败 · 超时', 'Failed · timeout');
+            if(item.status) return `HTTP ${item.status}`;
+            return updateUiText('失败', 'Failed');
+        }
+
+        function setUpdateSummary(kind, title, text) {
+            const box = document.getElementById('project-update-summary');
+            const titleEl = document.getElementById('project-update-summary-title');
+            const textEl = document.getElementById('project-update-summary-text');
+            if(box) {
+                box.classList.remove('ok', 'warn', 'fail');
+                box.classList.add(kind || 'warn');
+            }
+            if(titleEl) titleEl.textContent = title;
+            if(textEl) textEl.textContent = text;
+        }
+
+        function updateConnectivityTargets() {
+            const sources = appInfo.sources || {};
+            const github = sources.github || {};
+            const gitee = sources.gitee || {};
+            const modelscope = sources.modelscope || {};
+            return [
+                { name:'ModelScope 更新列表', url:modelscope.tree_url || 'https://www.modelscope.cn/api/v1/studio/bllack/NOVAI-Canvas/repo?Revision=main&FilePath=/static/update-notes.json', source:'modelscope', required:true },
+                { name:'ModelScope 版本文件', url:modelscope.version_url || 'https://www.modelscope.cn/studios/bllack/NOVAI-Canvas/raw/main/VERSION', source:'modelscope', required:true },
+                { name:'ModelScope 主页', url:'https://modelscope.cn/studios/bllack/NOVAI-Canvas', source:'modelscope' },
+                { name:'Gitee 更新列表', url:gitee.tree_url || 'https://gitee.com/api/v5/repos/invaders/novai/git/trees/main?recursive=1', source:'gitee', required:true },
+                { name:'Gitee 版本文件', url:gitee.version_url || 'https://gitee.com/invaders/novai/raw/main/VERSION', source:'gitee', required:true },
+                { name:'Gitee 主页', url:'https://gitee.com/', source:'gitee' },
+                { name:'GitHub 更新列表', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/invaders-2/NOVAI/git/trees/main?recursive=1', source:'github', required:true },
+                { name:'GitHub 版本文件', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION', source:'github', required:true },
+                { name:'GitHub 主页', url:'https://github.com/', source:'github' },
+                { name:'Google 连通性', url:'https://www.google.com/generate_204', source:'reference' },
+            ];
+        }
+
+        function renderConnectivityList(results = []) {
+            const allItems = results.length ? results : updateConnectivityTargets().map(item => ({...item, pending:false, untouched:true}));
+            const renderInto = (list, source) => {
+                if(!list) return;
+                list.replaceChildren();
+                const items = allItems.filter(item => item.source === source || (source === 'github' && item.source === 'reference'));
+                items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = `connectivity-row ${item.pending ? 'pending' : item.untouched ? '' : item.ok ? 'ok' : 'fail'}`;
+                const indicator = document.createElement('span');
+                indicator.className = 'connectivity-indicator';
+                const meta = document.createElement('div');
+                const name = document.createElement('div');
+                name.className = 'connectivity-name';
+                name.textContent = updateTargetLabel(item.name);
+                const url = document.createElement('div');
+                url.className = 'connectivity-url';
+                url.textContent = item.url || '';
+                meta.append(name, url);
+                const status = document.createElement('div');
+                status.className = 'connectivity-status';
+                status.textContent = item.untouched ? updateUiText('待测试', 'Not tested') : updateStatusLabel(item);
+                row.append(indicator, meta, status);
+                if(item.error && !item.timed_out) {
+                    const error = document.createElement('div');
+                    error.className = 'connectivity-error';
+                    error.textContent = String(item.error).slice(0, 220);
+                    row.append(error);
+                }
+                list.append(row);
+            });
+            };
+            renderInto(document.querySelector('[data-connectivity-source="github"]'), 'github');
+            renderInto(document.querySelector('[data-connectivity-source="gitee"]'), 'gitee');
+            renderInto(document.querySelector('[data-connectivity-source="modelscope"]'), 'modelscope');
+        }
+
+        function refreshProjectUpdateModalText() {
+            const updateBtn = document.getElementById('update-now-btn');
+            const remoteVersion = updateBtn?.dataset.remoteVersion || '';
+            const localVersion = updateBtn?.dataset.localVersion || appInfo.version || '';
+            const sourceName = updateSourceLabel();
+            const title = remoteVersion
+                ? updateUiText(`更新到 ${versionLabel(remoteVersion)}`, `Update to ${versionLabel(remoteVersion)}`)
+                : updateUiText('一键更新', 'One-click update');
+            const titleEl = document.getElementById('project-update-title');
+            const copyEl = document.getElementById('project-update-copy');
+            const testText = document.getElementById('connectivity-test-text');
+            const cancelText = document.getElementById('project-update-cancel-text');
+            const confirmText = document.getElementById('project-update-confirm-text');
+            const closeBtn = document.querySelector('#project-update-modal .studio-modal-close');
+            if(titleEl) titleEl.textContent = title;
+            renderProjectUpdateNotes();
+            document.querySelectorAll('[data-update-source]').forEach(card => {
+                const source = card.dataset.updateSource || 'github';
+                const active = source === updateSource;
+                card.classList.toggle('active', active);
+                card.setAttribute('aria-pressed', active ? 'true' : 'false');
+                const badge = card.querySelector('.update-source-badge');
+                if(badge) {
+                    if(!updateConnectivityResult) {
+                        setSourceBadge(badge, '', updateUiText('待测试', 'Not tested'));
+                    } else {
+                        const stats = sourceConnectivityStats(source, updateConnectivityResult.results || []);
+                        setSourceBadge(badge, stats.ok ? 'ok' : 'bad',
+                            stats.ok ? updateUiText('可用', 'Available') : updateUiText('不可用', 'Unavailable'));
+                    }
+                }
+            });
+            if(copyEl) copyEl.textContent = updateUiText(
+                `将从 ${sourceName} 更新 main.py、VERSION 和 static 文件。更新前会自动备份，更新完成后后端会自动重启。当前 ${versionLabel(localVersion)}，最新 ${versionLabel(remoteVersion || localVersion)}。`,
+                `This updates main.py, VERSION, and static files from ${sourceName}. A backup is created first, then the backend restarts automatically. Current ${versionLabel(localVersion)}, latest ${versionLabel(remoteVersion || localVersion)}.`
+            );
+            if(testText) testText.textContent = updateConnectivityResult ? updateUiText('重新测试', 'Retest') : updateUiText('测试连通性', 'Test connectivity');
+            if(cancelText) cancelText.textContent = updateUiText('取消', 'Cancel');
+            if(confirmText && !projectUpdateRunning) confirmText.textContent = updateUiText('开始更新', 'Start update');
+            if(closeBtn) {
+                closeBtn.title = updateUiText('关闭', 'Close');
+                closeBtn.setAttribute('aria-label', closeBtn.title);
+            }
+            if(!updateConnectivityResult) {
+                setUpdateSummary(
+                    'warn',
+                    updateUiText('建议先测试连通性', 'Connectivity test recommended'),
+                    updateUiText(
+                        '测试会检测 GitHub / Gitee 连通性。',
+                        'The test checks GitHub / Gitee connectivity.'
+                    )
+                );
+            } else if(updateConnectivityResult.backend_missing) {
+                setUpdateSummary(
+                    'fail',
+                    updateUiText('需要重启后端', 'Backend restart required'),
+                    updateUiText(
+                        '当前页面已经更新，但后端仍是旧版本，所以找不到连通性测试接口。请重启服务后再试。',
+                        'The page is updated, but the backend is still the old version and cannot find the connectivity-test API. Restart the service and try again.'
+                    )
+                );
+            } else if((updateConnectivityResult.sources || {})[updateSource]?.ok || (updateSource === 'github' && updateConnectivityResult.ok)) {
+                const google = (updateConnectivityResult.results || []).find(item => item.name === 'Google 连通性');
+                const sourceResults = (updateConnectivityResult.results || []).filter(item => item.source === updateSource);
+                const fastest = sourceResults.filter(item => item.ok).sort((a, b) => (a.elapsed_ms || 999999) - (b.elapsed_ms || 999999))[0];
+                setUpdateSummary(
+                    google?.ok ? 'ok' : 'warn',
+                    updateUiText(`${sourceName} 下载源可用`, `${sourceName} source reachable`),
+                    fastest
+                        ? updateUiText(`${sourceName} 可访问，最快节点约 ${fastest.elapsed_ms || 0}ms，可以开始更新。`, `${sourceName} is reachable; fastest endpoint is about ${fastest.elapsed_ms || 0}ms.`)
+                        : updateUiText(`${sourceName} 更新节点可用，可以开始更新。`, `${sourceName} update endpoints are reachable.`)
+                );
+            } else {
+                setUpdateSummary(
+                    'fail',
+                    updateUiText(`${sourceName} 下载源不可用`, `${sourceName} source unreachable`),
+                    updateUiText(
+                        `当前网络无法访问 ${sourceName} 必需节点。请切换下载源，或检查代理、DNS 后重试。`,
+                        `This network cannot reach required ${sourceName} endpoints. Switch source, or check proxy/DNS and try again.`
+                    )
+                );
+            }
+            renderConnectivityList(updateConnectivityResult?.results || []);
+        }
+
+        function openProjectUpdateModal() {
+            const modal = document.getElementById('project-update-modal');
+            if(!modal) return;
+            updateConnectivityResult = null;
+            projectUpdateNotes = null;
+            refreshProjectUpdateModalText();
+            modal.hidden = false;
+            document.getElementById('connectivity-test-btn')?.focus?.();
+            // 显示更新说明区域，从 /api/changelog 自动获取
+            const notesBox = document.getElementById('project-update-notes');
+            if(notesBox) notesBox.hidden = false;
+            fetchChangelog();
+        }
+
+        async function fetchChangelog() {
+            try {
+                const res = await fetch('/api/changelog');
+                if(!res.ok) return;
+                const data = await res.json();
+                if(data && Array.isArray(data.items) && data.items.length > 0) {
+                    setProjectUpdateNotes(data);
+                }
+            } catch(e) { /* 静默失败，不影响使用 */ }
+        }
+
+        function closeProjectUpdateModal() {
+            // 更新进行中允许关闭：中止在途请求并恢复 UI，避免「卡在更新中、无法关闭」
+            if(projectUpdateRunning) {
+                try { projectUpdateAbort?.abort(); } catch(e) {}
+            }
+            const modal = document.getElementById('project-update-modal');
+            if(modal) modal.hidden = true;
+        }
+
+        document.getElementById('project-update-modal')?.addEventListener('click', event => {
+            if(event.target?.id === 'project-update-modal') closeProjectUpdateModal();
+        });
+
+        window.addEventListener('keydown', event => {
+            if(event.key === 'Escape') closeProjectUpdateModal();
+        });
+
+        async function runProjectUpdate() {
+            openProjectUpdateModal();
+        }
+
+        function computeConnectivitySources(results) {
+            const out = {};
+            for(const source of ['github', 'gitee']) {
+                const reqAll = (results || []).filter(it => it.source === source && it.required);
+                out[source] = {
+                    ok: reqAll.length > 0 && reqAll.every(it => it.ok),
+                    required: reqAll.map(it => it.name),
+                };
+            }
+            return out;
+        }
+
+        function setSourceBadge(badge, state, text) {
+            if(!badge) return;
+            badge.classList.remove('ok', 'bad');
+            if(state) badge.classList.add(state);
+            badge.textContent = text;
+        }
+
+        function renderSourceBadgesLive(results) {
+            document.querySelectorAll('[data-update-source]').forEach(card => {
+                const source = card.dataset.updateSource || 'github';
+                const badge = card.querySelector('.update-source-badge');
+                if(!badge) return;
+                const items = (results || []).filter(it => it.source === source);
+                if(!items.length) return;
+                const done = items.filter(it => !it.pending && !it.untouched);
+                if(done.length < items.length) {
+                    setSourceBadge(badge, '', updateUiText(`检测中 ${done.length}/${items.length}`, `${done.length}/${items.length}`));
+                    return;
+                }
+                const stats = sourceConnectivityStats(source, results);
+                setSourceBadge(badge, stats.ok ? 'ok' : 'bad',
+                    stats.ok ? updateUiText('可用', 'Available') : updateUiText('不可用', 'Unavailable'));
+            });
+        }
+
+        let connectivityTesting = false;
+        async function runUpdateConnectivityTest() {
+            if(connectivityTesting) return; // 防止重复点击导致状态错乱
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            const btn = document.getElementById('connectivity-test-btn');
+            const text = document.getElementById('connectivity-test-text');
+            connectivityTesting = true;
+            if(btn) btn.disabled = true;
+            if(text) text.textContent = isEn ? 'Testing...' : '检测中...';
+            updateConnectivityResult = null;
+
+            const targets = updateConnectivityTargets();
+            // 实时状态数组：先全部置为「检测中」，每条探测完成立即刷新对应行
+            const live = targets.map(item => ({...item, pending:true, untouched:false}));
+            let backendMissing = false;
+            const applyResult = (name, patch) => {
+                const i = live.findIndex(x => x.name === name);
+                if(i < 0) return;
+                live[i] = {...live[i], pending:false, untouched:false, ...patch};
+                renderConnectivityList(live);
+                renderSourceBadgesLive(live);
+            };
+
+            const probeOne = async (t) => {
+                // 客户端兜底超时：5s 探测 + 1s 网络余量，超时即报「超时」，不会永远卡在「检测中」
+                const ac = new AbortController();
+                const killer = setTimeout(() => ac.abort(), 6000);
+                try {
+                    const res = await fetch(`/api/update-connectivity/probe?name=${encodeURIComponent(t.name)}`, { cache:'no-store', signal:ac.signal });
+                    const data = await res.json().catch(() => ({}));
+                    // 旧后端没有单条探测接口 → 404 Not Found，标记后回退到整体接口
+                    if(res.status === 404 && (data.detail === 'Not Found' || data.detail === undefined)) {
+                        backendMissing = true;
+                        return;
+                    }
+                    if(res.ok) {
+                        applyResult(t.name, { ok:!!data.ok, status:data.status || 0, elapsed_ms:data.elapsed_ms || 0, error:data.error || '', timed_out:!!data.timed_out });
+                    } else {
+                        applyResult(t.name, { ok:false, error:data.detail || (isEn ? 'Failed' : '失败') });
+                    }
+                } catch(e) {
+                    if(e && e.name === 'AbortError') {
+                        applyResult(t.name, { ok:false, timed_out:true, error:isEn ? 'Timed out (over 5s)' : '连接超时（超过 5s）' });
+                    } else {
+                        applyResult(t.name, { ok:false, error:describeNetworkError(e, isEn) });
+                    }
+                } finally {
+                    clearTimeout(killer);
+                }
+            };
+
+            try {
+                setUpdateSummary('warn', isEn ? 'Testing connectivity' : '正在测试连通性', isEn ? 'Probing each endpoint — results stream in live.' : '正在逐条检测各节点，结果实时显示。');
+                renderConnectivityList(live);
+                renderSourceBadgesLive(live);
+                await Promise.all(targets.map(probeOne));
+
+                if(backendMissing) {
+                    // 兜底：尝试旧的整体接口
+                    try {
+                        const res = await fetch('/api/update-connectivity', { cache:'no-store' });
+                        const data = await res.json().catch(() => ({}));
+                        if(res.ok && Array.isArray(data.results)) {
+                            updateConnectivityResult = data;
+                            setUpdateSource(bestUpdateSourceFromConnectivity(data));
+                            return;
+                        }
+                    } catch(e) {}
+                    const message = isEn
+                        ? 'The backend has not loaded the new connectivity-test API yet. Restart the backend service, then test again.'
+                        : '后端还没有加载新的连通性测试接口。请重启服务后再测试。';
+                    updateConnectivityResult = {
+                        ok:false,
+                        backend_missing:true,
+                        results:targets.map(item => ({...item, ok:false, elapsed_ms:0, error:message })),
+                    };
+                    return;
+                }
+
+                const results = live.map(({pending, untouched, ...rest}) => rest);
+                const sources = computeConnectivitySources(results);
+                updateConnectivityResult = { results, sources, ok:sources.github.ok };
+                setUpdateSource(bestUpdateSourceFromConnectivity(updateConnectivityResult));
+            } finally {
+                connectivityTesting = false;
+                if(btn) btn.disabled = false;
+                refreshProjectUpdateModalText();
+            }
+        }
+
+        async function confirmProjectUpdate() {
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            const btn = document.getElementById('update-now-btn');
+            const text = document.getElementById('update-now-text');
+            const confirmBtn = document.getElementById('project-update-confirm-btn');
+            const confirmText = document.getElementById('project-update-confirm-text');
+            const testBtn = document.getElementById('connectivity-test-btn');
+            const oldText = text?.textContent || '';
+            projectUpdateRunning = true;
+            if(btn) btn.disabled = true;
+            if(confirmBtn) confirmBtn.disabled = true;
+            if(testBtn) testBtn.disabled = true;
+            if(text) text.textContent = isEn ? 'Updating...' : '更新中...';
+            if(confirmText) confirmText.textContent = isEn ? 'Updating...' : '更新中...';
+            const sourceName = updateSourceLabel();
+            setUpdateSummary('warn', isEn ? 'Updating' : '正在更新', isEn ? `Downloading files from ${sourceName} and creating a local backup.` : `正在从 ${sourceName} 下载文件，并创建本地备份。`);
+            // 客户端兜底超时：即使后端异常挂起，UI 也能恢复，不会永远停在「更新中」
+            const ac = new AbortController();
+            const killer = setTimeout(() => ac.abort(), 300000);
+            try {
+                const res = await fetch('/api/update-from-github', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({ auto_restart:true, restart_delay:3, source:updateSource, fallback:true }),
+                    signal:ac.signal
+                });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '更新失败'));
+                if(data.update_notes) setProjectUpdateNotes(data.update_notes);
+                const restarting = data.restart_scheduled;
+                const usedLabel = data.source_label || 'GitHub';
+                const fallbackNote = data.fallback_used
+                    ? (isEn
+                        ? ` (${sourceName} was unreachable, so it fell back to ${usedLabel})`
+                        : `（${sourceName} 不可用，已自动兜底切换到 ${usedLabel}）`)
+                    : '';
+                setUpdateSummary(
+                    'ok',
+                    isEn ? 'Update complete' : '更新完成',
+                    (restarting
+                        ? (isEn
+                            ? `Updated ${data.count || 0} files. The backend will restart in about 3 seconds; this page will reload when it returns.`
+                            : `已更新 ${data.count || 0} 个文件。后端将在约 3 秒后自动重启，本页面会在恢复后自动刷新。`)
+                        : (isEn
+                            ? `Updated ${data.count || 0} files. Please restart the backend, then refresh this page.`
+                            : `已更新 ${data.count || 0} 个文件。请重启后端，然后刷新页面。`)) + fallbackNote
+                );
+                document.getElementById('project-version-badge')?.classList.remove('has-update');
+                btn?.classList.remove('show');
+                setProjectVersionBadge(data.version || btn?.dataset.remoteVersion || appInfo.version);
+                if(restarting) waitForBackendAndReload();
+            } catch(e) {
+                const msg = (e && e.name === 'AbortError')
+                    ? (isEn ? 'Update timed out. Switch source or check your network, then retry.' : '更新超时。请切换下载源或检查网络后重试。')
+                    : describeNetworkError(e, isEn);
+                setUpdateSummary('fail', isEn ? 'Update failed' : '更新失败', msg);
+            } finally {
+                clearTimeout(killer);
+                projectUpdateRunning = false;
+                if(btn) btn.disabled = false;
+                if(confirmBtn) confirmBtn.disabled = false;
+                if(testBtn) testBtn.disabled = false;
+                if(text) text.textContent = oldText || (isEn ? 'Update' : '一键更新');
+                if(confirmText) confirmText.textContent = isEn ? 'Start update' : '开始更新';
+                refreshUpdateButtonText();
+            }
+        }
+        async function waitForBackendAndReload() {
+            const deadline = Date.now() + 90 * 1000;
+            await new Promise(r => setTimeout(r, 4000));
+            while(Date.now() < deadline) {
+                try {
+                    const r = await fetch('/api/app-info', { cache:'no-store' });
+                    if(r.ok) { location.reload(); return; }
+                } catch {}
+                await new Promise(r => setTimeout(r, 1500));
+            }
+        }
+        async function rollbackProjectUpdate() {
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            try {
+                const list = await fetch('/api/update-backups').then(r => r.json());
+                const backups = list.backups || [];
+                if(!backups.length){ alert(isEn ? 'No backups available.' : '没有可用的备份'); return; }
+                const lines = backups.slice(0, 8).map((b, i) => {
+                    const d = new Date((b.created_at || 0) * 1000);
+                    const ts = d.toLocaleString();
+                    return `${i + 1}. ${b.name}  (${b.file_count} files, ${ts})`;
+                });
+                const promptMsg = (isEn
+                    ? 'Select a backup to restore (enter the number):\n'
+                    : '选择要还原的备份（输入序号）：\n') + lines.join('\n');
+                const answer = prompt(promptMsg, '1');
+                const idx = Number(answer) - 1;
+                if(!(idx >= 0 && idx < backups.length)) return;
+                const target = backups[idx];
+                if(!confirm(isEn ? `Restore "${target.name}"? Backend will restart.` : `要还原 "${target.name}" 吗？后端会自动重启。`)) return;
+                const res = await fetch('/api/update-rollback', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({ name:target.name, auto_restart:true, restart_delay:3 })
+                });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data.detail || (isEn ? 'Rollback failed' : '回滚失败'));
+                alert(isEn
+                    ? `Restored ${data.count || 0} files. Backend is restarting.`
+                    : `已还原 ${data.count || 0} 个文件。后端正在重启。`);
+                if(data.restart_scheduled) waitForBackendAndReload();
+            } catch(e) {
+                alert((isEn ? 'Rollback failed: ' : '回滚失败：') + describeNetworkError(e, isEn));
+            }
+        }
+        window.rollbackProjectUpdate = rollbackProjectUpdate;
+
+        async function checkForUpdates(manual = false) {
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            const checkBtn = document.getElementById('versionCheckBtn');
+            if(manual && checkBtn) checkBtn.classList.add('checking');
+            try {
+                const info = await fetch('/api/app-info', { cache:'no-store' }).then(r => r.json()).catch(() => ({}));
+                appInfo = {...appInfo, ...info};
+                let current = String(appInfo.version || '').trim();
+                setProjectVersionBadge(current);
+                let best = null;
+                let reachable = false;
+                let serverChecked = false;
+                // 优先走后端检测：服务端用系统代理检测 GitHub，避免浏览器跨域/被墙
+                try {
+                    const r = await fetch('/api/check-update', { cache:'no-store' });
+                    if(r.ok) {
+                        const d = await r.json();
+                        serverChecked = true;
+                        reachable = !!d.reachable;
+                        if(d.current) { current = String(d.current).trim(); setProjectVersionBadge(current); }
+                        if(d.latest?.version) best = {source:d.latest.source, version:d.latest.version, update_notes:d.latest.update_notes || d.update_notes || null};
+                    }
+                } catch(e) {}
+                // 兜底：后端检测失败或无结果时，浏览器直接拉取 GitHub/Gitee VERSION
+                if(!serverChecked || !best) {
+                    const sources = appInfo.sources || {};
+                    const candidates = [
+                        {source:'github', url:sources.github?.version_url || appInfo.version_url || ''},
+                        {source:'gitee', url:sources.gitee?.version_url || ''},
+                    ].filter(item => item.url);
+                    for(const item of candidates) {
+                        try {
+                            const remoteText = await fetch(`${item.url}${item.url.includes('?') ? '&' : '?'}t=${Date.now()}`, { cache:'no-store' }).then(r => r.ok ? r.text() : '');
+                            const remote = String(remoteText || '').trim().split(/\r?\n/)[0].trim();
+                            if(remote){ reachable = true; if(!best || compareVersions(remote, best.version) > 0) best = {source:item.source, version:remote}; }
+                        } catch(e) {}
+                    }
+                }
+                const hasUpdate = !!(current && best?.version && compareVersions(best.version, current) > 0);
+                if(hasUpdate) {
+                    setProjectUpdateNotes(best.update_notes || null);
+                    showUpdateNotice(current, best.version);
+                }
+                if(manual) {
+                    if(hasUpdate) {
+                        openProjectUpdateModal();
+                    } else if(reachable) {
+                        alert(isEn ? `You are on the latest version (${versionLabel(current)}).` : `已是最新版本（${versionLabel(current)}）。`);
+                    } else {
+                        alert(isEn ? 'Could not reach GitHub. Check your network/proxy and try again.' : '无法连接 GitHub 更新源，请检查网络或代理后重试。');
+                    }
+                }
+            } catch(e) {
+                // 离线包里没有网络时保持安静，不影响本地使用。
+                if(manual) alert(isEn ? 'Update check failed.' : '检测更新失败。');
+            } finally {
+                if(checkBtn) checkBtn.classList.remove('checking');
+            }
+        }
+    </script>
+    <script>
+        // Mac Electron: 隐藏自定义按钮（原生红绿灯已生效）
+        (function() {
+            if (window.novaiDesktop && window.novaiDesktop.platform === 'darwin') {
+                var tb = document.querySelector('.titlebar');
+                if (tb) tb.style.display = 'none';
+            }
+        })();
+        function titlebarMinimize() { try { window.pywebview.api.minimize(); } catch(e) {} }
+        function titlebarMaximize() { try { window.pywebview.api.maximize(); } catch(e) {} }
+        function titlebarClose()   { try { window.pywebview.api.close(); } catch(e) {} }
+    </script>
+    <script>
+        document.addEventListener('gesturestart', e => { e.preventDefault(); }, { capture: true });
+        document.addEventListener('gesturechange', e => { e.preventDefault(); }, { capture: true });
+        document.addEventListener('gestureend', e => { e.preventDefault(); }, { capture: true });
+    </script>
+</body>
+
+</html>

@@ -235,6 +235,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str = None):
 
 CLIENT_ID = str(uuid.uuid4())
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 优先使用环境变量（桌面打包场景），否则按 __file__ 定位
+BASE_DIR = os.environ.get("NOVAI_APP_DIR") or os.path.dirname(os.path.abspath(__file__))
+# 用户数据目录独立于安装目录
+_DATA_DIR_OVERRIDE = os.environ.get("NOVAI_DATA_DIR", "")
 WORKFLOW_DIR = os.path.join(BASE_DIR, "workflows")
 WORKFLOW_PATH = os.path.join(WORKFLOW_DIR, "Z-Image.json")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -242,15 +246,21 @@ STATIC_RUNNINGHUB_DIR = os.path.join(STATIC_DIR, "runninghub")
 STATIC_RUNNINGHUB_THUMBNAIL_DIR = os.path.join(STATIC_RUNNINGHUB_DIR, "thumbnails")
 STATIC_RUNNINGHUB_API_PROVIDERS_FILE = os.path.join(STATIC_RUNNINGHUB_DIR, "api_providers.json")
 STATIC_RUNNINGHUB_MODEL_REGISTRY_FILE = os.path.join(STATIC_RUNNINGHUB_DIR, "models_registry.json")
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
-ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+# 用户数据目录：桌面打包时独立于安装目录（%APPDATA%/NOVAI），否则在 BASE_DIR 下
+if _DATA_DIR_OVERRIDE:
+    _DATA_ROOT = _DATA_DIR_OVERRIDE
+else:
+    _DATA_ROOT = BASE_DIR
+
+OUTPUT_DIR = os.path.join(_DATA_ROOT, "output")
+ASSETS_DIR = os.path.join(_DATA_ROOT, "assets")
 OUTPUT_INPUT_DIR = os.path.join(ASSETS_DIR, "input")
 OUTPUT_OUTPUT_DIR = os.path.join(ASSETS_DIR, "output")
 ASSET_LIBRARY_DIR = os.path.join(ASSETS_DIR, "library")
 LOCAL_UPLOAD_DIR = os.path.join(ASSETS_DIR, "uploads")
-HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
-API_ENV_FILE = os.path.join(BASE_DIR, "API", ".env")
-DATA_DIR = os.path.join(BASE_DIR, "data")
+HISTORY_FILE = os.path.join(_DATA_ROOT, "history.json")
+API_ENV_FILE = os.path.join(_DATA_ROOT, "API", ".env")
+DATA_DIR = os.path.join(_DATA_ROOT, "data")
 CONVERSATION_DIR = os.path.join(DATA_DIR, "conversations")
 CANVAS_DIR = os.path.join(DATA_DIR, "canvases")
 MEDIA_PREVIEW_DIR = os.path.join(DATA_DIR, "media_previews")
@@ -2098,11 +2108,36 @@ def schedule_self_restart(delay_seconds: int = 3) -> bool:
     pid = os.getpid()
     try:
         if os.name == "nt":
+            # 优先使用桌面版 exe 启动（PyInstaller 打包场景）
+            desktop_exe = os.path.join(BASE_DIR, "NOVAI.exe")
+            has_desktop_exe = os.path.isfile(desktop_exe)
+
             launcher = os.path.join(BASE_DIR, "启动服务.bat")
             if not os.path.exists(launcher):
                 launcher = os.path.join(BASE_DIR, "start.bat")
             bat_path = os.path.join(BASE_DIR, "_self_restart.bat")
             log_path = os.path.join(BASE_DIR, "_self_restart.log")
+
+            if has_desktop_exe:
+                launch_line = (
+                    f"echo [%date% %time%] starting NOVAI.exe >> \"%LOG_FILE%\"\r\n"
+                    f"start \"NOVAI\" /D \"%APP_DIR%\" \"\"%APP_DIR%\\NOVAI.exe\"\"\r\n"
+                )
+            else:
+                launch_line = (
+                    f"if exist \"%LAUNCHER%\" (\r\n"
+                    f"  echo [%date% %time%] starting launcher: %LAUNCHER% >> \"%LOG_FILE%\"\r\n"
+                    f"  start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k call \"%LAUNCHER%\"\r\n"
+                    f") else (\r\n"
+                    f"  echo [%date% %time%] launcher missing, fallback to python main.py >> \"%LOG_FILE%\"\r\n"
+                    f"  if exist \"%APP_DIR%\\python\\python.exe\" (\r\n"
+                    f"    start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k \"\"%APP_DIR%\\python\\python.exe\" main.py\"\r\n"
+                    f"  ) else (\r\n"
+                    f"    start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k python main.py\r\n"
+                    f"  )\r\n"
+                    f")\r\n"
+                )
+
             script = (
                 "@echo off\r\n"
                 "chcp 65001 >nul\r\n"
@@ -2116,17 +2151,7 @@ def schedule_self_restart(delay_seconds: int = 3) -> bool:
                 f"taskkill /F /PID {pid} >nul 2>&1\r\n"
                 "timeout /t 2 /nobreak >nul\r\n"
                 "cd /d \"%APP_DIR%\"\r\n"
-                "if exist \"%LAUNCHER%\" (\r\n"
-                "  echo [%date% %time%] starting launcher: %LAUNCHER% >> \"%LOG_FILE%\"\r\n"
-                "  start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k call \"%LAUNCHER%\"\r\n"
-                ") else (\r\n"
-                "  echo [%date% %time%] launcher missing, fallback to python main.py >> \"%LOG_FILE%\"\r\n"
-                "  if exist \"%APP_DIR%\\python\\python.exe\" (\r\n"
-                "    start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k \"\"%APP_DIR%\\python\\python.exe\" main.py\"\r\n"
-                "  ) else (\r\n"
-                "    start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k python main.py\r\n"
-                "  )\r\n"
-                ")\r\n"
+                + launch_line +
                 "del \"%~f0\"\r\n"
             )
             with open(bat_path, "w", encoding="utf-8") as f:

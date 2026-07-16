@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="/static/images/logo.png" type="image/png">
+    <title>在线生图</title>
+    <script>
+        (function(){
+            try {
+                var theme = localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light';
+                if(theme === 'dark') {
+                    document.documentElement.classList.add('studio-theme-dark');
+                    document.documentElement.classList.add('theme-dark');
+                }
+            } catch(e) {}
+        })();
+    </script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.81.1783947775"></script>
+    <script src="/static/vendor/js/lucide.js?v=1.0.81.1783947775"></script>
+    <script src="/static/js/theme.js?v=1.0.81.1783947771"></script>
+    <script src="/static/js/i18n.js?v=1.0.81.1783947769"></script>
+    <script src="/static/js/image-preview.js?v=1.0.81.1783966785"></script>
+    <script src="/static/js/history-bulk-manager.js?v=1.0.81.1783947769"></script>
+    <style>
+        @import url('/static/vendor/css/fonts.css?v=1.0.81.1783947773');
+        :root { --accent:#1c1c1e; --bg:#f9fafb; --card:#fff; --easing:cubic-bezier(0.4,0,0.2,1); }
+        body { background:var(--bg); font-family:'Inter',-apple-system,sans-serif; color:var(--accent); -webkit-font-smoothing:antialiased; }
+        .container-box { max-width:1280px; margin:0 auto; padding:0 40px; margin-top:50px; }
+        .nano-input { background:var(--card); border:1px solid #ececee; transition:all .3s var(--easing); }
+        .nano-input:focus { border-color:#000; box-shadow:0 0 0 1px #000; }
+        .upload-item { background:var(--card); border:1px dashed #e5e5e5; transition:all .4s var(--easing); position:relative; overflow:hidden; }
+        .upload-item:hover,.upload-item.drag-over { border-color:#000; transform:translateY(-2px); }
+        .preview-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; animation:fadeIn .5s var(--easing); }
+        .glass-btn { background:#1c1c1e; transition:all .3s var(--easing); }
+        .glass-btn:hover { background:#000; transform:translateY(-1px); box-shadow:0 12px 24px rgba(0,0,0,.1); }
+        .result-frame { background:#fff; border-radius:32px; border:1px solid #e5e5e5; box-shadow:0 2px 15px rgba(0,0,0,.02); }
+        .tool-panel { background:#fff; border:1px solid #ececee; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .model-pill { background:#f5f5f7; border:1px solid #dcdcde; border-radius:999px; padding:3px; display:grid; grid-template-columns:1fr 1fr; gap:2px; }
+        .model-option { border-radius:999px; height:34px; display:flex; align-items:center; justify-content:center; gap:6px; color:#58585a; font-size:10px; font-weight:600; letter-spacing:.02em; transition:all .25s var(--easing); }
+        .model-option.active { background:#fff; color:#1c1c1e; box-shadow:0 1px 3px rgba(28,28,28,.08); }
+        .control-panel { background:#fff; border:1px solid #ececee; border-radius:24px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .control-label { display:flex; align-items:center; gap:6px; color:#848488; font-size:10px; font-weight:600; letter-spacing:.04em; }
+        .size-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; align-items:start; }
+        .size-field { min-width:0; display:flex; flex-direction:column; gap:6px; }
+        .size-select,.size-custom { width:100%; min-width:0; max-width:100%; height:34px; border:1px solid #dcdcde; border-radius:14px; background:#f5f5f7; color:#1c1c1e; outline:none; padding:0 10px; font-size:11px; font-weight:700; }
+        .size-select { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .size-select:disabled { opacity:.55; cursor:not-allowed; }
+        .size-custom { display:none; background:#fff; }
+        .size-field.custom .size-custom { display:block; }
+        .size-pair { display:none; grid-template-columns:1fr 1fr; gap:6px; }
+        .size-field.custom .size-pair { display:grid; }
+        .size-pair .size-custom { display:block; }
+        .size-pair.with-fit { grid-template-columns:1fr 1fr auto; align-items:center; }
+        .size-fit-btn { height:34px; border:1px solid #dcdcde; border-radius:14px; background:#fff; color:#1c1c1e; padding:0 10px; font-size:10px; font-weight:800; white-space:nowrap; }
+        .size-fit-btn:disabled { opacity:.45; cursor:not-allowed; }
+        .mode-badge { font-size:9px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:#1c1c1e; background:#f5f5f5; border:1px solid #e5e5e5; padding:2px 8px; border-radius:999px; }
+        .masonry-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:20px; }
+        @media (min-width:768px){ .masonry-grid{ grid-template-columns:repeat(4,1fr); } }
+        @media (max-width:640px){ .size-row{ grid-template-columns:1fr; } }
+        .masonry-item { aspect-ratio:1/1; border-radius:24px; overflow:hidden; background:#fff; border:1px solid #e5e5e5; transition:all .5s var(--easing); }
+        .masonry-item:hover { transform:translateY(-6px); box-shadow:0 20px 40px rgba(0,0,0,.08); }
+        .gallery-lightbox { background:rgba(255,255,255,.99); backdrop-filter:blur(33px) saturate(1.05); }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+    </style>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.81.1783947764">
+    <style>
+        html:not(.studio-theme-dark) body:not(.studio-theme-dark) #lightbox.gallery-lightbox {
+            background: rgba(255,255,255,.99) !important;
+            backdrop-filter: blur(33px) saturate(1.05) !important;
+            -webkit-backdrop-filter: blur(33px) saturate(1.05) !important;
+        }
+    </style>
+<style>
+
+/* === Marvis 视觉风格统一注入 === */
+:root {
+    --bg: #f5f5f7;
+    --sidebar-bg: rgba(245, 245, 247, 0.72);
+    --stage-bg: #ffffff;
+    --border: transparent;
+    --text: #1d1d1f;
+    --muted: #86868b;
+    --nav-hover-bg: rgba(0, 0, 0, 0.04);
+    --divider: rgba(0, 0, 0, 0.06);
+    --scrollbar: rgba(0, 0, 0, 0.12);
+    --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 20px;
+    --radius-xl: 28px;
+    --font-sans: 'SF Pro Display', 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', system-ui, sans-serif;
+    --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
+}
+
+html.theme-dark,
+html.studio-theme-dark,
+body.theme-dark,
+body.studio-theme-dark {
+    --bg: #0d0d0d;
+    --sidebar-bg: rgba(13,13,13,0.78);
+    --stage-bg: #161616;
+    --border: transparent;
+    --text: #f5f5f7;
+    --muted: #86868b;
+    --nav-hover-bg: rgba(255, 255, 255, 0.06);
+    --divider: rgba(255, 255, 255, 0.06);
+    --scrollbar: rgba(255, 255, 255, 0.16);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.18);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.28);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.34);
+    --shadow-xl: 0 16px 48px rgba(0,0,0,0.42);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar) transparent;
+}
+
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg);
+    color: var(--text);
+}
+
+/* --- 页面特定覆盖 --- */
+
+        body { background: var(--bg) !important; color: var(--text) !important; }
+    
+
+
+/* --- Marvis 增强覆盖 (online.html) --- */
+.model-selector, .resolution-selector { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; box-shadow: var(--shadow-sm) !important; }
+select { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; color: var(--text) !important; }
+.ref-image-upload { border: 1px dashed var(--border) !important; border-radius: var(--radius-lg) !important; background: var(--stage-bg) !important; }
+.generate-btn { background: var(--text) !important; color: var(--bg) !important; border-radius: var(--radius-md) !important; }
+.generate-btn:hover { opacity: 0.88 !important; }
+.image-card { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; }
+.prompt-area { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; color: var(--text) !important; }
+.prompt-area:focus { border-color: var(--text) !important; }
+
+</style>
+
+</head>
+<body>
+    <div class="container-box min-h-screen flex flex-col">
+        <header class="flex justify-between items-end mb-16">
+            <div class="space-y-1">
+            </div>
+            <nav class="hidden md:flex gap-8 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+                <span class="text-black border-b-2 border-black pb-1" data-i18n="online.create">Create</span>
+            </nav>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div class="lg:col-span-5 space-y-8">
+                <section class="space-y-4">
+                    <div class="flex items-center gap-2 text-gray-400">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                        <span class="text-[10px] font-black uppercase tracking-widest">Prompt</span>
+                    </div>
+                    <textarea id="promptInput" rows="5" class="nano-input w-full p-6 rounded-3xl text-sm outline-none resize-none placeholder-gray-300" placeholder="输入想生成或编辑的画面..." data-i18n-placeholder="online.promptPlaceholder"></textarea>
+                </section>
+
+                <section class="space-y-4">
+                    <div class="flex items-center gap-2 text-gray-400">
+                        <i data-lucide="images" class="w-3.5 h-3.5"></i>
+                        <span class="text-[10px] font-black uppercase tracking-widest" data-i18n="online.referenceImages">Reference Images</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div id="drop-zone-1" onclick="document.getElementById('file1').click()" class="upload-item group aspect-square rounded-2xl flex flex-col items-center justify-center cursor-pointer">
+                            <input type="file" id="file1" accept="image/*" class="hidden" onchange="handleFile(this.files[0],1)">
+                            <i data-lucide="plus" class="w-5 h-5 text-gray-300 group-hover:text-black"></i><span class="text-[9px] mt-2 font-bold text-gray-400 uppercase">Main</span>
+                            <img id="prev1" class="preview-img hidden"><button id="del1" onclick="clearSlot(1,event)" class="hidden absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10">×</button>
+                        </div>
+                        <div id="drop-zone-2" onclick="document.getElementById('file2').click()" class="upload-item group aspect-square rounded-2xl flex flex-col items-center justify-center cursor-pointer">
+                            <input type="file" id="file2" accept="image/*" class="hidden" onchange="handleFile(this.files[0],2)">
+                            <i data-lucide="plus" class="w-5 h-5 text-gray-300 group-hover:text-black"></i><span class="text-[9px] mt-2 font-bold text-gray-400 uppercase">Aux A</span>
+                            <img id="prev2" class="preview-img hidden"><button id="del2" onclick="clearSlot(2,event)" class="hidden absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10">×</button>
+                        </div>
+                        <div id="drop-zone-3" onclick="document.getElementById('file3').click()" class="upload-item group aspect-square rounded-2xl flex flex-col items-center justify-center cursor-pointer">
+                            <input type="file" id="file3" accept="image/*" class="hidden" onchange="handleFile(this.files[0],3)">
+                            <i data-lucide="plus" class="w-5 h-5 text-gray-300 group-hover:text-black"></i><span class="text-[9px] mt-2 font-bold text-gray-400 uppercase">Aux B</span>
+                            <img id="prev3" class="preview-img hidden"><button id="del3" onclick="clearSlot(3,event)" class="hidden absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full shadow-sm z-10">×</button>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="tool-panel">
+                    <div class="control-label">
+                        <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                        <span data-i18n="online.model">Model</span>
+                        <span id="providerModeBadge" class="mode-badge" style="margin-left:auto;display:none;"></span>
+                    </div>
+                    <div class="size-row">
+                        <label class="size-field">
+                            <select id="providerSelect" class="size-select" onchange="setProvider(this.value)"></select>
+                        </label>
+                        <label class="size-field">
+                            <select id="modelSelect" class="size-select" onchange="setModel(this.value)"></select>
+                        </label>
+                    </div>
+                    <div id="adaptiveExtras" class="size-row" style="margin-top:2px;">
+                        <label id="qualityField" class="size-field">
+                            <select id="qualitySelect" class="size-select" onchange="setQuality(this.value)" title="Quality">
+                                <option value="auto" data-i18n="online.qualityAuto">自动</option>
+                                <option value="low" data-i18n="online.qualityLow">低</option>
+                                <option value="medium" data-i18n="online.qualityMedium">中</option>
+                                <option value="high" data-i18n="online.qualityHigh">高</option>
+                            </select>
+                        </label>
+                        <label id="countField" class="size-field">
+                            <select id="countSelect" class="size-select" onchange="setCount(this.value)" title="Count">
+                                <option value="1" selected>×1</option>
+                                <option value="2">×2</option>
+                                <option value="3">×3</option>
+                                <option value="4">×4</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="control-label mt-1">
+                        <i data-lucide="ruler" class="w-3.5 h-3.5"></i>
+                        <span data-i18n="online.size">Size</span>
+                    </div>
+                    <div class="size-row">
+                        <label id="resolutionField" class="size-field">
+                            <select id="resolutionSelect" class="size-select" onchange="setResolution(this.value)">
+                                <option value="1k" selected>1K</option>
+                                <option value="2k">2K</option>
+                                <option value="4k">4K</option>
+                                <option value="custom" data-i18n="online.customSize">自定义尺寸</option>
+                            </select>
+                            <span class="size-pair with-fit">
+                                <input id="sizeCustomWidth" class="size-custom" type="number" min="64" step="64" placeholder="宽度" data-i18n-placeholder="online.width" oninput="setCustomSize()">
+                                <input id="sizeCustomHeight" class="size-custom" type="number" min="64" step="64" placeholder="高度" data-i18n-placeholder="online.height" oninput="setCustomSize()">
+                                <button id="fitImageSizeBtn" class="size-fit-btn" type="button" onclick="fitCustomSizeToImage(event)">适配图片</button>
+                            </span>
+                        </label>
+                        <label id="ratioField" class="size-field">
+                            <select id="ratioSelect" class="size-select" onchange="setRatio(this.value)">
+                                <option value="" data-i18n="online.emptyRatio">比例为空</option>
+                                <option value="square" selected data-i18n="online.square">1:1 方图</option>
+                                <option value="portrait" data-i18n="online.portrait">2:3 竖图</option>
+                                <option value="landscape" data-i18n="online.landscape">3:2 横图</option>
+                                <option value="portrait43">3:4 竖图</option>
+                                <option value="landscape43">4:3 横图</option>
+                                <option value="story" data-i18n="online.story">9:16 竖屏</option>
+                                <option value="wide" data-i18n="online.wide">16:9 宽屏</option>
+                                <option value="custom" data-i18n="online.customRatio">自定义比例</option>
+                            </select>
+                            <span class="size-pair">
+                                <input id="ratioCustomWidth" class="size-custom" type="number" min="1" step="1" placeholder="宽" data-i18n-placeholder="online.ratioWidth" oninput="setCustomRatio()">
+                                <input id="ratioCustomHeight" class="size-custom" type="number" min="1" step="1" placeholder="高" data-i18n-placeholder="online.ratioHeight" oninput="setCustomRatio()">
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <button id="genBtn" onclick="submitImage()" class="glass-btn w-full py-5 text-white rounded-3xl font-bold flex items-center justify-center gap-3 shadow-lg">
+                    <i data-lucide="bolt" class="w-4 h-4"></i>
+                    <span class="tracking-[0.3em] text-[11px] uppercase" data-i18n="online.generate">Generate</span>
+                </button>
+            </div>
+
+            <div class="lg:col-span-7">
+                <div id="resultBox" class="result-frame min-h-[500px] lg:h-full flex items-center justify-center relative overflow-hidden">
+                    <div id="placeholder" class="text-center space-y-4 opacity-20"><i data-lucide="layout" class="w-12 h-12 mx-auto stroke-[1px]"></i><p class="text-[10px] font-black tracking-[0.5em] uppercase" data-i18n="online.canvasReady">Canvas Ready</p></div>
+                    <div id="loader" class="hidden text-center space-y-4"><div class="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto"></div><p class="text-[10px] font-black tracking-[0.5em] uppercase" data-i18n="online.generating">Generating</p></div>
+                    <img id="outputImg" class="hidden w-full h-full object-contain p-8 cursor-zoom-in" onclick="zoomImage()">
+                    <a id="downloadBtn" href="#" download class="hidden absolute top-8 right-8 w-12 h-12 bg-white/90 shadow-2xl rounded-2xl flex items-center justify-center hover:bg-black hover:text-white"><i data-lucide="download" class="w-4 h-4"></i></a>
+                </div>
+            </div>
+        </main>
+
+        <section class="mt-32">
+            <div class="flex items-center gap-6 mb-12"><h2 class="text-[11px] font-black uppercase tracking-[0.5em]" data-i18n="online.archives">Archives</h2><div class="h-px flex-1 bg-gray-100"></div></div>
+            <div id="masonry" class="masonry-grid"></div>
+            <div id="loadMoreTrigger" class="py-20 text-center text-gray-300 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:text-black">Load More Archive</div>
+        </section>
+    </div>
+
+    <div id="lightbox" onclick="handleOutsideClick(event)" class="hidden fixed inset-0 z-50 gallery-lightbox flex flex-col items-center justify-center p-8">
+        <button onclick="closeLightbox()" class="absolute top-10 right-10 text-gray-400 hover:text-black"><i data-lucide="x" class="w-8 h-8"></i></button>
+        <div class="w-full flex flex-col items-center pointer-events-none" style="max-width:min(1280px, 92vw)">
+            <div id="lightboxFrame" class="studio-preview-frame pointer-events-auto">
+                <img id="lightboxImg" class="studio-preview-img" alt="preview">
+                <div data-no-pan class="absolute top-6 left-6 bg-black/50 backdrop-blur-md text-white px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest shadow-2xl pointer-events-auto z-10">
+                    <span id="lightboxRes">0x0</span>
+                </div>
+                <button id="lightboxDownload" onclick="downloadLightboxImage(event)" data-no-pan class="absolute top-6 right-6 bg-black text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl hover:scale-105 transition-transform pointer-events-auto z-10">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="lightboxCard" class="w-full mt-16 pointer-events-auto bg-white border border-gray-100 rounded-[2rem] p-8 shadow-sm flex justify-between items-center gap-8">
+                <div class="flex-1">
+                    <span class="text-[9px] font-black text-gray-300 uppercase tracking-widest block mb-2">Prompt</span>
+                    <p id="lightboxPrompt" class="text-gray-700 text-sm leading-relaxed max-h-32 overflow-y-auto pr-2"></p>
+                </div>
+                <button id="sameStyleBtn" onclick="applySameStyle()" class="bg-black text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><i data-lucide="copy" class="w-4 h-4"></i><span data-i18n="online.reuse">Reuse</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        function tr(key){ return window.StudioI18n ? StudioI18n.t(key) : key; }
+        function applyLanguage(lang){
+            if(lang && window.StudioI18n) StudioI18n.set(lang);
+            document.title = tr('online.title');
+            const loader = document.getElementById('loadMoreTrigger');
+            if(loader && !isLoading) loader.innerText = tr('online.loadMore');
+        }
+        window.addEventListener('message', event => {
+            if(event.data?.type === 'studio-lang') applyLanguage(event.data.lang);
+            // API 设置页通过 postMessage 通知平台/模型变更（iframe 内嵌场景）
+            if(event.data?.type === 'providers-changed' || event.data?.type === 'workflows-changed') scheduleProviderRefresh();
+        });
+        window.addEventListener('studio-lang-change', () => {
+            document.title = tr('online.title');
+            updateAdaptivePanel();
+        });
+        let refs = {1:null,2:null,3:null};
+        let refDims = {1:null,2:null,3:null};
+        let provider = 'comfly';
+        let selectedModel = 'gpt-image-2';
+        let apiProviders = [];
+        let ratio = 'square';
+        let resolution = '1k';
+        let customRatioWidth = '';
+        let customRatioHeight = '';
+        let customWidth = '';
+        let customHeight = '';
+        let quality = 'auto';
+        let outputCount = 1;
+        let models = {gpt:'gpt-image-2', nano:'nano-banana-pro'};
+        let allHistory = [], currentIndex = 0, currentResult = null, currentLightboxData = null, isLoading = false;
+        const PAGE_SIZE = 24;
+        const SIZE_OPTIONS = {
+            square: [
+                ['1024x1024', '1k'],
+                ['2048x2048', '2k'],
+                ['3840x2160', '4k']
+            ],
+            portrait: [
+                ['1024x1536', '1k'],
+                ['1360x2048', '2k'],
+                ['2352x3520', '4k']
+            ],
+            portrait43: [
+                ['1008x1344', '1k'],
+                ['1536x2048', '2k'],
+                ['2448x3264', '4k']
+            ],
+            landscape43: [
+                ['1344x1008', '1k'],
+                ['2048x1536', '2k'],
+                ['3264x2448', '4k']
+            ],
+            landscape: [
+                ['1536x1024', '1k'],
+                ['2048x1360', '2k'],
+                ['3520x2352', '4k']
+            ],
+            story: [
+                ['720x1280', '1k'],
+                ['1152x2048', '2k'],
+                ['2160x3840', '4k']
+            ],
+            wide: [
+                ['1280x720', '1k'],
+                ['2048x1152', '2k'],
+                ['3840x2160', '4k']
+            ]
+        };
+
+        // 模型专用尺寸映射：根据模型自动匹配其 API 支持的尺寸
+        // 键名按匹配优先级排列，model name 包含键名即命中
+        const MODEL_SIZE_PRESETS = {
+            // ── OpenAI ──
+            'gpt-image-2': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['1024x1536','1k']],
+                landscape: [['1536x1024','1k']]
+            },
+            'gpt-image-1': {
+                square: [['1024x1024','1k']],
+                portrait: [['1024x1536','1k']],
+                landscape: [['1536x1024','1k']]
+            },
+            'dall-e-3': {
+                square: [['1024x1024','1k']],
+                portrait: [['1024x1792','1k']],
+                landscape: [['1792x1024','1k']]
+            },
+            'dall-e-2': {
+                square: [['1024x1024','1k'], ['512x512','small'], ['256x256','tiny']],
+                portrait: [['512x768','1k']],
+                landscape: [['768x512','1k']]
+            },
+
+            // ── Nano Banana (Gemini 出图) ──
+            'nano-banana': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                portrait43: [['1024x1365','1k'], ['2048x2730','2k'], ['3072x4096','4k']],
+                landscape43: [['1365x1024','1k'], ['2730x2048','2k'], ['4096x3072','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']],
+                story: [['720x1280','1k'], ['1080x1920','2k'], ['2160x3840','4k']],
+                wide: [['1280x720','1k'], ['1920x1080','2k'], ['3840x2160','4k']]
+            },
+            'nano-banana-2': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                portrait43: [['1024x1365','1k'], ['2048x2730','2k'], ['3072x4096','4k']],
+                landscape43: [['1365x1024','1k'], ['2730x2048','2k'], ['4096x3072','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']],
+                story: [['720x1280','1k'], ['1080x1920','2k'], ['2160x3840','4k']],
+                wide: [['1280x720','1k'], ['1920x1080','2k'], ['3840x2160','4k']]
+            },
+            'nano-banana-pro': {
+                square: [['1024x1024','1k'], ['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1024x1536','1k'], ['2048x3072','2k'], ['4096x6144','4k']],
+                portrait43: [['1024x1365','1k'], ['2048x2730','2k'], ['3072x4096','4k']],
+                landscape43: [['1365x1024','1k'], ['2730x2048','2k'], ['4096x3072','4k']],
+                landscape: [['1536x1024','1k'], ['3072x2048','2k'], ['6144x4096','4k']],
+                story: [['720x1280','1k'], ['1080x1920','2k'], ['2160x3840','4k']],
+                wide: [['1280x720','1k'], ['1920x1080','2k'], ['3840x2160','4k']]
+            },
+
+            // ── Seedream (火山引擎) ──
+            'seedream-5.0': {
+                square: [['2048x2048','2k'], ['3072x3072','3k']],
+                portrait: [['1536x2048','2k'], ['2304x3072','3k']],
+                portrait43: [['1536x2048','2k'], ['2304x3072','3k']],
+                landscape43: [['2048x1536','2k'], ['3072x2304','3k']],
+                landscape: [['2048x1536','2k'], ['3072x2304','3k']],
+                story: [['1152x2048','2k'], ['1728x3072','3k']],
+                wide: [['2048x1152','2k'], ['3072x1728','3k']]
+            },
+            'seedream-4.5': {
+                square: [['2048x2048','2k'], ['4096x4096','4k']],
+                portrait: [['1536x2048','2k'], ['3072x4096','4k']],
+                portrait43: [['1536x2048','2k'], ['3072x4096','4k']],
+                landscape43: [['2048x1536','2k'], ['4096x3072','4k']],
+                landscape: [['2048x1536','2k'], ['4096x3072','4k']],
+                story: [['1152x2048','2k'], ['2304x4096','4k']],
+                wide: [['2048x1152','2k'], ['4096x2304','4k']]
+            },
+            'seedream-4.0': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['832x1216','1k'], ['1664x2432','2k']],
+                portrait43: [['928x1216','1k'], ['1856x2432','2k']],
+                landscape43: [['1216x928','1k'], ['2432x1856','2k']],
+                landscape: [['1216x832','1k'], ['2432x1664','2k']],
+                story: [['768x1216','1k'], ['1536x2432','2k']],
+                wide: [['1216x768','1k'], ['2432x1536','2k']]
+            },
+            'seedream-3.0': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['832x1216','1k'], ['1664x2432','2k']],
+                portrait43: [['928x1216','1k'], ['1856x2432','2k']],
+                landscape43: [['1216x928','1k'], ['2432x1856','2k']],
+                landscape: [['1216x832','1k'], ['2432x1664','2k']],
+                story: [['768x1216','1k'], ['1536x2432','2k']],
+                wide: [['1216x768','1k'], ['2432x1536','2k']]
+            },
+
+            // ── Flux ──
+            'flux': {
+                square: [['1024x1024','1k'], ['1536x1536','2k']],
+                portrait: [['832x1216','1k'], ['1024x1536','2k']],
+                portrait43: [['896x1216','1k'], ['1152x1536','2k']],
+                landscape43: [['1216x896','1k'], ['1536x1152','2k']],
+                landscape: [['1216x832','1k'], ['1536x1024','2k']],
+                story: [['768x1344','1k'], ['1024x1792','2k']],
+                wide: [['1344x768','1k'], ['1792x1024','2k']]
+            },
+
+            // ── SDXL ──
+            'sdxl': {
+                square: [['1024x1024','1k']],
+                portrait: [['896x1152','1k']],
+                portrait43: [['896x1152','1k']],
+                landscape43: [['1152x896','1k']],
+                landscape: [['1152x896','1k']],
+                story: [['768x1344','1k']],
+                wide: [['1344x768','1k']]
+            },
+            'stable-diffusion-xl': {
+                square: [['1024x1024','1k']],
+                portrait: [['896x1152','1k']],
+                landscape: [['1152x896','1k']],
+                story: [['768x1344','1k']],
+                wide: [['1344x768','1k']]
+            },
+
+            // ── SD 1.5 / 2.1 ──
+            'stable-diffusion-2': {
+                square: [['768x768','1k']],
+                portrait: [['768x1152','1k']],
+                landscape: [['1152x768','1k']]
+            },
+            'stable-diffusion': {
+                square: [['512x512','1k']],
+                portrait: [['512x768','1k']],
+                landscape: [['768x512','1k']]
+            },
+
+            // ── Midjourney ──
+            'midjourney': {
+                square: [['1024x1024','1k']],
+                portrait: [['832x1216','1k']],
+                portrait43: [['896x1216','1k']],
+                landscape43: [['1216x896','1k']],
+                landscape: [['1216x832','1k']],
+                story: [['768x1344','1k']],
+                wide: [['1344x768','1k']]
+            },
+
+            // ── Ideogram ──
+            'ideogram': {
+                square: [['1024x1024','1k']],
+                portrait: [['896x1152','1k']],
+                portrait43: [['896x1216','1k']],
+                landscape43: [['1216x896','1k']],
+                landscape: [['1152x896','1k']],
+                story: [['768x1344','1k']],
+                wide: [['1344x768','1k']]
+            },
+
+            // ── Kolors ──
+            'kolors': {
+                square: [['1024x1024','1k'], ['2048x2048','2k']],
+                portrait: [['768x1024','1k'], ['1536x2048','2k']],
+                landscape: [['1024x768','1k'], ['2048x1536','2k']]
+            },
+
+            // ── Hunyuan ──
+            'hunyuan': {
+                square: [['1024x1024','1k']],
+                portrait: [['768x1024','1k']],
+                landscape: [['1024x768','1k']]
+            },
+
+            // ── Recraft ──
+            'recraft': {
+                square: [['1024x1024','1k']],
+                portrait: [['1024x1536','1k']],
+                landscape: [['1536x1024','1k']]
+            },
+
+            // ── Playground ──
+            'playground': {
+                square: [['1024x1024','1k']],
+                portrait: [['832x1216','1k']],
+                landscape: [['1216x832','1k']]
+            }
+        };
+
+        function getSizeOptionsForModel(model) {
+            const m = String(model || '').toLowerCase();
+            for (const [key, sizes] of Object.entries(MODEL_SIZE_PRESETS)) {
+                if (m.includes(key)) return sizes;
+            }
+            return SIZE_OPTIONS;
+        }
+
+        function currentSizeOptions() {
+            return getSizeOptionsForModel(selectedModel);
+        }
+        const RES_LONG_SIDE = { '1k': 1536, '2k': 2048, '4k': 3840 };
+        const RES_PIXEL_LIMIT = { '1k': 1572864, '2k': 4194304, '4k': 8294400 };
+
+        function uniqueModels(list){
+            const seen = new Set();
+            return (list || []).map(item => String(item || '').trim()).filter(item => item && !seen.has(item) && seen.add(item));
+        }
+        function imageProviders(){
+            const list = (apiProviders || []).filter(p => p.enabled !== false && (
+                (p.image_models || []).length || (p.rh_apps || []).length || (p.rh_workflows || []).length
+            ));
+            return list.length ? list : [{id:'comfly', name:'Comfly', image_models:[models.gpt, models.nano]}];
+        }
+        function providerById(id){
+            return imageProviders().find(p => p.id === id) || imageProviders()[0];
+        }
+        function providerModels(id){
+            return uniqueModels(providerById(id)?.image_models || [models.gpt]);
+        }
+        /* ---- RunningHub：同一平台下同步模型 API / 工作流 / AI 应用。
+         * 模型 API 直接提交原始模型名；value=app:ID / workflow:ID 走 RH 应用/工作流路径。 */
+        function runningHubEntryId(entry, kind){
+            if(!entry || typeof entry !== 'object') return '';
+            const raw = kind === 'model' ? (entry.model || entry.id || entry.name)
+                : kind === 'workflow' ? (entry.workflowId || entry.id)
+                : (entry.appId || entry.webappId || entry.id);
+            return String(raw || '').trim();
+        }
+        function runningHubEntries(id){
+            const p = providerById(id) || {};
+            const collect = (list, kind) => (list || [])
+                .filter(e => e && e.enabled !== false && e.hidden !== true)
+                .map(e => ({ kind, id: runningHubEntryId(e, kind), title: String(e.title || e.note || '').trim() }))
+                .filter(e => e.id);
+            const models = uniqueModels(p.image_models || []).map(model => ({kind:'model', id:model, title:model}));
+            return [...models, ...collect(p.rh_workflows, 'workflow'), ...collect(p.rh_apps, 'app')];
+        }
+        function isRunningHubProvider(id){ return providerProtocol(id) === 'runninghub'; }
+        function renderProviderControls(){
+            const providerSelect = document.getElementById('providerSelect');
+            const modelSelect = document.getElementById('modelSelect');
+            const providers = imageProviders();
+            if(!providers.some(p => p.id === provider)) provider = providers[0]?.id || 'comfly';
+            providerSelect.innerHTML = providers.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === provider ? 'selected' : ''}>${escapeHtml(p.name || p.id)}</option>`).join('');
+            if(isRunningHubProvider(provider)){
+                const entries = runningHubEntries(provider);
+                const keys = entries.map(e => e.kind === 'model' ? e.id : `${e.kind}:${e.id}`);
+                if(!keys.includes(selectedModel)) selectedModel = keys[0] || '';
+                modelSelect.innerHTML = entries.length
+                    ? entries.map(e => {
+                        const key = e.kind === 'model' ? e.id : `${e.kind}:${e.id}`;
+                        const tag = e.kind === 'model' ? '模型 API' : e.kind === 'workflow' ? tr('online.rhWorkflow') : tr('online.rhApp');
+                        const label = e.title || e.id;
+                        return `<option value="${escapeHtml(key)}" ${key === selectedModel ? 'selected' : ''}>${escapeHtml(`[${tag}] ${label}`)}</option>`;
+                    }).join('')
+                    : `<option value="">${escapeHtml(tr('online.rhNoEntries'))}</option>`;
+            } else {
+                const modelsForProvider = providerModels(provider);
+                if(!modelsForProvider.includes(selectedModel)) selectedModel = modelsForProvider[0] || models.gpt;
+                modelSelect.innerHTML = modelsForProvider.map(m => `<option value="${escapeHtml(m)}" ${m === selectedModel ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('');
+            }
+            updateAdaptivePanel();
+        }
+
+        /* ---- 协议自适应：根据所选 provider 的 protocol 调整参数栏 ----
+         * 后端 /api/online-image → generate_ai_image 已按协议分发，前端只需让
+         * 与协议无关的控件随之显隐：质量仅 OpenAI 系（gpt-image）生效，其余协议忽略。 */
+        function providerProtocol(id){
+            const p = providerById(id) || {};
+            const proto = String(p.protocol || '').toLowerCase();
+            const pid = String(p.id || '').toLowerCase();
+            const base = String(p.base_url || '').toLowerCase();
+            if(proto === 'modelscope' || pid === 'modelscope') return 'modelscope';
+            if(proto === 'runninghub' || pid === 'runninghub') return 'runninghub';
+            if(proto === 'jimeng' || pid === 'jimeng') return 'jimeng';
+            if(proto === 'volcengine' || pid === 'volcengine') return 'volcengine';
+            if(proto === 'gemini') return 'gemini';
+            if(proto === 'apimart' || base.includes('apimart.ai')) return 'apimart';
+            return 'api';
+        }
+        const PROTOCOL_BADGE = {
+            api:'online.modeApi', apimart:'online.modeApi', modelscope:'online.modeModelscope',
+            runninghub:'online.modeRunningHub', jimeng:'online.modeJimeng',
+            volcengine:'online.modeVolcengine', gemini:'online.modeGemini'
+        };
+        // 仅 OpenAI / APIMart（gpt-image 系）后端会消费 quality；其它协议忽略，隐藏以免误导。
+        const QUALITY_PROTOCOLS = new Set(['api','apimart']);
+        function updateAdaptivePanel(){
+            const proto = providerProtocol(provider);
+            const badge = document.getElementById('providerModeBadge');
+            if(badge){
+                badge.textContent = tr(PROTOCOL_BADGE[proto] || 'online.modeApi');
+                badge.style.display = '';
+            }
+            const qf = document.getElementById('qualityField');
+            if(qf) qf.style.display = QUALITY_PROTOCOLS.has(proto) ? '' : 'none';
+            const qs = document.getElementById('qualitySelect');
+            if(qs) qs.value = quality;
+            // RunningHub 每次出图都是一次完整工作流运行，隐藏数量并固定为 1，避免误触发多次昂贵任务。
+            if(proto === 'runninghub') outputCount = 1;
+            const cf = document.getElementById('countField');
+            if(cf) cf.style.display = (proto === 'runninghub') ? 'none' : '';
+            const cs = document.getElementById('countSelect');
+            if(cs) cs.value = String(outputCount);
+        }
+        function setQuality(next){ quality = next || 'auto'; }
+        function setCount(next){ outputCount = Math.max(1, Math.min(4, parseInt(next, 10) || 1)); }
+
+        async function initModels(){
+            try {
+                const cfg = await fetch('/api/config').then(r=>r.json());
+                const imageModels = cfg.image_models || [];
+                models.nano = imageModels.find(m => m.toLowerCase().includes('nano')) || 'nano-banana-pro';
+                models.gpt = imageModels.find(m => !m.toLowerCase().includes('nano')) || cfg.image_model || 'gpt-image-2';
+                apiProviders = Array.isArray(cfg.api_providers) ? cfg.api_providers : [];
+                selectedModel = providerModels(provider)[0] || models.gpt;
+            } catch(e) {}
+            renderProviderControls();
+        }
+        // API 设置页保存后会广播 studio-api 事件；这里重新拉取 /api/config，
+        // 尽量保留当前已选的平台/模型，renderProviderControls 会在其不存在时自动回退。
+        async function refreshProvidersFromApiSettings(){
+            try {
+                const cfg = await fetch('/api/config').then(r=>r.json());
+                const imageModels = cfg.image_models || [];
+                models.nano = imageModels.find(m => m.toLowerCase().includes('nano')) || 'nano-banana-pro';
+                models.gpt = imageModels.find(m => !m.toLowerCase().includes('nano')) || cfg.image_model || 'gpt-image-2';
+                apiProviders = Array.isArray(cfg.api_providers) ? cfg.api_providers : [];
+            } catch(e) { return; }
+            renderProviderControls();
+        }
+        let apiSyncTimer = null;
+        function scheduleProviderRefresh(){
+            clearTimeout(apiSyncTimer);
+            apiSyncTimer = setTimeout(refreshProvidersFromApiSettings, 150);
+        }
+        try {
+            const studioApiChannel = new BroadcastChannel('studio-api');
+            studioApiChannel.addEventListener('message', () => scheduleProviderRefresh());
+        } catch(e) {}
+        // 页面重新可见时也兜底刷新一次（切回标签页 / iframe 重新展示）
+        document.addEventListener('visibilitychange', () => { if(!document.hidden) scheduleProviderRefresh(); });
+
+        function setProvider(next){
+            provider = next;
+            selectedModel = providerModels(provider)[0] || selectedModel;
+            renderProviderControls();
+            updateSizeUI();
+        }
+        function setModel(next){
+            selectedModel = next;
+            updateSizeUI();
+        }
+        function escapeHtml(str){ return String(str || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+
+        function parseSizeValue(value){
+            const match = String(value || '').trim().match(/^(\d+)\s*[xX*]\s*(\d+)$/);
+            return match ? {width:match[1], height:match[2]} : null;
+        }
+        function customRatioValue(){
+            const w = Number(customRatioWidth);
+            const h = Number(customRatioHeight);
+            return w > 0 && h > 0 ? w / h : null;
+        }
+        function customSizeValue(){
+            const w = Number(customWidth);
+            const h = Number(customHeight);
+            return w > 0 && h > 0 ? `${Math.round(w)}x${Math.round(h)}` : '';
+        }
+        function getImageDimensions(src){
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve({width:img.naturalWidth, height:img.naturalHeight});
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+        function firstReferenceDimension(){
+            return [1,2,3].map(id => refDims[id]).find(dim => dim?.width && dim?.height) || null;
+        }
+
+        function setRatio(next, preferredSize = ''){
+            ratio = next;
+            if (preferredSize) {
+                const match = currentSizeOptions()[next]?.find(([value]) => value === preferredSize);
+                if (match) resolution = match[1];
+            }
+            if(next !== 'custom') {
+                customRatioWidth = '';
+                customRatioHeight = '';
+            }
+            updateSizeUI();
+        }
+
+        function setCustomRatio(){
+            customRatioWidth = document.getElementById('ratioCustomWidth').value;
+            customRatioHeight = document.getElementById('ratioCustomHeight').value;
+            ratio = 'custom';
+            updateSizeUI();
+        }
+
+        function setCustomSize(){
+            customWidth = document.getElementById('sizeCustomWidth').value;
+            customHeight = document.getElementById('sizeCustomHeight').value;
+            resolution = 'custom';
+            ratio = '';
+            updateSizeUI();
+        }
+
+        function setResolution(next){
+            resolution = next;
+            if(next === 'custom'){
+                ratio = '';
+            } else {
+                customWidth = '';
+                customHeight = '';
+                if(ratio === '') ratio = 'square';
+            }
+            updateSizeUI();
+        }
+
+        function updateSizeUI(){
+            const ratioSelect = document.getElementById('ratioSelect');
+            const ratioField = document.getElementById('ratioField');
+            const ratioCustomWidthInput = document.getElementById('ratioCustomWidth');
+            const ratioCustomHeightInput = document.getElementById('ratioCustomHeight');
+            const resolutionSelect = document.getElementById('resolutionSelect');
+            const resolutionField = document.getElementById('resolutionField');
+            const sizeCustomWidthInput = document.getElementById('sizeCustomWidth');
+            const sizeCustomHeightInput = document.getElementById('sizeCustomHeight');
+            const fitImageSizeBtn = document.getElementById('fitImageSizeBtn');
+            // Hide unsupported ratio options for current model
+            const opts = currentSizeOptions();
+            Array.from(ratioSelect.options).forEach(opt => {
+                if (opt.value && opt.value !== 'custom') {
+                    opt.hidden = !opts[opt.value];
+                }
+            });
+            if (!opts[ratio]) {
+                ratio = Object.keys(opts)[0] || 'square';
+            }
+            ratioSelect.value = ratio;
+            ratioSelect.disabled = resolution === 'custom';
+            ratioField.classList.toggle('custom', ratio === 'custom');
+            ratioCustomWidthInput.value = customRatioWidth;
+            ratioCustomHeightInput.value = customRatioHeight;
+            resolutionSelect.value = resolution;
+            resolutionField.classList.toggle('custom', resolution === 'custom');
+            sizeCustomWidthInput.value = customWidth;
+            sizeCustomHeightInput.value = customHeight;
+            if(fitImageSizeBtn) fitImageSizeBtn.disabled = !firstReferenceDimension();
+            updateResolutionUI();
+        }
+
+        function updateResolutionUI(){}
+        function fitCustomSizeToImage(event){
+            if(event) event.preventDefault();
+            const dim = firstReferenceDimension();
+            if(!dim) return;
+            resolution = 'custom';
+            ratio = '';
+            customWidth = dim.width;
+            customHeight = dim.height;
+            updateSizeUI();
+        }
+
+        function currentSize(){
+            if(resolution === 'custom') return customSizeValue();
+            const opts = currentSizeOptions();
+            const options = opts[ratio] || opts.square;
+            if(ratio === 'custom'){
+                const parsed = customRatioValue();
+                const longSide = RES_LONG_SIDE[resolution] || 1024;
+                if(parsed){
+                    const pixelLimit = RES_PIXEL_LIMIT[resolution] || (longSide * longSide);
+                    const rawWidth = parsed >= 1 ? longSide : Math.min(longSide * parsed, Math.sqrt(pixelLimit * parsed));
+                    const rawHeight = parsed >= 1 ? Math.min(longSide / parsed, Math.sqrt(pixelLimit / parsed)) : longSide;
+                    const width = Math.floor(rawWidth / 16) * 16;
+                    const height = Math.floor(rawHeight / 16) * 16;
+                    return `${Math.max(64, width)}x${Math.max(64, height)}`;
+                }
+            }
+            const match = options.find(([, label]) => label === resolution) || opts.square.find(([, label]) => label === resolution) || opts.square[0];
+            return match[0];
+        }
+
+        [1,2,3].forEach(id => {
+            const zone = document.getElementById(`drop-zone-${id}`);
+            zone.ondragover = e => { e.preventDefault(); zone.classList.add('drag-over'); };
+            zone.ondragleave = () => zone.classList.remove('drag-over');
+            zone.ondrop = e => { e.preventDefault(); zone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0], id); };
+        });
+        window.addEventListener('paste', e => {
+            const item = [...(e.clipboardData?.items || [])].find(x => x.kind === 'file' && x.type.startsWith('image/'));
+            if (item) handleFile(item.getAsFile(), firstEmptySlot());
+        });
+        function firstEmptySlot(){ return [1,2,3].find(id => !refs[id]) || 1; }
+
+        async function handleFile(file, index){
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const prev = document.getElementById(`prev${index}`);
+                prev.src = e.target.result; prev.classList.remove('hidden');
+                document.getElementById(`del${index}`).classList.remove('hidden');
+                getImageDimensions(e.target.result).then(dim => {
+                    refDims[index] = dim;
+                    updateSizeUI();
+                }).catch(() => {});
+            };
+            reader.readAsDataURL(file);
+            const form = new FormData();
+            form.append('files', file);
+            const data = await fetch('/api/ai/upload', {method:'POST', body:form}).then(r=>r.json());
+            refs[index] = data.files[0];
+        }
+        function clearSlot(index, ev){
+            if(ev) ev.stopPropagation();
+            refs[index] = null;
+            refDims[index] = null;
+            document.getElementById(`prev${index}`).src = '';
+            document.getElementById(`prev${index}`).classList.add('hidden');
+            document.getElementById(`del${index}`).classList.add('hidden');
+        }
+
+        async function submitImage(){
+            const prompt = document.getElementById('promptInput').value.trim();
+            if(!prompt){ alert(tr('online.promptRequired')); return; }
+            const btn = document.getElementById('genBtn'), loader = document.getElementById('loader'), placeholder = document.getElementById('placeholder'), out = document.getElementById('outputImg'), dl = document.getElementById('downloadBtn');
+            btn.disabled = true; placeholder.classList.add('hidden'); out.classList.add('hidden'); dl.classList.add('hidden'); loader.classList.remove('hidden');
+            try {
+                const reqBody = { prompt, provider_id:provider, model:selectedModel, size:currentSize(), n:outputCount, reference_images:Object.values(refs).filter(Boolean) };
+                if(QUALITY_PROTOCOLS.has(providerProtocol(provider))) reqBody.quality = quality;
+                const result = await fetch('/api/online-image', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify(reqBody)
+                }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || '生成失败'); return r.json(); });
+                currentResult = result; out.src = result.images[0]; out.classList.remove('hidden'); dl.href = result.images[0]; dl.classList.remove('hidden'); renderImageCard(result, true);
+            } catch(err) {
+                alert(err.message || 'Generation failed'); placeholder.classList.remove('hidden');
+            } finally {
+                loader.classList.add('hidden'); btn.disabled = false;
+            }
+        }
+
+        function renderImageCard(data, isNew=false){
+            if(!data.images?.[0] || document.getElementById(`history-${data.timestamp}`)) return;
+            const card = document.createElement('div');
+            card.id = `history-${data.timestamp}`;
+            card.dataset.historyTs = data.timestamp;
+            card.className = 'masonry-item group relative cursor-zoom-in';
+            card.onclick = () => { if(document.body.classList.contains('history-bulk-selecting')) return; openLightbox(data); };
+            const multi = Array.isArray(data.images) && data.images.length > 1
+                ? `<div class="absolute top-3 right-3 bg-black/60 text-white text-[10px] font-black px-2 py-0.5 rounded-full pointer-events-none">×${data.images.length}</div>` : '';
+            card.innerHTML = `<img src="${data.images[0]}" class="w-full h-full object-cover block group-hover:scale-105 transition-transform duration-1000" loading="lazy">${multi}
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 p-6 flex flex-col justify-end"><p class="text-white text-[10px] font-medium line-clamp-2 uppercase tracking-wider">${data.prompt || tr('online.onlineImageFallback')}</p></div>`;
+            isNew ? document.getElementById('masonry').prepend(card) : document.getElementById('masonry').appendChild(card);
+            lucide.createIcons();
+        }
+        async function loadHistory(page=0){
+            if(isLoading) return; isLoading = true;
+            const loader = document.getElementById('loadMoreTrigger');
+            if(page === 0){ loader.innerText = tr('online.loadingArchives'); allHistory = await fetch('/api/history?type=online').then(r=>r.json()); document.getElementById('masonry').innerHTML=''; currentIndex=0; }
+            const next = allHistory.slice(currentIndex, currentIndex + PAGE_SIZE);
+            next.forEach(item => renderImageCard(item)); currentIndex += next.length;
+            loader.classList.toggle('hidden', currentIndex >= allHistory.length);
+            loader.innerText = tr('online.loadMore'); isLoading = false;
+        }
+        let lightboxPreview = null;
+        function ensureLightboxPreview(){
+            if(!lightboxPreview && window.StudioImagePreview){
+                lightboxPreview = StudioImagePreview.attach(document.getElementById('lightboxFrame'));
+            }
+            return lightboxPreview;
+        }
+        function openLightbox(data){
+            currentLightboxData = data;
+            const img = document.getElementById('lightboxImg');
+            const res = document.getElementById('lightboxRes');
+            res.textContent = '...';
+            ensureLightboxPreview();
+            if(lightboxPreview) lightboxPreview.reset();
+            img.onload = () => { res.textContent = img.naturalWidth && img.naturalHeight ? `${img.naturalWidth} x ${img.naturalHeight}` : (data.params?.size || '--'); };
+            img.src = data.images[0];
+            document.getElementById('lightboxPrompt').textContent = data.prompt || '';
+            document.getElementById('lightbox').classList.replace('hidden','flex');
+            document.body.style.overflow='hidden';
+            lucide.createIcons();
+        }
+        function closeLightbox(){
+            if(lightboxPreview) lightboxPreview.reset();
+            document.getElementById('lightbox').classList.replace('flex','hidden');
+            document.body.style.overflow='auto';
+        }
+        function handleOutsideClick(e){ if(e.target.id === 'lightbox') closeLightbox(); }
+        async function downloadLightboxImage(e){
+            e.stopPropagation();
+            const url = currentLightboxData?.images?.[0];
+            if(!url) return;
+            const res = await fetch(url);
+            if(!res.ok) return alert('下载失败');
+            const blob = await res.blob();
+            const clean = url.split('?')[0];
+            const ext = clean.includes('.') ? clean.split('.').pop() : 'png';
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `online-image-${Date.now()}.${ext || 'png'}`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        }
+        function zoomImage(){ if(currentResult) openLightbox(currentResult); }
+        function applySameStyle(){
+            if(!currentLightboxData) return;
+            document.getElementById('promptInput').value = currentLightboxData.prompt || '';
+            [1,2,3].forEach(id => clearSlot(id));
+            (currentLightboxData.params?.reference_images || []).slice(0,3).forEach((ref,i) => {
+                refs[i+1] = ref; const prev = document.getElementById(`prev${i+1}`);
+                prev.src = ref.url; prev.classList.remove('hidden'); document.getElementById(`del${i+1}`).classList.remove('hidden');
+                getImageDimensions(ref.url).then(dim => {
+                    refDims[i+1] = dim;
+                    updateSizeUI();
+                }).catch(() => {});
+            });
+            const size = currentLightboxData.params?.size || '1024x1024';
+            const opts = currentSizeOptions();
+            const matchedRatio = Object.keys(opts).find(key => opts[key].some(([value]) => value === size)) || 'square';
+            const matchedRes = opts[matchedRatio]?.find(([value]) => value === size)?.[1];
+            if(matchedRes) {
+                setRatio(matchedRatio, size);
+                setResolution(matchedRes);
+            } else {
+                setResolution('custom');
+                const parsed = parseSizeValue(size);
+                customWidth = parsed?.width || '';
+                customHeight = parsed?.height || '';
+                updateSizeUI();
+            }
+            closeLightbox(); window.scrollTo({top:0, behavior:'smooth'});
+        }
+        async function deleteHistoryItem(ts, ev){
+            ev.stopPropagation();
+            if(!confirm(tr('online.deleteConfirm'))) return;
+            const res = await fetch('/api/history/delete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({timestamp:ts})}).then(r=>r.json());
+            if(res.success) document.getElementById(`history-${ts}`)?.remove();
+        }
+        const observer = new IntersectionObserver(entries => { if(entries[0].isIntersecting && currentIndex < allHistory.length) loadHistory(1); }, {threshold:.1});
+        window.onload = async () => { applyLanguage(); setRatio('square'); setResolution('1k'); await initModels(); await loadHistory(0); window.HistoryBulkManager?.attach({masonry:'#masonry'}); observer.observe(document.getElementById('loadMoreTrigger')); document.getElementById('loadMoreTrigger').onclick = () => loadHistory(1); };
+    </script>
+</body>
+</html>

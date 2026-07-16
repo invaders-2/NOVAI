@@ -53,12 +53,14 @@ async function startServer() {
 }
 
 function createWindow() {
+  const isMac = process.platform === 'darwin';
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    title: 'NOVAI 智能画布',
+    frame: false,
+    titleBarStyle: isMac ? 'hidden' : 'default',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -67,7 +69,6 @@ function createWindow() {
   });
   mainWindow.loadURL(`http://localhost:${PORT}`);
   mainWindow.on('closed', () => { mainWindow = null; });
-  // 移除菜单栏
   mainWindow.setMenuBarVisibility(false);
 }
 

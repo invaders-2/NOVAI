@@ -1,9 +1,9 @@
 /* Agent（对话生图）：选 LLM(对话) + 生图模型 → 走后端 /api/chat/agent（自带意图路由：聊天/生成/改图）
  * → 返回图片自动置入图层。多轮对话用 conversation_id 维持。 */
 (function () {
-  const net = DX.net;
-  const ps = DX.ps;
-  const state = DX.state;
+  const net = NV.net;
+  const ps = NV.ps;
+  const state = NV.state;
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -65,8 +65,8 @@
 
   // 稳定的用户 id（让对话历史按本插件持久化）
   function userId() {
-    let id = localStorage.getItem('daxiong.agent.uid');
-    if (!id) { id = `ps_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e9).toString(36)}`; localStorage.setItem('daxiong.agent.uid', id); }
+    let id = localStorage.getItem('novai.agent.uid');
+    if (!id) { id = `ps_${Date.now().toString(36)}_${Math.floor(Math.random() * 1e9).toString(36)}`; localStorage.setItem('novai.agent.uid', id); }
     return id;
   }
 
@@ -90,7 +90,7 @@
   }
 
   function applyCollapse() {
-    const collapsed = localStorage.getItem('daxiong.agent.collapsed') === '1';
+    const collapsed = localStorage.getItem('novai.agent.collapsed') === '1';
     els.models.classList.toggle('hidden', collapsed);
   }
 
@@ -103,19 +103,19 @@
   /* ---------- 模型 + 历史加载 ---------- */
   async function ensureLoaded() {
     applyCollapse();
-    a.regionMode = localStorage.getItem('daxiong.agent.region') === '1';
+    a.regionMode = localStorage.getItem('novai.agent.region') === '1';
     a.outpaintMode = false;
-    localStorage.setItem('daxiong.agent.outpaint', '0');
+    localStorage.setItem('novai.agent.outpaint', '0');
     if (a.regionMode && a.outpaintMode) a.outpaintMode = false;   // 互斥
     // 恢复扩图方向勾选 + px 记忆
     try {
-      const saved = JSON.parse(localStorage.getItem('daxiong.agent.outpaintDirs') || '{}');
+      const saved = JSON.parse(localStorage.getItem('novai.agent.outpaintDirs') || '{}');
       if (els.dirLeft) els.dirLeft.checked = !!saved.left;
       if (els.dirRight) els.dirRight.checked = !!saved.right;
       if (els.dirTop) els.dirTop.checked = !!saved.top;
       if (els.dirBottom) els.dirBottom.checked = !!saved.bottom;
     } catch (e) {}
-    const savedPx = localStorage.getItem('daxiong.agent.outpaintPx');
+    const savedPx = localStorage.getItem('novai.agent.outpaintPx');
     if (savedPx && els.outpaintPx) els.outpaintPx.value = savedPx;
     applyRegion();
     if (a.loaded || !state.connected) return;
@@ -125,10 +125,10 @@
       const all = data.providers || data.api_providers || [];
       a.chatProviders = all.filter((p) => Array.isArray(p.chat_models) && p.chat_models.length);
       a.imgProviders = all.filter((p) => Array.isArray(p.image_models) && p.image_models.length);
-      DX.ui.fillPicker(els.llmProvider, a.chatProviders.map((p) => ({ value: p.id, label: p.name || p.id })), localStorage.getItem('daxiong.agent.llmp'));
-      DX.ui.fillPicker(els.imgProvider, a.imgProviders.map((p) => ({ value: p.id, label: p.name || p.id })), localStorage.getItem('daxiong.agent.imgp'));
-      renderLlmModels(localStorage.getItem('daxiong.agent.llmm'));
-      renderImgModels(localStorage.getItem('daxiong.agent.imgm'));
+      NV.ui.fillPicker(els.llmProvider, a.chatProviders.map((p) => ({ value: p.id, label: p.name || p.id })), localStorage.getItem('novai.agent.llmp'));
+      NV.ui.fillPicker(els.imgProvider, a.imgProviders.map((p) => ({ value: p.id, label: p.name || p.id })), localStorage.getItem('novai.agent.imgp'));
+      renderLlmModels(localStorage.getItem('novai.agent.llmm'));
+      renderImgModels(localStorage.getItem('novai.agent.imgm'));
       a.loaded = true;
       setStatus(a.chatProviders.length ? '' : '没有可用的对话模型，请先在网页端配置 chat 模型。', a.chatProviders.length ? '' : 'err');
       await loadHistory();
@@ -140,7 +140,7 @@
     try {
       const data = await apiGetU('/api/conversations');
       const list = data.conversations || [];
-      DX.ui.fillPicker(els.history, [{ value: '', label: `历史对话（${list.length}）` }]
+      NV.ui.fillPicker(els.history, [{ value: '', label: `历史对话（${list.length}）` }]
         .concat(list.map((c) => ({ value: c.id, label: c.title || '未命名对话' }))), a.conversationId || '');
       updateDelete();
     } catch (e) { /* 历史拉取失败不致命 */ }
@@ -168,12 +168,12 @@
     a.conversationId = '';
     a.msgs = [];
     renderMsgs();
-    DX.ui.fillPicker(els.history, els.history._options || [{ value: '', label: '历史对话' }], '');
+    NV.ui.fillPicker(els.history, els.history._options || [{ value: '', label: '历史对话' }], '');
     updateDelete();
     setStatus('已开始新对话。', 'ok');
   }
   function selectedConversationId() {
-    return DX.ui.pickerValue(els.history) || a.conversationId || '';
+    return NV.ui.pickerValue(els.history) || a.conversationId || '';
   }
   function updateDelete() {
     if (els.deleteBtn) els.deleteBtn.disabled = !selectedConversationId() || a.busy;
@@ -196,7 +196,7 @@
         renderAttach();
       }
       await loadHistory();
-      DX.ui.fillPicker(els.history, els.history._options || [{ value: '', label: '历史对话' }], '');
+      NV.ui.fillPicker(els.history, els.history._options || [{ value: '', label: '历史对话' }], '');
       updateDelete();
       setStatus('已删除对话。', 'ok');
     } catch (err) {
@@ -204,10 +204,10 @@
       updateDelete();
     }
   }
-  function llmProvider() { const v = DX.ui.pickerValue(els.llmProvider); return a.chatProviders.find((p) => p.id === v) || a.chatProviders[0] || null; }
-  function imgProvider() { const v = DX.ui.pickerValue(els.imgProvider); return a.imgProviders.find((p) => p.id === v) || a.imgProviders[0] || null; }
-  function renderLlmModels(sel) { const p = llmProvider(); DX.ui.fillPicker(els.llmModel, ((p && p.chat_models) || []).map((m) => ({ value: m, label: m })), sel); }
-  function renderImgModels(sel) { const p = imgProvider(); DX.ui.fillPicker(els.imgModel, ((p && p.image_models) || []).map((m) => ({ value: m, label: m })), sel); }
+  function llmProvider() { const v = NV.ui.pickerValue(els.llmProvider); return a.chatProviders.find((p) => p.id === v) || a.chatProviders[0] || null; }
+  function imgProvider() { const v = NV.ui.pickerValue(els.imgProvider); return a.imgProviders.find((p) => p.id === v) || a.imgProviders[0] || null; }
+  function renderLlmModels(sel) { const p = llmProvider(); NV.ui.fillPicker(els.llmModel, ((p && p.chat_models) || []).map((m) => ({ value: m, label: m })), sel); }
+  function renderImgModels(sel) { const p = imgProvider(); NV.ui.fillPicker(els.imgModel, ((p && p.image_models) || []).map((m) => ({ value: m, label: m })), sel); }
 
   /* ---------- 对话渲染 ---------- */
   function renderMsgs() {
@@ -258,7 +258,7 @@
 
   /* ---------- 发送 ---------- */
   function updateSend() {
-    els.send.disabled = !(state.connected && !a.busy && llmProvider() && DX.ui.pickerValue(els.llmModel) && imgProvider() && DX.ui.pickerValue(els.imgModel) && els.input.value.trim());
+    els.send.disabled = !(state.connected && !a.busy && llmProvider() && NV.ui.pickerValue(els.llmModel) && imgProvider() && NV.ui.pickerValue(els.imgModel) && els.input.value.trim());
     updateDelete();
   }
 
@@ -305,10 +305,10 @@
     }
 
     // 记忆所选模型
-    localStorage.setItem('daxiong.agent.llmp', lp.id);
-    localStorage.setItem('daxiong.agent.llmm', DX.ui.pickerValue(els.llmModel));
-    localStorage.setItem('daxiong.agent.imgp', ip.id);
-    localStorage.setItem('daxiong.agent.imgm', DX.ui.pickerValue(els.imgModel));
+    localStorage.setItem('novai.agent.llmp', lp.id);
+    localStorage.setItem('novai.agent.llmm', NV.ui.pickerValue(els.llmModel));
+    localStorage.setItem('novai.agent.imgp', ip.id);
+    localStorage.setItem('novai.agent.imgm', NV.ui.pickerValue(els.imgModel));
 
     // 用户消息：挂上各方向块的缩略图 + 标签
     const dirNames = blocks.map((b) => DIR_LABEL[b.dir] || b.dir).join('、');
@@ -327,9 +327,9 @@
           conversation_id: '',
           message: sendMsg,
           provider: lp.id,
-          model: DX.ui.pickerValue(els.llmModel),
+          model: NV.ui.pickerValue(els.llmModel),
           image_provider: ip.id,
-          image_model: DX.ui.pickerValue(els.imgModel),
+          image_model: NV.ui.pickerValue(els.imgModel),
           size: sizeTextForApi(b.size),
           quality: 'auto',
           reference_images: [{ url: b.url, name: b.name, kind: 'image' }],
@@ -406,10 +406,10 @@
     els.input.style.height = '';   // 复位高度
 
     // 记忆所选模型
-    localStorage.setItem('daxiong.agent.llmp', lp.id);
-    localStorage.setItem('daxiong.agent.llmm', DX.ui.pickerValue(els.llmModel));
-    localStorage.setItem('daxiong.agent.imgp', ip.id);
-    localStorage.setItem('daxiong.agent.imgm', DX.ui.pickerValue(els.imgModel));
+    localStorage.setItem('novai.agent.llmp', lp.id);
+    localStorage.setItem('novai.agent.llmm', NV.ui.pickerValue(els.llmModel));
+    localStorage.setItem('novai.agent.imgp', ip.id);
+    localStorage.setItem('novai.agent.imgm', NV.ui.pickerValue(els.imgModel));
 
     try {
       const refs = a.attachments.map((r) => ({ url: r.url, name: r.name, kind: 'image' }));
@@ -424,9 +424,9 @@
         conversation_id: a.conversationId,
         message: sendMsg,
         provider: lp.id,
-        model: DX.ui.pickerValue(els.llmModel),
+        model: NV.ui.pickerValue(els.llmModel),
         image_provider: ip.id,
-        image_model: DX.ui.pickerValue(els.imgModel),
+        image_model: NV.ui.pickerValue(els.imgModel),
         size: boundsSizeForApi(placeBounds),
         quality: 'auto',
         reference_images: refs,
@@ -467,16 +467,16 @@
   }
 
   /* ---------- 事件 ---------- */
-  DX.ui.onPick(els.llmProvider, () => renderLlmModels());
-  DX.ui.onPick(els.imgProvider, () => renderImgModels());
-  DX.ui.onPick(els.llmModel, updateSend);
-  DX.ui.onPick(els.imgModel, updateSend);
-  DX.ui.onPick(els.history, () => { const id = DX.ui.pickerValue(els.history); updateDelete(); if (id) openConversation(id); });
+  NV.ui.onPick(els.llmProvider, () => renderLlmModels());
+  NV.ui.onPick(els.imgProvider, () => renderImgModels());
+  NV.ui.onPick(els.llmModel, updateSend);
+  NV.ui.onPick(els.imgModel, updateSend);
+  NV.ui.onPick(els.history, () => { const id = NV.ui.pickerValue(els.history); updateDelete(); if (id) openConversation(id); });
   els.newBtn.addEventListener('click', newConversation);
   if (els.deleteBtn) els.deleteBtn.addEventListener('click', deleteConversation);
   els.toggleModels.addEventListener('click', () => {
-    const c = localStorage.getItem('daxiong.agent.collapsed') === '1';
-    localStorage.setItem('daxiong.agent.collapsed', c ? '0' : '1');
+    const c = localStorage.getItem('novai.agent.collapsed') === '1';
+    localStorage.setItem('novai.agent.collapsed', c ? '0' : '1');
     applyCollapse();
   });
   function autoGrow() { els.input.style.height = 'auto'; els.input.style.height = `${Math.min(els.input.scrollHeight, 160)}px`; }
@@ -493,8 +493,8 @@
   if (els.regionBtn) els.regionBtn.addEventListener('click', () => {
     a.regionMode = !a.regionMode;
     if (a.regionMode) a.outpaintMode = false;   // 与扩图互斥
-    localStorage.setItem('daxiong.agent.region', a.regionMode ? '1' : '0');
-    localStorage.setItem('daxiong.agent.outpaint', a.outpaintMode ? '1' : '0');
+    localStorage.setItem('novai.agent.region', a.regionMode ? '1' : '0');
+    localStorage.setItem('novai.agent.outpaint', a.outpaintMode ? '1' : '0');
     applyRegion();
     setStatus(a.regionMode ? '已开启「改选区」：发送时会读取矩形选区，只改这一块。' : '已关闭「改选区」。', a.regionMode ? 'ok' : '');
   });
@@ -510,14 +510,14 @@
   if (els.outpaintBtn) els.outpaintBtn.addEventListener('click', () => {
     a.outpaintMode = !a.outpaintMode;
     if (a.outpaintMode) a.regionMode = false;   // 与改选区互斥
-    localStorage.setItem('daxiong.agent.outpaint', a.outpaintMode ? '1' : '0');
-    localStorage.setItem('daxiong.agent.region', a.regionMode ? '1' : '0');
+    localStorage.setItem('novai.agent.outpaint', a.outpaintMode ? '1' : '0');
+    localStorage.setItem('novai.agent.region', a.regionMode ? '1' : '0');
     applyRegion();
     setStatus(a.outpaintMode ? '已开启「扩图」：勾选方向+填扩多少 px，点发送自动往各方向补画（各方向并发、各自贴回）。' : '已关闭「扩图」。', a.outpaintMode ? 'ok' : '');
   });
   // 扩图方向/px 记忆
   function saveOutpaintDirs() {
-    localStorage.setItem('daxiong.agent.outpaintDirs', JSON.stringify({
+    localStorage.setItem('novai.agent.outpaintDirs', JSON.stringify({
       left: !!(els.dirLeft && els.dirLeft.checked),
       right: !!(els.dirRight && els.dirRight.checked),
       top: !!(els.dirTop && els.dirTop.checked),
@@ -525,15 +525,15 @@
     }));
   }
   [els.dirLeft, els.dirRight, els.dirTop, els.dirBottom].forEach((el) => { if (el) el.addEventListener('change', saveOutpaintDirs); });
-  if (els.outpaintPx) els.outpaintPx.addEventListener('change', () => localStorage.setItem('daxiong.agent.outpaintPx', String(els.outpaintPx.value || 256)));
+  if (els.outpaintPx) els.outpaintPx.addEventListener('change', () => localStorage.setItem('novai.agent.outpaintPx', String(els.outpaintPx.value || 256)));
 
-  DX.agent = {
+  NV.agent = {
     ensureLoaded,
     reset() {
       a.loaded = false; a.chatProviders = []; a.imgProviders = []; a.conversationId = ''; a.msgs = []; a.attachments = [];
-      DX.ui.fillPicker(els.llmProvider, []); DX.ui.fillPicker(els.llmModel, []);
-      DX.ui.fillPicker(els.imgProvider, []); DX.ui.fillPicker(els.imgModel, []);
-      DX.ui.fillPicker(els.history, []);
+      NV.ui.fillPicker(els.llmProvider, []); NV.ui.fillPicker(els.llmModel, []);
+      NV.ui.fillPicker(els.imgProvider, []); NV.ui.fillPicker(els.imgModel, []);
+      NV.ui.fillPicker(els.history, []);
       a.lastInput = ''; showRetry(false);
       renderMsgs(); renderAttach();
       updateSend();

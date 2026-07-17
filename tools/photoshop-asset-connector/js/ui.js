@@ -1,7 +1,7 @@
 /* 下拉组件助手：统一用 UXP 原生 <sp-picker>（原生 <select> 不吃 CSS height，会留白/错位）。
  * 用 selectedIndex 作为取值真源（比 .value 在 UXP 里可靠），选项数组缓存在元素上。 */
-window.DX = window.DX || {};
-DX.ui = (function () {
+window.NV = window.NV || {};
+NV.ui = (function () {
   function esc(v) {
     return String(v ?? '').replace(/[&<>"']/g, (c) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

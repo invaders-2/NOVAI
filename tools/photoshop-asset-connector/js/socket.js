@@ -1,8 +1,8 @@
 /* WebSocket 实时同步：心跳 15s、指数退避重连、防重复连、重连后补刷。
  * 抖动只影响自动刷新，不影响浏览/置入/导出（那些都是独立 REST）。 */
 (function () {
-  const state = DX.state;
-  const net = DX.net;
+  const state = NV.state;
+  const net = NV.net;
 
   // handlers = { isLive: () => bool, onUpdate: (source?) => void }
   function openSocket(handlers) {
@@ -47,5 +47,5 @@
     if (state.ws) { try { state.ws.close(); } catch (e) {} state.ws = null; }
   }
 
-  DX.socket = { openSocket, closeSocket };
+  NV.socket = { openSocket, closeSocket };
 })();

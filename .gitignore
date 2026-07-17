@@ -15,6 +15,7 @@ dist-desktop/
 NOVAI-*.zip
 NOVAI-Setup-*.exe
 *.spec
+*.ccx
 
 # 运行时数据（不推送）
 assets/

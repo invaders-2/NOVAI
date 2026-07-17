@@ -1,83 +1,82 @@
-# 大雄画布资产库 · Photoshop 插件
+# NOVAI画布工具 · Photoshop 插件
 
-一个 Adobe Photoshop UXP 面板插件，通过局域网地址连接 Infinite Canvas 后端，双向打通 PS 与「资产库」：
+Adobe Photoshop UXP 面板插件，连接局域网内的 NOVAI 后端，双向打通 PS 与资产库：
 
 - **资产 → PS**：浏览资产库，把图片素材置入当前文档
-- **PS → 资产库**：把当前文档导出成 PNG，存进选中的图片分组
-- **实时同步**：连上后端的 WebSocket，资产库有变化时面板自动刷新
+- **PS → 资产库**：把当前画面导出为 PNG，存进选中的分组
+- **实时同步**：WebSocket 自动刷新，画布那边新增素材面板即时更新
+- **生成 / Agent**：在 PS 内调用 AI 模型生成图片、对话编辑
 
-类似 SDPPP：输入电脑的局域网 `IP:端口` 即可通讯，不需要额外配置。
+## 安装（两步）
 
-## 用法
-
-1. 启动 Infinite Canvas 后端（`启动服务.bat` / `python main.py`）。
-2. 在 Photoshop 里打开「大雄资产库」面板。
-3. 顶部填入服务地址：
-   - 本机：`127.0.0.1:8767`（按你的实际端口）
-   - 局域网：跑后端那台电脑的 `IP:端口`，例如 `192.168.1.10:3000`
-4. 点「连接」。绿点表示已连接。
-5. 用「资产库 / 分组」下拉切换，点素材选中：
-   - **置入当前文档**：把选中图片置入 PS（双击素材也可）
-   - **打开**：在外部浏览器打开原图 / 视频
-6. 底部「把当前文档存到此分组 ↑」：把当前 PS 文档合并导出为 PNG，存入选中的图片分组。
-
-> 地址会被记住，下次打开点「连接」即可恢复。右上「实时」勾选后，画布/网页那边新增素材，面板会自动刷新。
-
-## 调试安装
-
-1. 安装 Adobe UXP Developer Tool（UDT）。
-2. 打开 Photoshop（24.0 以上）。
-3. UDT → `Add Plugin` → 选择本目录的 `manifest.json`：
-
-   ```text
-   tools/photoshop-asset-connector/manifest.json
+1. **打包**：在终端运行
+   ```bash
+   cd tools/photoshop-asset-connector
+   bash package.sh
    ```
+   生成 `NOVAI-画布工具-v0.3.0.ccx`（约 48KB）。
 
-4. 点 `Load`，在 PS 的「增效工具」菜单里打开「大雄资产库」。
+2. **安装到 PS**：打开 Photoshop（24.0 以上）→ 增效工具 → 管理增效工具 → 右上 ⚙ → **从文件安装增效工具** → 选择 `.ccx` 文件。
 
-## 后端接口契约
+> 开发调试也可以用 UXP Developer Tool 加载 `manifest.json`，见 [Adobe UXP 文档](https://developer.adobe.com/photoshop/uxp/devtool/)。
 
-| 用途 | 方法 / 路径 | 说明 |
-| --- | --- | --- |
-| 读取资产库 | `GET /api/asset-library` | 返回 `{ library: { libraries, active_library_id } }` |
-| 上传字节 | `POST /api/ai/upload`（multipart）| 返回 `{ files:[{ url:"/assets/input/…", kind, name }] }` |
-| 存入分组 | `POST /api/asset-library/items` | 体 `{ library_id, category_id, url, name }`，仅图片类分组 |
-| 实时刷新 | `WS /ws/stats` | 收到 `{ type:"asset_library_updated" }` 触发刷新 |
+## 使用（打开面板即连）
+
+1. 启动 NOVAI 后端（`python main.py` 或 `启动服务.bat`）。
+2. 在 PS 增效工具菜单打开「NOVAI画布工具」面板。
+3. **面板会自动探测本机服务并连接** — 绿点亮起就能用了。
+
+如果自动连接失败（比如后端在局域网另一台电脑上）：
+- 切到「设置」Tab → 填入那台电脑的 `IP:端口`（如 `192.168.1.10:3000`） → 点「连接」。
+
+> 地址会记住，下次打开面板自动重连，不用再手动操作。
+
+## 功能
+
+| 功能 | 说明 |
+|------|------|
+| 资产浏览 | 切「图片资产 / 画布资产 / 本地素材」浏览，双击置入 PS |
+| 下载到图层 | 选中图片 → 点底部「下载到图层」 |
+| 上传当前画面 | 选中分组 → 点「上传当前画面」导出 PS 文档并存入 |
+| 生成 Tab | 调用 API / MS / RH / ComfyUI 生成图片 |
+| Agent Tab | AI 对话生成和图像编辑，支持选区局部修改 |
+| 实时同步 | 勾选「实时同步」后，画布那边变化面板自动刷新 |
 
 ## 说明
 
-- `manifest.json` 用 `"network": { "domains": "all" }` 放开网络权限，所以**任意局域网地址**都能填。
-- 后端 CORS 为 `*`，且 `/assets` 已作为静态目录挂载，跨机访问可直接加载缩略图。
-- 视频/非图片素材可浏览、可外部打开，但不直接置入 PS。
-- 导出用 `copy:true` 存合并拷贝，**不会改动你的原文档**。
-- 工作流（`workflow` 类）分组不参与置入与导出。
+- 插件不改动原文档：导出用合并拷贝（`copy:true`），安全无副作用。
+- 视频/音频素材可浏览、可外部打开，但不置入 PS。
+- 局域网地址随意填（`manifest.json` 已放行所有域名）。
 
-## 代码结构（v0.3 起模块化）
+## 后端接口
 
-多 `<script>` + 全局 `DX` 命名空间（规避 UXP 的 CommonJS 路径解析问题）：
+| 用途 | 方法 / 路径 | 说明 |
+|------|-------------|------|
+| 读取资产库 | `GET /api/asset-library` | `{ library: { libraries, active_library_id } }` |
+| 上传图片 | `POST /api/ai/upload-base64` | `{ data, name, content_type } → { files: [{ url }] }` |
+| 存入分组 | `POST /api/asset-library/items` | `{ library_id, category_id, url, name }` |
+| 实时推送 | `WS /ws/stats` | `{ type: "asset_library_updated" }` 触发刷新 |
+| 自动探测 | `GET /api/asset-library` | 插件对 localhost 常见端口逐个探测 |
+
+## 代码结构
 
 ```
-index.html        外壳：顶部 Tab（资产/生成/设置）+ 三个视图
-style.css         深色主题；纯 flexbox；@media 做两栏渐进增强
+index.html        外壳：顶部 Tab（资产 / 生成 / Agent / 设置）
+style.css         深色主题
 js/state.js       共享状态 + localStorage 键
-js/net.js         地址解析 / HTTP / WS base / 字节上传
+js/net.js         地址解析 / HTTP / WS / 字节上传 / 自动探测
 js/sources.js     三数据源适配器（assets / canvas / local）
-js/ps.js          Photoshop 操作（置入 / 导出 PNG / 外部打开）
+js/ps.js          PS 操作（置入 / 导出 PNG / 外部打开）
 js/socket.js      WebSocket 实时同步（心跳 + 退避重连）
-js/app.js         启动 + Tab 路由 + 资产视图渲染 + 事件
+js/ui.js          Spectrum UI 组件助手
+js/generate.js    生成 Tab（API / MS / RH / ComfyUI）
+js/agent.js       Agent Tab（对话 + 图像编辑）
+js/app.js         启动 / Tab 路由 / 事件绑定 / 自动连接
+package.sh        打包为 .ccx 安装包
 ```
-
-脚本按依赖顺序加载：state → net → sources → ps → socket → app。
-
-## 路线图
-
-- ✅ 连接 / 三源浏览 / 置入 / 导出 / 深色 / 稳定性 / Tab 地基
-- ⏳ 编辑：改名 / 删除 / 移动 / 新建分组（资产库 + 本地；画布资产删改需读画布→改节点→存画布）
-- ⏳ 生成 Tab：API / ModelScope / RunningHub 切换 → 模型 / 参数 → 提交 → 队列轮询 → 结果置入 PS 或存库
-- ⏳ 工作流：ComfyUI / RunningHub 工作流参数表单与调用
 
 ## 版本
 
-- 0.3：模块化重构、顶部 Tab、两栏预览、连接稳定性加固（含服务端关闭 WS 协议 ping）。
+- **0.3**：模块化重构、顶部 Tab、两栏预览、自动探测连接、Agent Tab。
 - 0.2：切到 `/api/asset-library`，新增三数据源、PS→库导出、WebSocket 实时刷新。
 - 0.1：只读浏览本地上传并置入。

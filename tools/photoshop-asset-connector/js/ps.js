@@ -10,8 +10,8 @@
   const formats = uxp.storage.formats;
   const shell = uxp.shell;
 
-  const net = DX.net;
-  const itemIsImage = DX.sources.itemIsImage;
+  const net = NV.net;
+  const itemIsImage = NV.sources.itemIsImage;
 
   function hasDocument() { return app.documents.length > 0; }
 
@@ -31,7 +31,7 @@
     if (!/^[a-z0-9]{1,5}$/.test(ext)) ext = 'png';
     const safe = String(item.name || 'asset').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 48) || 'asset';
     const folder = await fs.getTemporaryFolder();
-    const file = await folder.createFile(`dx_${safe}_${Date.now()}.${ext}`, { overwrite: true });
+    const file = await folder.createFile(`nv_${safe}_${Date.now()}.${ext}`, { overwrite: true });
     await file.write(buffer, { format: formats.binary });
     return file;
   }
@@ -59,7 +59,7 @@
   // PS → 后端：导出当前文档为合并 PNG（asCopy=true，不改动用户文档），返回字节
   async function exportDocPng() {
     const folder = await fs.getTemporaryFolder();
-    const file = await folder.createFile(`dx_export_${Date.now()}.png`, { overwrite: true });
+    const file = await folder.createFile(`nv_export_${Date.now()}.png`, { overwrite: true });
     let docName = 'document';
     await core.executeAsModal(async () => {
       const doc = app.activeDocument;
@@ -75,7 +75,7 @@
   // 全程不改动用户的原文档。
   async function exportActiveLayerPng() {
     const folder = await fs.getTemporaryFolder();
-    const file = await folder.createFile(`dx_layer_${Date.now()}.png`, { overwrite: true });
+    const file = await folder.createFile(`nv_layer_${Date.now()}.png`, { overwrite: true });
     let layerName = 'layer';
     await core.executeAsModal(async () => {
       const srcDoc = app.activeDocument;
@@ -88,7 +88,7 @@
       await action.batchPlay([{
         _obj: 'make',
         _target: [{ _ref: 'document' }],
-        name: 'dx_tmp_layer_export',
+        name: 'nv_tmp_layer_export',
         using: {
           _ref: [
             { _ref: 'layer', _enum: 'ordinal', _value: 'targetEnum' },
@@ -107,7 +107,7 @@
   }
 
   async function exportCurrentPng() {
-    return DX.state.exportLayer ? exportActiveLayerPng() : exportDocPng();
+    return NV.state.exportLayer ? exportActiveLayerPng() : exportDocPng();
   }
 
   // 读当前矩形选区边界（原文档像素坐标）。无选区/无效返回 null。需在 executeAsModal 内调用。
@@ -160,7 +160,7 @@
     const srcId = doc.id;
     let bounds = null;
     const folder = await fs.getTemporaryFolder();
-    const file = await folder.createFile(`dx_selpng_${Date.now()}.png`, { overwrite: true });
+    const file = await folder.createFile(`nv_selpng_${Date.now()}.png`, { overwrite: true });
     await core.executeAsModal(async () => {
       const sb = await readSelectionBounds();
       if (!sb) return;
@@ -169,7 +169,7 @@
       await action.batchPlay([{
         _obj: 'duplicate',
         _target: [{ _ref: 'document', _enum: 'ordinal', _value: 'targetEnum' }],
-        name: 'dx_tmp_selpng',
+        name: 'nv_tmp_selpng',
       }], { synchronousExecution: true });
       const tmp = app.activeDocument;
       if (!tmp || tmp.id === srcId) throw new Error('未能复制文档用于导出选区');
@@ -208,12 +208,12 @@
 
     const folder = await fs.getTemporaryFolder();
     // 先把原图合并导出成一张 PNG（作为要贴进各块透明画布的素材）
-    const origPng = await folder.createFile(`dx_op_src_${Date.now()}.png`, { overwrite: true });
+    const origPng = await folder.createFile(`nv_op_src_${Date.now()}.png`, { overwrite: true });
     await core.executeAsModal(async () => {
       await action.batchPlay([{
         _obj: 'duplicate',
         _target: [{ _ref: 'document', _enum: 'ordinal', _value: 'targetEnum' }],
-        name: 'dx_tmp_op_src',
+        name: 'nv_tmp_op_src',
       }], { synchronousExecution: true });
       const tmp = app.activeDocument;
       if (!tmp || tmp.id === srcId) throw new Error('未能复制文档用于扩图');
@@ -235,7 +235,7 @@
     const blocks = [];
     for (const dir of wanted) {
       const g = geom(dir);
-      const file = await folder.createFile(`dx_op_${dir}_${Date.now()}.png`, { overwrite: true });
+      const file = await folder.createFile(`nv_op_${dir}_${Date.now()}.png`, { overwrite: true });
       await core.executeAsModal(async () => {
         const blkDoc = await app.documents.add({ width: g.BW, height: g.BH, resolution: 72, fill: 'transparent' });
         if (!blkDoc || blkDoc.id === srcId) throw new Error('未能新建扩图块文档');
@@ -333,5 +333,5 @@
     catch (e) { /* 部分版本不支持 */ }
   }
 
-  DX.ps = { hasDocument, docSize, placeImage, placeImageAt, exportDocPng, exportActiveLayerPng, exportCurrentPng, exportSelectionPng, exportSelectionTransparent, outpaintDirections, openExternal, openUrl, onDocChange };
+  NV.ps = { hasDocument, docSize, placeImage, placeImageAt, exportDocPng, exportActiveLayerPng, exportCurrentPng, exportSelectionPng, exportSelectionTransparent, outpaintDirections, openExternal, openUrl, onDocChange };
 })();

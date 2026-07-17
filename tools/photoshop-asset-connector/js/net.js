@@ -1,6 +1,6 @@
 /* 网络层：地址解析、HTTP/WS base、REST 助手、字节上传。纯逻辑，不碰 DOM/PS。 */
 (function () {
-  const state = DX.state;
+  const state = NV.state;
 
   function parseHost(raw) {
     let text = String(raw || '').trim();
@@ -110,5 +110,22 @@
     return uploadBase64Raw(toBase64(buffer), name, 'image/png');
   }
 
-  DX.net = { parseHost, httpBase, wsBase, absUrl, thumbUrl, displayUrl, needsJpeg, apiGet, apiSend, fetchBytes, toBase64, uploadInputBase64, uploadBase64Raw };
+  // 自动探测：依次尝试 localhost 常见端口，返回第一个可用的 host。
+  // UXP fetch 跨域受限（manifest 已放行 "all"），超时用 AbortController。
+  const PROBE_PORTS = [8767, 3000, 8765, 8766, 5000];
+  async function probeHost() {
+    for (const port of PROBE_PORTS) {
+      const host = `127.0.0.1:${port}`;
+      try {
+        const ctrl = new AbortController();
+        const to = setTimeout(() => ctrl.abort(), 2500);
+        const res = await fetch(`http://${host}/api/asset-library`, { signal: ctrl.signal, cache: 'no-store' });
+        clearTimeout(to);
+        if (res.ok || res.status === 200) return host;
+      } catch (e) { /* 不可用，继续下一个 */ }
+    }
+    return '';
+  }
+
+  NV.net = { parseHost, httpBase, wsBase, absUrl, thumbUrl, displayUrl, needsJpeg, apiGet, apiSend, fetchBytes, toBase64, uploadInputBase64, uploadBase64Raw, probeHost };
 })();

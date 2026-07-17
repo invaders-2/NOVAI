@@ -1,0 +1,57 @@
+# API 配置(含密钥)
+.env
+API/.env
+API/
+
+# Python
+*.pyc
+__pycache__/
+venv/
+
+# 构建产物 / 打包输出
+build/
+dist/
+dist-desktop/
+NOVAI-*.zip
+NOVAI-Setup-*.exe
+*.spec
+
+# 运行时数据（不推送）
+assets/
+data/api_providers.json
+data/asset_library.json
+data/prompt_libraries.json
+data/canvases/
+data/conversations/
+data/media_previews/
+data/projects.json
+data/update_backups/
+history.json
+static/runninghub/api_providers.json
+
+# 日志
+logs/
+
+# 编辑器 / IDE / 工具
+.claude/
+.codegraph/
+.coze
+.deps_installed
+.deps_hash
+.workbuddy/
+.playwright-cli/
+electron/node_modules/
+node_modules/
+smart-canvas.js.bak
+_self_restart.bat
+
+# 测试/调试截图和临时文件
+gpt-chat-*.png
+gpt-chat-*.yml
+
+# 冗余 vendor 文件（已有子集版本替代）
+static/vendor/js/lucide.js
+
+# 系统文件
+.DS_Store
+Thumbs.db

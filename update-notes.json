@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "version": "1.0.83",
+      "date": "2026-07-17",
+      "changes": [
+        "前端六轮性能优化：Lucide图标子集化（体积减少90%）、共享模块提取（NovaUtils/NovaMedia）、Marvis风格CSS去重、定时器泄漏修复、rAF暂停机制、touch-mouse布局缓存",
+        "GPT聊天模型选择弹窗重构：左右两栏布局，悬停联动切换供应商，动态高度自适应",
+        "修复GPT聊天功能无法使用（TDZ错误导致空白）、Lucide图标不显示、素材库英文错误信息",
+        "API设置与工作流设置页面设计同步为Marvis风格",
+        "新增7个后端API端点（存储管理、图片检测、分类Prompt、模型规范化、RH钱包状态）",
+        "轮询改为setTimeout递归防竞态、node.running过早清零修复、sendChatMessage防重入"
+      ]
+    },
+    {
       "version": "1.0.77",
       "date": "2026-07-14",
       "changes": [

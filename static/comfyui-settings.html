@@ -21,15 +21,16 @@
     <link rel="stylesheet" href="/static/css/comfyui-settings.css?v=1.0.83.1784267890">
     <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784255511">
 
+<link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784254613">
 <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784254710">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
 body { background: var(--bg) !important; color: var(--text) !important; }
 /* --- Marvis 增强覆盖 (comfyui-settings.html) --- */
-header { background: var(--sidebar-bg) !important; backdrop-filter: blur(28px) !important; border-bottom: 1px solid var(--divider) !important; }
-.card { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; }
+header { background: var(--sidebar-bg) !important; backdrop-filter: blur(28px) !important; }
+.card { background: var(--stage-bg) !important; border-radius: var(--radius-lg) !important; }
 button.primary { background: var(--text) !important; color: var(--bg) !important; border-radius: var(--radius-md) !important; }
-input, select { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; color: var(--text) !important; }
+input, select { background: var(--stage-bg) !important; border-radius: var(--radius-sm) !important; color: var(--text) !important; }
 /* 设置弹窗内嵌模式 — 与通用/外观/关于面板风格统一 */
 html.settings-embed body { background: transparent !important; font-family: var(--font-sans) !important; }
 html.settings-embed,
@@ -50,13 +51,11 @@ html.settings-embed .layout { grid-template-columns: 260px minmax(0,1fr); gap: 1
 html.settings-embed .sidebar { position: static; max-height: none; }
 html.settings-embed .side-card {
     background: var(--stage-bg) !important;
-    border: 1px solid var(--divider) !important;
     border-radius: 16px !important;
 }
 html.settings-embed .graph-card,
 html.settings-embed .content-head {
     background: var(--stage-bg) !important;
-    border: 1px solid var(--divider) !important;
     border-radius: 16px !important;
 }
 html.settings-embed .field-frame,
@@ -91,11 +90,11 @@ html.settings-embed .graph-svg-wrap { border-radius: 10px !important; }
                             <i data-lucide="plus" class="w-3.5 h-3.5"></i><span>添加后端</span>
                         </button>
                         <div style="display:flex;gap:6px">
-                            <button class="upload-btn" type="button" onclick="saveComfyInstances()" style="flex:1;border-style:solid;background:var(--panel);color:var(--text);border-color:var(--text)">
+                            <button class="upload-btn" type="button" onclick="saveComfyInstances()" style="flex:1;background:var(--panel);color:var(--text)">
                                 <i data-lucide="save" class="w-3.5 h-3.5"></i><span>保存</span>
                             </button>
                         </div>
-                        <div style="font-size:10.5px;color:var(--faint);line-height:1.55;font-weight:600">格式：<span style="font-family:ui-monospace,Menlo,monospace">host:port</span>（如 <span style="font-family:ui-monospace,Menlo,monospace">127.0.0.1:8188</span>）</div>
+                        <div style="font-size:10.5px;color:var(--faint);line-height:1.55;font-weight:600">格式：<span style="font-family:var(--font-mono)">host:port</span>（如 <span style="font-family:var(--font-mono)">127.0.0.1:8188</span>）</div>
                     </div>
 
                     <div class="side-card workflow-panel workflow-panel-comfy">

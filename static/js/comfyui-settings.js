@@ -214,9 +214,9 @@ function renderComfyInstances(){
     const el = document.getElementById('comfyInstancesList');
     if(!el) return;
     el.innerHTML = comfyInstances.map((addr, i) => `
-        <div style="display:flex;align-items:center;gap:6px;padding:4px;border:1px solid var(--line);border-radius:9px;background:var(--soft)">
+        <div style="display:flex;align-items:center;gap:6px;padding:4px;border:0;border-radius:9px;background:var(--soft)">
             <span style="width:18px;text-align:center;font-size:10.5px;color:var(--faint);font-weight:800">${i + 1}</span>
-            <input class="small-input" type="text" value="${escapeAttr(addr)}" placeholder="host:port" oninput="updateComfyInstance(${i}, this.value)" style="flex:1;height:28px;padding:0 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);font-size:12px;font-family:ui-monospace,Menlo,monospace">
+            <input class="small-input" type="text" value="${escapeAttr(addr)}" placeholder="host:port" oninput="updateComfyInstance(${i}, this.value)" style="flex:1;height:28px;padding:0 8px;border:0;border-radius:6px;background:var(--panel);color:var(--text);font-size:12px;font-family:var(--font-mono)">
             <button class="opt-del" type="button" onclick="removeComfyInstance(${i})" title="删除"><i data-lucide="x" class="w-3 h-3"></i></button>
         </div>
     `).join('');

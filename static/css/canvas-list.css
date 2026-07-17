@@ -1,58 +1,36 @@
 @import url('/static/vendor/css/fonts.css?v=2026.07.9.2400');
 
-/* ===== Theme variables ===== */
+/* ===== 变量由 marvis-shared.css 统一提供，此处仅保留本地别名 ===== */
 :root {
-    --ease:cubic-bezier(.4,0,.2,1);
-    --page:#f3f3f3;
-    --grid:rgba(88, 88, 88, .18);
-    --panel:rgba(255,255,255,.9);
-    --panel-solid:#fff;
-    --card:rgba(255,255,255,.98);
-    --card-solid:#fff;
-    --soft:#f3f3f3;
-    --soft-2:#ececec;
-    --line:#e4e4e4;
-    --line-2:#d1d1d1;
-    --text:#121212;
-    --muted:#525252;
-    --faint:#888888;
-    --shadow:rgba(28, 28, 28, .08);
-    --shadow-strong:rgba(28, 28, 28, .14);
-    --strong:#141414;
-    --strong-text:#fff;
-    --accent:#2563eb;
-    --accent-soft:#f5f5f5;
-    --accent-line:#bfdbfe;
-    --success:#059669;
-    --danger:#dc2626;
-    --danger-soft:#fff1f2;
+    --ease: var(--fast-ease);
+    --page: var(--bg);
+    --grid: var(--grid-color);
+    --panel: var(--panel-bg);
+    --panel-solid: var(--surface);
+    --card: var(--surface-2);
+    --card-solid: var(--surface);
+    --soft: var(--surface-2);
+    --soft-2: var(--surface-2);
+    --line: var(--border-2);
+    --line-2: var(--border-strong);
+    --text: var(--text);
+    --muted: var(--text-2);
+    --faint: var(--text-3);
+    --shadow: var(--shadow-color);
+    --shadow-strong: var(--shadow-color-lg);
+    --strong: var(--text);
+    --strong-text: var(--bg);
+    --accent: var(--info);
+    --accent-soft: var(--info-bg);
+    --accent-line: var(--info-border);
+    --success: var(--success);
+    --danger: var(--danger);
+    --danger-soft: var(--danger-bg);
 }
-.theme-dark {
-    --page:#0c0c0c;
-    --grid:rgba(132, 132, 132, .16);
-    --panel:rgba(18,18,18,.9);
-    --panel-solid:#141414;
-    --card:rgba(18,18,18,.98);
-    --card-solid:#171717;
-    --soft:#1a1a1a;
-    --soft-2:#262626;
-    --line:#2a2a2a;
-    --line-2:#525252;
-    --text:#f5f5f5;
-    --muted:#a3a3a3;
-    --faint:#8e8e8e;
-    --shadow:rgba(0,0,0,.24);
-    --shadow-strong:rgba(0,0,0,.36);
-    --strong:#d1d1d1;
-    --strong-text:#171717;
-    --accent:#60a5fa;
-    --accent-soft:rgba(37,99,235,.16);
-    --accent-line:rgba(96,165,250,.34);
-    --danger-soft:rgba(220,38,38,.16);
-}
+/* 暗色模式由 marvis-shared.css 统一处理 */
 
 * { box-sizing:border-box; }
-body { margin:0; height:100vh; overflow:hidden; background:var(--page); color:var(--text); font-family:'Inter',-apple-system,sans-serif; -webkit-font-smoothing:antialiased; }
+body { margin:0; height:100vh; overflow:hidden; background:var(--page); color:var(--text); font-family: var(--font-sans); -webkit-font-smoothing:antialiased; }
 
 /* ===== Workspace shell (two pane) ===== */
 .workspace { position:relative; display:flex; height:100vh; overflow:hidden; }
@@ -97,18 +75,18 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-proj-act { width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; color:var(--faint); background:transparent; border:none; cursor:pointer; transition:all .13s var(--ease); }
 .ws-proj-act:hover { color:var(--text); background:var(--soft-2); }
 .ws-project-row.active .ws-proj-act { color:rgba(255,255,255,.9); background:rgba(255,255,255,.1); }
-.ws-project-row.active .ws-proj-act:hover { color:#fff; background:rgba(255,255,255,.22); }
-.ws-proj-act.del:hover { color:#dc2626; background:#fee2e2; }
-.theme-dark .ws-proj-act.del:hover { color:#fca5a5; background:rgba(220,38,38,.22); }
-.ws-project-row.active .ws-proj-act.del:hover { color:#fecaca; background:rgba(248,113,113,.22); }
+.ws-project-row.active .ws-proj-act:hover { color:var(--text-on-accent); background:rgba(255,255,255,.22); }
+.ws-proj-act.del:hover { color:var(--danger); background:var(--danger-bg); }
+.theme-dark .ws-proj-act.del:hover { color:var(--danger-text); background:rgba(220,38,38,.22); }
+.ws-project-row.active .ws-proj-act.del:hover { color:var(--danger-text); background:rgba(248,113,113,.22); }
 
 /* delete-confirm inline */
 .ws-project-confirm { display:flex; flex-direction:column; gap:7px; padding:10px; margin:2px 0; border-radius:8px; background:var(--strong); box-shadow:0 10px 24px var(--shadow); }
 .ws-project-confirm-title { color:var(--strong-text); font-size:11px; font-weight:800; line-height:1.4; }
 .ws-project-confirm-actions { display:flex; gap:6px; }
 .ws-confirm-btn,.ws-cancel-btn { flex:1; height:26px; border-radius:999px; font-size:11px; font-weight:800; cursor:pointer; border:none; }
-.ws-confirm-btn { background:#dc2626; color:#fff; }
-.ws-confirm-btn:hover { background:#b91c1c; }
+.ws-confirm-btn { background:var(--danger); color:var(--text-on-accent); }
+.ws-confirm-btn:hover { background:var(--danger-text); }
 .ws-cancel-btn { background:var(--soft); color:var(--text); border:1px solid var(--line); }
 
 .ws-side-foot { padding:10px 12px; border-top:1px solid var(--line); background:linear-gradient(180deg, transparent, rgba(88, 88, 88, .04)); }
@@ -116,7 +94,7 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-trash-entry:hover { color:var(--text); background:var(--soft); }
 .ws-trash-entry.active { color:var(--text); background:var(--danger-soft); border-color:rgba(220,38,38,.22); }
 .ws-trash-label { flex:1; text-align:left; }
-.ws-trash-badge { min-width:18px; height:18px; padding:0 6px; border-radius:999px; display:none; align-items:center; justify-content:center; background:#3a3a3a; color:#fff; font-size:10px; font-weight:800; }
+.ws-trash-badge { min-width:18px; height:18px; padding:0 6px; border-radius:999px; display:none; align-items:center; justify-content:center; background:var(--surface-2); color:var(--text-on-accent); font-size:10px; font-weight:800; }
 .ws-trash-badge.visible { display:inline-flex; }
 
 /* ===== RIGHT main / board ===== */
@@ -131,12 +109,12 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-primary-btn { height:36px; padding:0 14px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; gap:7px; background:var(--strong); color:var(--strong-text); border:none; cursor:pointer; font-size:12px; font-weight:850; box-shadow:0 8px 18px var(--shadow); }
 .ws-primary-btn:hover { transform:translateY(-1px); box-shadow:0 12px 24px var(--shadow-strong); }
 /* 粘贴到此项目：剪切后才出现的强调按钮，固定高对比色避免主题变量冲淡文字。 */
-.ws-paste-btn { height:36px; padding:0 13px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; gap:7px; background:#1d4ed8; color:#fff; border:1px solid rgba(255,255,255,.18); cursor:pointer; font-size:12px; font-weight:850; box-shadow:0 8px 18px rgba(37,99,235,.28); }
+.ws-paste-btn { height:36px; padding:0 13px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; gap:7px; background:var(--info); color:var(--text-on-accent); border:1px solid rgba(255,255,255,.18); cursor:pointer; font-size:12px; font-weight:850; box-shadow:0 8px 18px rgba(37,99,235,.28); }
 .ws-paste-btn:hover { background:#1e40af; box-shadow:0 10px 22px rgba(37,99,235,.34); }
 .ws-paste-btn span { color:inherit; }
 .ws-paste-btn i,.ws-paste-btn svg { width:16px; height:16px; color:inherit; stroke:currentColor; }
-.theme-dark .ws-paste-btn { background:#2563eb; color:#fff; border-color:rgba(147,197,253,.28); box-shadow:0 10px 24px rgba(37,99,235,.34); }
-.theme-dark .ws-paste-btn:hover { background:#1d4ed8; }
+.theme-dark .ws-paste-btn { background:#2563eb; color:var(--text-on-accent); border-color:rgba(147,197,253,.28); box-shadow:0 10px 24px rgba(37,99,235,.34); }
+.theme-dark .ws-paste-btn:hover { background:var(--info); }
 
 .ws-board { position:relative; flex:1; min-height:0; overflow:hidden; background:var(--page); background-image:linear-gradient(rgba(88, 88, 88, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(88, 88, 88, .045) 1px, transparent 1px), radial-gradient(var(--grid) 1px, transparent 1px); background-size:120px 120px, 120px 120px, 24px 24px; cursor:grab; user-select:none; }
 .ws-board.panning { cursor:grabbing; }
@@ -157,7 +135,7 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
     border-radius:8px;
     background:var(--card-solid);
     border:1px solid var(--line);
-    box-shadow:0 6px 18px rgba(28, 28, 28, .06);
+    box-shadow:0 6px 18px var(--shadow-color);
     padding:14px;
     display:flex;
     flex-direction:column;
@@ -173,9 +151,9 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-card.cut { opacity:.56; border-style:dashed; }
 .ws-card-top { display:flex; align-items:center; gap:8px; min-height:28px; flex:0 0 auto; min-width:0; white-space:nowrap; overflow:hidden; }
 .ws-card-icon { width:30px; height:30px; flex:0 0 auto; border-radius:8px; display:flex; align-items:center; justify-content:center; background:var(--soft); color:var(--muted); border:1px solid var(--line); font-size:16px; }
-.ws-card-icon.icon-has-color { background:var(--accent); color:#fff; border-color:transparent; }
+.ws-card-icon.icon-has-color { background:var(--accent); color:var(--text-on-accent); border-color:transparent; }
 .ws-card-kind { display:inline-flex; align-items:center; justify-content:center; flex:0 1 auto; min-width:0; max-width:calc(100% - 36px); height:22px; padding:0 8px; border-radius:6px; font-size:10px; font-weight:850; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.ws-card-kind.smart { background:#f3f3f3; color:#6d28d9; border:1px solid #dadada; }
+.ws-card-kind.smart { background:var(--surface-2); color:#6d28d9; border:1px solid var(--border-2); }
 .ws-card-kind.classic { background:var(--soft-2); color:var(--muted); border:1px solid var(--line); }
 .ws-card-menu { margin-left:auto; width:28px; height:28px; flex:0 0 28px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--faint); background:transparent; border:1px solid transparent; cursor:pointer; opacity:.58; transition:all .14s var(--ease); }
 .ws-card:hover .ws-card-menu,.ws-card:focus-within .ws-card-menu { opacity:1; }
@@ -194,7 +172,7 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-card-delete-title { font-size:12px; line-height:1.45; font-weight:800; color:var(--text); }
 .ws-card-delete-actions { display:flex; gap:7px; }
 .ws-card-delete-actions button { flex:1; height:30px; border-radius:8px; border:1px solid var(--line); cursor:pointer; font-size:12px; font-weight:800; }
-.ws-card-delete-yes { background:var(--danger); color:#fff; border-color:var(--danger) !important; }
+.ws-card-delete-yes { background:var(--danger); color:var(--text-on-accent); border-color:var(--danger) !important; }
 .ws-card-delete-no { background:var(--card-solid); color:var(--muted); }
 
 /* ===== Card context menu ===== */
@@ -232,19 +210,19 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-trash-note { display:flex; align-items:center; gap:7px; margin:14px 18px 0; padding:10px 12px; border-radius:8px; background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-line); font-size:12px; font-weight:700; }
 .ws-trash-list { flex:1; min-height:0; overflow:auto; padding:16px 18px 24px; display:grid; grid-template-columns:repeat(auto-fill, minmax(248px, 1fr)); gap:14px; align-content:start; }
 .ws-trash-empty { grid-column:1/-1; min-height:280px; display:flex; align-items:center; justify-content:center; text-align:center; color:var(--faint); font-size:14px; font-weight:750; }
-.ws-trash-card { position:relative; border-radius:8px; background:var(--card-solid); border:1px solid var(--line); padding:14px; display:flex; flex-direction:column; gap:12px; min-height:150px; box-shadow:0 6px 18px rgba(28, 28, 28, .06); overflow:hidden; }
+.ws-trash-card { position:relative; border-radius:8px; background:var(--card-solid); border:1px solid var(--line); padding:14px; display:flex; flex-direction:column; gap:12px; min-height:150px; box-shadow:0 6px 18px var(--shadow-color); overflow:hidden; }
 .ws-trash-card::before { display:none; }
 .ws-trash-card .ws-card-actions { display:flex; gap:6px; margin-top:auto; }
 .ws-trash-act { flex:1; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:5px; font-size:11.5px; font-weight:800; cursor:pointer; border:1px solid var(--line); background:var(--soft); color:var(--muted); transition:all .14s var(--ease); }
-.ws-trash-act.restore:hover { color:var(--success); background:#ecfdf5; border-color:#a7f3d0; }
-.ws-trash-act.purge:hover { color:var(--danger); background:var(--danger-soft); border-color:#fecaca; }
+.ws-trash-act.restore:hover { color:var(--success); background:var(--success-bg); border-color:var(--success-border); }
+.ws-trash-act.purge:hover { color:var(--danger); background:var(--danger-soft); border-color:var(--danger-border); }
 .ws-trash-card.confirming .ws-card-actions { display:none; }
 .ws-trash-confirm { display:none; flex-direction:column; gap:8px; margin-top:auto; padding:8px; border-radius:8px; background:var(--danger-soft); border:1px solid rgba(220,38,38,.2); }
 .ws-trash-card.confirming .ws-trash-confirm { display:flex; }
 .ws-trash-confirm-title { font-size:11px; font-weight:800; color:var(--text); }
 .ws-trash-confirm-actions { display:flex; gap:6px; }
 .ws-trash-confirm-actions button { flex:1; height:30px; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer; border:none; }
-.ws-trash-confirm-yes { background:var(--danger); color:#fff; }
+.ws-trash-confirm-yes { background:var(--danger); color:var(--text-on-accent); }
 .ws-trash-confirm-no { background:var(--soft); color:var(--muted); border:1px solid var(--line); }
 
 /* ===== Status toast ===== */
@@ -252,22 +230,22 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-status.show { opacity:1; }
 
 /* ===== Dark theme adjustments ===== */
-.theme-dark .ws-trash-note { background:var(--accent-soft); color:#bfdbfe; border-color:var(--accent-line); }
+.theme-dark .ws-trash-note { background:var(--accent-soft); color:var(--info-border); border-color:var(--accent-line); }
 .theme-dark .ws-project-row.active,
-.theme-dark .ws-primary-btn { background:#dcdcdc; color:#1c1c1c; }
+.theme-dark .ws-primary-btn { background:var(--surface-2); color:var(--text); }
 .theme-dark .ws-project-row.active .ws-project-name,
 .theme-dark .ws-project-row.active .ws-project-icon,
-.theme-dark .ws-project-row.active .ws-project-count { color:#1c1c1c; }
+.theme-dark .ws-project-row.active .ws-project-count { color:var(--text); }
 .theme-dark .ws-project-row.active .ws-project-count { background:rgba(28, 28, 28, .12); }
 .theme-dark .ws-project-row.active .ws-proj-act { color:#1a1a1a; background:rgba(28, 28, 28, .08); }
-.theme-dark .ws-project-row.active .ws-proj-act:hover { color:#1c1c1c; background:rgba(28, 28, 28, .16); }
+.theme-dark .ws-project-row.active .ws-proj-act:hover { color:var(--text); background:rgba(28, 28, 28, .16); }
 .theme-dark .ws-project-row.active .ws-proj-act.del:hover { color:#991b1b; background:rgba(220,38,38,.14); }
-.theme-dark .ws-mini-btn.primary { background:#dcdcdc; color:#1c1c1c; border-color:#dcdcdc; }
+.theme-dark .ws-mini-btn.primary { background:var(--surface-2); color:var(--text); border-color:var(--border-2); }
 .theme-dark .ws-card-kind.smart { background:rgba(139,92,246,.18); color:#c4b5fd; border-color:rgba(139,92,246,.3); }
-.theme-dark .ws-create-confirm { background:#dcdcdc; color:#1c1c1c; }
-.theme-dark .ws-create-toggle-btn.active { background:#dcdcdc; color:#1c1c1c; }
-.theme-dark .ws-trash-act.restore:hover { color:#6ee7b7; background:rgba(5,150,105,.15); border-color:rgba(110,231,183,.35); }
-.theme-dark .ws-trash-act.purge:hover { color:#fecaca; background:rgba(220,38,38,.18); border-color:rgba(248,113,113,.35); }
+.theme-dark .ws-create-confirm { background:var(--surface-2); color:var(--text); }
+.theme-dark .ws-create-toggle-btn.active { background:var(--surface-2); color:var(--text); }
+.theme-dark .ws-trash-act.restore:hover { color:var(--success-text); background:rgba(5,150,105,.15); border-color:rgba(110,231,183,.35); }
+.theme-dark .ws-trash-act.purge:hover { color:var(--danger-text); background:rgba(220,38,38,.18); border-color:rgba(248,113,113,.35); }
 .theme-dark .ws-pop-item.danger:hover { background:rgba(220,38,38,.18); }
 .theme-dark .ws-card-delete-no { background:var(--soft); }
 

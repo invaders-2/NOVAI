@@ -9,12 +9,9 @@ Adobe Photoshop UXP 面板插件，连接局域网内的 NOVAI 后端，双向�
 
 ## 安装（两步）
 
-1. **打包**：在终端运行
-   ```bash
-   cd tools/photoshop-asset-connector
-   bash package.sh
-   ```
-   生成 `NOVAI-画布工具-v0.3.0.ccx`（约 48KB）。
+1. **打包**：双击 `package.command` 文件即可生成 `.ccx` 安装包。
+   > 如果无法双击运行，在终端执行：`chmod +x package.command` 后再双击。
+   > 生成 `NOVAI-画布工具-v0.3.0.ccx`（约 48KB）。
 
 2. **安装到 PS**：打开 Photoshop（24.0 以上）→ 增效工具 → 管理增效工具 → 右上 ⚙ → **从文件安装增效工具** → 选择 `.ccx` 文件。
 
@@ -72,7 +69,7 @@ js/ui.js          Spectrum UI 组件助手
 js/generate.js    生成 Tab（API / MS / RH / ComfyUI）
 js/agent.js       Agent Tab（对话 + 图像编辑）
 js/app.js         启动 / Tab 路由 / 事件绑定 / 自动连接
-package.sh        打包为 .ccx 安装包
+package.command   双击打包为 .ccx 安装包
 ```
 
 ## 版本

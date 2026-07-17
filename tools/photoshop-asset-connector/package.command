@@ -1,6 +1,6 @@
 #!/bin/bash
 # 将 PS 插件打包为 .ccx 安装包，用户可在 PS 里直接安装
-# 用法：cd tools/photoshop-asset-connector && bash package.sh
+# 用法：双击 package.command（或在终端执行 bash package.command）
 
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -21,14 +21,20 @@ zip -r "$CCX" \
   index.html \
   style.css \
   js/ \
-  -x "*.DS_Store" "package.sh"
+  -x "*.DS_Store" "package.command"
 
 SIZE=$(du -h "$CCX" | cut -f1)
 echo ""
 echo "✅ 打包完成：$CCX ($SIZE)"
 echo ""
-echo "安装方式："
-echo "  1. 打开 Photoshop → 增效工具 → 管理增效工具"
-echo "  2. 点击右上角 ⚙ → 从文件安装增效工具"
-echo "  3. 选择 ${NAME}-v${VERSION}.ccx"
-echo "  4. 在「增效工具」菜单打开「NOVAI画布工具」"
+echo "安装方式（Mac）："
+echo "  1. 确保 Photoshop 已启用开发者模式："
+echo "     Photoshop → 首选项 → 插件 → 启用开发者模式 → 重启 PS"
+echo "  2. 打开 Photoshop → 增效工具 → 管理增效工具"
+echo "  3. 点击右上角 ⚙ → 从文件安装增效工具"
+echo "  4. 选择 ${NAME}-v${VERSION}.ccx"
+echo "  5. 在「增效工具」菜单打开「NOVAI画布工具」"
+echo ""
+echo "如果面板空白，请检查："
+echo "  - 是否已开启开发者模式（最常见原因）"
+echo "  - 系统设置 → 隐私与安全性 是否阻止了未签名插件"

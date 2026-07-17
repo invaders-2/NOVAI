@@ -2,7 +2,7 @@
   "manifestVersion": 5,
   "id": "com.novai.canvas.assets",
   "name": "NOVAI画布工具",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "main": "index.html",
   "host": {
     "app": "PS",
@@ -21,7 +21,9 @@
     {
       "type": "panel",
       "id": "assetPanel",
-      "label": "NOVAI画布工具",
+      "label": {
+        "default": "NOVAI画布工具"
+      },
       "minimumSize": {
         "width": 280,
         "height": 360

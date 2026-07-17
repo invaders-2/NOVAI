@@ -3,9 +3,35 @@
 <head>
   <meta charset="utf-8">
   <title>NOVAI画布工具</title>
+  <style>
+    /* 备用样式：即使外部 CSS 没加载，也保证有基本文字可见 */
+    html, body { margin: 0; height: 100%; background: #181918; color: #f0f1ee; font-family: system-ui, -apple-system, sans-serif; font-size: 12px; }
+    #bootErr { position: fixed; inset: 10px; z-index: 9999; padding: 12px; background: rgba(0,0,0,.85); color: #f87171; white-space: pre-wrap; font-size: 11px; line-height: 1.5; display: none; overflow: auto; }
+    #bootMsg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #858a82; font-size: 12px; }
+  </style>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="bootMsg">NOVAI画布工具 加载中…</div>
+  <div id="bootErr"></div>
+  <script>
+    // 全局错误捕获：在 UXP 面板里如果 JS 报错，Photoshop 不会自动显示，这里把错误写到页面上
+    try {
+      window.onerror = function(msg, url, line, col, err) {
+        const el = document.getElementById('bootErr');
+        if (el) { el.style.display = 'block'; el.textContent += (msg || '未知错误') + ' @ ' + (url||'') + ':' + line + '\n'; }
+        return false;
+      };
+      window.addEventListener('error', function(e) {
+        const el = document.getElementById('bootErr');
+        if (el && e.error) { el.style.display = 'block'; el.textContent += (e.error.stack || e.error.message || e.message) + '\n'; }
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        const el = document.getElementById('bootErr');
+        if (el) { el.style.display = 'block'; el.textContent += 'Unhandled Promise: ' + (e.reason && (e.reason.stack || e.reason.message || e.reason)) + '\n'; }
+      });
+    } catch(e) {}
+  </script>
   <main class="app">
     <header class="app-head">
       <div class="brand-block">
@@ -218,7 +244,7 @@
 
             <button id="githubBtn" class="btn wide settings-link" type="button">打开 GitHub 项目</button>
 
-            <div class="about">NOVAI画布工具 · v0.3.0</div>
+            <div class="about">NOVAI画布工具 · v0.3.1</div>
           </div>
         </div>
       </section>

@@ -408,23 +408,32 @@
 
   /* ---------- 初始化 ---------- */
   (function init() {
-    state.exportLayer = localStorage.getItem(NV.LS.exportLayer) === '1';
-    els.exportLayer.checked = state.exportLayer;
-    const savedSource = localStorage.getItem(NV.LS.source);
-    if (savedSource && sources.adapters[savedSource]) state.source = savedSource;
+    try {
+      const bootMsg = document.getElementById('bootMsg');
+      if (bootMsg) bootMsg.style.display = 'none';
+    } catch(e) {}
+
+    try {
+      state.exportLayer = localStorage.getItem(NV.LS.exportLayer) === '1';
+      els.exportLayer.checked = state.exportLayer;
+    } catch (e) {}
+
+    try {
+      const savedSource = localStorage.getItem(NV.LS.source);
+      if (savedSource && sources.adapters[savedSource]) state.source = savedSource;
+    } catch (e) {}
+
     setDot('off');
     renderSources();
     renderActions();
 
     const savedHost = localStorage.getItem(NV.LS.host);
     if (savedHost) {
-      // 有保存地址 → 自动重连
       els.server.value = savedHost;
       setConnMsg(`正在自动连接 ${savedHost} …`);
-      switchTab('assets');          // 先切到资产页，连接成功后就在这里
+      switchTab('assets');
       connect(true).catch(() => {});
     } else {
-      // 没有保存地址 → 自动探测本机端口
       setConnMsg('正在自动探测本机 NOVAI 服务 …');
       switchTab('assets');
       net.probeHost().then((found) => {
@@ -436,7 +445,7 @@
           setConnMsg('未发现本机 NOVAI 服务。请先启动后端，或手动输入局域网地址。');
           switchTab('settings');
         }
-      });
+      }).catch(() => {});
     }
   })();
 })();

@@ -7,13 +7,26 @@ Adobe Photoshop UXP 面板插件，连接局域网内的 NOVAI 后端，双向�
 - **实时同步**：WebSocket 自动刷新，画布那边新增素材面板即时更新
 - **生成 / Agent**：在 PS 内调用 AI 模型生成图片、对话编辑
 
-## 安装（两步）
+## 安装（三步）
 
-1. **打包**：双击 `package.command` 文件即可生成 `.ccx` 安装包。
+> ⚠️ **Mac 用户注意**：如果安装后面板空白，先检查 Photoshop 是否启用了「开发者模式」。未签名的 .ccx 插件在没有开发者模式时，常会出现「只有标题、内容空白」的现象。
+
+1. **开启 Photoshop 开发者模式**：
+   `Photoshop → 首选项 → 插件 → 启用开发者模式` → 重启 Photoshop。
+   > Windows 如果没有该选项，可手动创建：
+   > - Win: `C:\Users\<用户名>\AppData\Roaming\Adobe\UXP\Developer\settings.json`
+   > - Mac: `~/Library/Preferences/Adobe/UXP/Developer/settings.json`
+   >   内容：`{ "developer": true }`
+
+2. **打包**：双击 `package.command` 文件生成 `.ccx` 安装包。
    > 如果无法双击运行，在终端执行：`chmod +x package.command` 后再双击。
-   > 生成 `NOVAI-画布工具-v0.3.0.ccx`（约 48KB）。
+   > 生成 `NOVAI-画布工具-v0.3.1.ccx`（约 48KB）。
 
-2. **安装到 PS**：打开 Photoshop（24.0 以上）→ 增效工具 → 管理增效工具 → 右上 ⚙ → **从文件安装增效工具** → 选择 `.ccx` 文件。
+3. **安装到 PS**：打开 Photoshop（24.0 以上）→ 增效工具 → 管理增效工具 → 右上 ⚙ → **从文件安装增效工具** → 选择 `.ccx` 文件 → 在「增效工具」菜单打开「NOVAI画布工具」。
+
+> 如果仍然空白，请检查：
+> - 安装 .ccx 时是否有安全提示，需要到「系统设置 → 隐私与安全性」允许。
+> - 面板右上角是否有红色错误文字（v0.3.1 起会显示具体 JS 报错）。
 
 > 开发调试也可以用 UXP Developer Tool 加载 `manifest.json`，见 [Adobe UXP 文档](https://developer.adobe.com/photoshop/uxp/devtool/)。
 

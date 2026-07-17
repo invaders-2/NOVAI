@@ -398,7 +398,7 @@
     localStorage.setItem(NV.LS.exportLayer, state.exportLayer ? '1' : '0');
   });
   els.github.addEventListener('click', () => {
-    ps.openUrl('https://github.com/hero8152/Infinite-Canvas').catch((err) => setConnMsg(`打开 GitHub 失败：${err.message || err}`, 'err'));
+    ps.openUrl('https://github.com/invaders-2/NOVAI').catch((err) => setConnMsg(`打开 GitHub 失败：${err.message || err}`, 'err'));
   });
 
   els.place.addEventListener('click', doPlace);

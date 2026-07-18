@@ -1,6 +1,18 @@
 {
   "versions": [
     {
+      "version": "1.0.84",
+      "date": "2026-07-18",
+      "changes": [
+        "画布列表卡片支持最多4张图片2x2网格预览（后端 canvas_record 新增 thumbnails 字段）",
+        "桌面应用端：无边框窗口+系统托盘（关闭按钮最小化到托盘）+ 局域网访问（手机/iPad 同网络可访问）",
+        "桌面图标更新：白底黑logo圆角设计，符合 logo 视觉系统规定",
+        "局域网访问：/api/lan-info 接口返回二维码，NSIS 安装时自动添加防火墙规则放行 3000 端口",
+        "修复：64位 ctypes WndProc 指针截断崩溃、pystray 打包 ModuleNotFound、端口占用等",
+        "代码仓库纯净版整理：完善 .gitignore，排除设计概念稿/测试截图/备份文件"
+      ]
+    },
+    {
       "version": "1.0.83",
       "date": "2026-07-17",
       "changes": [

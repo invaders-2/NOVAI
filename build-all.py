@@ -160,7 +160,7 @@ def build_installer():
         except Exception:
             pass
     if not version:
-        version = "1.0.83"
+        version = "1.0.84"
     print(f"  版本号: {version}")
 
     run(f'"{makensis}" /DPRODUCT_VERSION="{version}" "{nsi_path}"')

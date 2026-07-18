@@ -13,16 +13,16 @@
             }
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784225480"></script>
-    <script src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784267716"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784225480"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784268083"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784254953"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784255511">
-    <link rel="stylesheet" href="/static/css/api-settings.css?v=1.0.83.1784267880">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
+    <script src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
+    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
+    <link rel="stylesheet" href="/static/css/api-settings.css?v=1.0.83.1784365787">
 
-<link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784254613">
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784254710">
+<link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
 body { background: var(--bg) !important; color: var(--text) !important; }
@@ -85,6 +85,19 @@ html.settings-embed .field-frame {
 html.settings-embed .provider-list .provider-item { border-radius: 10px !important; }
 html.settings-embed .model-list .model-item { border-radius: 10px !important; }
 html.settings-embed .action-btn { border-radius: 10px !important; }
+/* 顶部保存按钮：深浅色模式下都保证高对比，文字始终可见 */
+.action-btn.save-btn.api-page-save-btn,
+.action-btn.save-btn.api-page-save-btn:hover,
+body.studio-theme-dark .action-btn.save-btn.api-page-save-btn,
+html.studio-theme-dark body .action-btn.save-btn.api-page-save-btn,
+body.theme-dark .action-btn.save-btn.api-page-save-btn,
+body.studio-theme-dark .action-btn.save-btn.api-page-save-btn:hover,
+html.studio-theme-dark body .action-btn.save-btn.api-page-save-btn:hover,
+body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
+    background: var(--text) !important;
+    color: var(--text-on-accent) !important;
+    border-color: transparent !important;
+}
 @media (max-width: 700px) {
     html.settings-embed .layout { grid-template-columns: 1fr; }
     html.settings-embed .sidebar { position: static; max-height: none; }
@@ -637,6 +650,6 @@ html.settings-embed .action-btn { border-radius: 10px !important; }
         </div>
     </div>
 
-    <script defer src="/static/js/api-settings.js?v=1.0.83.1784258016"></script>
+    <script src="/static/js/api-settings.js?v=1.0.83.1784320796"></script>
 </body>
 </html>

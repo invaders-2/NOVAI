@@ -1,3 +1,4 @@
+(function(){
 const root = document.getElementById('assetManagerRoot');
 const statusEl = document.getElementById('assetStatus');
 const refreshBtn = document.getElementById('refreshBtn');
@@ -113,10 +114,10 @@ let lastSearchCompositionEndAt = 0;
 const LOCAL_MEDIA_EXTS = /\.(png|jpe?g|webp|gif|bmp|avif|svg|mp4|webm|mov|m4v|mp3|wav|flac|ogg|m4a|aac)(\?|#|$)/i;
 const SEARCH_INPUT_IDS = new Set(['assetSearch','workflowSearch','promptSearch','localSearch','localUploadSearch','canvasAssetSearch']);
 
-function refreshIcons(){ window.NovaUtils?.refreshIcons?.(); }
+var refreshIcons = function(){ window.NovaUtils?.refreshIcons?.(); };
 function setStatus(text='准备就绪'){ if(statusEl) statusEl.textContent = text || '准备就绪'; }
-function escapeHtml(value=''){ return window.NovaUtils ? NovaUtils.escapeHtml(value) : String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
-function escapeAttr(value=''){ return window.NovaUtils ? NovaUtils.escapeAttr(value) : escapeHtml(value); }
+var escapeHtml = function(str){ return window.NovaUtils ? NovaUtils.escapeHtml(str) : String(str || '').replace(/[&<>"']/g, function(s){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]; }); };
+var escapeAttr = function(str){ return window.NovaUtils ? NovaUtils.escapeAttr(str) : escapeHtml(str).replace(/`/g, '&#96;'); };
 async function copyTextToClipboard(text){ return window.NovaUtils ? NovaUtils.copyTextToClipboard(text) : _localCopyText(text); }
 async function _localCopyText(text){
     const value = String(text || '');
@@ -4404,3 +4405,4 @@ window.addEventListener('message', event => {
     if(event.data?.type === 'studio-theme') window.StudioTheme?.apply?.(event.data.theme);
 });
 document.addEventListener('DOMContentLoaded', () => loadAll().catch(err => setStatus(err.message || '加载失败')));
+})();

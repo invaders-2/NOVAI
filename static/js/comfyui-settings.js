@@ -1,7 +1,9 @@
-function tr(key){ return window.NovaUtils ? NovaUtils.tr(key) : (window.StudioI18n ? window.StudioI18n.t(key) : key); }
-function trf(key, vars={}){
-    return window.NovaUtils ? NovaUtils.trf(key, vars) : Object.entries(vars).reduce((text, [k,v]) => text.replaceAll(`{${k}}`, v), tr(key));
-}
+(function(){
+var tr = function(key){ return window.NovaUtils ? NovaUtils.tr(key) : (window.StudioI18n ? window.StudioI18n.t(key) : key); };
+var trf = function(key, vars){
+    vars = vars || {};
+    return window.NovaUtils ? NovaUtils.trf(key, vars) : Object.entries(vars).reduce(function(text, entry){ var k = entry[0], v = entry[1]; return text.replaceAll('{' + k + '}', v); }, tr(key));
+};
 function refreshLanguageView(){
     document.title = tr('comfy.title');
     renderList();
@@ -14,7 +16,7 @@ function applyLanguage(){
     if(window.StudioI18n) window.StudioI18n.apply();
     refreshLanguageView();
 }
-function refreshIcons(){ window.NovaUtils?.refreshIcons?.(); }
+var refreshIcons = function(){ window.NovaUtils?.refreshIcons?.(); };
 
 const TYPES = [
     { v:'text', zh:'文本', en:'Text' },
@@ -146,8 +148,8 @@ const previewCard = document.getElementById('previewContent');
 const miniCanvasHost = document.getElementById('miniCanvasHost');
 
 function setStatus(text){ statusEl.textContent = text || ''; }
-function escapeHtml(s){ return window.NovaUtils ? NovaUtils.escapeHtml(s) : String(s == null ? '' : s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function escapeAttr(s){ return window.NovaUtils ? NovaUtils.escapeAttr(s) : escapeHtml(s); }
+var escapeHtml = function(s){ return window.NovaUtils ? NovaUtils.escapeHtml(s) : String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+var escapeAttr = function(s){ return window.NovaUtils ? NovaUtils.escapeAttr(s) : escapeHtml(s); };
 function fieldKind(f){
     if(['image','video','audio'].includes(f.type)) return f.type;
     const key = `${f.input || ''} ${f.name || ''}`.toLowerCase();
@@ -1394,4 +1396,15 @@ document.addEventListener('DOMContentLoaded', () => {
     loadList();
     loadComfyInstances();
 });
+window.addComfyInstance = addComfyInstance;
+window.closeImagePreview = closeImagePreview;
+window.closeNodePopup = closeNodePopup;
+window.graphFit = graphFit;
+window.graphZoom = graphZoom;
+window.onDelete = onDelete;
+window.onSave = onSave;
+window.saveComfyInstances = saveComfyInstances;
+window.setWorkspaceMode = setWorkspaceMode;
+window.toggleNodeList = toggleNodeList;
+})();
 

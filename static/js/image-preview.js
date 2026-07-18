@@ -147,5 +147,67 @@
     }
 
     injectStyles();
-    window.StudioImagePreview = { attach };
+
+    // 灯箱管理器 — 确保单例
+    var _lightboxInstance = null;
+
+    function getOrCreateLightbox(options) {
+        if (_lightboxInstance) return _lightboxInstance;
+        
+        var opts = options || {};
+        var frameId = opts.frameId || 'lightboxFrame';
+        var lightboxId = opts.lightboxId || 'lightbox';
+        var imgId = opts.imgId || 'lightboxImg';
+        
+        var lightbox = document.getElementById(lightboxId);
+        var frame = document.getElementById(frameId);
+        var img = document.getElementById(imgId);
+        var zoomCtrl = null;
+        
+        function ensure() {
+            if (!lightbox) lightbox = document.getElementById(lightboxId);
+            if (!frame) frame = document.getElementById(frameId);
+            if (!img) img = document.getElementById(imgId);
+            if (frame && !zoomCtrl) {
+                zoomCtrl = attach(frame, { img: img });
+            }
+            return !!lightbox;
+        }
+        
+        function open(data) {
+            if (!ensure()) return;
+            if (typeof data === 'string') {
+                img.src = data;
+            } else if (data) {
+                img.src = data.url || data.src || '';
+                // 自定义 onOpen 回调 — 设置 prompt/对比等
+                if (typeof opts.onOpen === 'function') {
+                    opts.onOpen(data, lightbox);
+                }
+            }
+            lightbox.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function close() {
+            if (!ensure()) return;
+            if (zoomCtrl && typeof zoomCtrl.reset === 'function') zoomCtrl.reset();
+            lightbox.style.display = 'none';
+            document.body.style.overflow = '';
+            if (typeof opts.onClose === 'function') opts.onClose(lightbox);
+        }
+        
+        function handleOutside(e) {
+            if (!ensure()) return;
+            if (e.target === lightbox) close();
+        }
+        
+        _lightboxInstance = { open: open, close: close, handleOutside: handleOutside, ensure: ensure };
+        return _lightboxInstance;
+    }
+
+    window.StudioImagePreview = {
+        attach: attach,
+        getLightbox: getOrCreateLightbox
+    };
 })();

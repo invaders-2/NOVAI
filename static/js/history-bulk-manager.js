@@ -12,9 +12,7 @@
      * 用法：window.HistoryBulkManager.attach({ masonry:'#masonry' })
      * ------------------------------------------------------------------- */
 
-    function tr(key){
-        return (window.StudioI18n && StudioI18n.t) ? StudioI18n.t(key) : key;
-    }
+    var tr = function(key){ return window.NovaUtils ? NovaUtils.tr(key) : (window.StudioI18n ? window.StudioI18n.t(key) : key); };
     function fmt(key, vars){
         let s = tr(key);
         if(vars) Object.keys(vars).forEach(k => { s = s.replace('{' + k + '}', vars[k]); });

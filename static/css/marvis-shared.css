@@ -162,3 +162,43 @@ body {
 .mono, code, pre, kbd, samp {
     font-family: var(--font-mono);
 }
+
+/* ── 极简悬浮浅灰滚动条 ── */
+*::-webkit-scrollbar {
+    width: 10px !important;
+    height: 10px !important;
+    background: transparent !important;
+}
+*::-webkit-scrollbar-track {
+    background: transparent !important;
+    border: none !important;
+}
+*::-webkit-scrollbar-thumb {
+    background-color: #d8d8d8 !important;
+    border: 3px solid transparent !important;
+    border-right-width: 5px !important;
+    background-clip: padding-box !important;
+    border-radius: 10px !important;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background-color: #c0c0c0 !important;
+}
+*::-webkit-scrollbar-corner {
+    background: transparent !important;
+}
+* {
+    scrollbar-width: thin !important;
+    scrollbar-color: #d8d8d8 transparent !important;
+}
+
+/* settings-embed — 嵌入 iframe 时隐藏滚动条 */
+html.settings-embed, html.settings-embed * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+html.settings-embed::-webkit-scrollbar,
+html.settings-embed *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+}

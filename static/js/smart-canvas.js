@@ -1,4 +1,13 @@
+(function(){
 (function(){document.documentElement.style.touchAction='none';if(document.body)document.body.style.touchAction='none';else document.addEventListener('DOMContentLoaded',function(){document.body.style.touchAction='none';});})();
+// ── Delegate to NovaUtils (shared/utils.js loaded before this file) ──
+// 使用安全的 fallback 包装器，避免 NovaUtils 未定义时整个 IIFE 崩溃
+var tr = function(key) { return window.NovaUtils ? NovaUtils.tr(key) : (window.StudioI18n ? window.StudioI18n.t(key) : key); };
+var trf = function(key) { var args = Array.prototype.slice.call(arguments); return window.NovaUtils ? NovaUtils.trf.apply(NovaUtils, args) : (window.StudioI18n ? window.StudioI18n.t(key) : key); };
+var uid = function() { return window.NovaUtils ? NovaUtils.uid() : 'uid_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); };
+var escapeHtml = function(str) { return window.NovaUtils ? NovaUtils.escapeHtml(str) : String(str || '').replace(/[&<>"']/g, function(s) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]; }); };
+var escapeAttr = function(str) { return window.NovaUtils ? NovaUtils.escapeAttr(str) : escapeHtml(str).replace(/`/g, '&#96;'); };
+var sleep = function(ms) { return window.NovaUtils ? NovaUtils.sleep(ms) : new Promise(function(r) { setTimeout(r, ms); }); };
 const params = new URLSearchParams(location.search);
 const canvasId = params.get('id') || '';
 const sourceProjectId = params.get('project') || '';
@@ -380,10 +389,6 @@ const SIZE_MAP = {
 };
 const RES_LONG_SIDE = { '1k':1536, '2k':2048, '4k':3840 };
 const RES_PIXEL_LIMIT = { '1k':1572864, '2k':4194304, '4k':8294400 };
-function tr(key){ return window.NovaUtils ? NovaUtils.tr(key) : (window.StudioI18n?.t ? window.StudioI18n.t(key) : key); }
-function trf(key, values={}){
-    return window.NovaUtils ? NovaUtils.trf(key, values) : Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), tr(key));
-}
 // Clipboard helpers: delegate to NovaUtils
 function copyTextWithCopyEvent(value){ return window.NovaUtils?.copyTextWithCopyEvent?.(value) ?? _localCopyTextWithCopyEvent(value); }
 function _localCopyTextWithCopyEvent(value){
@@ -444,9 +449,6 @@ async function _localCopyTextToClipboard(text){
     return false;
 }
 function refreshIcons(){ window.NovaUtils?.refreshIcons?.(); }
-function uid(prefix='n'){ return window.NovaUtils ? NovaUtils.uid(prefix) : `${prefix}_${Math.random().toString(16).slice(2)}_${Date.now()}`; }
-function escapeHtml(str){ return window.NovaUtils ? NovaUtils.escapeHtml(str) : String(str == null ? '' : str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
-const escapeAttr = window.NovaUtils ? NovaUtils.escapeAttr : escapeHtml;
 // ── Media helpers: delegate to NovaMedia (shared/media.js loaded before this file) ──
 function smartOriginalMediaUrl(itemOrUrl){ return window.NovaMedia ? NovaMedia.originalMediaUrlFromItem(itemOrUrl) : _localSmartOriginalMediaUrl(itemOrUrl); }
 function _localSmartOriginalMediaUrl(itemOrUrl){
@@ -1294,8 +1296,7 @@ function isEditableTarget(target){
     return !!el?.closest?.('input, textarea, select, option, [contenteditable="true"], .prompt-node-control, .prompt-input');
 }
 function safeScale(value){
-    const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? n : 1;
+    return NovaViewport.safeScale(value);
 }
 function nodeScale(node){
     const v = Number(node?.scale);
@@ -2057,7 +2058,7 @@ function arrangeSelectedSmartNodes(){
     toast('已整理选中节点');
 }
 function applyViewport(){
-    world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
+    world.style.transform = NovaViewport.viewportTransform(viewport);
     // world 被 transform:scale 缩放后，其内部带 backdrop-filter 的卡片（参数设置/合成卡等）
     // 会被部分浏览器（Chrome/Edge 等 Blink 内核）当作独立合成层先按 1x 栅格化、再整体缩放，
     // 缩小时位图被降采样 → 组件发虚。缩放态下关闭这些 backdrop-filter（底色本身已接近不透明，
@@ -2068,11 +2069,8 @@ function applyViewport(){
     renderMinimap();
 }
 function screenToWorld(event){
-    const rect = shell.getBoundingClientRect();
-    return {
-        x:(event.clientX - rect.left - viewport.x) / viewport.scale,
-        y:(event.clientY - rect.top - viewport.y) / viewport.scale
-    };
+    var rect = shell.getBoundingClientRect();
+    return NovaViewport.screenToWorld(event.clientX, event.clientY, rect, viewport);
 }
 function viewportCenter(){
     return {
@@ -5627,6 +5625,8 @@ function connectAssetLibrarySyncSocket(){
         clearTimeout(retryTimer);
         stopCanvasMetaPoll();
         try { socket?.close(); } catch(e) {}
+        try { new BroadcastChannel('studio-api').close(); } catch(e) {}
+        if(runTimerInterval){ clearInterval(runTimerInterval); runTimerInterval = null; }
     });
     connect();
 }
@@ -15161,7 +15161,6 @@ async function urlToBase64(url){ if(window.NovaUtils) return NovaUtils.urlToBase
         reader.readAsDataURL(blob);
     });
 }
-function sleep(ms){ if(window.NovaUtils) return NovaUtils.sleep(ms); return new Promise(resolve => setTimeout(resolve, ms)); }
 async function runComfyGeneration(node, prompt, refs, pendingNode, meta){
     const allRefs = refs || [];
     refs = imageRefsOnly(allRefs);
@@ -16450,7 +16449,7 @@ let trackpadPinchAccum = 0;
 let trackpadLastPinchTime = 0;
 // 判断是否为普通鼠标滚轮（非触控板）
 function isMouseWheel(e){
-    return e.deltaMode === 1 || Math.abs(e.deltaY) >= 100;
+    return NovaViewport.isMouseWheel(e);
 }
 
 document.addEventListener('gesturestart', e => {
@@ -17388,10 +17387,10 @@ document.getElementById('imageEditStage').addEventListener('wheel', event => {
     stage.scrollLeft = contentX * scale - mx;
     stage.scrollTop = contentY * scale - my;
 }, {passive:false});
-window.addEventListener('resize', () => {
+window.addEventListener('resize', NovaUtils.debounce(function() {
     if(cropState) syncImageEditOverflow();
     if(panoramaState.enabled) resizePanoramaViewer();
-});
+}, 150));
 window.addEventListener('studio-theme-change', event => applyTheme(event.detail?.theme || 'light'));
 try {
     const apiChannel = new BroadcastChannel('studio-api');
@@ -17442,3 +17441,35 @@ window.onload = async () => {
     syncApiKindToggleVisibility();
     render();
 };
+window.applyGridJoinPreset = applyGridJoinPreset;
+window.applyGridPreset = applyGridPreset;
+window.applyImageEdit = applyImageEdit;
+window.backToCanvasList = backToCanvasList;
+window.clearEditDrawing = clearEditDrawing;
+window.clearGridCustomLines = clearGridCustomLines;
+window.closeImageEditor = closeImageEditor;
+window.closeSmartCanvasLog = closeSmartCanvasLog;
+window.closeSmartCanvasShortcuts = closeSmartCanvasShortcuts;
+window.closeSmartWorkflowTransferModal = closeSmartWorkflowTransferModal;
+window.downloadPreviewGroup = downloadPreviewGroup;
+window.downloadPreviewImage = downloadPreviewImage;
+window.exportPanoramaFrame = exportPanoramaFrame;
+window.exportSelectedSmartWorkflow = exportSelectedSmartWorkflow;
+window.exportVideoFrame = exportVideoFrame;
+window.navigatePreviewImage = navigatePreviewImage;
+window.openSmartCanvasLog = openSmartCanvasLog;
+window.openSmartCanvasShortcuts = openSmartCanvasShortcuts;
+window.redoEditDrawing = redoEditDrawing;
+window.resetGridJoinLayout = resetGridJoinLayout;
+window.sendChatMessage = sendChatMessage;
+window.setBrushTool = setBrushTool;
+window.setGridCustomOrientation = setGridCustomOrientation;
+window.setGridJoinOutputSize = setGridJoinOutputSize;
+window.setGridOperationMode = setGridOperationMode;
+window.toggleChatPanel = toggleChatPanel;
+window.toggleGridCustomMode = toggleGridCustomMode;
+window.togglePanoramaPreview = togglePanoramaPreview;
+window.togglePreviewCompare = togglePreviewCompare;
+window.undoEditDrawing = undoEditDrawing;
+window.undoGridCustomLine = undoGridCustomLine;
+})();

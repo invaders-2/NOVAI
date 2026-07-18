@@ -1,12 +1,15 @@
+(function(){
 (function(){document.documentElement.style.touchAction='none';if(document.body)document.body.style.touchAction='none';else document.addEventListener('DOMContentLoaded',function(){document.body.style.touchAction='none';});})();
 // ── Delegate to NovaUtils (shared/utils.js loaded before this file) ──
-function refreshIcons(){ window.NovaUtils?.refreshIcons?.(); }
-refreshIcons();
-function tr(key){ return window.NovaUtils ? NovaUtils.tr(key) : (window.StudioI18n ? StudioI18n.t(key) : key); }
-function trf(key, values={}){
-    return window.NovaUtils ? NovaUtils.trf(key, values) : Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), tr(key));
-}
-function langIsEn(){ return window.NovaUtils ? NovaUtils.langIsEn() : (window.StudioI18n?.lang?.() === 'en'); }
+// 使用安全的 fallback 包装器，避免 NovaUtils 未定义时整个 IIFE 崩溃
+var tr = function(key) { return window.NovaUtils ? NovaUtils.tr(key) : (window.StudioI18n ? window.StudioI18n.t(key) : key); };
+var trf = function(key) { var args = Array.prototype.slice.call(arguments); return window.NovaUtils ? NovaUtils.trf.apply(NovaUtils, args) : (window.StudioI18n ? window.StudioI18n.t(key) : key); };
+var langIsEn = function() { return window.NovaUtils ? NovaUtils.langIsEn() : (window.StudioI18n ? (window.StudioI18n.currentLang === 'en') : false); };
+var escapeHtml = function(str) { return window.NovaUtils ? NovaUtils.escapeHtml(str) : String(str || '').replace(/[&<>"']/g, function(s) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]; }); };
+var escapeAttr = function(str) { return window.NovaUtils ? NovaUtils.escapeAttr(str) : escapeHtml(str).replace(/`/g, '&#96;'); };
+var sleep = function(ms) { return window.NovaUtils ? NovaUtils.sleep(ms) : new Promise(function(r) { setTimeout(r, ms); }); };
+var refreshIcons = function() { window.NovaUtils?.refreshIcons?.(); };
+try { refreshIcons(); } catch(e) {}
 const CANVAS_UPLOAD_MAX = 20;
 const CANVAS_REFERENCE_IMAGE_MAX = 20;
 function actionFailed(labelKey, detail=''){
@@ -1204,11 +1207,11 @@ function setCreateMode(active, kind='classic'){
     refreshIcons();
 }
 function screenToWorld(clientX, clientY){
-    const rect = board.getBoundingClientRect();
-    return { x:(clientX - rect.left - viewport.x) / viewport.scale, y:(clientY - rect.top - viewport.y) / viewport.scale };
+    var rect = board.getBoundingClientRect();
+    return NovaViewport.screenToWorld(clientX, clientY, rect, viewport);
 }
 function applyViewport(){
-    world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
+    world.style.transform = NovaViewport.viewportTransform(viewport);
     scheduleMinimapRender();
 }
 function estimatedNodeRect(n){
@@ -1305,8 +1308,7 @@ function centerViewportOnWorldPoint(point){
     renderSelectionHub();
 }
 function safeViewportScale(value){
-    const n = Number(value);
-    return Number.isFinite(n) && n > 0 ? n : 1;
+    return NovaViewport.safeScale(value);
 }
 function fitAllNodesViewport(){
     const rect = board.getBoundingClientRect();
@@ -2490,9 +2492,9 @@ document.getElementById('imageEditStage').addEventListener('wheel', event => {
     stage.scrollLeft = contentX * scale - mx;
     stage.scrollTop = contentY * scale - my;
 }, {passive: false});
-window.addEventListener('resize', () => {
+window.addEventListener('resize', NovaUtils.debounce(function() {
     if(cropState) syncImageEditOverflow();
-});
+}, 150));
 function rememberCanvasListProject(projectId){
     const pid = projectId || 'default';
     try { localStorage.setItem(CANVAS_LIST_PROJECT_KEY, pid); } catch(e){}
@@ -15005,7 +15007,7 @@ let trackpadLastPinchTime = 0;
 // - deltaMode === 0 但 |deltaY| >= 100 → 普通鼠标（像素模式，典型值 100/120）
 // - deltaMode === 0 且 |deltaY| < 100 → 触控板
 function isMouseWheel(e){
-    return e.deltaMode === 1 || Math.abs(e.deltaY) >= 100;
+    return NovaViewport.isMouseWheel(e);
 }
 board.onwheel = e => {
     if(!canvas) return;
@@ -15256,4 +15258,43 @@ window.addEventListener('beforeunload', () => {
     if(canvasSelectedHighResTimer){ clearTimeout(canvasSelectedHighResTimer); canvasSelectedHighResTimer = 0; }
     if(remoteSyncTimer){ clearTimeout(remoteSyncTimer); remoteSyncTimer = null; }
     if(generatorInputSyncTimer){ clearTimeout(generatorInputSyncTimer); generatorInputSyncTimer = 0; }
+    try { new BroadcastChannel('studio-api').close(); } catch(e) {}
 });
+window.addComfyNode = addComfyNode;
+window.addGeneratorNode = addGeneratorNode;
+window.addImageNode = addImageNode;
+window.addLLMNode = addLLMNode;
+window.addLoopNode = addLoopNode;
+window.addLTXDirectorNode = addLTXDirectorNode;
+window.addMsGenNode = addMsGenNode;
+window.addOutputNode = addOutputNode;
+window.addPromptNode = addPromptNode;
+window.addRhNode = addRhNode;
+window.addVideoNode = addVideoNode;
+window.applyGridPreset = applyGridPreset;
+window.applyImageEdit = applyImageEdit;
+window.clearEditDrawing = clearEditDrawing;
+window.clearGridCustomLines = clearGridCustomLines;
+window.closeAssetManager = closeAssetManager;
+window.closeCanvasLog = closeCanvasLog;
+window.closeErrorModal = closeErrorModal;
+window.closeImageEditor = closeImageEditor;
+window.closeOutputLightbox = closeOutputLightbox;
+window.closePromptTemplateModal = closePromptTemplateModal;
+window.closeWorkflowTransferModal = closeWorkflowTransferModal;
+window.copyErrorMessage = copyErrorMessage;
+window.deleteNodeFromButton = deleteNodeFromButton;
+window.exportSelectedWorkflow = exportSelectedWorkflow;
+window.exportSelectedWorkflowToLibrary = exportSelectedWorkflowToLibrary;
+window.groupSelectedImages = groupSelectedImages;
+window.menuAdd = menuAdd;
+window.openCanvasLog = openCanvasLog;
+window.redoEditDrawing = redoEditDrawing;
+window.resetCropBox = resetCropBox;
+window.setBrushTool = setBrushTool;
+window.setGridCustomOrientation = setGridCustomOrientation;
+window.toggleGridCustomMode = toggleGridCustomMode;
+window.toggleQuickToolbar = toggleQuickToolbar;
+window.undoEditDrawing = undoEditDrawing;
+window.undoGridCustomLine = undoGridCustomLine;
+})();

@@ -8,7 +8,10 @@ Unicode true
 ; ── 基本信息 ──
 !define PRODUCT_NAME "NOVAI"
 !define PRODUCT_DISPLAY "NOVAI 智能画布"
-!define PRODUCT_VERSION "1.0.82"
+; 版本号：优先用命令行 -DPRODUCT_VERSION 传入，否则回退到写死的值
+!ifndef PRODUCT_VERSION
+  !define PRODUCT_VERSION "1.0.83"
+!endif
 !define PRODUCT_PUBLISHER "NOVAI"
 !define PRODUCT_WEB_SITE "https://github.com/invaders-2/NOVAI"
 !define PRODUCT_DIR_REGKEY "Software\Microsoft\Windows\CurrentVersion\App Paths\NOVAI.exe"
@@ -104,6 +107,11 @@ Section "Install"
   ; ── 卸载程序 ──
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
+  ; ── 防火墙规则（允许 3000 端口入站，供局域网手机/iPad 访问）──
+  DetailPrint "正在配置防火墙规则..."
+  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="NOVAI Server (port 3000)"'
+  nsExec::ExecToLog 'netsh advfirewall firewall add rule name="NOVAI Server (port 3000)" dir=in action=allow protocol=TCP localport=3000'
+
   ; ── 快捷方式 ──
   CreateDirectory "$SMPROGRAMS\${PRODUCT_DISPLAY}"
   CreateShortCut "$SMPROGRAMS\${PRODUCT_DISPLAY}\${PRODUCT_DISPLAY}.lnk" "$INSTDIR\NOVAI.exe"
@@ -137,6 +145,9 @@ done_data:
 
   ; 删除安装目录
   RMDir /r "$INSTDIR"
+
+  ; 删除防火墙规则
+  nsExec::ExecToLog 'netsh advfirewall firewall delete rule name="NOVAI Server (port 3000)"'
 
   ; 删除快捷方式
   Delete "$DESKTOP\${PRODUCT_DISPLAY}.lnk"

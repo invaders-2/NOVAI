@@ -49,6 +49,15 @@ _self_restart.bat
 # 测试/调试截图和临时文件
 gpt-chat-*.png
 gpt-chat-*.yml
+test-*.png
+tmp_*.png
+*.bak
+*.bak-*
+
+# 设计概念稿/临时原型（非正式页面）
+static/canvas-entry-redesign-*.html
+static/canvas-list-redesign-*.html
+static/images/concept/
 
 # 冗余 vendor 文件（已有子集版本替代）
 static/vendor/js/lucide.js

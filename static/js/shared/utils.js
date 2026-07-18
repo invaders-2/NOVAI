@@ -265,6 +265,119 @@
         } catch(e) { console.warn('[NovaUtils] fetchRhWalletStatus failed:', e); return null; }
     }
 
+    /* ── shared history helpers ── */
+
+    // Generic history loader with pagination and scroll-based infinite loading.
+    function loadHistoryWithPagination(options) {
+        var opts = options || {};
+        var pageSize = opts.pageSize || 20;
+        var page = 1;
+        var loading = false;
+        var hasMore = true;
+        var container = document.getElementById(opts.containerId);
+
+        function loadMore() {
+            if (loading || !hasMore) return;
+            loading = true;
+            var params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+            if (opts.extraParams) {
+                Object.keys(opts.extraParams).forEach(function(k) {
+                    if (opts.extraParams[k] != null) params.append(k, String(opts.extraParams[k]));
+                });
+            }
+            return fetch(opts.apiUrl + '?' + params.toString())
+                .then(function(res) {
+                    if (!res.ok) throw new Error('Failed to load');
+                    return res.json();
+                })
+                .then(function(data) {
+                    var items = data.items || data.history || data.results || data || [];
+                    if (items.length < pageSize) hasMore = false;
+                    if (typeof opts.renderFn === 'function') {
+                        opts.renderFn(items, container, page === 1);
+                    }
+                    page++;
+                })
+                .catch(function(e) { console.error('[NovaUtils] loadHistory failed:', e); })
+                .finally(function() { loading = false; });
+        }
+
+        // Scroll-based trigger
+        function onScroll() {
+            if (!container || !hasMore) return;
+            var rect = container.getBoundingClientRect();
+            if (rect.bottom <= window.innerHeight + 300) loadMore();
+        }
+        window.addEventListener('scroll', onScroll, {passive: true});
+
+        return {
+            loadMore: loadMore,
+            reset: function() { page = 1; hasMore = true; if (container) container.innerHTML = ''; },
+            destroy: function() { window.removeEventListener('scroll', onScroll); }
+        };
+    }
+
+    // Generic image-card HTML generator. Returns an HTML string for a single history item.
+    function renderImageCardHtml(item, options) {
+        var opts = options || {};
+        var url = item.url || item.image_url || (item.images && item.images[0]) || '';
+        var prompt = item.prompt || item.text || '';
+        var width = item.width || item.image_width || 0;
+        var height = item.height || item.image_height || 0;
+        var id = item.id || item.task_id || item.timestamp || '';
+        var model = item.model || item.model_name || '';
+        var cls = opts.containerClass || 'image-card';
+
+        return '<div class="' + escapeAttr(cls) + '" data-id="' + escapeAttr(id) + '" ' +
+            (opts.onclick ? 'onclick="' + opts.onclick + '"' : '') + '>' +
+            '<div class="image-card-img">' +
+            '<img src="' + escapeAttr(url) + '" loading="lazy" alt="">' +
+            '</div>' +
+            (prompt ? '<div class="image-card-prompt">' + escapeHtml(prompt) + '</div>' : '') +
+            (width && height ? '<div class="image-card-res">' + width + ' \u00d7 ' + height + '</div>' : '') +
+            (model ? '<div class="image-card-model">' + escapeHtml(model) + '</div>' : '') +
+            (opts.extraHtml || '') +
+            '</div>';
+    }
+
+    /* ── 防抖 (debounce) ── */
+    function debounce(fn, delay) {
+        var timer = null;
+        return function() {
+            var context = this;
+            var args = arguments;
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(function() { fn.apply(context, args); }, delay || 200);
+        };
+    }
+
+    /* ── 节流 (throttle) ── */
+    function throttle(fn, interval) {
+        var lastTime = 0;
+        return function() {
+            var now = Date.now();
+            if (now - lastTime >= (interval || 200)) {
+                lastTime = now;
+                fn.apply(this, arguments);
+            }
+        };
+    }
+
+    /* ── UUID & Client ID ── */
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+    function getClientId() {
+        try {
+            var id = localStorage.getItem('client_id');
+            if (!id) { id = generateUUID(); localStorage.setItem('client_id', id); }
+            return id;
+        } catch(e) { return generateUUID(); }
+    }
+
     /* ── expose ── */
     window.NovaUtils = {
         tr, trf, langIsEn, refreshIcons,
@@ -279,5 +392,14 @@
         detectImageMediaUrl, looksLikeImageMediaUrl,
         fetchClassificationPrompt, updateClassificationPrompt,
         normalizeModels, fetchRhWalletStatus,
+        // Shared history helpers
+        loadHistoryWithPagination,
+        renderImageCardHtml,
+        // Debounce / throttle
+        debounce,
+        throttle,
+        // UUID / client id
+        generateUUID,
+        getClientId,
     };
 })();

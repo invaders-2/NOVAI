@@ -2983,7 +2983,7 @@ html:not(.studio-theme-dark) body:not(.theme-dark) .recommend-register,
 html:not(.studio-theme-dark) body:not(.theme-dark) .recommend-fill {
     background:var(--api-light-primary) !important;
     border-color:transparent !important;
-    color:var(--text) !important;
+    color:var(--bg) !important;
 }
 
 body:not(.studio-theme-dark) .api-link-btn:hover,
@@ -2997,7 +2997,7 @@ html:not(.studio-theme-dark) body:not(.theme-dark) .action-btn.save-btn:hover,
 html:not(.studio-theme-dark) body:not(.theme-dark) .recommend-register:hover,
 html:not(.studio-theme-dark) body:not(.theme-dark) .recommend-fill:hover {
     background:var(--api-light-primary-hover) !important;
-    color:var(--text-on-accent) !important;
+    color:var(--bg) !important;
 }
 
 body:not(.studio-theme-dark) .recommend-tag,
@@ -5907,4 +5907,20 @@ html.studio-theme-dark body .recommend-tag.recommend-free-tag svg {
     .recommend-inline-body .recommend-setup-flow .recommend-guide-arrow {
         display:none !important;
     }
+}
+
+/* 修复：推荐平台保存按钮"保存"文字与背景同色（深底深字，看不见）
+   原规则用 var(--text) 在浅色主题下与 var(--api-light-primary) 都是深色；
+   改为 var(--text-on-accent) 在两种主题下都能保证与深色背景的对比度。 */
+.recommend-inline-card .onboarding-save-btn,
+.recommend-inline-card .recommend-guide-save-btn,
+body:not(.studio-theme-dark) .recommend-inline-card .onboarding-save-btn,
+body:not(.studio-theme-dark) .recommend-inline-card .recommend-guide-save-btn,
+html:not(.studio-theme-dark) body:not(.theme-dark) .recommend-inline-card .onboarding-save-btn,
+html:not(.studio-theme-dark) body:not(.theme-dark) .recommend-inline-card .recommend-guide-save-btn,
+body.studio-theme-dark .recommend-inline-card .onboarding-save-btn,
+body.studio-theme-dark .recommend-inline-card .recommend-guide-save-btn,
+html.studio-theme-dark body .recommend-inline-card .onboarding-save-btn,
+html.studio-theme-dark body .recommend-inline-card .recommend-guide-save-btn {
+    color: var(--text-on-accent) !important;
 }

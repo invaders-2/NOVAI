@@ -2154,7 +2154,8 @@ def schedule_self_restart(delay_seconds: int = 3) -> bool:
                 + launch_line +
                 "del \"%~f0\"\r\n"
             )
-            with open(bat_path, "w", encoding="utf-8") as f:
+            # bat 文件必须用系统 ANSI 编码（GBK/mbcs），cmd 不会按 chcp 切换文件解析编码
+            with open(bat_path, "w", encoding="mbcs") as f:
                 f.write(script)
             subprocess.Popen(
                 ["cmd", "/c", bat_path],
@@ -3357,6 +3358,63 @@ def normalize_canvas_color(value):
     color = str(value or "").strip().lower()
     return color if color in CANVAS_COLORS else ""
 
+_VIDEO_EXTS = ('.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v', '.flv')
+
+def _node_image_urls(node):
+    """Yield downloadable image URLs from a single canvas node (images first, no videos)."""
+    if not isinstance(node, dict):
+        return
+    # node.url (image nodes)
+    url = canvas_asset_downloadable_url(node.get("url", ""))
+    if url:
+        yield url
+    # node.images (output / smart-image nodes)
+    for img in (node.get("images") or []):
+        url = canvas_asset_downloadable_url(canvas_asset_url_value(img))
+        if url:
+            yield url
+    # node.output_images (some generator nodes)
+    for img in (node.get("output_images") or []):
+        url = canvas_asset_downloadable_url(canvas_asset_url_value(img))
+        if url:
+            yield url
+
+def canvas_thumbnail(data):
+    """Extract the first image URL from canvas nodes for use as a card thumbnail.
+    Prefers images over videos; returns '' if none found."""
+    nodes = data.get("nodes", [])
+    if not isinstance(nodes, list):
+        return ""
+    # First pass: prefer image URLs (not videos)
+    for node in nodes:
+        for url in _node_image_urls(node):
+            if not url.lower().endswith(_VIDEO_EXTS):
+                return url
+    # Second pass: accept anything (including video thumbnails)
+    for node in nodes:
+        for url in _node_image_urls(node):
+            return url
+    return ""
+
+def canvas_thumbnails(data, max_count=4):
+    """Extract up to max_count image URLs from canvas nodes for card preview grid.
+    Prefers images over videos; returns [] if none found."""
+    nodes = data.get("nodes", [])
+    if not isinstance(nodes, list):
+        return []
+    seen = set()
+    urls = []
+    for node in nodes:
+        for url in _node_image_urls(node):
+            if url.lower().endswith(_VIDEO_EXTS):
+                continue
+            if url not in seen:
+                seen.add(url)
+                urls.append(url)
+                if len(urls) >= max_count:
+                    return urls
+    return urls
+
 def canvas_record(data):
     return {
         "id": data.get("id"),
@@ -3373,6 +3431,8 @@ def canvas_record(data):
         "updated_at": data.get("updated_at", 0),
         "deleted_at": data.get("deleted_at", 0),
         "node_count": len(data.get("nodes", [])),
+        "thumbnail": canvas_thumbnail(data),
+        "thumbnails": canvas_thumbnails(data),
     }
 
 def cleanup_expired_canvas_trash():
@@ -10586,6 +10646,51 @@ async def build_chat_text_reply(payload, conversation):
 
 # --- 路由接口 ---
 
+@app.get("/api/lan-info")
+async def lan_info():
+    """返回局域网访问地址 + 二维码 data URL，供前端显示「手机访问」通知条"""
+    import os as _os
+    import io as _io
+    import base64 as _b64
+    port = 3000
+    lan_ip = _os.environ.get("NOVAI_LAN_IP")
+    lan_url = _os.environ.get("NOVAI_LAN_URL")
+    # dev 模式（直接跑 main.py）下环境变量没设，自己算
+    if not lan_ip:
+        import socket as _socket
+        s = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            lan_ip = s.getsockname()[0]
+        except Exception:
+            lan_ip = None
+        finally:
+            s.close()
+        if lan_ip:
+            lan_url = f"http://{lan_ip}:{port}"
+    if not lan_url:
+        return {"available": False, "url": None, "ip": None, "port": port, "qr_data_url": None}
+    # 生成二维码 data URL
+    qr_data_url = None
+    try:
+        import qrcode as _qr
+        qr = _qr.QRCode(version=1, box_size=6, border=2)
+        qr.add_data(lan_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = _io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_data_url = "data:image/png;base64," + _b64.b64encode(buf.getvalue()).decode()
+    except Exception as e:
+        print(f"[lan-info] qrcode gen failed: {e}")
+    return {
+        "available": True,
+        "url": lan_url,
+        "ip": lan_ip,
+        "port": port,
+        "qr_data_url": qr_data_url,
+    }
+
 @app.get("/")
 async def index():
     return static_html_response("index.html")
@@ -14396,6 +14501,11 @@ async def delete_conversation(conversation_id: str, request: Request, x_user_id:
 @app.get("/api/canvases")
 async def canvases():
     return {"canvases": list_canvases()}
+
+@app.get("/api/recent-canvases")
+async def recent_canvases():
+    """返回最近更新的画布列表（首页"最新画布"区域使用）。"""
+    return list_canvases()[:12]
 
 @app.get("/api/projects")
 async def get_projects():

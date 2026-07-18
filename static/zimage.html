@@ -7,14 +7,14 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>Flux Modern Gallery | Unified Console</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784225480"></script>
-    <script src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784267716"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784225480"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784268083"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784254953"></script>
-    <script src="/static/js/image-preview.js?v=1.0.83.1784225480"></script>
-    <script src="/static/js/history-bulk-manager.js?v=1.0.83.1784225480"></script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784254613">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
+    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
+    <script defer src="/static/js/image-preview.js?v=1.0.83.1784312776"></script>
+    <script defer src="/static/js/history-bulk-manager.js?v=1.0.83.1784314442"></script>
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
     <style>
         :root {
             --bg-base: #f8f8f8;
@@ -22,40 +22,6 @@
             --max-w: 1280px;
             --easing: cubic-bezier(0.4, 0, 0.2, 1);
             --accent: #000000;
-        }
-
-        /* --- 极简悬浮浅灰滚动条 (无底色/左移) --- */
-        *::-webkit-scrollbar {
-            width: 10px !important;
-            height: 10px !important;
-            background: transparent !important;
-        }
-
-        *::-webkit-scrollbar-track {
-            background: transparent !important;
-            border: none !important;
-        }
-
-        *::-webkit-scrollbar-thumb {
-            background-color: #d8d8d8 !important;
-            border: 3px solid transparent !important;
-            border-right-width: 5px !important;
-            /* 增加右侧间距，使滚动条向左位移 */
-            background-clip: padding-box !important;
-            border-radius: 10px !important;
-        }
-
-        *::-webkit-scrollbar-thumb:hover {
-            background-color: #c0c0c0 !important;
-        }
-
-        *::-webkit-scrollbar-corner {
-            background: transparent !important;
-        }
-
-        * {
-            scrollbar-width: thin !important;
-            scrollbar-color: #d8d8d8 transparent !important;
         }
 
         body {
@@ -167,7 +133,7 @@
             display: none;
         }
     </style>
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784254710">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
         body { background: var(--bg) !important; color: var(--text) !important; }
@@ -182,7 +148,7 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--text)
 button.generate { background: var(--text) !important; color: var(--bg) !important; border-radius: var(--radius-md) !important; }
 </style>
 
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784255511">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
 </head>
 
 <body class="antialiased">
@@ -308,17 +274,7 @@ button.generate { background: var(--text) !important; color: var(--bg) !importan
         });
         window.addEventListener('studio-lang-change', () => { document.title = tr('nav.textToImage'); });
 
-        function generateUUID() {
-            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-                try { return crypto.randomUUID(); } catch (e) { }
-            }
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        }
-        const CLIENT_ID = localStorage.getItem("client_id") || generateUUID();
-        localStorage.setItem("client_id", CLIENT_ID);
+        const CLIENT_ID = window.NovaUtils.getClientId();
 
         let allHistory = [];
         let currentIndex = 0;
@@ -488,6 +444,10 @@ button.generate { background: var(--text) !important; color: var(--bg) !importan
             return div;
         }
 
+        // ═══ PAGE-SPECIFIC: renderImageCard / loadHistory ═══
+        // NOTE: Similar functions exist in online.html, enhance.html, zimage.html, klein.html, angle.html
+        // Each has page-specific card templates and API parameters.
+        // Consider NovaUtils.loadHistoryWithPagination + NovaUtils.renderImageCardHtml for future refactoring.
         function renderImageCard(data, isNew = false) {
             if (document.getElementById(`history-${data.timestamp}`)) return;
             const masonry = document.getElementById('masonry');
@@ -504,6 +464,8 @@ button.generate { background: var(--text) !important; color: var(--bg) !importan
             lucide.createIcons();
         }
 
+        // ═══ PAGE-SPECIFIC: renderImageCard / loadHistory ═══
+        // NOTE: See comment above renderImageCard for cross-file refactoring notes.
         async function loadHistory(page = 0) {
             if (isLoading) return;
             const trigger = document.getElementById('loadMoreTrigger');
@@ -592,33 +554,21 @@ button.generate { background: var(--text) !important; color: var(--bg) !importan
         };
 
         // 基础功能
-        let lightboxPreview = null;
-        function ensureLightboxPreview(){
-            if(!lightboxPreview && window.StudioImagePreview){
-                lightboxPreview = StudioImagePreview.attach(document.getElementById('lightboxFrame'));
+        var lightbox = StudioImagePreview.getLightbox({
+            onOpen: function(data, el) {
+                var resDisplay = el.querySelector('#lightboxRes');
+                var img = el.querySelector('#lightboxImg');
+                resDisplay.innerText = "...";
+                img.onload = function() {
+                    resDisplay.innerText = img.naturalWidth + ' x ' + img.naturalHeight;
+                };
+                var promptEl = el.querySelector('#lightboxPrompt');
+                if (promptEl && data.prompt) promptEl.innerText = data.prompt;
             }
-            return lightboxPreview;
-        }
-        function openLightbox(url, prompt) {
-            const img = document.getElementById('lightboxImg');
-            const resDisplay = document.getElementById('lightboxRes');
-            resDisplay.innerText = "...";
-            ensureLightboxPreview();
-            if(lightboxPreview) lightboxPreview.reset();
-            img.src = url;
-            img.onload = () => {
-                resDisplay.innerText = `${img.naturalWidth} x ${img.naturalHeight}`;
-            };
-            document.getElementById('lightboxPrompt').innerText = prompt;
-            document.getElementById('lightbox').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-        function closeLightbox() {
-            if(lightboxPreview) lightboxPreview.reset();
-            document.getElementById('lightbox').classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-        function handleOutsideClick(e) { if (e.target.id === 'lightbox') closeLightbox(); }
+        });
+        function openLightbox(url, prompt) { lightbox.open({ url: url, prompt: prompt }); }
+        function closeLightbox() { lightbox.close(); }
+        function handleOutsideClick(e) { lightbox.handleOutside(e); }
         function downloadImage() {
             const a = document.createElement('a'); a.href = document.getElementById('lightboxImg').src;
             a.download = `Art-${Date.now()}.png`; a.click();

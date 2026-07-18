@@ -7,15 +7,16 @@
     <title data-i18n="smart.title">智能画布</title>
     <!-- 关键渲染路径优化：CSS 先于 JS 加载，浏览器可并行下载 CSS 和 JS -->
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.83.1784225480">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784254710">
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784254613">
-    <script src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784267716"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784225480"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784268083"></script>
-    <script src="/static/js/shared/media.js?v=1.0.83.1784258896"></script>
-    <script defer src="/static/js/touch-mouse.js?v=1.0.83.1784256865"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784254953"></script>
+    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.83.1784291998">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
+    <script src="/static/js/shared/media.js?v=1.0.83.1784291998"></script>
+    <script src="/static/js/shared/viewport.js?v=1.0.83.1784296809"></script>
+    <script defer src="/static/js/touch-mouse.js?v=1.0.83.1784291998"></script>
+    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
 html, body {
@@ -256,6 +257,7 @@ html, body {
                 </div>
             </div>
         </div>
+        <!-- ═══ IMAGE-EDIT-MODAL (shared with canvas.html) ═══ -->
         <div id="imageEditModal" class="image-edit-modal">
             <div class="image-edit-panel">
                 <div class="image-edit-head">
@@ -448,6 +450,7 @@ html, body {
                 </div>
             </div>
         </div>
+        <!-- ═══ /IMAGE-EDIT-MODAL ═══ -->
         <div id="toast" class="toast"></div>
         <div id="mentionPreview" class="mention-preview"><img alt="preview"></div>
     </div>
@@ -467,6 +470,6 @@ html, body {
         <div id="chatContext" class="chat-context"></div>
         <div class="chat-resize"></div>
     </div>
-    <script defer src="/static/js/smart-canvas.js?v=1.0.83.1784259020"></script>
+    <script defer src="/static/js/smart-canvas.js?v=1.0.83.1784315093"></script>
 </body>
 </html>

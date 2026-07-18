@@ -36,7 +36,7 @@ def install_deps():
     """安装打包依赖"""
     print("=== 安装依赖 ===")
     subprocess.run(
-        [sys.executable, "-m", "pip", "install", "pyinstaller", "pywebview"],
+        [sys.executable, "-m", "pip", "install", "pyinstaller", "pywebview", "pystray", "qrcode"],
         check=True, capture_output=False
     )
 
@@ -51,7 +51,10 @@ def build_exe():
         "uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto",
         "fastapi", "aiofiles", "pydantic", "python_multipart", "httpx", "PIL",
         "webview", "webview.platforms.winforms",
+        "clr", "pythonnet",  # pywebview WinForms 后端依赖
         "requests",
+        "pystray", "pystray._win32", "pystray._util", "six",  # 系统托盘
+        "qrcode", "qrcode.main", "qrcode.constants", "qrcode.util",  # 局域网二维码
     ]
 
     cmd_parts = [
@@ -147,7 +150,20 @@ def build_installer():
         print("   请安装 NSIS: https://nsis.sourceforge.io/Download")
         return
 
-    run(f'"{makensis}" "{nsi_path}"')
+    # 从 VERSION 文件读取版本号，传给 NSIS（installer.nsi 用 !ifndef 兜底）
+    version = ""
+    version_file = os.path.join(ROOT, "VERSION")
+    if os.path.isfile(version_file):
+        try:
+            with open(version_file, encoding="utf-8") as f:
+                version = f.read().strip().splitlines()[0].strip()
+        except Exception:
+            pass
+    if not version:
+        version = "1.0.83"
+    print(f"  版本号: {version}")
+
+    run(f'"{makensis}" /DPRODUCT_VERSION="{version}" "{nsi_path}"')
     print(f"✅ 安装包已生成到 {DIST_DESKTOP}")
 
 

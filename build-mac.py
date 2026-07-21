@@ -224,6 +224,10 @@ def build_dmg(app_path, version):
     staging_app = os.path.join(dmg_staging, f"{APP_NAME}.app")
     shutil.copytree(app_path, staging_app, symlinks=True)
 
+    # 签名必须在 copytree 之后：shutil 拷贝在 macOS 上不保留签名的完整元数据，
+    # 先签后拷会让 dmg 里的 app 签名失效（用户下载报“已损坏”）
+    sign_app(staging_app)
+
     # Applications 软链接（用户拖 .app 到 Applications）
     apps_link = os.path.join(dmg_staging, "Applications")
     if os.path.exists(apps_link):
@@ -278,12 +282,12 @@ def main():
         app_path = build_app()
         copy_business_files(app_path)
         fix_info_plist(app_path, version)
-        sign_app(app_path)
         build_dmg(app_path, version)
 
-        # 也复制一份 .app 到 dist-desktop（方便直接测试）
-        shutil.copytree(app_path, os.path.join(DIST, f"{APP_NAME}.app"),
-                        symlinks=True, dirs_exist_ok=True)
+        # 也复制一份 .app 到 dist-desktop（方便直接测试）；拷贝后同样需要重签
+        dist_app = os.path.join(DIST, f"{APP_NAME}.app")
+        shutil.copytree(app_path, dist_app, symlinks=True, dirs_exist_ok=True)
+        sign_app(dist_app)
 
         print()
         print("=" * 50)

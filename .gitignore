@@ -57,7 +57,8 @@ tmp_*.png
 # 设计概念稿/临时原型（非正式页面）
 static/canvas-entry-redesign-*.html
 static/canvas-list-redesign-*.html
-static/images/concept/
+static/images/concept/*
+!static/images/concept/carousel-*
 
 # 冗余 vendor 文件（已有子集版本替代）
 static/vendor/js/lucide.js

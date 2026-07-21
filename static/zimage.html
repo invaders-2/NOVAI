@@ -7,14 +7,14 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>Flux Modern Gallery | Unified Console</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
-    <script defer src="/static/js/image-preview.js?v=1.0.83.1784312776"></script>
-    <script defer src="/static/js/history-bulk-manager.js?v=1.0.83.1784314442"></script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/vendor/js/lucide-subset.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <script src="/static/js/i18n.js?v=1.0.85.1784619943.1784319389"></script>
+    <script src="/static/js/image-preview.js?v=1.0.85.1784619943.1784312776"></script>
+    <script src="/static/js/history-bulk-manager.js?v=1.0.85.1784619943.1784314442"></script>
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.85.1784619943.1784291998">
     <style>
         :root {
             --bg-base: #f8f8f8;
@@ -29,12 +29,21 @@
             font-family: var(--font-sans);
             color: var(--text-main);
             -webkit-font-smoothing: antialiased;
+            scrollbar-width: none;
+            overflow-x: hidden;
+            max-width: 100vw;
         }
+        body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+        * { scrollbar-width: none; -ms-overflow-style: none; }
+        *::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
         .layout-container {
             max-width: var(--max-w);
             margin: 0 auto;
             padding: 0 40px;
+        }
+        @media (max-width: 768px) {
+            .layout-container { padding: 0 16px; }
         }
 
         .console-card {
@@ -133,7 +142,7 @@
             display: none;
         }
     </style>
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
         body { background: var(--bg) !important; color: var(--text) !important; }
@@ -148,7 +157,7 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--text)
 button.generate { background: var(--text) !important; color: var(--bg) !important; border-radius: var(--radius-md) !important; }
 </style>
 
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.85.1784619943.1784477206">
 </head>
 
 <body class="antialiased">
@@ -570,8 +579,25 @@ button.generate { background: var(--text) !important; color: var(--bg) !importan
         function closeLightbox() { lightbox.close(); }
         function handleOutsideClick(e) { lightbox.handleOutside(e); }
         function downloadImage() {
-            const a = document.createElement('a'); a.href = document.getElementById('lightboxImg').src;
-            a.download = `Art-${Date.now()}.png`; a.click();
+            const img = document.getElementById('lightboxImg');
+            if (!img || !img.src) return;
+            try {
+                // 桌面版：通过 pywebview 原生保存对话框
+                if (window.pywebview && window.pywebview.api && window.pywebview.api.save_file) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width;
+                    canvas.height = img.naturalHeight || img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    window.pywebview.api.save_file(canvas.toDataURL('image/png'), `Art-${Date.now()}.png`);
+                    return;
+                }
+                // 网页版：回退到 <a download>
+                const a = document.createElement('a');
+                a.href = img.src;
+                a.download = `Art-${Date.now()}.png`;
+                a.click();
+            } catch(e) {}
         }
         function applySameStyle() {
             document.getElementById('prompt').value = document.getElementById('lightboxPrompt').innerText;

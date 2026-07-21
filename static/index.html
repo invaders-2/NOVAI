@@ -10,6 +10,16 @@
         html.studio-route-booting body {
             visibility: hidden !important;
         }
+        /* 全局隐藏滚动条 */
+        *, *::before, *::after {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+        *::-webkit-scrollbar {
+            width: 0 !important;
+            height: 0 !important;
+            display: none !important;
+        }
     </style>
     <script>
         (function(){
@@ -23,12 +33,12 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <script src="/static/js/i18n.js?v=1.0.85.1784619943.1784319389"></script>
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.85.1784619943.1784291998">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
     <style>
         /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
         .w-1\.5 { width: 0.375rem; }
@@ -57,12 +67,14 @@
             --text: #1c1c1e;
             --muted: #656569;
             --nav-hover-bg: rgba(0, 0, 0, 0.04);
+            --nav-hover: #ECECEC;
+            --nav-active: #E9E9EA;
             --monitor-bg: rgba(255, 255, 255, 0.88);
             --monitor-border: transparent;
             --monitor-shadow: rgba(0, 0, 0, 0.06);
             --divider: transparent;
-            --scrollbar: rgba(0, 0, 0, 0.12);
-            --scrollbar-hover: rgba(0, 0, 0, 0.22);
+            --scrollbar: rgba(0, 0, 0, 0.25);
+            --scrollbar-hover: rgba(0, 0, 0, 0.40);
             --focus-ring: rgba(59, 130, 246, 0.5);
             --card-shadow-sm: 0 1px 2px rgba(0,0,0,0.03);
             --card-shadow-md: 0 4px 16px -4px rgba(0,0,0,0.06);
@@ -87,12 +99,14 @@
             --text: #f5f5f7;
             --muted: #96969a;
             --nav-hover-bg: rgba(255, 255, 255, 0.05);
+            --nav-hover: #2A2A2E;
+            --nav-active: #2F2F34;
             --monitor-bg: rgba(18,18,18,0.88);
             --monitor-border: transparent;
             --monitor-shadow: rgba(0, 0, 0, 0.3);
             --divider: transparent;
-            --scrollbar: rgba(255, 255, 255, 0.12);
-            --scrollbar-hover: rgba(255, 255, 255, 0.22);
+            --scrollbar: rgba(255, 255, 255, 0.25);
+            --scrollbar-hover: rgba(255, 255, 255, 0.40);
             --focus-ring: rgba(96, 165, 250, 0.5);
             --card-shadow-sm: 0 1px 2px rgba(0,0,0,0.15);
             --card-shadow-md: 0 4px 16px -4px rgba(0,0,0,0.25);
@@ -164,32 +178,43 @@
             display: flex;
             width: 100%;
             height: 100vh;
+            padding: 15px;
+            box-sizing: border-box;
             background: var(--bg);
             position: relative;
             transition: background 0.3s;
         }
 
-        /* 侧边栏 */
+        /* 侧边栏 - 自动收起/展开（hover） */
         .sidebar {
             width: 72px;
             min-width: 72px;
-            height: calc(100vh - 24px);
-            max-height: calc(100vh - 24px);
-            background: var(--sidebar-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            max-width: 220px;
+            height: calc(100vh - 30px);
+            border-radius: 26px;
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            transition: width 0.3s ease-out, background 0.3s ease-out, backdrop-filter 0.3s ease-out, box-shadow 0.3s ease-out;
             display: flex;
             flex-direction: column;
             align-items: center;
-            border-right: 1px solid var(--border);
-            border-radius: 28px;
-            margin: 12px 0 12px 12px;
-            padding: 32px 0 8px 0;
-            transition: width 0.4s var(--ease-out) 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s;
+            overflow: hidden;
+            flex-shrink: 0;
+            position: relative;
             z-index: 50;
-            overflow-y: auto;
-            box-shadow: var(--card-shadow-sm);
+            box-shadow: 0 8px 24px rgba(0,0,0,.08);
             -webkit-app-region: drag;
+            margin: 0;
+            padding: 16px 0 12px 0;
+        }
+        .sidebar:hover {
+            width: 220px;
+            min-width: 220px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         }
 
         /* 侧边栏内所有交互元素禁止拖拽穿透 */
@@ -203,21 +228,6 @@
             -webkit-app-region: no-drag;
         }
 
-        .sidebar:hover {
-            width: 260px;
-            transition-delay: 0s;
-            box-shadow: 4px 0 24px -8px var(--monitor-shadow);
-        }
-
-        body.studio-scale-host .sidebar {
-            --ssm: max(10px, calc(12px * var(--studio-ui-scale, 1)));
-            height: calc((100vh - 2 * var(--ssm)) / var(--studio-ui-scale, 1));
-            max-height: calc((100vh - 2 * var(--ssm)) / var(--studio-ui-scale, 1));
-            margin-top: calc(var(--ssm) / var(--studio-ui-scale, 1));
-            margin-bottom: calc(var(--ssm) / var(--studio-ui-scale, 1));
-            zoom: var(--studio-ui-scale, 1);
-        }
-
         /* 首次加载时与 iframe 的 0.5s 淡入同步播放，避免侧栏"焊死"在原地造成视觉断层 */
         @keyframes sidebar-enter {
             from { opacity: 0; transform: translateX(-6px); }
@@ -228,6 +238,7 @@
         }
 
         .logo-text {
+            display: flex;
             font-size: 14px;
             font-weight: 600;
             letter-spacing: 0.06em;
@@ -243,7 +254,6 @@
             background: transparent;
             border: none;
             font-family: inherit;
-            display: flex;
             align-items: center;
             gap: 8px;
             justify-content: flex-start;
@@ -255,6 +265,12 @@
             padding-left: 5px;
             justify-content: center;
             gap: 0;
+        }
+
+        /* 收起态：Logo 下移一点，且去掉左补偿让 Logo 与导航图标同一左中心线 */
+        .sidebar:not(:hover):not(.is-pinned) .logo-text {
+            padding-left: 0;
+            margin-top: 10px;
         }
 
         .sidebar-logo-img {
@@ -284,7 +300,7 @@
         .sidebar:hover .logo-text {
             font-size: 20px;
             letter-spacing: 0.06em;
-            width: 230px;
+            width: 190px;
         }
 
         .sidebar:hover .logo-text-label {
@@ -310,65 +326,73 @@
         /* 导航项 */
         .nav-item {
             position: relative;
-            width: 48px;
-            height: 48px;
-            flex: 0 0 48px;
-            margin: 8px 0;
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            margin: 2px auto;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
-            border-radius: 16px;
+            justify-content: center;
+            border-radius: 12px;
             cursor: pointer;
-            transition: width 0.3s var(--ease-out) 0.3s, background 0.2s var(--ease-hover), color 0.2s var(--ease-hover), transform 0.2s var(--ease-hover), box-shadow 0.2s var(--ease-hover);
+            transition: background 0.2s var(--ease-hover), color 0.2s var(--ease-hover), transform 0.2s var(--ease-hover), box-shadow 0.2s var(--ease-hover), width 0.3s ease-out, margin 0.3s ease-out;
             color: var(--muted);
             overflow: hidden;
-            padding-left: 14px;
+            padding-left: 0;
             box-sizing: border-box;
         }
 
-        .sidebar:not(:hover) .nav-item {
-            padding-left: 5px;
-            justify-content: center;
-        }
-
-        /* 侧边栏收起时增大点击热区 */
-        .sidebar:not(:hover) .nav-item {
-            position: relative;
-        }
-        .sidebar:not(:hover) .nav-item::after {
-            content: '';
-            position: absolute;
-            inset: -4px -8px;
-            /* 扩展热区超出视觉边界 */
-        }
-
+        /* 展开时导航项还原 */
         .sidebar:hover .nav-item {
-            width: 230px;
-            transition-delay: 0s;
+            width: 190px;
+            height: 48px;
+            flex: 0 0 48px;
+            margin: 8px 0;
+            justify-content: flex-start;
+            padding-left: 14px;
+        }
+
+        /* 侧边栏图标统一 24px */
+        .nav-item svg, .nav-item img,
+        .side-pill svg, .side-pill img {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        /* 收起态图标 20px（点击区域仍是 40×40），展开态维持 24px */
+        .sidebar:not(:hover):not(.is-pinned) .nav-item svg,
+        .sidebar:not(:hover):not(.is-pinned) .nav-item img {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* 收起态去掉文字的 16px 间距，否则图标被顶偏、与 Logo 不在同一左中心线 */
+        .sidebar:not(:hover):not(.is-pinned) .nav-text {
+            margin-left: 0;
         }
 
         .nav-item:hover {
-            background: var(--nav-hover-bg);
+            background: var(--nav-hover);
             color: var(--text);
-            transform: translateX(2px);
         }
 
         .nav-item:focus-visible {
             outline: 2px solid var(--focus-ring);
             outline-offset: 2px;
-            background: var(--nav-hover-bg);
+            background: var(--nav-hover);
             color: var(--text);
         }
 
         .nav-item.active {
-            background: var(--text);
-            color: var(--bg);
-            box-shadow: var(--card-shadow-sm), 0 4px 16px -2px rgba(0, 0, 0, 0.12);
+            background: var(--nav-active);
+            color: var(--text);
+            box-shadow: none;
         }
 
         .nav-item.active:hover {
-            transform: translateX(0);
-            box-shadow: var(--card-shadow-sm), 0 6px 16px -2px rgba(0, 0, 0, 0.2);
+            background: var(--nav-active);
+            box-shadow: none;
         }
 
         .nav-item.active:focus-visible {
@@ -376,47 +400,42 @@
             outline-offset: 3px;
         }
 
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 3px;
-            height: 18px;
-            border-radius: 3px;
-            background: var(--bg);
-            opacity: 0;
-            transition: opacity 0.25s ease;
+        /* 展开时 hover/active 还原为原样式 */
+        .sidebar:hover .nav-item:hover {
+            background: var(--nav-hover-bg);
+            color: var(--text);
+            transform: translateX(2px);
         }
-
-        .sidebar:hover .nav-item.active::before {
-            opacity: 1;
+        .sidebar:hover .nav-item.active {
+            background: var(--text);
+            color: var(--bg);
+            box-shadow: var(--card-shadow-sm), 0 4px 16px -2px rgba(0, 0, 0, 0.12);
         }
-
-        html.theme-dark .nav-item.active,
-        body.theme-dark .nav-item.active {
+        .sidebar:hover .nav-item.active:hover {
+            transform: translateX(0);
+            box-shadow: var(--card-shadow-sm), 0 6px 16px -2px rgba(0, 0, 0, 0.2);
+        }
+        html.theme-dark .sidebar:hover .nav-item.active,
+        body.theme-dark .sidebar:hover .nav-item.active {
             background: var(--text);
             color: var(--bg);
             box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.3);
         }
 
         .nav-text {
-            opacity: 0;
-            max-width: 0;
-            margin-left: 0;
+            margin-left: 16px;
             font-weight: 600;
             font-size: 14px;
             white-space: nowrap;
             overflow: hidden;
-            transition: opacity 0.3s var(--ease-out) 0.3s, max-width 0.3s var(--ease-out) 0.3s, margin-left 0.3s var(--ease-out) 0.3s;
+            opacity: 0;
+            width: 0;
+            transition: opacity 0.3s ease-out, width 0.3s ease-out;
         }
-
         .sidebar:hover .nav-text {
             opacity: 1;
+            width: auto;
             max-width: 200px;
-            margin-left: 16px;
-            transition-delay: 0.1s;
         }
 
         .nav-divider {
@@ -499,6 +518,7 @@
             flex: 1 1 auto;
             overflow-y: auto;
             overflow-x: hidden;
+            scrollbar-width: none;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -506,39 +526,31 @@
             overscroll-behavior: contain;
             scrollbar-gutter: stable;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
-            scrollbar-color: rgba(148, 163, 184, .34) transparent;
         }
+        .sidebar nav::-webkit-scrollbar { display: none; }
 
-        .sidebar::-webkit-scrollbar { width: 4px !important; }
-        .sidebar::-webkit-scrollbar-track { background: transparent !important; }
-        .sidebar::-webkit-scrollbar-thumb {
-            background: rgba(148, 163, 184, .34) !important;
-            border: 0 !important;
-            border-radius: 999px !important;
-        }
+        .sidebar::-webkit-scrollbar { display: none !important; }
+        .sidebar::-webkit-scrollbar-track { display: none !important; }
+        .sidebar::-webkit-scrollbar-thumb { display: none !important; }
 
-        .sidebar nav::-webkit-scrollbar { width: 4px !important; }
-        .sidebar nav::-webkit-scrollbar-track { background: transparent !important; }
-        .sidebar nav::-webkit-scrollbar-thumb {
-            background: rgba(148, 163, 184, .34) !important;
-            border: 0 !important;
-            border-radius: 999px !important;
-        }
+        .sidebar nav::-webkit-scrollbar { display: none; }
+        .sidebar nav::-webkit-scrollbar-track { display: none; }
+        .sidebar nav::-webkit-scrollbar-thumb { display: none; }
 
         .sidebar nav > * {
             flex-shrink: 0;
         }
 
-        /* 主舞台区 */
+        /* 主舞台区 - flex 自适应 + 侧边栏间距 */
         .stage {
             flex: 1;
+            min-width: 0;
             background: var(--stage-bg);
-            margin: 12px 12px 12px 8px;
-            border-radius: 28px;
+            margin: 0 0 0 10px;
+            border-radius: 20px;
             overflow: hidden;
             position: relative;
-            transition: background 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+            transition: background 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out), margin-left 0.3s ease-out;
             box-shadow: inset 0 2px 8px -2px rgba(0, 0, 0, 0.04);
         }
 
@@ -548,9 +560,88 @@
         }
 
         body.studio-scale-host .stage {
-            margin: max(10px, calc(12px * var(--studio-ui-scale, 1)));
-            margin-left: max(6px, calc(8px * var(--studio-ui-scale, 1)));
             border-radius: max(20px, calc(28px * var(--studio-ui-scale, 1)));
+        }
+
+        /* 画布路由全屏出血：去掉外壳 padding 与舞台圆角/左边距，仅画布路由生效 */
+        body.route-canvas .app-shell { padding: 0; }
+        body.route-canvas .stage { margin: 0; border-radius: 0; }
+        /* 边栏不跟随全屏出血：保持与其他页面一致的 15px 内缩，避免无边框窗口下贴到窗口边缘/压住红绿灯 */
+        body.route-canvas .sidebar { margin: 15px 0 15px 15px; }
+        /* macOS 原生标题栏模式下其他页面边栏 = 外壳15 + 标题带48 = 63px，这里补齐同样的顶部偏移 */
+        body.route-canvas.has-native-titlebar .sidebar { margin-top: 63px; }
+
+        /* ═══ 右上角快捷操作按钮 ═══ */
+        .stage-actions {
+            position: fixed;
+            top: 16px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 8px;
+        }
+        /* macOS 原生窗口：48px Header 带，按钮排在 top:18（中心 y=36，与平移后的红绿灯同一条水平线） */
+        body.has-native-titlebar .stage-actions {
+            top: 18px;
+            -webkit-app-region: no-drag;
+        }
+        /* 网页版（无 pywebview）：隐藏右上角主题/设置快捷按钮，侧栏已有设置入口，功能不丢 */
+        body.web-mode:not(.has-native-titlebar):not(.has-frameless-titlebar) .stage-actions {
+            display: none;
+        }
+        .stage-actions button {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s, background 0.2s;
+        }
+        .stage-actions button:hover {
+            opacity: 1;
+        }
+        /* Dark hover */
+        html.theme-dark .stage-actions button:hover,
+        body.theme-dark .stage-actions button:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        /* Light hover */
+        html:not(.theme-dark) body:not(.theme-dark) .stage-actions button:hover {
+            background: rgba(0,0,0,0.06);
+        }
+        .stage-actions button svg, .stage-actions button img {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ═══ macOS 原生窗口：顶部 48px Header 带（窗口拖拽区；透明，视觉与页面同一块背景） ═══ */
+        .app-header {
+            display: none;
+        }
+        body.has-native-titlebar .app-header {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            z-index: 40;
+            -webkit-app-region: drag;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        /* 侧栏与舞台从 Header 带下方开始，页面内容不钻进标题区 */
+        body.has-native-titlebar .sidebar {
+            margin-top: 48px;
+            height: calc(100vh - 30px - 48px);
+        }
+        body.has-native-titlebar .stage {
+            margin-top: 48px;
         }
 
         iframe {
@@ -748,37 +839,46 @@
         }
 
         .side-pill {
-            width:48px;
-            height:38px;
-            border-radius:999px;
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
+            margin: 2px auto;
+            border-radius: 12px;
             background: transparent;
             outline: 1px solid transparent;
             outline-offset: -1px;
             color: var(--muted);
             display: flex;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: center;
             cursor: pointer;
-            transition: width 0.3s var(--fluid-ease) 0.3s, gap 0.3s var(--fluid-ease) 0.3s, background-color 0.2s, color 0.2s, outline-color 0.2s, transform 0.2s, box-shadow 0.2s;
+            transition: background-color 0.2s, color 0.2s, outline-color 0.2s, transform 0.2s, box-shadow 0.2s, width 0.3s ease-out, margin 0.3s ease-out;
             flex-shrink: 0;
-            overflow:hidden;
-            gap:8px;
-            position:relative;
-            padding-left: 14px;
+            overflow: hidden;
+            gap: 0;
+            position: relative;
+            padding-left: 0;
             box-sizing: border-box;
         }
 
-        .sidebar:not(:hover) .side-pill {
-            padding-left: 5px;
-            justify-content: center;
-        }
-
+        /* 展开时 side-pill 还原 */
         .sidebar:hover .side-pill {
             width: 190px;
-            transition-delay: 0s;
+            height: 40px;
+            flex: 0 0 40px;
+            margin: 0;
+            justify-content: flex-start;
+            padding-left: 14px;
+            gap: 8px;
         }
 
         .side-pill:hover {
+            background: var(--nav-hover);
+            color: var(--text);
+            outline-color: var(--stage-border);
+        }
+
+        .sidebar:hover .side-pill:hover {
             background: var(--nav-hover-bg);
             color: var(--text);
             outline-color: var(--stage-border);
@@ -786,6 +886,13 @@
         }
 
         .side-pill.active {
+            background: var(--nav-active);
+            color: var(--text);
+            outline-color: var(--nav-active);
+            box-shadow: none;
+        }
+
+        .sidebar:hover .side-pill.active {
             background: var(--text);
             color: var(--bg);
             outline-color: var(--text);
@@ -793,6 +900,10 @@
         }
 
         .side-pill.active:hover {
+            box-shadow: none;
+        }
+
+        .sidebar:hover .side-pill.active:hover {
             transform: translateX(0);
             box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.2);
         }
@@ -805,20 +916,16 @@
 
         /* 版本显示样式 */
         .version-display {
+            flex-shrink: 0;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 4px;
             padding: 4px 0 0;
+            padding-left: 28px;
             margin-bottom: 8px;
             width: 100%;
-            transition: justify-content 0.3s var(--fluid-ease), padding-left 0.3s var(--fluid-ease), color 0.2s ease;
-        }
-
-        .sidebar:hover .version-display,
-        .sidebar.is-pinned .version-display {
-            justify-content: flex-start;
-            padding-left: 28px;
+            transition: color 0.2s ease;
         }
 
         .version-text {
@@ -826,7 +933,11 @@
             color: var(--muted);
             font-weight: 500;
             letter-spacing: 0.02em;
-            transition: color 0.2s ease;
+            transition: color 0.2s ease, opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+        }
+        .sidebar:hover .version-text {
+            opacity: 1;
         }
 
         .version-display.clickable {
@@ -899,14 +1010,20 @@
         /* ===== 设置弹窗：左右分栏 + 标签切换（现代设置面板风格） ===== */
         #settings-modal .settings-modal-panel {
             position: relative;
-            width: min(980px, 96vw);
-            max-height: min(900px, calc(100vh - 64px));
+            width: 75vw;
+            height: 75vh;
+            min-width: 1100px;
+            min-height: 720px;
+            max-width: 90vw;
+            max-height: 90vh;
             display: flex;
             flex-direction: row;
             overflow: hidden;
             align-items: stretch;
             background: var(--stage-bg);
-            border-radius: 18px;
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
         /* 左侧 aside */
@@ -916,7 +1033,13 @@
             display: flex;
             flex-direction: column;
             padding: 26px 16px 22px;
-            background: var(--bg);
+            border-radius: 24px;
+            background: #F5F5F6;
+        }
+
+        html.theme-dark .settings-aside,
+        body.theme-dark .settings-aside {
+            background: #222326;
         }
 
         .settings-aside-top {
@@ -1153,6 +1276,15 @@
             transition: none;
         }
 
+        /* 所有设置子页面 iframe 统一 100% 宽高 */
+        #settings-modal iframe,
+        .settings-modal-panel iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            flex: 1;
+        }
+
         /* 右下角拖拽调整大小手柄 */
         .settings-resize-handle {
             position: absolute;
@@ -1273,6 +1405,97 @@
             background: rgba(0, 0, 0, 0.06);
             margin: 10px 0;
             border: none;
+        }
+
+        /* Toggle 开关 */
+        .settings-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 2px 0;
+            gap: 16px;
+        }
+        .settings-toggle-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .settings-toggle-desc {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+        .settings-toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 26px;
+            flex: 0 0 auto;
+            cursor: pointer;
+        }
+        .settings-toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .settings-toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.15);
+            border-radius: 26px;
+            transition: background 0.25s ease;
+        }
+        .settings-toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.25s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .settings-toggle-switch input:checked + .settings-toggle-slider {
+            background: var(--text);
+        }
+        .settings-toggle-switch input:checked + .settings-toggle-slider::before {
+            transform: translateX(18px);
+        }
+
+        /* 路径行 */
+        .settings-path-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .settings-path-text {
+            flex: 1;
+            font-size: 13px;
+            color: var(--muted);
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        .settings-path-btn {
+            flex: 0 0 auto;
+            padding: 7px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,0,0,0.08);
+            background: var(--stage-bg);
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.2s ease;
+        }
+        .settings-path-btn:hover {
+            background: var(--nav-hover-bg);
         }
 
         /* Pill 选项组 */
@@ -1397,7 +1620,11 @@
         @media (max-width: 640px) {
             #settings-modal .settings-modal-panel {
                 flex-direction: column;
-                max-height: min(900px, calc(100vh - 64px));
+                width: 90vw;
+                height: auto;
+                min-width: 0;
+                min-height: 0;
+                max-height: 90vh;
             }
             .settings-aside {
                 width: 100%;
@@ -1533,27 +1760,26 @@
         }
         .side-pill-text {
             opacity:0;
-            max-width:0;
+            width:0;
             font-size:14px;
             font-weight:600;
             letter-spacing:.02em;
             white-space:nowrap;
             overflow:hidden;
-            transition: opacity 0.3s 0.5s, max-width 0.3s var(--fluid-ease) 0.5s;
+            transition: opacity 0.3s ease-out, width 0.3s ease-out;
         }
         .sidebar:hover .side-pill-text {
             opacity:1;
+            width:auto;
             max-width:120px;
-            transition-delay:.15s;
         }
         /* 更新按钮文字在侧边栏动画中自适应缩小，防止挤压溢出 */
         .side-pill.update-now-btn .side-pill-text {
             font-size: clamp(10px, 1.5vw, 12px);
             text-overflow: ellipsis;
         }
-        /* 折叠态去除 gap，避免图标被推偏 */
-        .side-pill { gap:0; min-width:0; }
-        .sidebar:hover .side-pill { gap:8px; }
+        /* 始终显示文字和图标间距 */
+        .side-pill { gap:8px; min-width:0; }
 
         .project-version-badge {
             width:48px;
@@ -1655,8 +1881,6 @@
                 overflow-x:hidden;
                 overscroll-behavior:contain;
                 -webkit-overflow-scrolling:touch;
-                scrollbar-width:thin;
-                scrollbar-color:rgba(132,132,132,.34) transparent;
             }
             .sidebar nav {
                 flex:1 1 auto;
@@ -1664,7 +1888,9 @@
                 overflow-y:auto;
                 overflow-x:hidden;
                 padding-bottom:0;
+                scrollbar-width:none;
             }
+            .sidebar nav::-webkit-scrollbar { display:none; }
             .logo-ring { margin-bottom: 16px !important; }
             .nav-item {
                 height: 42px;
@@ -1707,7 +1933,9 @@
                 overflow-y:auto;
                 overflow-x:hidden;
                 padding-bottom:0;
+                scrollbar-width:none;
             }
+            .sidebar nav::-webkit-scrollbar { display:none; }
             .logo-ring {
                 width:32px;
                 height:32px;
@@ -2165,17 +2393,29 @@
         }
 
         .sidebar.is-pinned {
-            width: 260px;
+            width: 220px;
+            min-width: 220px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
             transition-delay: 0s;
         }
 
         .sidebar.is-pinned .nav-item,
         .sidebar.is-pinned .nav-fold-toggle {
-            width: 230px;
+            width: 190px;
+            height: 48px;
+            flex: 0 0 48px;
+            margin: 8px 0;
+            justify-content: flex-start;
+            padding-left: 14px;
             transition-delay: 0s;
         }
         .sidebar.is-pinned .nav-text {
             opacity: 1;
+            width: auto;
+            max-width: 200px;
             transition-delay: 0.1s;
         }
 
@@ -2186,39 +2426,50 @@
         }
 
         .sidebar.is-pinned .logo-text {
-            width: 230px;
+            width: 190px;
+            justify-content: flex-start;
+            gap: 8px;
         }
 
         .sidebar.is-pinned .side-pill {
-            width: 230px;
+            width: 190px;
+            margin: 0;
+            justify-content: flex-start;
+            padding-left: 14px;
             gap: 8px;
             transition-delay: 0s;
         }
         .sidebar.is-pinned .side-pill-text {
             opacity: 1;
+            width: auto;
             max-width: 120px;
             transition-delay: .15s;
         }
         .sidebar.is-pinned .project-version-badge {
-            width: 230px;
+            width: 190px;
             display: flex;
             transition-delay: 0s;
         }
         .sidebar.is-pinned .update-now-btn {
-            width: 230px;
+            width: 190px;
             transition-delay: 0s;
         }
 
         .sidebar.is-collapsing:hover {
-            width: 72px;
+            width: 220px;
         }
 
         .sidebar.is-collapsing:hover .nav-item,
         .sidebar.is-collapsing:hover .nav-fold-toggle {
-            width: 48px;
+            width: 190px;
+            height: 48px;
+            flex: 0 0 48px;
+            margin: 8px 0;
+            justify-content: flex-start;
+            padding-left: 14px;
         }
         .sidebar.is-collapsing:hover .logo-text {
-            width: 48px;
+            width: 190px;
         }
         .sidebar.is-collapsing:hover .logo-text-label {
             opacity: 0;
@@ -2226,45 +2477,29 @@
         }
         .sidebar.is-collapsing:hover .nav-text {
             opacity: 0;
+            width: 0;
         }
         .sidebar.is-collapsing:hover .side-pill {
-            width: 48px;
+            width: 190px;
+            margin: 0;
+            justify-content: flex-start;
+            padding-left: 14px;
             gap: 0;
         }
         .sidebar.is-collapsing:hover .version-display {
-            width: 48px;
+            width: 190px;
         }
         .sidebar.is-collapsing:hover .project-version-badge {
-            width: 48px;
+            width: 190px;
         }
         .sidebar.is-collapsing:hover .update-now-btn {
-            width: 48px;
+            width: 190px;
         }
         .sidebar.is-collapsing:hover .side-pill-text {
             opacity: 0;
-            max-width: 0;
+            width: 0;
         }
 
-        /* 收起侧边栏时子元素宽度适配 72px */
-        .sidebar:not(:hover) .nav-item,
-        .sidebar:not(:hover) .nav-fold-toggle,
-        .sidebar:not(:hover) .logo-text,
-        .sidebar:not(:hover) .side-pill,
-        .sidebar:not(:hover) .project-version-badge,
-        .sidebar:not(:hover) .update-now-btn,
-        .sidebar.is-collapsing:hover .nav-item,
-        .sidebar.is-collapsing:hover .nav-fold-toggle,
-        .sidebar.is-collapsing:hover .logo-text,
-        .sidebar.is-collapsing:hover .side-pill,
-        .sidebar.is-collapsing:hover .project-version-badge,
-        .sidebar.is-collapsing:hover .update-now-btn,
-        .sidebar.is-collapsing:hover .version-display {
-            width: 60px;
-        }
-        .sidebar:not(:hover) .nav-fold-toggle {
-            padding-left: 0;
-            justify-content: center;
-        }
 
         /* ===== 首页 ===== */
         .homepage {
@@ -2612,7 +2847,7 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 36px;
+            height: 48px;
             z-index: 2100;
             display: none;
             align-items: center;
@@ -2625,18 +2860,18 @@
             box-sizing: border-box;
         }
         body.has-frameless-titlebar {
-            padding-top: 36px;
+            /* padding-top removed — sidebar+stage are flex children with height: 100vh */
         }
         body.has-frameless-titlebar .frameless-titlebar {
             display: flex;
         }
         body.has-frameless-titlebar .app-shell {
-            height: calc(100vh - 36px);
+            height: 100vh;
         }
         body.has-frameless-titlebar .homepage,
         body.has-frameless-titlebar .onboarding-modal {
-            top: 36px;
-            height: calc(100vh - 36px);
+            top: 48px;
+            height: calc(100vh - 48px);
         }
         .titlebar-logo {
             display: flex;
@@ -2650,9 +2885,8 @@
             user-select: none;
         }
         .titlebar-logo svg {
-            width: 18px;
-            height: 18px;
-            color: var(--text);
+            height: 20px;
+            width: auto;
             flex-shrink: 0;
         }
         .titlebar-actions {
@@ -2703,6 +2937,52 @@
             margin: 0 4px;
             opacity: 0.5;
         }
+
+        /* ═══ 标题栏 Logo 只在 Windows frameless 模式随标题栏显示（.frameless-titlebar 其余模式 display:none），Mac 原生标题栏不渲染整个标题栏 ═══ */
+
+        /* ═══ 全局隐藏滚动条，hover 时显示 ═══ */
+        html, body {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        /* 侧边栏导航 hover 时显示滚动条 */
+        .sidebar nav:hover::-webkit-scrollbar {
+            display: block;
+            width: 6px;
+        }
+        .sidebar nav:hover::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar nav:hover::-webkit-scrollbar-thumb {
+            background: var(--scrollbar);
+            border-radius: 3px;
+        }
+        .sidebar nav:hover::-webkit-scrollbar-thumb:hover {
+            background: var(--scrollbar-hover);
+        }
+
+        /* Stage 内容区域 hover 时显示滚动条 */
+        .stage:hover::-webkit-scrollbar {
+            display: block;
+            width: 6px;
+        }
+        .stage:hover::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .stage:hover::-webkit-scrollbar-thumb {
+            background: var(--scrollbar);
+            border-radius: 3px;
+        }
+        .stage:hover::-webkit-scrollbar-thumb:hover {
+            background: var(--scrollbar-hover);
+        }
     </style>
 </head>
 
@@ -2710,7 +2990,7 @@
     <!-- 桌面 Frameless 标题栏 -->
     <div class="frameless-titlebar" id="framelessTitlebar">
         <div class="titlebar-logo">
-            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M869.44,200.5L494.98,39.39c-98.45-42.36-208.12,29.86-208.12,137.03v14.48l82.33,35.42v-56.49c0-52.07,53.28-87.15,101.11-66.57l356.27,153.28c16.53,7.11,16.53,30.54,0,37.67l-48.96,21.05c-84.31,36.27-179.84,36.27-264.15,0l-267.88-115.26c-99.7-42.89-210.74,30.23-210.74,138.74v323.08c0,68.38,40.7,130.21,103.52,157.23l384.4,165.37c99.82,42.94,211.01-138.93v-2.62l-82.33-35.42v33.92c0,58.62-59.98,98.12-113.84,74.95l-345.18-148.51c-14.35-6.18-14.35-26.53,0-32.7l76.43-32.95c64.04-27.6,136.62-27.63,200.69-.07l278.94,120.01c113.84,48.98,240.66-34.51,240.66-158.45v-281.37c0-79.07-47.06-150.55-119.71-181.8ZM906.83,663.69c0,71.74-73.39,120.06-139.28,91.72l-33.77-14.53-82.33-35.42-155.17-66.76c-77.12-33.18-127.09-109.07-127.09-193.03v-91.04l-82.33-35.42v175.86c0,75.82-45.13,144.37-114.77,174.34l-24.08,10.36c-14.59,6.28-30.84-4.42-30.84-20.3v-326.53c0-53.75,54.99-89.95,104.37-68.7l298.17,128.27c79.94,34.39,131.73,113.06,131.73,200.08v85.91l82.33,35.42v-168.65c0-82.93,49.36-157.9,125.54-190.66l13.46-5.8c16.11-6.94,34.06,4.89,34.06,22.41v292.46Z"/></svg>
+            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M869.44,200.5L494.98,39.39c-98.45-42.36-208.12,29.86-208.12,137.03v14.48l82.33,35.42v-56.49c0-52.07,53.28-87.15,101.11-66.57l356.27,153.28c16.53,7.11,16.53,30.54,0,37.67l-48.96,21.05c-84.31,36.27-179.84,36.27-264.15,0l-267.88-115.26c-99.7-42.89-210.74,30.23-210.74,138.74v323.08c0,68.38,40.7,130.21,103.52,157.23l384.4,165.37c99.82,42.94,211.01-30.26,211.01-138.93v-2.62l-82.33-35.42v33.92c0,58.62-59.98,98.12-113.84,74.95l-345.18-148.51c-14.35-6.18-14.35-26.53,0-32.7l76.43-32.95c64.04-27.6,136.62-27.63,200.69-.07l278.94,120.01c113.84,48.98,240.66-34.51,240.66-158.45v-281.37c0-79.07-47.06-150.55-119.71-181.8ZM906.83,663.69c0,71.74-73.39,120.06-139.28,91.72l-33.77-14.53-82.33-35.42-155.17-66.76c-77.12-33.18-127.09-109.07-127.09-193.03v-91.04l-82.33-35.42v175.86c0,75.82-45.13,144.37-114.77,174.34l-24.08,10.36c-14.59,6.28-30.84-4.42-30.84-20.3v-326.53c0-53.75,54.99-89.95,104.37-68.7l298.17,128.27c79.94,34.39,131.73,113.06,131.73,200.08v85.91l82.33,35.42v-168.65c0-82.93,49.36-157.9,125.54-190.66l13.46-5.8c16.11-6.94,34.06,4.89,34.06,22.41v292.46Z"/></svg>
             <span>NOVAI</span>
         </div>
         <div class="titlebar-actions">
@@ -2720,15 +3000,14 @@
             <button class="titlebar-btn" id="titlebarSettingsBtn" onclick="openTitlebarSettings()" title="设置" type="button">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.36 1.08V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.08-.36H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .36-1.08V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.22.38.58.69 1 .86.2.08.42.13.65.14H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"></path></svg>
             </button>
-            <div class="titlebar-sep"></div>
+            <button class="titlebar-btn close" onclick="closeTitlebarWindow()" title="关闭" type="button">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
             <button class="titlebar-btn" onclick="minimizeTitlebarWindow()" title="最小化" type="button">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path></svg>
             </button>
             <button class="titlebar-btn" onclick="maximizeTitlebarWindow()" title="最大化" type="button">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
-            </button>
-            <button class="titlebar-btn close" onclick="closeTitlebarWindow()" title="关闭" type="button">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
             </button>
         </div>
     </div>
@@ -2822,6 +3101,8 @@
         </div>
     </div>
 
+    <div class="app-header" id="appHeader" aria-hidden="true"></div>
+
     <div class="app-shell">
         <aside class="sidebar" id="studioSidebar">
             <button class="logo-text" title="固定导航栏">
@@ -2908,6 +3189,18 @@
         </script>
 
         <main class="stage">
+
+            <!-- 右上角快捷操作 -->
+            <div class="stage-actions">
+                <button class="stage-action-btn" onclick="toggleTheme()" title="切换主题" type="button" aria-label="切换主题">
+                    <svg class="stage-action-icon-sun" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+                    <svg class="stage-action-icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+                <button class="stage-action-btn" onclick="openSettingsModal()" title="设置" type="button" aria-label="设置">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.36 1.08V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.08-.36H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .36-1.08V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.22.38.58.69 1 .86.2.08.42.13.65.14H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"></path></svg>
+                </button>
+            </div>
+
             <!-- 页面切换骨架屏 -->
             <div class="stage-skeleton" id="stageSkeleton">
                 <div class="skeleton-block sk-hero"></div>
@@ -2921,17 +3214,17 @@
                     <div class="skeleton-card"></div>
                 </div>
             </div>
-            <iframe id="frame-home" data-src="/static/home.html?v=1.0.83.1784321743" class="active" scrolling="yes"></iframe>
-            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.83.1784321695" scrolling="yes"></iframe>
-            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.83.1784321695" scrolling="yes"></iframe>
-            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.83.1784321695" scrolling="yes"></iframe>
-            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.83.1784321695" scrolling="yes"></iframe>
-            <iframe id="frame-online" data-src="/static/online.html?v=1.0.83.1784367766" scrolling="yes"></iframe>
-            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.83.1784321695" scrolling="yes"></iframe>
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.83.1784316650" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.83.1784367721" scrolling="yes"></iframe>
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.83.1784321695" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.83.1784364522" scrolling="yes"></iframe>
+            <iframe id="frame-home" src="/static/home.html?v=1.0.85.1784619943.1784623126" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.85.1784619943.1784623126" scrolling="yes"></iframe>
+            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.85.1784619943.1784623126" scrolling="yes"></iframe>
+            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.85.1784619943.1784627474" scrolling="yes"></iframe>
+            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.85.1784619943.1784627507" scrolling="yes"></iframe>
+            <iframe id="frame-online" data-src="/static/online.html?v=1.0.85.1784619943.1784627453" scrolling="yes"></iframe>
+            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.85.1784619943.1784623126" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.85.1784619943.1784623126" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.85.1784619943.1784623126" scrolling="yes"></iframe>
+            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.85.1784619943.1784623126" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.85.1784619943.1784623126" scrolling="yes"></iframe>
 
         </main>
     </div>
@@ -3105,9 +3398,79 @@
                 <div class="settings-content-body">
 
                     <div id="settings-panel-general" class="settings-panel active" role="tabpanel">
+                        <!-- 窗口行为 -->
                         <div class="settings-card">
-                            <div class="settings-card-body" style="padding:24px 20px;text-align:center;color:var(--muted);font-size:13px;">
-                                <span data-i18n="common.generalDesc">管理 NOVAI 的常用偏好与入口。</span>
+                            <div class="settings-card-header">
+                                <h4 class="settings-card-title">窗口行为</h4>
+                                <p class="settings-card-desc">控制窗口关闭与启动时的行为。</p>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div class="settings-toggle-label">关闭时最小化到系统托盘</div>
+                                        <div class="settings-toggle-desc">点击关闭按钮后隐藏到托盘而非退出</div>
+                                    </div>
+                                    <label class="settings-toggle-switch">
+                                        <input type="checkbox" id="setting-close-to-tray" onchange="saveGeneralSetting('closeToTray', this.checked)">
+                                        <span class="settings-toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <hr class="settings-divider">
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div class="settings-toggle-label">显示系统托盘图标</div>
+                                        <div class="settings-toggle-desc">在任务栏托盘区显示 NOVAI 图标</div>
+                                    </div>
+                                    <label class="settings-toggle-switch">
+                                        <input type="checkbox" id="setting-show-tray" onchange="saveGeneralSetting('showTray', this.checked)">
+                                        <span class="settings-toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 启动 -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <h4 class="settings-card-title">启动</h4>
+                                <p class="settings-card-desc">控制软件启动时的行为。</p>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div class="settings-toggle-label">开机自启动</div>
+                                        <div class="settings-toggle-desc">系统启动时自动运行 NOVAI</div>
+                                    </div>
+                                    <label class="settings-toggle-switch">
+                                        <input type="checkbox" id="setting-auto-start" onchange="saveGeneralSetting('autoStart', this.checked)">
+                                        <span class="settings-toggle-slider"></span>
+                                    </label>
+                                </div>
+                                <hr class="settings-divider">
+                                <div class="settings-toggle-row">
+                                    <div>
+                                        <div class="settings-toggle-label">恢复上次窗口状态</div>
+                                        <div class="settings-toggle-desc">启动时恢复上次关闭时的窗口大小和位置</div>
+                                    </div>
+                                    <label class="settings-toggle-switch">
+                                        <input type="checkbox" id="setting-restore-window" onchange="saveGeneralSetting('restoreWindow', this.checked)">
+                                        <span class="settings-toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 数据 -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <h4 class="settings-card-title">数据目录</h4>
+                                <p class="settings-card-desc">NOVAI 的用户数据存储位置。</p>
+                            </div>
+                            <div class="settings-card-body">
+                                <div class="settings-path-row">
+                                    <span class="settings-path-text" id="setting-data-path">—</span>
+                                    <button class="settings-path-btn" onclick="openDataFolder()">打开</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3228,18 +3591,49 @@
                 const isDesktop = typeof window !== 'undefined' && (
                     window.pywebview || window.navigator?.userAgent?.includes('pywebview')
                 );
-                if (isDesktop) {
+                const isWindows = window.navigator?.platform?.toLowerCase?.().includes('win') 
+                    || window.navigator?.userAgent?.toLowerCase?.().includes('windows');
+                if (isDesktop && isWindows) {
+                    document.body.classList.remove('web-mode');
                     document.body.classList.add('has-frameless-titlebar');
+                    return true;
+                }
+                if (isDesktop) {
+                    // macOS 原生透明标题栏：标记后右上角按钮与红绿灯中心线对齐
+                    document.body.classList.remove('web-mode');
+                    document.body.classList.add('has-native-titlebar');
                     return true;
                 }
                 return false;
             }
             if (!checkAndShow()) {
+                // 无 pywebview = 网页版：标记后隐藏右上角主题/设置按钮（侧栏有设置入口）；
+                // 若重试期间检出桌面环境，checkAndShow 会移除该标记
+                document.body.classList.add('web-mode');
                 var tries = 0;
                 var timer = setInterval(function(){
                     if (checkAndShow() || ++tries > 20) clearInterval(timer);
                 }, 200);
             }
+        })();
+
+        // ===== macOS 原生窗口：Header 带拖拽 =====
+        // pywebview（WKWebView）不支持 -webkit-app-region: drag，mousedown 时走原生桥移动窗口
+        (function initNativeHeaderDrag(){
+            var header = document.getElementById('appHeader');
+            if (!header) return;
+            header.addEventListener('mousedown', function(e){
+                if (e.button !== 0) return;
+                // 红绿灯区域不发起拖拽：三灯在 Header 带内（红灯左缘实测 15 / 中心 y 36，
+                // 与 launcher.py applyTrafficLights_ 的灯位常数一致），三灯 widget 跨度
+                // 15..67 × 30..42，外放 6px 余量；命中说明点的是灯，必须留给原生按钮处理
+                if (e.clientX >= 9 && e.clientX <= 73 && e.clientY >= 24 && e.clientY <= 48) return;
+                var api = window.pywebview && window.pywebview.api;
+                if (api && typeof api.start_window_drag === 'function') {
+                    e.preventDefault();
+                    api.start_window_drag();
+                }
+            });
         })();
 
         function toggleTitlebarTheme(){
@@ -3281,8 +3675,12 @@
 
         function closeTitlebarWindow(){
             try {
-                if (window.pywebview && window.pywebview.api && window.pywebview.api.close) {
+                if (!window.pywebview || !window.pywebview.api) return;
+                var s = getGeneralSettings();
+                if (s.closeToTray !== false) {
                     window.pywebview.api.close();
+                } else {
+                    window.pywebview.api.quit_app();
                 }
             } catch(e) {}
         }
@@ -3393,6 +3791,7 @@
         function switchUI(el, id, options = {}) {
             resetStudioRootScroll();
             if(!PAGE_IDS.includes(id)) id = DEFAULT_PAGE_ID;
+            document.body.classList.toggle('route-canvas', id === 'canvas');
             document.querySelectorAll('.nav-item,.side-pill').forEach(n => n.classList.remove('active'));
             if(el) el.classList.add('active');
             document.querySelectorAll('iframe').forEach(f => f.classList.remove('active'));
@@ -3470,14 +3869,22 @@
         } catch(e) {}
 
         function restoreActivePage() {
-            restoreSidebarPinned();
-            const id = PAGE_IDS.includes(localStorage.getItem(ACTIVE_PAGE_KEY)) ? localStorage.getItem(ACTIVE_PAGE_KEY) : DEFAULT_PAGE_ID;
-            restoreSidebarSettings(id);
-            const trigger = document.querySelector(`[onclick*="'${id}'"],[onclick*='"${id}"']`);
-            switchUI(trigger, id, { skipRemember:true });
-            document.documentElement.classList.remove('studio-route-booting');
+            try {
+                restoreSidebarPinned();
+                const id = PAGE_IDS.includes(localStorage.getItem(ACTIVE_PAGE_KEY)) ? localStorage.getItem(ACTIVE_PAGE_KEY) : DEFAULT_PAGE_ID;
+                restoreSidebarSettings(id);
+                const trigger = document.querySelector(`[onclick*="'${id}'"],[onclick*='"${id}"']`);
+                switchUI(trigger, id, { skipRemember:true });
+            } catch(e) {
+                console.error('restoreActivePage failed:', e);
+            } finally {
+                document.documentElement.classList.remove('studio-route-booting');
+            }
         }
-        document.addEventListener('DOMContentLoaded', restoreActivePage, { once:true });
+        // 兜底：3 秒后强制解除启动遮罩，防止任何异常导致永久白屏
+        setTimeout(function(){ document.documentElement.classList.remove('studio-route-booting'); }, 3000);
+        if (document.readyState !== 'loading') { restoreActivePage(); }
+        else { document.addEventListener('DOMContentLoaded', restoreActivePage, { once:true }); }
 
         async function syncStatus() {
             try {
@@ -3575,13 +3982,19 @@
         function updateThemeIcon(theme) {
             const moon = document.getElementById('icon-moon');
             const sun = document.getElementById('icon-sun');
+            const stageSun = document.querySelector('.stage-action-icon-sun');
+            const stageMoon = document.querySelector('.stage-action-icon-moon');
             const dark = theme === 'dark';
             if (dark) {
                 if(moon) moon.style.display = 'none';
                 if(sun) sun.style.display = 'block';
+                if(stageSun) stageSun.style.display = 'block';
+                if(stageMoon) stageMoon.style.display = 'none';
             } else {
                 if(moon) moon.style.display = 'block';
                 if(sun) sun.style.display = 'none';
+                if(stageSun) stageSun.style.display = 'none';
+                if(stageMoon) stageMoon.style.display = 'block';
             }
             // 同步侧边栏主题切换按钮文字
             const label = document.querySelector('#theme-toggle-btn .side-pill-text');
@@ -3654,7 +4067,61 @@
             switchSettingsTab('general');
             // 恢复用户上次调整的尺寸
             restoreSettingsModalSize();
+            // 刷新通用设置状态
+            refreshGeneralSettings();
             modal.hidden = false;
+        }
+
+        // ===== 通用设置读写 =====
+        var GENERAL_SETTINGS_KEY = 'studio_general_settings';
+
+        function getGeneralSettings() {
+            try {
+                return JSON.parse(localStorage.getItem(GENERAL_SETTINGS_KEY)) || {};
+            } catch(e) { return {}; }
+        }
+
+        function saveGeneralSetting(key, value) {
+            var s = getGeneralSettings();
+            s[key] = value;
+            localStorage.setItem(GENERAL_SETTINGS_KEY, JSON.stringify(s));
+            applyGeneralSetting(key, value);
+        }
+
+        function refreshGeneralSettings() {
+            var s = getGeneralSettings();
+            setToggle('setting-close-to-tray',  s.closeToTray !== false);
+            setToggle('setting-show-tray',      s.showTray !== false);
+            setToggle('setting-auto-start',     s.autoStart === true);
+            setToggle('setting-restore-window', s.restoreWindow !== false);
+            // 数据目录
+            var pathEl = document.getElementById('setting-data-path');
+            if (pathEl && window.pywebview && window.pywebview.api) {
+                window.pywebview.api.get_data_dir().then(function(p) {
+                    if (p) pathEl.textContent = p;
+                }).catch(function() { pathEl.textContent = '%APPDATA%\\NOVAI'; });
+            } else {
+                pathEl.textContent = '%APPDATA%\\NOVAI';
+            }
+        }
+
+        function applyGeneralSetting(key, value) {
+            if (key === 'autoStart') {
+                if (window.pywebview && window.pywebview.api) {
+                    window.pywebview.api.set_auto_start(value).catch(function(){});
+                }
+            }
+        }
+
+        function setToggle(id, checked) {
+            var el = document.getElementById(id);
+            if (el) el.checked = checked;
+        }
+
+        function openDataFolder() {
+            if (window.pywebview && window.pywebview.api) {
+                window.pywebview.api.open_data_dir().catch(function(){});
+            }
         }
 
         function closeSettingsModal() {
@@ -3667,8 +4134,8 @@
 
         // ===== 设置弹窗自定义大小（拖拽右下角手柄） =====
         var SETTINGS_SIZE_KEY = 'studio_settings_modal_size';
-        var SETTINGS_MIN_W = 520;
-        var SETTINGS_MIN_H = 400;
+        var SETTINGS_MIN_W = 1100;
+        var SETTINGS_MIN_H = 720;
 
         function restoreSettingsModalSize() {
             var panel = document.querySelector('#settings-modal .settings-modal-panel');

@@ -1,10 +1,11 @@
 (function(){
     /* ── 视口数学工具（canvas.js / smart-canvas.js / canvas-list.js 共享）── */
     
-    // 安全缩放值校验
+    // 安全缩放值校验：钳制在可用区间，防止缩放过小导致整个画布只剩几个像素
     function safeScale(value){
         var n = Number(value);
-        return Number.isFinite(n) && n > 0 ? n : 1;
+        if(!Number.isFinite(n) || n <= 0) return 1;
+        return Math.max(0.06, Math.min(8, n));
     }
     
     // 检测鼠标滚轮（非触控板）

@@ -6,13 +6,13 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>素材库管理</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/css/asset-manager.css?v=1.0.83.1784291998">
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.85.1784619943.1784477206">
+    <link rel="stylesheet" href="/static/css/asset-manager.css?v=1.0.85.1784619943.1784291998">
 
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
 <style>
 /* ═══ V4 Apple-style Glassmorphism 设计变量 ═══ */
 :root {
@@ -59,7 +59,11 @@ body {
     font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif) !important;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    scrollbar-width: none;
 }
+body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 /* ═══ PAGE CONTAINER ═══ */
 .asset-page {
@@ -347,9 +351,9 @@ html body .asset-page .asset-content .content-toolbar .content-heading span {
     overflow: hidden !important;
 }
 .asset-card:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--v4-card-shadow-hover) !important;
-    border-color: rgba(0,0,0,0.08) !important;
+    transform: translateY(-4px) scale(1.02) !important;
+    box-shadow: 0 4px 20px -4px var(--v4-card-shadow-hover) !important;
+    border-color: rgba(0,0,0,0.12) !important;
 }
 .theme-dark .asset-card:hover { border-color: rgba(255,255,255,0.08) !important; }
 .asset-card.active {
@@ -629,6 +633,15 @@ html body .asset-page .asset-content .content-toolbar .content-heading span {
 .detail-scroll::-webkit-scrollbar-thumb {
     background: rgba(128,128,128,0.3) !important;
 }
+.nav-scroll::-webkit-scrollbar,
+.content-scroll::-webkit-scrollbar,
+.detail-scroll::-webkit-scrollbar { width: 5px !important; }
+.nav-scroll::-webkit-scrollbar-track,
+.content-scroll::-webkit-scrollbar-track,
+.detail-scroll::-webkit-scrollbar-track { background: transparent !important; }
+.nav-scroll,
+.content-scroll,
+.detail-scroll { scrollbar-width: thin !important; scrollbar-color: rgba(128,128,128,0.3) transparent !important; }
 
 /* ═══ LIGHTBOX ═══ */
 .asset-lightbox {
@@ -648,6 +661,7 @@ html body .asset-page .asset-content .content-toolbar .content-heading span {
     .asset-manager-root { grid-template-columns: 1fr !important; }
     .asset-tabs button { padding: 0 10px !important; font-size: 11px !important; }
 }
+
 </style>
 </head>
 <body>
@@ -672,9 +686,69 @@ html body .asset-page .asset-content .content-toolbar .content-heading span {
         </div>
 
         <main id="assetManagerRoot" class="asset-manager-root"></main>
+
+        <!-- 素材存储目录设置 -->
+        <div id="storagePathSection" class="storage-path-section" style="display:flex;align-items:center;gap:10px;padding:10px 14px;margin-top:8px;border-radius:14px;background:var(--v4-card-bg);backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);border:1px solid transparent;box-shadow:0 1px 2px rgba(0,0,0,0.03), 0 2px 8px -2px var(--v4-card-shadow);">
+            <i data-lucide="folder-open" style="width:15px;height:15px;color:var(--v4-muted);flex:0 0 auto;"></i>
+            <span style="font-size:11px;color:var(--v4-muted);font-weight:500;flex:0 0 auto;">素材保存路径:</span>
+            <span class="storage-current-path" style="flex:1;font-size:11px;color:var(--v4-text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">加载中...</span>
+            <button class="asset-btn storage-select-btn" type="button" onclick="selectStorageDir()" style="font-size:11px;padding:5px 12px;flex:0 0 auto;"><i data-lucide="folder-search" style="width:13px;height:13px;"></i><span>选择</span></button>
+            <button class="asset-btn storage-open-btn" type="button" onclick="openStorageDir()" style="font-size:11px;padding:5px 12px;flex:0 0 auto;"><i data-lucide="external-link" style="width:13px;height:13px;"></i><span>打开</span></button>
+        </div>
     </div>
 
     <input id="assetUploadInput" type="file" accept="image/*,video/*,audio/*,.json,.zip,application/json,application/zip" multiple hidden>
-    <script defer src="/static/js/asset-manager.js?v=1.0.83.1784314450"></script>
+    <script defer src="/static/js/asset-manager.js?v=1.0.85.1784619943.1784314450"></script>
+    <script>
+    /* --- 素材存储目录管理 --- */
+    async function loadStorageConfig() {
+        try {
+            const resp = await fetch('/api/config/storage');
+            const data = await resp.json();
+            const el = document.querySelector('.storage-current-path');
+            if (el) el.textContent = data.path || '默认路径';
+        } catch(e) {
+            const el = document.querySelector('.storage-current-path');
+            if (el) el.textContent = '无法加载';
+        }
+    }
+
+    function selectStorageDir() {
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.select_directory) {
+            window.pywebview.api.select_directory().then(function(path) {
+                if (path) saveAndUpdatePath(path);
+            });
+        } else {
+            const path = prompt('请输入素材保存目录路径：');
+            if (path) saveAndUpdatePath(path);
+        }
+    }
+
+    async function saveAndUpdatePath(path) {
+        try {
+            await fetch('/api/config/storage', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: path})
+            });
+            const el = document.querySelector('.storage-current-path');
+            if (el) el.textContent = path;
+        } catch(e) {
+            alert('保存失败: ' + e.message);
+        }
+    }
+
+    function openStorageDir() {
+        if (window.pywebview && window.pywebview.api && window.pywebview.api.open_data_dir) {
+            window.pywebview.api.open_data_dir();
+        } else {
+            alert('请在桌面应用中打开素材目录');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadStorageConfig();
+    });
+    </script>
 </body>
 </html>

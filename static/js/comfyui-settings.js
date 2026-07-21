@@ -1403,8 +1403,13 @@ window.graphFit = graphFit;
 window.graphZoom = graphZoom;
 window.onDelete = onDelete;
 window.onSave = onSave;
+window.onUpload = onUpload;
+window.removeComfyInstance = removeComfyInstance;
 window.saveComfyInstances = saveComfyInstances;
+window.selectWorkflow = selectWorkflow;
 window.setWorkspaceMode = setWorkspaceMode;
 window.toggleNodeList = toggleNodeList;
+window.updateComfyInstance = updateComfyInstance;
+window.updateWorkflowTitle = updateWorkflowTitle;
 })();
 

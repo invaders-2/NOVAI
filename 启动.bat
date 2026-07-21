@@ -5,10 +5,21 @@ cd /d "%~dp0"
 title NOVAI
 
 :: ============================================
-:: NOVAI 一键启动（自动检查并安装依赖）
+:: NOVAI 一键启动（自动选择最佳模式）
 :: ============================================
 
-:: ---- 定位 Python（优先 venv）----
+:: ---- 优先级1：有打包好的 NOVAI.exe，直接启动桌面窗口（完整体验）----
+if exist "NOVAI.exe" (
+    echo ============================================
+    echo   NOVAI - 桌面版
+    echo ============================================
+    echo.
+    echo [启动] 正在启动桌面窗口模式...
+    start "" "NOVAI.exe"
+    exit /b 0
+)
+
+:: ---- 优先级2：Python 源文件启动 ----
 set "PYEXE=venv\Scripts\python.exe"
 if not exist "%PYEXE%" (
     where python >nul 2>&1
@@ -28,7 +39,7 @@ echo   NOVAI - AI 创作工具
 echo ============================================
 echo.
 
-:: ---- 检查关键依赖是否已安装 ----
+:: ---- 检查关键依赖 ----
 set "DEPS_OK=0"
 "%PYEXE%" -c "import fastapi, uvicorn, requests, httpx, PIL" >nul 2>&1
 if not errorlevel 1 (
@@ -58,20 +69,29 @@ if "!DEPS_OK!"=="0" (
     echo.
 )
 
+:: ---- 检查桌面窗口依赖 ----
+"%PYEXE%" -c "import webview" >nul 2>&1
+if errorlevel 1 (
+    set "DESKTOP_MODE=0"
+) else (
+    set "DESKTOP_MODE=1"
+)
+
 :: ---- 确定端口 ----
 set "PORT=3000"
 if defined DEPLOY_RUN_PORT set "PORT=%DEPLOY_RUN_PORT%"
 
-echo [NOVAI] 正在启动服务...
-echo [NOVAI] 访问地址: http://127.0.0.1:%PORT%/
-echo [NOVAI] 按 Ctrl+C 停止服务
-echo.
-
-:: 延迟打开浏览器
-start /b cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:%PORT%/"
-
-:: 启动服务
-"%PYEXE%" main.py
+if "!DESKTOP_MODE!"=="1" (
+    echo [NOVAI] 正在启动桌面窗口模式...
+    start /b "" "%PYEXE%" novai-desktop.py
+) else (
+    echo [NOVAI] 正在启动浏览器模式（安装 pywebview 可启用桌面窗口）...
+    echo [NOVAI] 访问地址: http://127.0.0.1:%PORT%/
+    echo.
+    :: 延迟打开浏览器
+    start /b cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:%PORT%/"
+    "%PYEXE%" main.py
+)
 
 echo.
 echo [NOVAI] 服务已停止

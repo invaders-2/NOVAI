@@ -261,6 +261,25 @@ LOCAL_UPLOAD_DIR = os.path.join(ASSETS_DIR, "uploads")
 HISTORY_FILE = os.path.join(_DATA_ROOT, "history.json")
 API_ENV_FILE = os.path.join(_DATA_ROOT, "API", ".env")
 DATA_DIR = os.path.join(_DATA_ROOT, "data")
+SETTINGS_FILE = os.path.join(DATA_DIR, "settings.json")
+
+# 从持久化设置加载自定义输出目录
+def _load_custom_output_dir():
+    """读取 settings.json 中的 output_dir，若存在且有效则返回。"""
+    try:
+        if os.path.isfile(SETTINGS_FILE):
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            custom = str(cfg.get("output_dir", "")).strip()
+            if custom and os.path.isdir(custom):
+                return custom
+    except Exception:
+        pass
+    return ""
+
+_CUSTOM_OUTPUT_DIR = _load_custom_output_dir()
+if _CUSTOM_OUTPUT_DIR:
+    OUTPUT_DIR = _CUSTOM_OUTPUT_DIR
 CONVERSATION_DIR = os.path.join(DATA_DIR, "conversations")
 CANVAS_DIR = os.path.join(DATA_DIR, "canvases")
 MEDIA_PREVIEW_DIR = os.path.join(DATA_DIR, "media_previews")
@@ -12328,6 +12347,80 @@ async def api_apply_storage_settings():
                 raise HTTPException(status_code=400, detail=f"无法创建目录 {d}：{exc}") from exc
     return {"applied": True, "created_dirs": created}
 
+# ── 自定义输出目录（仅影响生成的图片/视频，不影响 API/画布等数据）──
+
+class OutputDirPayload(BaseModel):
+    output_dir: str = ""
+
+@app.post("/api/pick-folder")
+async def api_pick_folder():
+    """弹出原生文件夹选择对话框，返回所选路径。"""
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        folder = filedialog.askdirectory(title="选择输出目录")
+        root.destroy()
+        if folder:
+            return {"path": os.path.abspath(folder)}
+        return {"path": ""}
+    except Exception:
+        return {"path": ""}
+
+@app.get("/api/settings/output-dir")
+async def api_get_output_dir():
+    """返回当前自定义输出目录设置。空字符串表示使用默认路径。"""
+    custom = ""
+    try:
+        if os.path.isfile(SETTINGS_FILE):
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            custom = str(cfg.get("output_dir", "")).strip()
+    except Exception:
+        pass
+    return {
+        "output_dir": custom,
+        "effective_output_dir": OUTPUT_DIR,
+        "is_custom": bool(custom and os.path.isdir(custom)),
+    }
+
+@app.put("/api/settings/output-dir")
+async def api_set_output_dir(payload: OutputDirPayload):
+    """设置自定义输出目录（仅影响生成的图片/视频）。空字符串恢复默认。"""
+    new_dir = str(payload.output_dir or "").strip()
+    # 读取现有设置
+    cfg = {}
+    try:
+        if os.path.isfile(SETTINGS_FILE):
+            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+    except Exception:
+        pass
+
+    if not new_dir:
+        # 恢复默认
+        cfg.pop("output_dir", None)
+        os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        return {"output_dir": "", "effective_output_dir": os.path.join(_DATA_ROOT, "output"), "message": "已恢复默认输出目录"}
+
+    # 验证并创建目录
+    expanded = os.path.abspath(os.path.expanduser(new_dir))
+    try:
+        os.makedirs(expanded, exist_ok=True)
+    except OSError as exc:
+        raise HTTPException(status_code=400, detail=f"无法创建目录 {expanded}：{exc}") from exc
+
+    cfg["output_dir"] = expanded
+    os.makedirs(os.path.dirname(SETTINGS_FILE), exist_ok=True)
+    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
+
+    return {"output_dir": expanded, "effective_output_dir": expanded, "message": "输出目录已更新，重启后生效"}
+
 @app.get("/api/asset/classification-prompt")
 async def api_get_classification_prompt():
     """返回素材分类 Prompt 的完整内容和维度名称映射，供前端渲染分类界面。"""
@@ -17406,3 +17499,76 @@ if __name__ == "__main__":
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。
     uvicorn.run(app, host="0.0.0.0", port=3000,
                 ws_ping_interval=None, ws_ping_timeout=None)
+
+
+# ═══ 素材库存储目录配置 ═══
+import json as _json
+
+_CONFIG_FILE = os.path.join(os.environ.get("NOVAI_DATA_DIR", os.path.expanduser("~/.NOVAI")), "config.json")
+
+def _load_novai_config():
+    if os.path.exists(_CONFIG_FILE):
+        with open(_CONFIG_FILE, "r", encoding="utf-8") as f:
+            return _json.load(f)
+    return {}
+
+def _save_novai_config(config):
+    os.makedirs(os.path.dirname(_CONFIG_FILE), exist_ok=True)
+    with open(_CONFIG_FILE, "w", encoding="utf-8") as f:
+        _json.dump(config, f, indent=2, ensure_ascii=False)
+
+@app.get("/api/config/storage")
+async def get_storage_path():
+    config = _load_novai_config()
+    default_path = os.path.join(os.environ.get("NOVAI_DATA_DIR", os.path.expanduser("~/.NOVAI")), "assets")
+    return {"path": config.get("storage_path", default_path)}
+
+@app.post("/api/config/storage")
+async def set_storage_path(data: dict):
+    config = _load_novai_config()
+    config["storage_path"] = data.get("path", "")
+    _save_novai_config(config)
+    return {"ok": True, "path": config["storage_path"]}
+
+@app.post("/api/native-save")
+async def native_save(data: dict):
+    """接收 base64 数据，通过 pywebview 窗口调原生保存对话框写入文件。
+    macOS WKWebView 不支持 blob URL 触发下载，所以走这条路径最稳。
+    """
+    import base64 as _b64, re as _re
+    payload = (data or {}).get("data") or ""
+    filename = (data or {}).get("filename") or f"download-{int(time.time())}"
+    if not payload:
+        raise HTTPException(status_code=400, detail="empty data")
+    try:
+        b64 = payload
+        ext = os.path.splitext(filename)[1] or ".png"
+        if "," in payload and payload.startswith("data:"):
+            header, b64 = payload.split(",", 1)
+            m = _re.match(r"data:image/(\w+)", header)
+            if m:
+                ext = "." + m.group(1)
+        raw = _b64.b64decode(b64)
+        if not filename.lower().endswith(ext):
+            filename += ext
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"decode failed: {e}")
+    try:
+        import webview as _webview
+        wins = getattr(_webview, "windows", []) or []
+        if not wins:
+            raise HTTPException(status_code=503, detail="no webview window")
+        result = wins[0].create_file_dialog(
+            _webview.SAVE_DIALOG,
+            directory="",
+            save_filename=filename,
+        )
+        if not result:
+            return {"ok": True, "saved": False}
+        with open(result, "wb") as f:
+            f.write(raw)
+        return {"ok": True, "saved": True, "path": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"save dialog failed: {e}")

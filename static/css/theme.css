@@ -575,7 +575,7 @@ body.studio-theme-dark .shell .node-title {
 
 html.studio-theme-dark body .shell .node.selected,
 body.studio-theme-dark .shell .node.selected {
-    outline-color: rgba(222, 222, 222, .72) !important;
+    outline-color: rgba(255, 255, 255, .1) !important;
 }
 
 html.studio-theme-dark body .shell .toolbar,
@@ -1790,3 +1790,62 @@ body.studio-theme-dark .shadow-slate-900\/5 {
     --tw-shadow-color: rgba(0,0,0,.3) !important;
 }
 
+/* ═══════════════════════════════════════════
+   NOVAI 全局设计系统统一 CSS 变量（追加）
+   不覆盖 marvis-shared.css 中已有的语义变量
+   ═══════════════════════════════════════════ */
+
+/* ── 统一圆角 ── */
+:root {
+    --radius-sidebar: 24px;
+    --radius-card: 20px;
+    --radius-button: 16px;
+    --radius-input: 16px;
+    --radius-modal: 24px;
+    --radius-sm: 12px;
+    --radius-xs: 8px;
+}
+
+/* ── 统一间距 ── */
+:root {
+    --space-page: 32px;
+    --space-module: 24px;
+    --space-card: 20px;
+    --space-button: 16px;
+    --space-text: 8px;
+}
+
+/* ── 统一阴影（设计系统语义层） ── */
+:root {
+    --shadow-card: 0 10px 30px rgba(0,0,0,0.05);
+    --shadow-elevated: 0 20px 40px rgba(0,0,0,0.08);
+    --shadow-float: 0 4px 16px rgba(0,0,0,0.04);
+}
+
+/* ── 统一字体 ── */
+:root {
+    --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'SF Mono', 'Menlo', 'Monaco', monospace;
+    --font-cjk: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+/* ── 统一动画工具类 ── */
+.anim-hover {
+    transition: all 0.2s ease-out;
+}
+.anim-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-elevated);
+}
+.anim-scale-hover:hover {
+    transform: scale(1.03);
+    transition: transform 0.2s ease-out;
+}
+.anim-fade-in {
+    animation: novai-fade-in 0.22s ease-out;
+}
+@keyframes novai-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}

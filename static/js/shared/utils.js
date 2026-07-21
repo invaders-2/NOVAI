@@ -128,15 +128,84 @@
     }
 
     /* ── file download ── */
-    function downloadBlob(blob, filename){
+    // 极简 toast：fixed 底部居中深色小条，2 秒自动消失，复用同一个 DOM 节点。
+    // 不依赖任何外部函数（canvas.js 的 setStatus / smart-canvas.js 的 toast 均不可用）。
+    var _novaToastEl = null;
+    var _novaToastTimer = null;
+    function showToast(text){
+        if(!document.body) return;
+        if(!_novaToastEl){
+            _novaToastEl = document.createElement('div');
+            _novaToastEl.style.cssText = [
+                'position:fixed', 'left:50%', 'bottom:48px', 'transform:translateX(-50%)',
+                'background:rgba(20,20,22,.92)', 'color:#f5f5f7',
+                'padding:8px 16px', 'border-radius:10px', 'font-size:13px',
+                'line-height:1.4', 'max-width:80vw', 'text-align:center',
+                'z-index:99999', 'pointer-events:none',
+                'opacity:0', 'transition:opacity .18s ease'
+            ].join(';');
+            document.body.appendChild(_novaToastEl);
+        }
+        _novaToastEl.textContent = text;
+        // 强制重排，保证连续调用时过渡动画能重新触发
+        void _novaToastEl.offsetWidth;
+        _novaToastEl.style.opacity = '1';
+        if(_novaToastTimer) clearTimeout(_novaToastTimer);
+        _novaToastTimer = setTimeout(function(){ _novaToastEl.style.opacity = '0'; }, 2000);
+    }
+
+    async function downloadBlob(blob, filename){
+        const name = filename || 'download';
+        // 桌面应用（pywebview）：调用原生保存对话框
+        // 注意：smart-canvas 等 iframe 中 window.pywebview 不存在，需向上查顶层窗口（同源）
+        var wv = window.pywebview;
+        if(!wv){
+            try { wv = window.top && window.top.pywebview; } catch(_){}
+            if(!wv){
+                try { wv = window.parent && window.parent.pywebview; } catch(_){}
+            }
+        }
+        if(wv && wv.api && typeof wv.api.save_file === 'function'){
+            showToast('正在准备文件...');
+            try {
+                const dataUrl = await new Promise(function(resolve, reject){
+                    const reader = new FileReader();
+                    reader.onload = function(){ resolve(reader.result); };
+                    reader.onerror = function(){ reject(reader.error || new Error('read failed')); };
+                    reader.readAsDataURL(blob);
+                });
+                // pywebview JS 桥是异步的，返回值是 Promise：非空字符串=已保存，空串=用户取消
+                const saved = await wv.api.save_file(dataUrl, name);
+                if(saved) showToast('已保存');
+                // 空串：用户取消，静默
+            } catch(e) {
+                showToast('保存失败');
+            }
+            return;
+        }
+        // Chromium 浏览器：File System Access API 系统级保存对话框
+        if(typeof window.showSaveFilePicker === 'function'){
+            try {
+                const handle = await window.showSaveFilePicker({ suggestedName: name });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                showToast('已保存');
+                return;
+            } catch(e) {
+                // AbortError = 用户取消，静默；其他错误（如无用户手势/iframe 限制）回退到普通下载
+                if(e && e.name === 'AbortError') return;
+            }
+        }
+        // Web 浏览器：<a download> + blob URL
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename || 'download';
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
     }
 
     /* ── theme helper ── */

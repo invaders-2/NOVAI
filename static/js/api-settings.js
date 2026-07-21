@@ -2321,14 +2321,7 @@ function renderRecommendApi(){
         </div>
         <div class="recommend-api-body recommend-inline-body">${html}</div>
         <div class="recommend-note">${escapeHtml(tr('api.recommendApiNote'))}</div>
-        <div class="recommend-note recommend-seedance-private-note">
-            <span class="recommend-seedance-private-icon"><i data-lucide="video" class="w-3.5 h-3.5"></i></span>
-            <span class="recommend-seedance-private-text">${escapeHtml(tr('api.recommendSeedancePrivateNote'))}</span>
-            <a class="recommend-seedance-private-link" href="https://space.bilibili.com/78652351" target="_blank" rel="noopener noreferrer">
-                <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                <span>${escapeHtml(tr('api.recommendSeedancePrivateAction'))}</span>
-            </a>
-        </div>
+
     `;
     refreshIcons();
 }
@@ -3291,10 +3284,11 @@ async function fetchModels(){
             : (detectedProtocol === 'volcengine' || isVolcengineProvider(item)) ? ' · 已识别方舟协议，火山聊天建议改填 ep-... 接入点' : '';
         const imageModeExtra = normalizeImageRequestMode(imageRequestModeInput?.value || item.image_request_mode) === 'openai-json' ? ' · 图片接口已设为 OpenAI JSON' : '';
         setStatus(`已拉取 ${data.total} 个模型 · 点「选择模型」勾选要导入的${extra}${imageModeExtra}`);
+        setModelsFetchHint('ok', `已从上游拉取 ${data.total} 个模型（图像 ${data.image_models?.length ?? 0} / 对话 ${data.chat_models?.length ?? 0} / 视频 ${data.video_models?.length ?? 0}），点「选择模型」勾选后应用。`);
         openModelPicker();
     } catch(e){
-        alert('拉取失败：' + (e.message || e));
-        setStatus('拉取失败');
+        setModelsFetchHint('error', `拉取失败：${e.message || e}。已保留当前模型列表，可检查请求地址和 Key 后重试。`);
+        setStatus('拉取失败，已保留当前模型列表');
     } finally {
         if(btn){ btn.disabled = false; btn.querySelector('span').textContent = tr('api.fetchModels') || '拉取模型'; }
     }
@@ -3457,6 +3451,7 @@ function renderModels(kind){
     const key = kind === 'image' ? 'image_models' : kind === 'video' ? 'video_models' : 'chat_models';
     const list = kind === 'image' ? imageModelList : kind === 'video' ? videoModelList : chatModelList;
     const models = item?.[key] || [];
+    updateModelCatCounts();
     if(!models.length){
         list.innerHTML = `<div class="empty">${tr('api.noModels')}</div>`;
         return;
@@ -3476,6 +3471,50 @@ function renderModels(kind){
         `;
     }).join('');
     refreshIcons();
+}
+// —— 模型分类 Tab：全部 / 图像 / 对话 / 视频 ——
+let activeModelGroup = 'all';
+const MODEL_GROUP_BLOCKS = { image:'imageModelBlock', chat:'chatModelBlock', video:'videoModelBlock' };
+function selectModelGroup(cat){
+    activeModelGroup = MODEL_GROUP_BLOCKS[cat] ? cat : 'all';
+    document.querySelectorAll('.model-cat-tab').forEach(tab => {
+        const on = tab.dataset.cat === activeModelGroup;
+        tab.classList.toggle('active', on);
+        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    syncModelGroupView();
+}
+function syncModelGroupView(){
+    const grid = document.getElementById('modelGrid');
+    Object.entries(MODEL_GROUP_BLOCKS).forEach(([cat, id]) => {
+        const el = document.getElementById(id);
+        if(!el) return;
+        const show = activeModelGroup === 'all' || activeModelGroup === cat;
+        el.style.display = show ? 'flex' : 'none';
+    });
+    if(grid) grid.classList.toggle('single-cat', activeModelGroup !== 'all');
+}
+function updateModelCatCounts(){
+    const item = provider();
+    const counts = {
+        image: (item?.image_models || []).length,
+        chat: (item?.chat_models || []).length,
+        video: (item?.video_models || []).length,
+    };
+    const set = (id, n) => { const el = document.getElementById(id); if(el) el.textContent = String(n); };
+    set('catCountAll', counts.image + counts.chat + counts.video);
+    set('catCountImage', counts.image);
+    set('catCountChat', counts.chat);
+    set('catCountVideo', counts.video);
+}
+function setModelsFetchHint(kind, text){
+    const el = document.getElementById('modelsFetchHint');
+    if(!el) return;
+    if(!text){ el.hidden = true; el.textContent = ''; el.classList.remove('is-error','is-ok'); return; }
+    el.hidden = false;
+    el.classList.toggle('is-error', kind === 'error');
+    el.classList.toggle('is-ok', kind === 'ok');
+    el.textContent = (kind === 'error' ? '⚠ ' : kind === 'ok' ? '✓ ' : '') + text;
 }
 function msLoraTargetOptions(selected){
     const item = provider();
@@ -3942,3 +3981,90 @@ window.onload = () => {
         });
     });
 };
+
+// ────────────────────────────────────────────────────
+// 存储设置 - 自定义输出目录
+// ────────────────────────────────────────────────────
+
+function showStorageSettings() {
+    // 隐藏主内容区所有 block，显示存储设置
+    document.querySelectorAll('#settingsContent > .content-head, #settingsContent > section, #settingsContent > div[id$="Block"]').forEach(el => {
+        if (el.id === 'storageSettingsBlock') {
+            el.classList.remove('settings-hidden');
+        } else {
+            el.style.display = 'none';
+        }
+    });
+    // 更新侧边栏激活状态
+    document.querySelectorAll('.cli-quick-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('sidebarStorageBtn');
+    if (btn) btn.classList.add('active');
+    loadOutputDir();
+}
+
+async function loadOutputDir() {
+    try {
+        const res = await fetch('/api/settings/output-dir');
+        const data = await res.json();
+        const input = document.getElementById('outputDirInput');
+        const status = document.getElementById('outputDirStatus');
+        if (input) input.value = data.output_dir || '';
+        if (status) {
+            if (data.is_custom) {
+                status.textContent = '当前生效路径: ' + data.effective_output_dir;
+                status.style.color = 'var(--success)';
+            } else {
+                status.textContent = '当前使用默认路径: ' + data.effective_output_dir;
+                status.style.color = 'var(--muted)';
+            }
+        }
+    } catch (e) {
+        console.error('加载输出目录设置失败:', e);
+    }
+}
+
+async function saveOutputDir() {
+    const input = document.getElementById('outputDirInput');
+    const dir = (input ? input.value : '').trim();
+    try {
+        const res = await fetch('/api/settings/output-dir', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ output_dir: dir })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            const status = document.getElementById('outputDirStatus');
+            if (status) {
+                status.textContent = data.message + '。重启后生效。';
+                status.style.color = 'var(--success)';
+            }
+            if (input) input.value = data.output_dir || '';
+        } else {
+            alert('保存失败: ' + (data.detail || '未知错误'));
+        }
+    } catch (e) {
+        alert('保存失败: ' + e.message);
+    }
+}
+
+function resetOutputDir() {
+    const input = document.getElementById('outputDirInput');
+    if (input) input.value = '';
+    saveOutputDir();
+}
+
+async function browseOutputDir() {
+    try {
+        const res = await fetch('/api/pick-folder', { method: 'POST' });
+        const data = await res.json();
+        if (data.path) {
+            const input = document.getElementById('outputDirInput');
+            if (input) input.value = data.path;
+        }
+    } catch (e) {
+        // 浏览器环境不支持，提示手动输入
+        const input = document.getElementById('outputDirInput');
+        if (input) input.focus();
+    }
+}

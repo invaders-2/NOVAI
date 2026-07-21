@@ -18,6 +18,53 @@
             document.body.classList.toggle('theme-dark', dark);
         }
         window.dispatchEvent(new CustomEvent('studio-theme-change', { detail: { theme: next } }));
+        broadcastTheme(next);
+        syncNativeTitlebar();
+    }
+
+    let titlebarProbe = null;
+    function readHeaderBg(){
+        if(!document.body) return null;
+        if(!titlebarProbe){
+            titlebarProbe = document.createElement('div');
+            titlebarProbe.id = 'studio-titlebar-probe';
+            titlebarProbe.setAttribute('aria-hidden', 'true');
+            // body 背景带 0.5s 过渡，直接读 computed 会拿到中间色，探针无过渡、瞬时解析 --bg
+            titlebarProbe.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:1px;visibility:hidden;pointer-events:none;background:var(--bg);';
+            document.body.appendChild(titlebarProbe);
+        }
+        return getComputedStyle(titlebarProbe).backgroundColor;
+    }
+
+    function syncNativeTitlebar(){
+        try {
+            if(isFramed()) return;  // 只有主壳同步原生窗口，iframe 子页面不碰
+            if(!window.pywebview || !window.pywebview.api || !window.pywebview.api.set_titlebar_theme) return;
+            const bg = readHeaderBg();
+            const m = bg && bg.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/);
+            if(!m) return;
+            window.pywebview.api.set_titlebar_theme(Number(m[1]), Number(m[2]), Number(m[3]));
+        } catch(e) {}
+    }
+
+    function broadcastTheme(theme){
+        document.querySelectorAll('iframe').forEach(frame => {
+            try {
+                frame.contentWindow?.postMessage({ type: 'studio-theme', theme }, '*');
+            } catch(e) {}
+        });
+    }
+
+    function ensureThemeTransitionStyle(){
+        if(document.getElementById('studio-theme-transition-style')) return;
+        const style = document.createElement('style');
+        style.id = 'studio-theme-transition-style';
+        style.textContent = `
+            body {
+                transition: background-color 0.3s ease, color 0.3s ease;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     function ensureScaleStyle(){
@@ -250,6 +297,7 @@
         set: setScaleMode
     };
 
+    ensureThemeTransitionStyle();
     applyTheme(currentTheme());
     applyScale(currentScaleMode());
 
@@ -257,6 +305,7 @@
         applyTheme(currentTheme());
         applyScale(currentScaleMode());
     });
+    window.addEventListener('pywebviewready', () => syncNativeTitlebar());
     window.addEventListener('message', event => {
         if(event.data?.type === 'studio-theme') applyTheme(event.data.theme);
         if(event.data?.type === 'studio-ui-scale') {

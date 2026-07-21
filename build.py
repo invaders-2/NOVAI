@@ -28,7 +28,7 @@ def build_windows():
             add_data.append(f'--add-data="{p}{os.pathsep}."')
     
     cmd = (
-        f'pyinstaller --onefile --console '
+        f'pyinstaller --onefile --console -y '
         f'--name={APP_NAME} '
         f'--hidden-import=uvicorn.logging '
         f'--hidden-import=uvicorn.loops.auto '
@@ -71,7 +71,7 @@ def build_mac():
             add_data.append(f'--add-data "{p}:."')
     
     cmd = (
-        f'pyinstaller --onefile --console '
+        f'pyinstaller --onefile --console -y '
         f'--name={APP_NAME} '
         f'--hidden-import=uvicorn.logging '
         f'--hidden-import=uvicorn.loops.auto '
@@ -81,6 +81,7 @@ def build_mac():
     )
     run(cmd)
     
+    shutil.rmtree(DIST, ignore_errors=True)
     os.makedirs(DIST, exist_ok=True)
     shutil.copy(os.path.join(ROOT, 'dist', APP_NAME), 
                 os.path.join(DIST, APP_NAME))

@@ -77,9 +77,10 @@ def build_app():
 
     hidden = [
         "uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto",
+        "uvicorn.protocols.websockets.auto", "websockets",
         "fastapi", "aiofiles", "pydantic", "python_multipart", "httpx", "PIL",
         "webview", "webview.platforms.cocoa",
-        "requests",
+        "requests", "qrcode", "pystray", "pystray._darwin",
     ]
 
     cmd_parts = [

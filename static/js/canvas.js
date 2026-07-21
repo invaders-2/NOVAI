@@ -3525,13 +3525,13 @@ async function downloadOutputNodeImages(nodeId){
         });
         if(!res.ok) throw new Error(await responseErrorMessage(res, tr('canvas.outputDownloadEmpty')));
         const blob = await res.blob();
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${(canvas?.title || 'canvas-output').slice(0, 48)}-${node.id}.zip`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        (window.NovaUtils ? NovaUtils.downloadBlob : function(b,f){
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(b);
+            link.download = f;
+            document.body.appendChild(link); link.click(); link.remove();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        })(blob, `${(canvas?.title || 'canvas-output').slice(0, 48)}-${node.id}.zip`);
     } catch(err) {
         alert(err.message || tr('canvas.outputDownloadEmpty'));
     }
@@ -3556,14 +3556,13 @@ async function downloadGroupNodeImages(groupId){
         });
         if(!res.ok) throw new Error(await responseErrorMessage(res, tr('canvas.outputDownloadEmpty')));
         const blob = await res.blob();
-        const href = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = href;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(href), 1200);
+        (window.NovaUtils ? NovaUtils.downloadBlob : function(b,f){
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(b);
+            link.download = f;
+            document.body.appendChild(link); link.click(); link.remove();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1200);
+        })(blob, filename);
     } catch(err) {
         alert(err.message || tr('canvas.outputDownloadEmpty'));
     }
@@ -13785,17 +13784,16 @@ function _localDownloadBlob(blob, filename){
 function downloadUrl(url, filename='download'){
     if(!url) return Promise.resolve(false);
     const raw = canvasOriginalMediaUrl(url);
-    const href = (raw.startsWith('data:') || raw.startsWith('blob:') || raw.startsWith('/api/download-output'))
-        ? raw
-        : `/api/download-output?url=${encodeURIComponent(raw)}&name=${encodeURIComponent(filename || outputDownloadName(raw))}`;
-    const link = document.createElement('a');
-    link.href = href;
-    link.download = filename || '';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    return Promise.resolve(true);
+    const name = filename || outputDownloadName(raw);
+    const isDirect = raw.startsWith('data:') || raw.startsWith('blob:');
+    const fetchUrl = (isDirect || raw.startsWith('/api/download-output')) ? raw : `/api/download-output?url=${encodeURIComponent(raw)}&name=${encodeURIComponent(name)}`;
+    return fetch(fetchUrl)
+        .then(res => res.blob())
+        .then(blob => {
+            downloadBlob(blob, name);
+            return true;
+        })
+        .catch(() => false);
 }
 function openWorkflowTransferModal(){
     if(!canvas){ setStatus(tr('canvas.needCanvas')); return; }
@@ -14929,6 +14927,8 @@ board.addEventListener('mousedown', e => {
 // gestureActive 标志用于防止 Chrome 中 gesture 和 wheel 双重缩放。
 let gestureActive = false, gestureState = null;
 document.addEventListener('gesturestart', e => {
+    // 触屏双指捏合由 touch-mouse.js 桥接成 ctrl+wheel 处理，这里跳过避免双重缩放
+    if(window.__novaTouchGestureActive){ e.preventDefault(); return; }
     // 当 lightbox 打开且非视频模式时，手势缩放应作用于 lightbox 图片而非画布
     if(outputLightbox.classList.contains('open') && outputLightboxVideo.style.display !== 'block'){
         e.preventDefault();
@@ -14948,6 +14948,7 @@ document.addEventListener('gesturestart', e => {
     e.preventDefault();
     gestureActive = true;
     const rect = board.getBoundingClientRect();
+    document.body.classList.add('canvas-board-pan');
     gestureState = {
         startScale: viewport.scale,
         originX: e.pageX - rect.left,
@@ -14990,6 +14991,7 @@ document.addEventListener('gestureend', e => {
         gestureState = null;
         return;
     }
+    if(gestureState) document.body.classList.remove('canvas-board-pan');
     gestureActive = false;
     gestureState = null;
     scheduleViewportSave();
@@ -15009,6 +15011,18 @@ let trackpadLastPinchTime = 0;
 function isMouseWheel(e){
     return NovaViewport.isMouseWheel(e);
 }
+// 滚轮/触控板手势期间的 body 门控：双指平移或捏合缩放进行中挂 canvas-board-pan（抑制节点 hover
+// 与文本选择，与拖拽平移同一套），停顿 260ms 判定手势结束后摘除。若拖拽平移（dragBoard）正在进行，
+// 该类由 startBoardPan/endDrag 持有，这里不抢。
+let boardWheelGestureTimer = 0;
+function markBoardWheelGesture(){
+    document.body.classList.add('canvas-board-pan');
+    if(boardWheelGestureTimer) clearTimeout(boardWheelGestureTimer);
+    boardWheelGestureTimer = setTimeout(() => {
+        boardWheelGestureTimer = 0;
+        if(!dragBoard) document.body.classList.remove('canvas-board-pan');
+    }, 260);
+}
 board.onwheel = e => {
     if(!canvas) return;
     if(outputLightbox?.classList.contains('open')) return;
@@ -15019,28 +15033,36 @@ board.onwheel = e => {
     // 超过 200ms 没有新的捏合事件，重置累积器（新一轮手势）
     if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
     trackpadLastPinchTime = now;
-    if(e.ctrlKey || e.metaKey){
-        // 触控板捏合缩放（Chrome）：gesture 活跃时跳过，避免双重缩放
+    if(e.ctrlKey || e.metaKey || e.__novaTouchPinch){
+        // 触控板/触屏捏合缩放（Chrome）：gesture 活跃时跳过，避免双重缩放
         if(gestureActive){ trackpadPinchAccum = 0; return; }
+        markBoardWheelGesture();
         // 累积 deltaY，超过阈值才触发缩放
         trackpadPinchAccum += e.deltaY;
         if(Math.abs(trackpadPinchAccum) < TRACKPAD_PINCH_THRESHOLD) return;
         const before = screenToWorld(e.clientX, e.clientY);
         const factor = Math.exp(-trackpadPinchAccum * 0.01);
-        viewport.scale = viewport.scale * factor;
+        viewport.scale = safeViewportScale(viewport.scale * factor);
         viewport.x = e.clientX - rect.left - before.x * viewport.scale;
         viewport.y = e.clientY - rect.top - before.y * viewport.scale;
         trackpadPinchAccum = 0;
+    } else if(e.__novaTouchPan){
+        // 触屏双指拖动（touch-mouse.js 桥接合成）→ 平移
+        trackpadPinchAccum = 0;
+        markBoardWheelGesture();
+        viewport.x -= e.deltaX;
+        viewport.y -= e.deltaY;
     } else if(isMouseWheel(e)){
         // 普通鼠标滚轮 → 缩放
         trackpadPinchAccum = 0;
         const before = screenToWorld(e.clientX, e.clientY);
-        viewport.scale = viewport.scale * (e.deltaY > 0 ? .92 : 1.08);
+        viewport.scale = safeViewportScale(viewport.scale * (e.deltaY > 0 ? .92 : 1.08));
         viewport.x = e.clientX - rect.left - before.x * viewport.scale;
         viewport.y = e.clientY - rect.top - before.y * viewport.scale;
     } else {
         // 触控板双指平移（deltaMode===0 且 deltaY 较小）
         trackpadPinchAccum = 0;
+        markBoardWheelGesture();
         viewport.x -= e.deltaX;
         viewport.y -= e.deltaY;
     }

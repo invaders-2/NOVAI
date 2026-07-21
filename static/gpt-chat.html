@@ -6,13 +6,13 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>GPT 对话</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.85.1784619943.1784291998"></script>
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <script src="/static/js/i18n.js?v=1.0.85.1784619943.1784319389"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.85.1784619943.1784477206">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.85.1784619943.1784291998">
     <style>
         :root {
             --ease:cubic-bezier(.4,0,.2,1);
@@ -35,7 +35,7 @@
             --chat-user-bg:#1d1d1f;
             --chat-user-text:#ffffff;
             --chat-shadow:rgba(0,0,0,.06);
-            --chat-width:1120px;
+            --chat-width:900px;
         }
         html.studio-theme-dark,
         body.studio-theme-dark,
@@ -61,7 +61,8 @@
             --chat-shadow:rgba(0,0,0,.28);
         }
         * { box-sizing:border-box; }
-        body { margin:0; height:100vh; overflow:hidden; background:var(--chat-bg); color:var(--chat-text); font-family: var(--font-sans); -webkit-font-smoothing:antialiased; }
+        body { margin:0; height:100vh; overflow:hidden; background:var(--chat-bg); color:var(--chat-text); font-family: var(--font-sans); -webkit-font-smoothing:antialiased; scrollbar-width:none; }
+        body::-webkit-scrollbar { width:0; height:0; display:none; }
         html.studio-ui-scaled body:not(.studio-scale-host) {
             width:calc(100vw / var(--studio-ui-scale, 1)) !important;
         }
@@ -82,7 +83,6 @@
         .thread-list:hover,
         .ref-strip:hover { scrollbar-color:rgba(132,132,132,.34) transparent; }
         .thread-list::-webkit-scrollbar,.messages::-webkit-scrollbar,.ref-strip::-webkit-scrollbar { width:4px; height:4px; }
-        .messages::-webkit-scrollbar { width:0; height:0; display:none; }
         .thread-list::-webkit-scrollbar-track,.messages::-webkit-scrollbar-track,.ref-strip::-webkit-scrollbar-track { background:transparent; }
         .thread-list::-webkit-scrollbar-thumb,.messages::-webkit-scrollbar-thumb,.ref-strip::-webkit-scrollbar-thumb { background:rgba(132,132,132,.16); border-radius:999px; }
         .thread-list:hover::-webkit-scrollbar-thumb,.ref-strip:hover::-webkit-scrollbar-thumb { background:rgba(132,132,132,.34); }
@@ -242,7 +242,7 @@
         .composer-body:focus-within,
         .composer-body.has-overflow { overflow:auto; }
         .composer-body.drag-over { border-color:transparent; background:var(--chat-soft); box-shadow:inset 0 0 0 1px var(--chat-line); }
-        textarea { width:100%; flex:1 1 auto; min-height:36px; max-height:50vh; resize:vertical; outline:none; border:0; padding:2px; font-size:14px; line-height:1.55; background:transparent; color:var(--chat-text); }
+        textarea { width:100%; flex:1 1 auto; min-height:120px; max-height:150px; resize:none; outline:none; border:0; padding:2px; font-size:14px; line-height:1.55; background:transparent; color:var(--chat-text); overflow-y:auto; transition:height 0.15s ease-out; }
         textarea::placeholder { color:var(--chat-faint); }
         .attachment-stack { display:flex; flex-direction:column; align-items:flex-start; gap:8px; min-width:0; }
         .composer-inside-foot { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px; overflow:visible; flex:0 0 auto; }
@@ -252,8 +252,8 @@
         .upload-btn:hover { background:var(--chat-soft); color:var(--chat-text); border-color:transparent; transform:translateY(-1px); }
         .upload-btn i,.upload-btn svg { width:16px; height:16px; }
         .file-input { display:none; }
-        .send-btn { width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center; background:var(--chat-strong); color:var(--chat-strong-text); transition:opacity .16s var(--ease), transform .16s var(--ease); flex:0 0 auto; }
-        .send-btn:hover { transform:translateY(-1px); }
+        .send-btn { width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center; background:var(--chat-strong); color:var(--chat-strong-text); transition:opacity 0.2s ease-out, transform 0.2s ease-out; flex:0 0 auto; }
+        .send-btn:hover { transform:scale(1.08); }
         .send-btn:disabled { opacity:.45; cursor:not-allowed; }
         .send-btn i,.send-btn svg { width:18px; height:18px; }
         .ref-strip { display:flex; align-items:center; gap:8px; overflow:auto; min-width:0; max-width:100%; min-height:0; }
@@ -467,7 +467,7 @@
             background:transparent !important;
         }
     </style>
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
         html body,
@@ -476,10 +476,10 @@
         html.theme-dark body,
         body.theme-dark { background: var(--bg) !important; color: var(--text) !important; }
         .chat-shell { background: var(--bg) !important; }
-        .topbar { background: rgba(245,245,247,0.78) !important; backdrop-filter: blur(28px) !important; border-bottom: 0 !important; }
+        .topbar { background: var(--bg) !important; backdrop-filter: blur(28px) !important; border-bottom: 0 !important; }
         .composer { background: transparent !important; border: 0 !important; box-shadow: var(--shadow-lg) !important; }
         .composer-body { background: transparent !important; border: 0 !important; }
-        .composer-wrap { background: linear-gradient(to top, var(--bg) 82%, rgba(245,245,247,0)) !important; }
+        .composer-wrap { background: linear-gradient(to top, var(--bg) 82%, transparent) !important; }
         .bubble.assistant { background: var(--stage-bg) !important; border: 0 !important; color: var(--text) !important; }
         .bubble.user { background: var(--text) !important; color: var(--bg) !important; }
         .chat-rail, .system-prompt-popover, .model-picker-popover, .resolution-picker-popover { background: var(--stage-bg) !important; border: 0 !important; box-shadow: var(--shadow-xl) !important; }
@@ -489,8 +489,8 @@
         .send-btn { background: var(--text) !important; color: var(--bg) !important; }
         .thread-item:hover { background: var(--nav-hover-bg) !important; }
         .thread-item.active { background: var(--nav-hover-bg) !important; border: 0 !important; }
-        html.theme-dark .topbar { background: rgba(13,13,13,0.78) !important; }
-        html.theme-dark .composer-wrap { background: linear-gradient(to top, var(--bg) 82%, rgba(13,13,13,0)) !important; }
+        html.theme-dark .topbar { background: var(--bg) !important; }
+        html.theme-dark .composer-wrap { background: linear-gradient(to top, var(--bg) 82%, transparent) !important; }
 </style>
 
 </head>

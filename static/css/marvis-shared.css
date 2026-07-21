@@ -202,3 +202,53 @@ html.settings-embed *::-webkit-scrollbar {
     height: 0 !important;
     display: none !important;
 }
+
+/* ═══════════════════════════════════════════
+   NOVAI 交互增强动画工具类（追加）
+   ═══════════════════════════════════════════ */
+
+/* ── 按钮 ripple 点击波纹效果 ── */
+.btn-ripple {
+    position: relative;
+    overflow: hidden;
+}
+.btn-ripple::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--ripple-x, 50%) var(--ripple-y, 50%),
+                rgba(255, 255, 255, 0.3) 0%,
+                transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease-out;
+    pointer-events: none;
+}
+.btn-ripple:active::after {
+    opacity: 1;
+    transition: opacity 0s;
+}
+
+/* ── 卡片 hover 上浮 + 阴影增强 ── */
+.card-hover-float {
+    transition: transform 0.25s cubic-bezier(0.22, 0.61, 0.36, 1),
+                box-shadow 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.card-hover-float:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-elevated, 0 20px 40px rgba(0,0,0,0.08));
+}
+
+/* ── Switch 开关弹簧动画 ── */
+.switch-spring {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.switch-spring:active {
+    transform: scale(0.92);
+}
+/* iOS-style switch knob spring */
+.ios-switch input:checked + .ios-slider:before {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.ios-switch .ios-slider:before {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

@@ -6,16 +6,16 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>画布工作台</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <script src="/static/js/shared/viewport.js?v=1.0.83.1784296809"></script>
-    <script defer src="/static/js/touch-mouse.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
-    <link rel="stylesheet" href="/static/css/canvas-list.css?v=1.0.83.1784321901">
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.85.1784619943.1784291998"></script>
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <script src="/static/js/shared/viewport.js?v=1.0.85.1784619943.1784296809"></script>
+    <script defer src="/static/js/touch-mouse.js?v=1.0.85.1784619943.1784512671"></script>
+    <script src="/static/js/i18n.js?v=1.0.85.1784619943.1784319389"></script>
+    <link rel="stylesheet" href="/static/css/canvas-list.css?v=1.0.85.1784619943.1784642230">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.85.1784619943.1784477206">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
 
     <style>
         /* ═══ V4 Apple-style Glassmorphism Design System ═══ */
@@ -46,10 +46,17 @@
 
         * { margin:0; padding:0; box-sizing:border-box; }
 
+        /* ═══ 隐藏滚动条 ═══ */
+        html { scrollbar-width: none; -ms-overflow-style: none; }
+        html::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
         html, body {
             overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
             touch-action: pan-y;
         }
+        body::-webkit-scrollbar { display: none; width: 0; height: 0; }
         body {
             font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
             background: var(--v4-bg);
@@ -280,7 +287,7 @@
         /* ═══ CARDS GRID ═══ */
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 12px;
             animation: fadeUp 0.7s var(--v4-ease-out) 0.2s both;
         }
@@ -293,7 +300,7 @@
             overflow: hidden;
             cursor: pointer;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--v4-card-shadow);
-            transition: transform 0.35s var(--v4-ease-out), box-shadow 0.35s var(--v4-ease-out), border-color 0.35s var(--v4-ease-out);
+            transition: transform 0.18s var(--v4-ease-out), box-shadow 0.18s var(--v4-ease-out), border-color 0.18s var(--v4-ease-out), background 0.18s var(--v4-ease-out);
             text-decoration: none;
             color: inherit;
             display: flex;
@@ -301,10 +308,10 @@
         }
         .project-card:hover {
             transform: translateY(-2px);
+            background: rgba(0, 0, 0, 0.03);
             box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--v4-card-shadow-hover);
-            border-color: rgba(0,0,0,0.08);
         }
-        .theme-dark .project-card:hover { border-color: rgba(255,255,255,0.08); }
+        .theme-dark .project-card:hover { background: rgba(255, 255, 255, 0.06); box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--v4-card-shadow-hover); }
         .project-card:active { transform: translateY(0) scale(0.98); }
         .project-card:focus-visible { outline: 2px solid var(--v4-focus-ring); outline-offset: 2px; }
 
@@ -375,6 +382,8 @@
         }
         .card-more-btn svg { width: 14px; height: 14px; }
 
+        /* 菜单挂在 .project-card 直下（不放 .card-preview 内）：preview 区 overflow:hidden 会把菜单底部裁掉。
+           卡片的 backdrop-filter 使绝对定位仍以卡片为包含块，top/right 锚点不变；z-index 压过预览图/badge/正文。 */
         .card-more-menu {
             position: absolute;
             top: 36px; right: 8px;
@@ -390,7 +399,7 @@
             transform: translateY(-6px) scale(0.96);
             pointer-events: none;
             transition: opacity 0.2s var(--v4-ease-out), transform 0.2s var(--v4-ease-out);
-            z-index: 10;
+            z-index: 60;
         }
         .card-more-menu.active {
             opacity: 1;
@@ -675,9 +684,72 @@
             font-family: var(--font-sans, inherit);
         }
         .trash-item-restore:hover { opacity: 0.85; }
+        .trash-item-purge {
+            padding: 4px 10px; border-radius: 6px;
+            border: none; background: transparent; color: #FF4D4F;
+            font-size: 11px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s var(--v4-ease-hover);
+            font-family: var(--font-sans, inherit);
+        }
+        .trash-item-purge:hover { background: rgba(255, 77, 79, 0.12); }
         .trash-empty {
             text-align: center; padding: 32px 20px; color: var(--v4-muted); font-size: 13px;
         }
+        .trash-panel-head-actions { display: flex; align-items: center; gap: 8px; }
+        .trash-clear-btn {
+            padding: 4px 10px; border-radius: 6px;
+            border: none; background: transparent; color: #FF4D4F;
+            font-size: 12px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s var(--v4-ease-hover);
+            font-family: var(--font-sans, inherit);
+        }
+        .trash-clear-btn:hover { background: rgba(255, 77, 79, 0.12); }
+        .trash-clear-btn:disabled { opacity: 0.35; cursor: default; background: transparent; }
+
+        /* ═══ PURGE CONFIRM DIALOG ═══ */
+        .purge-confirm-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.2);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 110;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.25s var(--v4-ease-out);
+        }
+        .purge-confirm-overlay.active { opacity: 1; pointer-events: auto; }
+        .purge-confirm-panel {
+            width: 340px; max-width: calc(100vw - 48px);
+            border-radius: 20px;
+            background: var(--v4-card-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid transparent;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--v4-card-shadow-hover);
+            transform: translateY(8px) scale(0.97);
+            transition: transform 0.3s var(--v4-ease-out);
+            padding: 20px;
+        }
+        .purge-confirm-overlay.active .purge-confirm-panel { transform: translateY(0) scale(1); }
+        .purge-confirm-title { font-size: 15px; font-weight: 600; line-height: 1.4; }
+        .purge-confirm-desc { font-size: 12px; color: var(--v4-muted); margin-top: 6px; line-height: 1.5; word-break: break-all; }
+        .purge-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+        .purge-confirm-no {
+            padding: 6px 14px; border-radius: 8px; border: none;
+            background: var(--v4-bg); color: var(--v4-text);
+            font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: opacity 0.2s var(--v4-ease-hover);
+            font-family: var(--font-sans, inherit);
+        }
+        .purge-confirm-no:hover { opacity: 0.8; }
+        .purge-confirm-yes {
+            padding: 6px 14px; border-radius: 8px; border: none;
+            background: #FF4D4F; color: #ffffff;
+            font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: opacity 0.2s var(--v4-ease-hover);
+            font-family: var(--font-sans, inherit);
+        }
+        .purge-confirm-yes:hover { opacity: 0.85; }
 
         /* ═══ RESPONSIVE ═══ */
         @media (max-width: 760px) {
@@ -685,7 +757,7 @@
             .hero { flex-direction: column; gap: 28px; min-height: auto; }
             .hero-title { font-size: 40px; }
             .hero-desc { max-width: 100%; }
-            .cards-grid { grid-template-columns: repeat(2, 1fr); }
+            .cards-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
             .hero-actions { flex-direction: column; }
             .btn-primary, .btn-secondary { justify-content: center; }
             .hero-carousel { height: 220px; }
@@ -842,9 +914,12 @@
                     <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     <span>回收站</span>
                 </div>
-                <button class="trash-panel-close" id="trashOverlayClose" aria-label="关闭">
-                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                </button>
+                <div class="trash-panel-head-actions">
+                    <button class="trash-clear-btn" id="trashClearBtn" type="button" disabled>清空回收站</button>
+                    <button class="trash-panel-close" id="trashOverlayClose" aria-label="关闭">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </button>
+                </div>
             </div>
             <div class="trash-note">
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -852,6 +927,18 @@
             </div>
             <div class="trash-list" id="trashListV4">
                 <div class="trash-empty">回收站为空</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ PURGE CONFIRM OVERLAY ═══ -->
+    <div class="purge-confirm-overlay" id="purgeConfirmOverlay">
+        <div class="purge-confirm-panel" onclick="event.stopPropagation()">
+            <div class="purge-confirm-title" id="purgeConfirmTitle">彻底删除后无法恢复，确定删除？</div>
+            <div class="purge-confirm-desc" id="purgeConfirmDesc"></div>
+            <div class="purge-confirm-actions">
+                <button class="purge-confirm-no" id="purgeConfirmCancel" type="button">取消</button>
+                <button class="purge-confirm-yes" id="purgeConfirmOk" type="button">彻底删除</button>
             </div>
         </div>
     </div>
@@ -866,7 +953,7 @@
         <span class="trash-badge" id="trashBadgeV4" style="display:none">0</span>
     </button>
 
-    <script defer src="/static/js/canvas-list.js?v=1.0.83.1784321834"></script>
+    <script defer src="/static/js/canvas-list.js?v=1.0.85.1784619943.1784642230"></script>
     <script>
         /* ═══ V4 集成层 — 与 canvas-list.js 数据桥接 ═══ */
         (function() {
@@ -955,7 +1042,7 @@
             document.getElementById('pickerCloseBtn').addEventListener('click', closeCanvasPicker);
 
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') { closeCanvasPicker(); closeTrashOverlay(); closeAllCardMenus(); }
+                if (e.key === 'Escape') { closeCanvasPicker(); closeTrashOverlay(); closePurgeConfirm(); closeAllCardMenus(); }
             });
 
             // ═══ TRASH OVERLAY ═══
@@ -1110,20 +1197,20 @@
                         <button class="card-more-btn" aria-label="更多操作">
                             <svg fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/></svg>
                         </button>
-                        <div class="card-more-menu">
-                            <button class="card-more-menu-item" data-action="rename">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                重命名
-                            </button>
-                            <button class="card-more-menu-item" data-action="duplicate">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                                复制画布
-                            </button>
-                            <button class="card-more-menu-item delete" data-action="delete">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                删除
-                            </button>
-                        </div>
+                    </div>
+                    <div class="card-more-menu">
+                        <button class="card-more-menu-item" data-action="rename">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            重命名
+                        </button>
+                        <button class="card-more-menu-item" data-action="duplicate">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            复制画布
+                        </button>
+                        <button class="card-more-menu-item delete" data-action="delete">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            删除
+                        </button>
                     </div>
                     <div class="card-body">
                         <div class="card-title">
@@ -1234,6 +1321,7 @@
                     if (!res.ok) throw new Error('delete failed');
                     v4Canvases = v4Canvases.filter(c => c.id !== cid);
                     renderV4Cards();
+                    loadTrash();   // 软删后同步回收站角标与列表
                 } catch(e) { console.error(e); alert('删除失败'); refreshAll(); }
             }
 
@@ -1300,14 +1388,78 @@
             });
 
             // ═══ 回收站 ═══
+            const trashClearBtn = document.getElementById('trashClearBtn');
+
             function updateTrashBadge() {
                 const count = v4DeletedCanvases.length;
                 trashBadgeV4.textContent = count;
                 trashBadgeV4.style.display = count > 0 ? '' : 'none';
             }
 
+            // ═══ 彻底删除二次确认 ═══
+            const purgeConfirmOverlay = document.getElementById('purgeConfirmOverlay');
+            const purgeConfirmTitle = document.getElementById('purgeConfirmTitle');
+            const purgeConfirmDesc = document.getElementById('purgeConfirmDesc');
+            let purgeConfirmAction = null;
+
+            function openPurgeConfirm(title, desc, action) {
+                purgeConfirmTitle.textContent = title;
+                purgeConfirmDesc.textContent = desc || '';
+                purgeConfirmDesc.style.display = desc ? '' : 'none';
+                purgeConfirmAction = action;
+                purgeConfirmOverlay.classList.add('active');
+            }
+            function closePurgeConfirm() {
+                purgeConfirmOverlay.classList.remove('active');
+                purgeConfirmAction = null;
+            }
+            purgeConfirmOverlay.addEventListener('click', function(e) {
+                if (e.target === purgeConfirmOverlay) closePurgeConfirm();
+            });
+            document.getElementById('purgeConfirmCancel').addEventListener('click', closePurgeConfirm);
+            document.getElementById('purgeConfirmOk').addEventListener('click', function() {
+                const action = purgeConfirmAction;
+                if (action) action();
+            });
+
+            async function purgeCanvasAPI(cid) {
+                try {
+                    const res = await fetch(`/api/canvases/${encodeURIComponent(cid)}/purge`, { method: 'DELETE' });
+                    if (!res.ok) throw new Error('purge failed');
+                    v4DeletedCanvases = v4DeletedCanvases.filter(c => c.id !== cid);
+                    closePurgeConfirm();
+                    renderTrashList();
+                    updateTrashBadge();
+                } catch(e) { console.error(e); closePurgeConfirm(); alert('彻底删除失败'); }
+            }
+
+            async function purgeAllCanvasesAPI() {
+                const ids = v4DeletedCanvases.map(c => c.id);
+                try {
+                    const results = await Promise.all(ids.map(id =>
+                        fetch(`/api/canvases/${encodeURIComponent(id)}/purge`, { method: 'DELETE' })
+                    ));
+                    if (results.some(r => !r.ok)) throw new Error('purge failed');
+                    v4DeletedCanvases = [];
+                    closePurgeConfirm();
+                    renderTrashList();
+                    updateTrashBadge();
+                } catch(e) { console.error(e); closePurgeConfirm(); alert('清空回收站失败'); }
+            }
+
+            trashClearBtn.addEventListener('click', function() {
+                const n = v4DeletedCanvases.length;
+                if (!n) return;
+                openPurgeConfirm(
+                    '清空回收站后无法恢复，确定清空？',
+                    `共 ${n} 个画布将被永久删除。`,
+                    purgeAllCanvasesAPI
+                );
+            });
+
             function renderTrashList() {
                 if (!trashListV4) return;
+                trashClearBtn.disabled = !v4DeletedCanvases.length;
                 if (!v4DeletedCanvases.length) {
                     trashListV4.innerHTML = '<div class="trash-empty">回收站为空</div>';
                     return;
@@ -1316,6 +1468,7 @@
                     <div class="trash-item">
                         <span class="trash-item-name">${escapeHtml(c.title || '未命名')}</span>
                         <span class="trash-item-meta">${formatTime(c.deleted_at || c.updated_at)}</span>
+                        <button class="trash-item-purge" data-canvas-id="${escapeHtml(c.id)}">彻底删除</button>
                         <button class="trash-item-restore" data-canvas-id="${escapeHtml(c.id)}">恢复</button>
                     </div>
                 `).join('');
@@ -1332,6 +1485,19 @@
                             updateTrashBadge();
                             refreshAll();
                         } catch(e) { console.error(e); alert('恢复失败'); }
+                    });
+                });
+
+                trashListV4.querySelectorAll('.trash-item-purge').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const cid = this.dataset.canvasId;
+                        const item = v4DeletedCanvases.find(c => c.id === cid);
+                        openPurgeConfirm(
+                            '彻底删除后无法恢复，确定删除？',
+                            item ? `「${item.title || '未命名'}」将被永久删除。` : '',
+                            () => purgeCanvasAPI(cid)
+                        );
                     });
                 });
             }

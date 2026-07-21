@@ -189,7 +189,7 @@ html[data-studio-scale="off"].studio-scale-managed .workspace {
 .ws-card.has-thumb .ws-card-title { text-shadow:0 1px 6px rgba(0,0,0,.3); }
 
 /* ===== Card context menu ===== */
-.ws-card-pop { position:fixed; left:0; top:0; z-index:200; width:214px; padding:6px; border-radius:8px; border:1px solid var(--line); background:var(--card-solid); color:var(--text); box-shadow:0 22px 54px var(--shadow-strong); display:flex; flex-direction:column; gap:1px; }
+.ws-card-pop { position:fixed; left:0; top:0; z-index:1000; width:214px; padding:6px; border-radius:8px; border:1px solid var(--line); background:var(--card-solid); color:var(--text); box-shadow:0 22px 54px var(--shadow-strong); display:flex; flex-direction:column; gap:1px; }
 .ws-pop-item { display:flex; align-items:center; gap:9px; width:100%; padding:8px 10px; border-radius:8px; background:transparent; border:none; cursor:pointer; color:var(--text); font-size:12.5px; font-weight:700; text-align:left; transition:background .12s var(--ease); }
 .ws-pop-item:hover { background:var(--soft); }
 .ws-pop-item.danger { color:var(--danger); }

@@ -12,7 +12,7 @@
       "max": null,
       "step": null,
       "options": [],
-      "bind_prompt": true
+      "random_enabled": false
     },
     {
       "id": "f_timeline_data",
@@ -25,7 +25,7 @@
       "max": null,
       "step": null,
       "options": [],
-      "bind_prompt": null
+      "random_enabled": false
     },
     {
       "id": "f_duration_frames",
@@ -38,7 +38,7 @@
       "max": 10000.0,
       "step": 1.0,
       "options": [],
-      "bind_prompt": null
+      "random_enabled": false
     },
     {
       "id": "f_duration_seconds",
@@ -51,7 +51,7 @@
       "max": 1000.0,
       "step": 0.01,
       "options": [],
-      "bind_prompt": null
+      "random_enabled": false
     },
     {
       "id": "f_frame_rate",
@@ -64,7 +64,7 @@
       "max": 240.0,
       "step": 1.0,
       "options": [],
-      "bind_prompt": null
+      "random_enabled": false
     },
     {
       "id": "f_custom_width",
@@ -77,7 +77,7 @@
       "max": 8192.0,
       "step": 32.0,
       "options": [],
-      "bind_prompt": null
+      "random_enabled": false
     },
     {
       "id": "f_custom_height",
@@ -90,7 +90,7 @@
       "max": 8192.0,
       "step": 32.0,
       "options": [],
-      "bind_prompt": null
+      "random_enabled": false
     },
     {
       "id": "f_use_custom_audio",
@@ -103,7 +103,7 @@
       "max": null,
       "step": null,
       "options": [],
-      "bind_prompt": null
+      "random_enabled": false
     },
     {
       "id": "f_noise_seed",
@@ -116,7 +116,7 @@
       "max": 4294967295.0,
       "step": 1.0,
       "options": [],
-      "bind_prompt": null
+      "random_enabled": false
     },
     {
       "id": "f_4t0z0g8",
@@ -132,7 +132,7 @@
         "maintain aspect ratio",
         "stretch to fit"
       ],
-      "bind_prompt": null
+      "random_enabled": false
     }
   ],
   "mini_cards": {

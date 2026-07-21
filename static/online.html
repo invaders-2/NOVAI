@@ -6,17 +6,31 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>在线生图</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
-    <script defer src="/static/js/image-preview.js?v=1.0.83.1784312776"></script>
-    <script defer src="/static/js/history-bulk-manager.js?v=1.0.83.1784314442"></script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/vendor/js/lucide-subset.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <script src="/static/js/i18n.js?v=1.0.85.1784619943.1784319389"></script>
+    <script src="/static/js/image-preview.js?v=1.0.85.1784619943.1784312776"></script>
+    <script src="/static/js/history-bulk-manager.js?v=1.0.85.1784619943.1784314442"></script>
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.85.1784619943.1784291998">
     <style>
         :root { --accent:#1c1c1e; --bg:#f9fafb; --card:#fff; --easing:cubic-bezier(0.4,0,0.2,1); }
-        body { background:var(--bg); font-family: var(--font-sans); color:var(--accent); -webkit-font-smoothing:antialiased; }
+        body { 
+            background:var(--bg); font-family: var(--font-sans); color:var(--accent); -webkit-font-smoothing:antialiased;
+            overflow-x: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        body::-webkit-scrollbar { width: 6px; }
+        body::-webkit-scrollbar-track { background: transparent; }
+        body::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; }
+        body:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+        .theme-dark body::-webkit-scrollbar-thumb { background: transparent; }
+        .theme-dark body:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+        /* 隐藏所有内部滚动条 */
+        * { scrollbar-width: none; -ms-overflow-style: none; }
+        *::-webkit-scrollbar { width: 0; height: 0; display: none; }
         .container-box { max-width:1280px; margin:0 auto; padding:0 40px; margin-top:50px; }
         .nano-input { background:var(--card); border:0px solid transparent; transition:all .3s var(--easing); }
         .nano-input:focus { box-shadow:0 0 0 1px rgba(0,0,0,0.15); }
@@ -54,7 +68,7 @@
         .gallery-lightbox { background:rgba(255,255,255,.99); backdrop-filter:blur(33px) saturate(1.05); }
         @keyframes fadeIn { from{opacity:0} to{opacity:1} }
     </style>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.85.1784619943.1784477206">
     <style>
         html:not(.studio-theme-dark) body:not(.studio-theme-dark) #lightbox.gallery-lightbox {
             background: rgba(255,255,255,.99) !important;
@@ -62,7 +76,7 @@
             -webkit-backdrop-filter: blur(33px) saturate(1.05) !important;
         }
     </style>
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
         body { background: var(--bg) !important; color: var(--text) !important; }
@@ -77,20 +91,29 @@
 .glass-btn:hover { opacity: 0.88 !important; }
 .result-frame { background: var(--stage-bg) !important; border-radius: var(--radius-lg) !important; }
 .masonry-item { background: var(--stage-bg) !important; border-radius: var(--radius-lg) !important; }
+/* --- 左右双栏 Split Layout：左栏固定宽自滚动，右栏填满剩余空间 --- */
+/* 100vh 需除以全局 UI 缩放系数（theme.js autoScale），否则缩放窗口下填不满视口高度 */
+.split-root { display: flex; height: calc(100vh / var(--studio-ui-scale, 1)); overflow: hidden; }
+.split-left { width: clamp(300px, 30vw, 360px); flex-shrink: 0; height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 32px 24px; border-right: 1px solid var(--border); }
+.split-right { flex: 1; min-width: 0; height: 100%; overflow-y: auto; }
+.split-right-inner { max-width: 1080px; margin: 0 auto; padding: 32px 40px 72px; display: flex; flex-direction: column; gap: 56px; }
+#resultBox { height: clamp(420px, 58vh, 720px); }
+@media (max-width: 768px) {
+    .split-root { flex-direction: column; height: auto; overflow: visible; }
+    .split-left { width: 100% !important; height: auto; max-height: none; overflow-y: visible; border-right: none; border-bottom: 1px solid var(--border); padding: 16px; }
+    .split-right { height: auto; overflow-y: visible; }
+    .split-right-inner { padding: 16px 16px 48px; gap: 40px; }
+    #resultBox { height: auto; min-height: 320px; }
+    #genBtn { position: static !important; }
+}
 </style>
 
 </head>
 <body>
-    <div class="container-box min-h-screen flex flex-col">
-        <header class="flex justify-between items-end mb-12">
-            <div class="space-y-1">
-            </div>
-        </header>
-
-        <main class="grid grid-cols-1 lg:grid-cols-12 gap-12">
-            <div class="lg:col-span-5 space-y-8">
-                <section class="space-y-4">
-                    <textarea id="promptInput" rows="5" class="nano-input w-full p-4 rounded-3xl text-sm outline-none resize-none placeholder-gray-300" placeholder="输入想生成或编辑的画面..." data-i18n-placeholder="online.promptPlaceholder"></textarea>
+    <div class="split-root">
+        <aside class="split-left">
+            <section class="space-y-4">
+                    <textarea id="promptInput" rows="3" class="nano-input w-full p-4 rounded-3xl text-sm outline-none resize-none placeholder-gray-300" placeholder="输入想生成或编辑的画面..." data-i18n-placeholder="online.promptPlaceholder" style="min-height: 80px; transition: height 0.15s ease-out;"></textarea>
                 </section>
 
                 <section class="space-y-4">
@@ -187,27 +210,28 @@
                     </div>
                 </div>
 
-                <button id="genBtn" onclick="submitImage()" class="glass-btn w-full py-5 text-white rounded-3xl font-bold flex items-center justify-center gap-3 shadow-lg">
+                <button id="genBtn" onclick="submitImage()" class="glass-btn w-full py-5 text-white rounded-3xl font-bold flex items-center justify-center gap-3 shadow-lg" style="position: sticky; bottom: 12px; margin-top: auto;">
                     <i data-lucide="bolt" class="w-4 h-4"></i>
                     <span class="tracking-[0.3em] text-[11px] uppercase" data-i18n="online.generate">Generate</span>
                 </button>
-            </div>
+        </aside>
 
-            <div class="lg:col-span-7">
-                <div id="resultBox" class="result-frame min-h-[500px] lg:h-full flex items-center justify-center relative overflow-hidden">
+        <main class="split-right">
+            <div class="split-right-inner">
+                <div id="resultBox" class="result-frame flex items-center justify-center relative overflow-hidden">
                     <div id="placeholder" class="text-center space-y-4 opacity-20"><i data-lucide="layout" class="w-12 h-12 mx-auto stroke-[1px]"></i><p class="text-[10px] font-black tracking-[0.5em] uppercase" data-i18n="online.canvasReady">Canvas Ready</p></div>
                     <div id="loader" class="hidden text-center space-y-4"><div class="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto"></div><p class="text-[10px] font-black tracking-[0.5em] uppercase" data-i18n="online.generating">Generating</p></div>
                     <img id="outputImg" class="hidden w-full h-full object-contain p-8 cursor-zoom-in" onclick="zoomImage()">
-                    <button id="downloadBtn" onclick="downloadGeneratedImage()" class="hidden absolute top-8 right-8 w-12 h-12 bg-white/90 shadow-2xl rounded-2xl flex items-center justify-center hover:bg-black hover:text-white"><i data-lucide="download" class="w-4 h-4"></i></button>
+                    <button id="downloadBtn" onclick="downloadGeneratedImage(event)" class="hidden absolute top-8 right-8 w-12 h-12 bg-white/90 shadow-2xl rounded-2xl flex items-center justify-center hover:bg-black hover:text-white"><i data-lucide="download" class="w-4 h-4"></i></button>
                 </div>
+
+                <section>
+                    <div class="flex items-center gap-6 mb-12"><h2 class="text-[11px] font-black uppercase tracking-[0.5em]" data-i18n="online.archives">Archives</h2><div class="h-px flex-1 bg-gray-100"></div></div>
+                    <div id="masonry" class="masonry-grid"></div>
+                    <div id="loadMoreTrigger" class="py-20 text-center text-gray-300 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:text-black">Load More Archive</div>
+                </section>
             </div>
         </main>
-
-        <section class="mt-32">
-            <div class="flex items-center gap-6 mb-12"><h2 class="text-[11px] font-black uppercase tracking-[0.5em]" data-i18n="online.archives">Archives</h2><div class="h-px flex-1 bg-gray-100"></div></div>
-            <div id="masonry" class="masonry-grid"></div>
-            <div id="loadMoreTrigger" class="py-20 text-center text-gray-300 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:text-black">Load More Archive</div>
-        </section>
     </div>
 
     <div id="lightbox" onclick="handleOutsideClick(event)" class="hidden fixed inset-0 z-50 gallery-lightbox flex flex-col items-center justify-center p-8">
@@ -893,7 +917,7 @@
         function closeLightbox() { lightbox.close(); }
         function handleOutsideClick(e) { lightbox.handleOutside(e); }
         async function downloadLightboxImage(e){
-            e.stopPropagation();
+            if(e){ e.stopPropagation(); e.preventDefault(); }
             const url = currentLightboxData?.images?.[0];
             if(!url) return;
             const res = await fetch(url);
@@ -901,15 +925,10 @@
             const blob = await res.blob();
             const clean = url.split('?')[0];
             const ext = clean.includes('.') ? clean.split('.').pop() : 'png';
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `online-image-${Date.now()}.${ext || 'png'}`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            await NovaUtils.downloadBlob(blob, `online-image-${Date.now()}.${ext || 'png'}`);
         }
-        async function downloadGeneratedImage(){
+        async function downloadGeneratedImage(e){
+            if(e){ e.stopPropagation(); e.preventDefault(); }
             const url = currentResult?.images?.[0];
             if(!url) return;
             try {
@@ -918,13 +937,7 @@
                 const blob = await res.blob();
                 const clean = url.split('?')[0];
                 const ext = clean.includes('.') ? clean.split('.').pop() : 'png';
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `online-image-${Date.now()}.${ext || 'png'}`;
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-                setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+                await NovaUtils.downloadBlob(blob, `online-image-${Date.now()}.${ext || 'png'}`);
             } catch(err) {
                 alert('保存失败：' + (err.message || '无法下载图片'));
             }
@@ -957,6 +970,7 @@
                 updateSizeUI();
             }
             closeLightbox(); window.scrollTo({top:0, behavior:'smooth'});
+            document.querySelector('.split-left')?.scrollTo({top:0, behavior:'smooth'});
         }
         async function deleteHistoryItem(ts, ev){
             ev.stopPropagation();
@@ -965,7 +979,11 @@
             if(res.success) document.getElementById(`history-${ts}`)?.remove();
         }
         const observer = new IntersectionObserver(entries => { if(entries[0].isIntersecting && currentIndex < allHistory.length) loadHistory(1); }, {threshold:.1});
-        window.onload = async () => { applyLanguage(); setRatio('square'); setResolution('1k'); await initModels(); await loadHistory(0); window.HistoryBulkManager?.attach({masonry:'#masonry'}); observer.observe(document.getElementById('loadMoreTrigger')); document.getElementById('loadMoreTrigger').onclick = () => loadHistory(1); };
+        window.onload = async () => { applyLanguage(); setRatio('square'); setResolution('1k'); await initModels(); await loadHistory(0); window.HistoryBulkManager?.attach({masonry:'#masonry'}); observer.observe(document.getElementById('loadMoreTrigger')); document.getElementById('loadMoreTrigger').onclick = () => loadHistory(1);
+            // Prompt auto-height
+            const promptEl = document.getElementById('promptInput');
+            if(promptEl){ const autoResize=()=>{ promptEl.style.height='auto'; promptEl.style.height=Math.max(80,Math.min(promptEl.scrollHeight,300))+'px'; }; promptEl.addEventListener('input',autoResize); autoResize(); }
+        };
     </script>
 </body>
 </html>

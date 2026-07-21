@@ -7,18 +7,18 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>Angle Control | 视角重塑</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
-    <script defer src="/static/js/image-preview.js?v=1.0.83.1784312776"></script>
-    <script defer src="/static/js/history-bulk-manager.js?v=1.0.83.1784314442"></script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/vendor/js/lucide-subset.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <script src="/static/js/i18n.js?v=1.0.85.1784619943.1784319389"></script>
+    <script src="/static/js/image-preview.js?v=1.0.85.1784619943.1784312776"></script>
+    <script src="/static/js/history-bulk-manager.js?v=1.0.85.1784619943.1784314442"></script>
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.85.1784619943.1784291998">
     <script type="importmap">
         {
             "imports": {
-                "three": "/static/vendor/js/three-0.160.0.module.js?v=1.0.83"
+                "three": "/static/vendor/js/three-0.160.0.module.js?v=1.0.85.1784619943"
             }
         }
     </script>
@@ -36,13 +36,23 @@
             font-family: var(--font-sans);
             color: var(--accent);
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+            max-width: 100vw;
+            scrollbar-width: none;
         }
+        body::-webkit-scrollbar { width: 0; height: 0; display: none; }
+        * { scrollbar-width: none; -ms-overflow-style: none; }
+        *::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
         .container-box {
             max-width: 1280px;
             margin: 0 auto;
             padding: 0 40px;
             margin-top: 50px;
+            overflow-x: hidden;
+        }
+        @media (max-width: 768px) {
+            .container-box { padding: 0 16px; margin-top: 30px; }
         }
 
         /* 统一组件风格 */
@@ -231,7 +241,7 @@
             border-color: #0c0c0c;
         }
     </style>
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
         body { background: var(--bg) !important; color: var(--text) !important; }
@@ -248,7 +258,7 @@ button.primary { background: var(--text) !important; color: var(--bg) !important
 button.primary:hover { opacity: 0.88 !important; }
 </style>
 
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.85.1784619943.1784477206">
 </head>
 
 <body class="selection:bg-black selection:text-white">
@@ -500,7 +510,7 @@ button.primary:hover { opacity: 0.88 !important; }
                 </div>
             </div>
             <div class="mt-8">
-                <button onclick="downloadLightboxImage()"
+                <button onclick="downloadLightboxImage(event)"
                     class="px-10 py-4 bg-black text-white rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-3 shadow-xl">
                     <i data-lucide="save" class="w-4 h-4"></i> Save Master
                 </button>
@@ -1131,7 +1141,18 @@ button.primary:hover { opacity: 0.88 !important; }
 
                 downloadBtn.href = data.images[0];
                 downloadBtn.classList.remove('hidden');
-                downloadBtn.download = `Angle-${Date.now()}.png`;
+                downloadBtn.onclick = async function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        const res = await fetch(downloadBtn.href);
+                        if (!res.ok) throw new Error('fetch failed');
+                        const blob = await res.blob();
+                        await NovaUtils.downloadBlob(blob, `Angle-${Date.now()}.png`);
+                    } catch (err) {
+                        alert('保存失败：' + (err.message || '无法下载图片'));
+                    }
+                };
 
                 btn.style.backgroundColor = '';
                 btn.innerHTML = `<i data-lucide="zap" class="w-4 h-4 text-yellow-400"></i><span id="btnText">${tr('studio.generateAngle')}</span>`;
@@ -1260,14 +1281,18 @@ button.primary:hover { opacity: 0.88 !important; }
         function closeLightbox() { lightbox.close(); }
         function handleOutsideClick(e) { lightbox.handleOutside(e); }
 
-        function downloadLightboxImage() {
+        async function downloadLightboxImage(e) {
+            if (e) { e.stopPropagation(); e.preventDefault(); }
             const imgUrl = document.getElementById('lightboxImg').src;
-            const link = document.createElement('a');
-            link.href = imgUrl;
-            link.download = `Angle-Master-${Date.now()}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            if (!imgUrl) return;
+            try {
+                const res = await fetch(imgUrl);
+                if (!res.ok) throw new Error('fetch failed');
+                const blob = await res.blob();
+                await NovaUtils.downloadBlob(blob, `Angle-Master-${Date.now()}.png`);
+            } catch (err) {
+                alert('保存失败：' + (err.message || '无法下载图片'));
+            }
         }
 
         function zoomImage() {

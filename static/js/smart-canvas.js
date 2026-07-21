@@ -2067,6 +2067,11 @@ function applyViewport(){
     shell.style.backgroundSize = '24px 24px';
     shell.style.backgroundPosition = '0 0';
     renderMinimap();
+    // composer 是屏幕空间元素，不随 world transform 移动，平移/缩放后按选中节点重新锚定。
+    if(composer.classList.contains('open')){
+        const active = selectedNode();
+        if(active) positionComposerForNode(active);
+    }
 }
 function screenToWorld(event){
     var rect = shell.getBoundingClientRect();
@@ -4151,7 +4156,7 @@ async function refreshSmartConfigFromSettings(){
     renderDynamicParams();
     const node = selectedNode();
     if(node?.type === 'smart-prompt') {
-        applySettingsToNode(node);
+        if(node.runSettings) sanitizeSmartApiSelection(node.runSettings);
         render();
     }
 }
@@ -6149,7 +6154,9 @@ async function loadCanvas(){
         if(settings.comfy_workflow && !settings.comfyWorkflow) settings.comfyWorkflow = settings.comfy_workflow;
         if(settings.comfy_params && !settings.comfyParams) settings.comfyParams = settings.comfy_params;
         updateProviderModels();
-        applyViewport();
+        // 旧版本可保存几乎不可见的视口：缩放极小（<0.1 时节点已无法看清和操作）时，重新适配内容
+        if(nodes.length && viewport.scale < 0.1) fitAllNodesViewport();
+        else applyViewport();
         render();
         if(cleanedDetachedInputs || cleanedCompletedState || recoveredLoopOutputs || hiddenCompletedTimers) scheduleSave();
         resumeSmartPendingTasks();
@@ -7037,22 +7044,20 @@ function downloadPreviewImage(){
     const image = node?.images?.[previewNavState.index];
     if(!image?.url) return;
     const name = downloadNameForMediaItem(image, 'image');
-    const link = document.createElement('a');
-    link.href = `/api/download-output?url=${encodeURIComponent(image.url)}&name=${encodeURIComponent(name)}`;
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const fetchUrl = `/api/download-output?url=${encodeURIComponent(image.url)}&name=${encodeURIComponent(name)}`;
+    fetch(fetchUrl)
+        .then(res => res.blob())
+        .then(blob => downloadBlob(blob, name))
+        .catch(() => toast('下载失败'));
 }
 function downloadPreviewFile(item){
     if(!item?.url) return;
     const name = downloadNameForMediaItem(item, 'output');
-    const link = document.createElement('a');
-    link.href = `/api/download-output?url=${encodeURIComponent(item.url)}&name=${encodeURIComponent(name)}`;
-    link.download = name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    const fetchUrl = `/api/download-output?url=${encodeURIComponent(item.url)}&name=${encodeURIComponent(name)}`;
+    fetch(fetchUrl)
+        .then(res => res.blob())
+        .then(blob => downloadBlob(blob, name))
+        .catch(() => toast('下载失败'));
 }
 function previewDownloadGroupItems(){
     // 分组预览：整组所有成员图片按阅读顺序打包。
@@ -7090,14 +7095,7 @@ async function zipDownloadImageItems(title, items){
         });
         if(!response.ok) throw new Error((await response.text()) || '批量下载失败');
         const blob = await response.blob();
-        const href = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = href;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(href), 1200);
+        downloadBlob(blob, filename);
     } catch(e) {
         toast((e.message || '批量下载失败').slice(0, 160));
     }
@@ -7809,9 +7807,6 @@ function render(){
     world.classList.toggle('smart-multi-selected', selectedNodeIds().length > 1);
     const composerEl = composer;
     const mediaStates = captureMediaPlaybackStates();
-    // 用户正在提示词框(contenteditable)输入时,本次重渲染不要移动 composer:
-    // 移动 DOM 节点会打断输入法合成会话,导致输入中断(即使保留焦点描边也接不上)。
-    const promptHadFocus = document.activeElement === promptInput;
     const reusableNodes = new Map();
     world.querySelectorAll('.image-node').forEach(el => {
         const node = nodes.find(n => n.id === el.dataset.id);
@@ -7865,13 +7860,10 @@ function render(){
     });
     const keepEls = new Set();
     reusableNodes.forEach(el => keepEls.add(el));
-    if(composerEl) keepEls.add(composerEl);
     [...world.childNodes].forEach(child => {
         if(!keepEls.has(child)) child.remove();
     });
-    // 用户正在提示词框输入时不要移动 composer:移动 DOM 会打断输入法合成、中断输入。
-    // composer 已在 keepEls 中(未被移除),不重排也不影响显示(z-index 固定)。
-    if(composerEl && !promptHadFocus) world.appendChild(composerEl);
+    // composer 已移出 world（屏幕空间悬浮栏），render 不再动它的 DOM 位置。
     world.insertAdjacentHTML('beforeend', renderConnections());
     nodeHtmlEntries.forEach(entry => {
         const fresh = renderedNodeEls.get(entry.node.id);
@@ -11694,12 +11686,27 @@ function loadPromptDraft(subject){
 }
 function positionComposerForNode(node){
     if(!node) return;
-    const rect = nodeRect(node);
-    const gap = 14;
     const cardW = 540;
     composer.style.width = `${cardW}px`;
-    composer.style.left = `${rect.x + rect.width / 2 - cardW / 2}px`;
-    composer.style.top = `${rect.y + rect.height + gap}px`;
+    const el = world.querySelector(`.image-node[data-id="${CSS.escape(node.id)}"]`);
+    if(!el) return;
+    // 用节点实际渲染位置（视口坐标）锚定，不用 nodeRect+viewport 换算：
+    // 换算依赖「shell 原点=视口原点、无祖先缩放」假设，UI 缩放/容器偏移场景会整体跑偏。
+    const rect = el.getBoundingClientRect();
+    // composer 的 style.left/top 与视口坐标之间可能隔着祖先 zoom/transform，
+    // 用 composer 自身渲染尺寸反推换算比例和原点，任何环境下都能对齐。
+    const rendered = composer.getBoundingClientRect();
+    const rawRatio = composer.offsetWidth ? rendered.width / composer.offsetWidth : 1;
+    const ratio = Number.isFinite(rawRatio) && rawRatio > 0 ? rawRatio : 1;
+    const baseX = rendered.left - (parseFloat(composer.style.left) || 0) * ratio;
+    const baseY = rendered.top - (parseFloat(composer.style.top) || 0) * ratio;
+    const gap = 14;
+    const visualLeft = rect.left + rect.width / 2 - rendered.width / 2;
+    const visualTop = rect.bottom + gap * ratio;
+    const left = Math.max(8, Math.min(Math.max(8, window.innerWidth - rendered.width - 8), visualLeft));
+    const top = Math.max(8, Math.min(visualTop, window.innerHeight - 80));
+    composer.style.left = `${(left - baseX) / ratio}px`;
+    composer.style.top = `${(top - baseY) / ratio}px`;
 }
 let composerUpdateTimer = 0;
 let composerUpdateSeq = 0;
@@ -13000,6 +13007,7 @@ function referenceImagesFor(node){
 function closeMentionPicker(){
     mentionPicker.classList.remove('open');
     mentionPicker.innerHTML = '';
+    mentionPicker.style.maxHeight = '';
     mentionAnchorEl = null;
     mentionInsertMode = 'token';
     if(selectedNode()) renderInputThumbsRow(selectedNode());
@@ -13077,14 +13085,13 @@ function renderMentionPicker(source){
     mentionPicker._items = candidates;
     bindSmartPreviewImageFallbacks(mentionPicker);
     if(mentionInsertMode === 'manual-ref'){
-        placeMentionPickerInComposerCard();
         renderInputThumbsRow(selectedNode());
         mentionAnchorEl = inputThumbsRow?.querySelector('[data-input-add-reference]') || inputThumbsRow;
-    } else {
-        placeMentionPickerInPromptRow();
     }
-    positionMentionPickerAtCaret();
+    placeMentionPickerInBody();
+    // 先 open 再定位：display:none 下量不到尺寸，翻转/限高需要真实高度。
     mentionPicker.classList.add('open');
+    positionMentionPickerAtCaret();
     mentionPicker.querySelectorAll('[data-mention-source]').forEach(btn => {
         btn.addEventListener('mousedown', e => {
             e.preventDefault(); e.stopPropagation();
@@ -13124,7 +13131,7 @@ function showMentionPicker(){
     const hasInput = inputMentionCandidateImages(node).length > 0;
     mentionInsertMode = 'token';
     mentionAnchorEl = null;
-    placeMentionPickerInPromptRow();
+    placeMentionPickerInBody();
     mentionSource = hasInput ? 'input' : 'asset';
     renderMentionPicker(mentionSource);
 }
@@ -13191,52 +13198,52 @@ function removeManualReferenceFromSelectedNode(key){
     renderInputThumbsRow(node);
     scheduleSave();
 }
-function placeMentionPickerInPromptRow(){
-    const row = promptInput?.closest?.('.prompt-row');
-    if(row && mentionPicker.parentElement !== row) row.insertBefore(mentionPicker, promptResize || null);
-}
-function placeMentionPickerInComposerCard(){
-    const card = promptInput?.closest?.('.composer-card');
-    if(card && mentionPicker.parentElement !== card) card.appendChild(mentionPicker);
+function placeMentionPickerInBody(){
+    // 弹窗挂到 body：放在 composer 内会被 composer 的 overflow-y:auto 裁掉下半截。
+    if(mentionPicker.parentElement !== document.body) document.body.appendChild(mentionPicker);
 }
 function positionMentionPickerAtCaret(){
-    const row = promptInput.closest('.prompt-row');
-    const rowRect = row.getBoundingClientRect();
+    // 锚点矩形（视口坐标）：手动加参考图模式用锚元素，@ 模式用光标位置。
+    let anchorRect = null;
     if(mentionAnchorEl){
-        const anchorRect = mentionAnchorEl.getBoundingClientRect();
-        const scale = (typeof viewport !== 'undefined' && Number(viewport?.scale)) || 1;
-        const safeScale = scale > 0 ? scale : 1;
-        const pickerWidth = mentionPicker.offsetWidth || 340;
-        const base = mentionPicker.offsetParent || mentionPicker.parentElement || row;
-        const baseRect = base.getBoundingClientRect();
-        const baseLogicalWidth = baseRect.width / safeScale;
-        const rawLeft = (anchorRect.right - baseRect.left) / safeScale - pickerWidth;
-        const rawTop = (anchorRect.bottom - baseRect.top) / safeScale + 2;
-        const left = Math.max(4, Math.min(rawLeft, Math.max(4, baseLogicalWidth - pickerWidth - 4)));
-        mentionPicker.style.left = `${left}px`;
-        mentionPicker.style.top = `${Math.max(2, rawTop)}px`;
-        return;
+        anchorRect = mentionAnchorEl.getBoundingClientRect();
+    } else {
+        const sel = window.getSelection();
+        if(sel && sel.rangeCount){
+            const range = sel.getRangeAt(0).cloneRange();
+            anchorRect = range.getClientRects()[0] || range.getBoundingClientRect();
+        }
+        if(!anchorRect) anchorRect = promptInput.getBoundingClientRect();
     }
-    let caretRect = null;
-    const sel = window.getSelection();
-    if(sel && sel.rangeCount){
-        const range = sel.getRangeAt(0).cloneRange();
-        caretRect = range.getClientRects()[0] || range.getBoundingClientRect();
+    // fixed 定位的 style 坐标与视口坐标之间可能隔着祖先缩放，用自身渲染尺寸反推换算比例和原点。
+    const rendered = mentionPicker.getBoundingClientRect();
+    const rawRatio = mentionPicker.offsetWidth ? rendered.width / mentionPicker.offsetWidth : 1;
+    const ratio = Number.isFinite(rawRatio) && rawRatio > 0 ? rawRatio : 1;
+    const baseX = rendered.left - (parseFloat(mentionPicker.style.left) || 0) * ratio;
+    const baseY = rendered.top - (parseFloat(mentionPicker.style.top) || 0) * ratio;
+    const margin = 12;
+    const gap = 4;
+    mentionPicker.style.maxHeight = '';
+    const pickerW = mentionPicker.offsetWidth || 340;
+    const pickerH = mentionPicker.offsetHeight || 240;
+    const spaceBelow = window.innerHeight - anchorRect.bottom - margin;
+    const spaceAbove = anchorRect.top - margin;
+    let top = anchorRect.bottom + gap;
+    // 下方放不下且上方更宽 → 向上弹出；高度封顶在可用空间内，列表内部滚动。
+    if(spaceBelow < pickerH && spaceAbove > spaceBelow){
+        const cap = Math.max(96, Math.min(260, spaceAbove));
+        mentionPicker.style.maxHeight = `${cap}px`;
+        top = anchorRect.top - Math.min(pickerH, cap) - gap;
+    } else if(spaceBelow < pickerH){
+        const cap = Math.max(96, Math.min(260, spaceBelow));
+        mentionPicker.style.maxHeight = `${cap}px`;
     }
-    const inputRect = promptInput.getBoundingClientRect();
-    // composer 在 world 里被 viewport.scale 缩放过，getBoundingClientRect 返回的是缩放后的屏幕像素，
-    // 而 style.left/top 是逻辑像素 → 需要除以 scale 才能正确还原 caret 的逻辑坐标
-    const scale = (typeof viewport !== 'undefined' && Number(viewport?.scale)) || 1;
-    const safeScale = scale > 0 ? scale : 1;
-    const rowLogicalWidth = rowRect.width / safeScale;
-    const pickerWidth = mentionPicker.offsetWidth || 340;
-    const maxLeft = Math.max(4, rowLogicalWidth - pickerWidth - 4);
-    const rawLeft = ((caretRect?.left || inputRect.left) - rowRect.left) / safeScale - 6;
-    const rawTop = ((caretRect?.bottom || inputRect.top + 24) - rowRect.top) / safeScale + 2;
-    const left = Math.max(4, Math.min(rawLeft, maxLeft));
-    const top = Math.max(2, rawTop);
-    mentionPicker.style.left = `${left}px`;
-    mentionPicker.style.top = `${top}px`;
+    const finalH = mentionPicker.offsetHeight || pickerH;
+    top = Math.max(margin, Math.min(top, window.innerHeight - finalH - margin));
+    const rawLeft = mentionAnchorEl ? anchorRect.right - pickerW : anchorRect.left;
+    const left = Math.max(margin, Math.min(rawLeft, window.innerWidth - pickerW - margin));
+    mentionPicker.style.left = `${(left - baseX) / ratio}px`;
+    mentionPicker.style.top = `${(top - baseY) / ratio}px`;
 }
 function maybeOpenMentionPicker(){
     saveMentionRange();
@@ -15658,6 +15665,7 @@ function finishSelection(event){
     selectedImage = {nodeId:'', index:-1};
     selectionState = null;
     selectionJustFinished = true;
+    document.body.classList.remove('smart-selecting');
     selectionBox.style.display = 'none';
     render();
     setTimeout(() => { selectionJustFinished = false; }, 0);
@@ -15906,6 +15914,7 @@ shell.onmousedown = e => {
         e.preventDefault();
         didPan = false;
         selectionState = {startScreen:{x:e.clientX, y:e.clientY}, startWorld:screenToWorld(e)};
+        document.body.classList.add('smart-selecting');
         updateSelectionBox(e);
         return;
     }
@@ -15913,6 +15922,7 @@ shell.onmousedown = e => {
         e.preventDefault();
         didPan = false;
         selectionState = {startScreen:{x:e.clientX, y:e.clientY}, startWorld:screenToWorld(e)};
+        document.body.classList.add('smart-selecting');
         updateSelectionBox(e);
         return;
     }
@@ -15921,6 +15931,7 @@ shell.onmousedown = e => {
     didPan = false;
     panState = {button:e.button, startX:e.clientX, startY:e.clientY, ox:viewport.x, oy:viewport.y};
     shell.classList.add('panning');
+    document.body.classList.add('smart-board-pan');
 };
 shell.oncontextmenu = e => {
     if((e.ctrlKey || e.metaKey) || isRKeyDown){
@@ -16264,6 +16275,8 @@ window.onmousemove = e => {
 window.onmouseup = e => {
     document.body.classList.remove('smart-node-drag');
     document.body.classList.remove('smart-node-resize');
+    document.body.classList.remove('smart-selecting');
+    document.body.classList.remove('smart-board-pan');
     if(portDragState){
         const drag = portDragState;
         portDragState = null;
@@ -16324,6 +16337,7 @@ window.onmouseup = e => {
     if(panState) {
         panState = null;
         shell.classList.remove('panning');
+        document.body.classList.remove('smart-board-pan');
         scheduleSave();
         setTimeout(() => { didPan = false; }, 0);
     }
@@ -16451,12 +16465,26 @@ let trackpadLastPinchTime = 0;
 function isMouseWheel(e){
     return NovaViewport.isMouseWheel(e);
 }
+// 滚轮/触控板手势期间的 body 门控：双指平移或捏合缩放进行中挂 smart-board-pan，停顿 260ms 判定
+// 手势结束后摘除。若拖拽平移（panState）正在进行，该类由 shell.onmousedown/window.onmouseup 持有。
+let shellWheelGestureTimer = 0;
+function markShellWheelGesture(){
+    document.body.classList.add('smart-board-pan');
+    if(shellWheelGestureTimer) clearTimeout(shellWheelGestureTimer);
+    shellWheelGestureTimer = setTimeout(() => {
+        shellWheelGestureTimer = 0;
+        if(!panState) document.body.classList.remove('smart-board-pan');
+    }, 260);
+}
 
 document.addEventListener('gesturestart', e => {
+    // 触屏双指捏合由 touch-mouse.js 桥接成 ctrl+wheel 处理，这里跳过避免双重缩放
+    if(window.__novaTouchGestureActive){ e.preventDefault(); return; }
     e.preventDefault();
     gestureActive = true;
     trackpadPinchAccum = 0;
     const rect = shell.getBoundingClientRect();
+    document.body.classList.add('smart-board-pan');
     gestureState = {
         startScale: viewport.scale,
         originX: e.pageX - rect.left,
@@ -16476,6 +16504,7 @@ document.addEventListener('gesturechange', e => {
     scheduleSave();
 });
 document.addEventListener('gestureend', e => {
+    if(gestureState) document.body.classList.remove('smart-board-pan');
     gestureActive = false;
     gestureState = null;
     trackpadPinchAccum = 0;
@@ -16492,10 +16521,12 @@ shell.addEventListener('wheel', e => {
     // 超过 200ms 没有新的捏合事件，重置累积器（新一轮手势）
     if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
     trackpadLastPinchTime = now;
-    if(e.ctrlKey || e.metaKey){
+    if(e.ctrlKey || e.metaKey || e.__novaTouchPinch){
         // gesture 活跃时跳过，避免 Chrome 上 gesture + wheel 双重缩放
         if(gestureActive){ trackpadPinchAccum = 0; return; }
-        // ctrlKey+wheel = 缩放（Mac触摸板捏合手势到达此处时为ctrlKey+wheel）
+        markShellWheelGesture();
+        // ctrlKey+wheel = 缩放（Mac触摸板捏合手势到达此处时为ctrlKey+wheel；
+        // 触屏双指捏合由 touch-mouse.js 桥接成 __novaTouchPinch 标记的同类事件）
         // 累积 deltaY，超过阈值才触发缩放
         trackpadPinchAccum += e.deltaY;
         if(Math.abs(trackpadPinchAccum) < TRACKPAD_PINCH_THRESHOLD) return;
@@ -16508,6 +16539,13 @@ shell.addEventListener('wheel', e => {
         viewport.x = sx - before.x * viewport.scale;
         viewport.y = sy - before.y * viewport.scale;
         trackpadPinchAccum = 0;
+        applyViewport();
+    } else if(e.__novaTouchPan){
+        // 触屏双指拖动（touch-mouse.js 桥接合成）→ 平移
+        trackpadPinchAccum = 0;
+        markShellWheelGesture();
+        viewport.x -= e.deltaX;
+        viewport.y -= e.deltaY;
         applyViewport();
     } else if(isMouseWheel(e)){
         // 普通鼠标滚轮 → 缩放
@@ -16524,6 +16562,7 @@ shell.addEventListener('wheel', e => {
     } else {
         // 触控板双指平移
         trackpadPinchAccum = 0;
+        markShellWheelGesture();
         viewport.x -= e.deltaX;
         viewport.y -= e.deltaY;
         applyViewport();

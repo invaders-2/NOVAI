@@ -13,21 +13,21 @@
             }
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
-    <script src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/css/api-settings.css?v=1.0.83.1784365787">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/vendor/js/lucide-subset.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <script src="/static/js/i18n.js?v=1.0.85.1784619943.1784319389"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.85.1784619943.1784477206">
+    <link rel="stylesheet" href="/static/css/api-settings.css?v=1.0.85.1784619943.1784548778">
 
-<link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+<link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.85.1784619943.1784291998">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
-body { background: var(--bg) !important; color: var(--text) !important; }
+body { background: transparent !important; color: var(--text) !important; }
 /* --- Marvis 增强覆盖 (api-settings.html) --- */
-.page { background: var(--bg) !important; }
+.page { background: var(--bg) !important; padding: 20px !important; }
 .page-head { border-bottom-color: var(--divider) !important; }
 .sidebar { background: var(--stage-bg) !important; border-color: var(--border) !important; border-radius: var(--radius-xl) !important; }
 .block { background: var(--stage-bg) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-xl) !important; box-shadow: var(--shadow-sm) !important; }
@@ -57,24 +57,27 @@ html.settings-embed *::-webkit-scrollbar {
 html.settings-embed .page { padding: 0; min-height: auto; background: transparent !important; }
 html.settings-embed .wrap { max-width: none; }
 html.settings-embed .page-head { display: none; }
-html.settings-embed .layout { grid-template-columns: 200px minmax(0,1fr); gap: 18px; align-items: start; }
+html.settings-embed .layout { grid-template-columns: 260px minmax(0,1fr); gap: 10px; align-items: start; }
 html.settings-embed .sidebar {
     position: static;
     max-height: none;
+    width: 260px;
+    min-width: 260px;
+    flex-shrink: 0;
     background: var(--bg) !important;
     border: 1px solid var(--divider) !important;
-    border-radius: 16px !important;
+    border-radius: 20px !important;
     padding: 14px;
 }
 html.settings-embed .block {
     background: var(--stage-bg) !important;
     border: 1px solid var(--divider) !important;
-    border-radius: 16px !important;
+    border-radius: 20px !important;
     box-shadow: none !important;
     padding: 18px 20px !important;
 }
 html.settings-embed .content-head {
-    border-radius: 16px !important;
+    border-radius: 20px !important;
     border: 1px solid var(--divider) !important;
     background: var(--stage-bg) !important;
 }
@@ -102,6 +105,19 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
     html.settings-embed .layout { grid-template-columns: 1fr; }
     html.settings-embed .sidebar { position: static; max-height: none; }
 }
+/* ═══ Modal embed: fill iframe height, content scrolls ═══ */
+html.settings-embed .wrap,
+html.settings-embed .page { height: 100%; overflow: hidden; }
+html.settings-embed .layout { height: 100%; overflow: hidden; }
+html.settings-embed .content { overflow-y: auto; }
+html.settings-embed .sidebar { overflow-y: auto; }
+html.settings-embed .content-head { position: sticky; top: 0; z-index: 5; }
+/* Close button */
+.settings-close-btn, .modal-close-btn { transition: transform 0.2s ease-out; }
+.settings-close-btn:hover, .modal-close-btn:hover { transform: rotate(90deg) scale(1.1); }
+/* Switch animation */
+input[type="checkbox"].toggle-switch { transition: all 0.2s cubic-bezier(0.22,0.61,0.36,1); }
+.ios-slider, .toggle-track { transition: all 0.2s cubic-bezier(0.22,0.61,0.36,1); }
 </style>
 </head>
 <body>
@@ -128,6 +144,12 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
                             <button class="cli-quick-btn" type="button" onclick="addCliProvider('codex')"><i data-lucide="terminal" class="w-3.5 h-3.5"></i><span>GPT CLI</span></button>
                             <button class="cli-quick-btn" type="button" onclick="addCliProvider('gemini-cli')"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i><span>Antigravity CLI</span></button>
                             <div class="cli-quick-note">需要先安装 CLI文件夹中的依赖。</div>
+                        </div>
+                    </div>
+                    <div class="cli-quick-group" style="margin-top:16px;">
+                        <div class="side-section-title">存储设置</div>
+                        <div class="cli-quick-list">
+                            <button id="sidebarStorageBtn" class="cli-quick-btn active" type="button" onclick="showStorageSettings()"><i data-lucide="folder-open" class="w-3.5 h-3.5"></i><span>输出目录</span></button>
                         </div>
                     </div>
                 </aside>
@@ -172,10 +194,6 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
                                 </div>
                                 <div class="apimart-hint">
                                     <span class="ms-line">国内请求地址：<span class="inline-code">https://apib.ai</span></span>
-                                </div>
-                                <div class="volcengine-hint">
-                                    <span class="ms-line">方舟默认请求地址：<span class="inline-code">https://ark.cn-beijing.volces.com/api/v3</span></span>
-                                    <span class="ms-line">Seedance 视频生成使用方舟 API Key，验证会请求 <span class="inline-code">/api/v3/models</span>。</span>
                                 </div>
                             </label>
                             <label class="field full api-key-field">
@@ -232,54 +250,6 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
                                             </div>
                                         </div>
                                         <span id="rhWalletKeyHint" class="hint"></span>
-                                    </div>
-                                </div>
-                                <div class="volcengine-key-stack" hidden>
-                                    <div class="rh-key-item">
-                                        <div class="rh-key-head">
-                                            <div>
-                                                <div class="rh-key-title" data-i18n="api.volcengineArkKey">方舟 API Key · 生成视频</div>
-                                                <div class="rh-key-desc" data-i18n="api.volcengineArkKeyDesc">用于 Seedance 2.0 生成接口，Authorization: Bearer。</div>
-                                            </div>
-                                        </div>
-                                        <span id="volcArkKeyHint" class="hint"></span>
-                                    </div>
-                                    <div class="rh-key-item">
-                                        <div class="rh-key-head">
-                                            <div>
-                                                <div class="rh-key-title" data-i18n="api.volcengineAssetKeys">素材库 AK/SK · 上传素材</div>
-                                                <div class="rh-key-desc" data-i18n="api.volcengineAssetKeysDesc">用于 CreateAssetGroup / CreateAsset / GetAsset 的 Access Key 鉴权。</div>
-                                            </div>
-                                        </div>
-                                        <div class="key-input-line">
-                                            <div class="field-frame"><input id="volcAkInput" type="password" placeholder="Access Key ID"></div>
-                                        </div>
-                                        <div class="key-input-line">
-                                            <div class="field-frame"><input id="volcSkInput" type="password" placeholder="Secret Access Key"></div>
-                                            <div class="key-actions">
-                                                <button class="key-btn" type="button" onclick="saveVolcengineAssetKeys()" title="保存火山素材库 AK/SK"><i data-lucide="check" class="w-4 h-4"></i></button>
-                                                <button class="key-btn key-clear" type="button" onclick="clearVolcengineAssetKeys()" title="清除火山素材库 AK/SK"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                                            </div>
-                                        </div>
-                                        <span id="volcAssetKeyHint" class="hint"></span>
-                                    </div>
-                                    <div class="rh-key-item volcengine-project-card">
-                                        <div class="rh-key-head">
-                                            <div>
-                                                <div class="rh-key-title" data-i18n="api.volcengineProject">素材库项目</div>
-                                                <div class="rh-key-desc" data-i18n="api.volcengineProjectDesc">ProjectName 必须和视频生成 API Key 所属项目一致。</div>
-                                            </div>
-                                        </div>
-                                        <div class="volcengine-project-grid">
-                                            <div class="rh-card-title-field">
-                                                <span>ProjectName</span>
-                                                <input id="volcProjectInput" type="text" value="default">
-                                            </div>
-                                            <div class="rh-card-title-field">
-                                                <span>Region</span>
-                                                <input id="volcRegionInput" type="text" value="cn-beijing">
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="ms-hint">
@@ -402,21 +372,30 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
                     </section>
 
                     <div id="modelsHead" class="block models-toolbar">
-                        <div>
-                            <div class="block-title" data-i18n="api.modelsTitle">模型列表</div>
-                            <div class="block-desc" data-i18n="api.modelsDesc">从上游 API 自动拉取所有可用模型并按类型分类（image / chat / video）</div>
+                        <div class="models-toolbar-main">
+                            <div>
+                                <div class="block-title" data-i18n="api.modelsTitle">模型列表</div>
+                                <div class="block-desc" data-i18n="api.modelsDesc">从上游 API 自动拉取所有可用模型并按类型分类（image / chat / video）</div>
+                            </div>
+                            <div class="models-toolbar-actions">
+                                <button id="fetchModelsBtn" class="action-btn primary-btn" type="button" onclick="fetchModels()">
+                                    <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i><span data-i18n="api.fetchModels">拉取模型</span>
+                                </button>
+                                <button id="openPickerBtn" class="action-btn" type="button" onclick="openModelPicker()" disabled style="opacity:.5">
+                                    <i data-lucide="list-checks" class="w-3.5 h-3.5"></i><span data-i18n="api.selectModels">选择模型</span>
+                                </button>
+                            </div>
                         </div>
-                        <div class="models-toolbar-actions">
-                            <button id="fetchModelsBtn" class="action-btn primary-btn" type="button" onclick="fetchModels()">
-                                <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i><span data-i18n="api.fetchModels">拉取模型</span>
-                            </button>
-                            <button id="openPickerBtn" class="action-btn" type="button" onclick="openModelPicker()" disabled style="opacity:.5">
-                                <i data-lucide="list-checks" class="w-3.5 h-3.5"></i><span data-i18n="api.selectModels">选择模型</span>
-                            </button>
+                        <div id="modelsFetchHint" class="models-fetch-hint" hidden></div>
+                        <div class="model-cat-tabs" id="modelCatTabs" role="tablist" aria-label="模型分类">
+                            <button class="model-cat-tab active" data-cat="all" role="tab" aria-selected="true" type="button" onclick="selectModelGroup('all')">全部 <span class="cat-count" id="catCountAll">0</span></button>
+                            <button class="model-cat-tab" data-cat="image" role="tab" aria-selected="false" type="button" onclick="selectModelGroup('image')">图像 <span class="cat-count" id="catCountImage">0</span></button>
+                            <button class="model-cat-tab" data-cat="chat" role="tab" aria-selected="false" type="button" onclick="selectModelGroup('chat')">对话 <span class="cat-count" id="catCountChat">0</span></button>
+                            <button class="model-cat-tab" data-cat="video" role="tab" aria-selected="false" type="button" onclick="selectModelGroup('video')">视频 <span class="cat-count" id="catCountVideo">0</span></button>
                         </div>
                     </div>
-                    <div class="model-grid">
-                        <section class="block">
+                    <div class="model-grid" id="modelGrid">
+                        <section class="block" id="imageModelBlock">
                             <div class="block-head">
                                 <div>
                                     <div class="block-title" data-i18n="api.imageModels">生图模型</div>
@@ -430,7 +409,7 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
                             <div id="imageModelList" class="model-list"></div>
                         </section>
 
-                        <section class="block">
+                        <section class="block" id="chatModelBlock">
                             <div class="block-head">
                                 <div>
                                     <div class="block-title" data-i18n="api.chatModels">聊天模型</div>
@@ -441,7 +420,7 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
                         <div id="chatModelList" class="model-list"></div>
                     </section>
 
-                        <section class="block">
+                        <section class="block" id="videoModelBlock">
                             <div class="block-head">
                                 <div>
                                     <div class="block-title" data-i18n="api.videoModels">视频模型</div>
@@ -467,6 +446,43 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
                             <div id="msLoraList" class="lora-list"></div>
                         </section>
                 </div>
+
+                <!-- 存储设置 - 自定义输出目录 -->
+                <div id="storageSettingsBlock" class="settings-hidden">
+                    <div class="content-head">
+                        <div>
+                            <div class="editor-title">输出目录</div>
+                            <div class="editor-sub">自定义生成的图片、视频保存位置（不影响 API 配置和画布数据）</div>
+                        </div>
+                        <div class="content-actions">
+                            <button class="action-btn save-btn api-page-save-btn" type="button" onclick="saveOutputDir()"><i data-lucide="save" class="w-3.5 h-3.5"></i><span>保存</span></button>
+                        </div>
+                    </div>
+                    <section class="block">
+                        <div class="block-head">
+                            <div>
+                                <div class="block-title">生成文件存放路径</div>
+                                <div class="block-desc">修改后需重启应用生效。留空恢复默认路径（%APPDATA%\NOVAI\output）</div>
+                            </div>
+                        </div>
+                        <div class="form">
+                            <label class="field full">
+                                <span class="label">自定义目录</span>
+                                <div class="field-frame" style="display:flex;gap:8px;">
+                                    <input id="outputDirInput" type="text" placeholder="例如 D:\NOVAI\图片输出" style="flex:1;">
+                                    <button class="action-btn" type="button" onclick="browseOutputDir()" style="white-space:nowrap;">
+                                        <i data-lucide="folder-search" class="w-3.5 h-3.5"></i><span>浏览</span>
+                                    </button>
+                                    <button class="action-btn" type="button" onclick="resetOutputDir()" style="white-space:nowrap;">
+                                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i><span>默认</span>
+                                    </button>
+                                </div>
+                            </label>
+                            <div id="outputDirStatus" class="field-hint" style="margin-top:8px;font-size:12px;color:var(--muted);"></div>
+                        </div>
+                    </section>
+                </div>
+
             </main>
                 <main id="recommendContent" class="content recommend-content" hidden>
                     <div class="content-head">
@@ -650,6 +666,6 @@ body.theme-dark .action-btn.save-btn.api-page-save-btn:hover {
         </div>
     </div>
 
-    <script src="/static/js/api-settings.js?v=1.0.83.1784320796"></script>
+    <script src="/static/js/api-settings.js?v=1.0.85.1784619943.1784548436"></script>
 </body>
 </html>

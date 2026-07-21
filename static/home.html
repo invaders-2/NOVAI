@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NOVAI - 首页</title>
     <script>(function(){try{var t=localStorage.getItem('studio_theme')||localStorage.getItem('canvas_theme')||'light';if(t==='dark'){document.documentElement.classList.add('studio-theme-dark');document.documentElement.classList.add('theme-dark');}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.85.1784619943.1784291998">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
     <style>
         /* ═══ V4 Apple-style Glassmorphism Design System ═══ */
         :root {
@@ -54,7 +54,19 @@
             padding: 0 24px;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            scrollbar-width: none;
+            overflow-x: hidden;
+            max-width: 100vw;
         }
+        body::-webkit-scrollbar { width: 6px; }
+        body::-webkit-scrollbar-track { background: transparent; }
+        body::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; transition: background 0.3s ease; }
+        body:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+        .theme-dark body::-webkit-scrollbar-thumb { background: transparent; }
+        .theme-dark body:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+        body { scrollbar-width: none; }
+        body:hover { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) transparent; }
+        .theme-dark body:hover { scrollbar-color: rgba(255,255,255,0.2) transparent; }
 
         .home-container {
             width: 100%;
@@ -72,7 +84,7 @@
         }
 
         .hero-title {
-            font-size: 52px;
+            font-size: 47px;
             font-weight: 400;
             letter-spacing: 0.02em;
             line-height: 1.1;
@@ -120,7 +132,7 @@
             border-radius: 16px;
             padding: 24px 20px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--v4-card-shadow);
-            transition: transform 0.35s var(--v4-ease-out), box-shadow 0.35s var(--v4-ease-out), border-color 0.35s var(--v4-ease-out);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
             cursor: pointer;
             display: flex;
             align-items: flex-start;
@@ -136,9 +148,9 @@
         .feature-card:nth-child(4) { animation-delay: 0.26s; }
 
         .feature-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-4px);
             box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--v4-card-shadow-hover);
-            border-color: rgba(0,0,0,0.08);
+            border-color: rgba(0,0,0,0.12);
         }
 
         .feature-card:active {
@@ -222,7 +234,7 @@
             font-size: 14px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.35s var(--v4-ease-out);
+            transition: all 0.2s ease-out;
             text-decoration: none;
             letter-spacing: 0.01em;
         }
@@ -230,6 +242,7 @@
         .cta-button:hover {
             transform: scale(1.03);
             box-shadow: 0 6px 20px -6px var(--v4-card-shadow-hover);
+            background: linear-gradient(135deg, var(--v4-btn-bg) 0%, #444 100%);
         }
 
         .cta-button:active {
@@ -251,14 +264,54 @@
             animation: fadeUp 0.7s var(--v4-ease-out) 0.38s both;
         }
 
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
         .section-title {
             font-size: 11px;
             font-weight: 500;
             color: var(--v4-muted);
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            margin-bottom: 12px;
             padding-left: 4px;
+        }
+
+        .view-all-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            background: none;
+            border: none;
+            padding: 2px 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--v4-muted);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: color 0.2s ease-out;
+            font-family: inherit;
+        }
+
+        .view-all-btn:hover {
+            color: var(--v4-text);
+        }
+
+        .view-all-btn:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 2px;
+        }
+
+        .view-all-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .view-all-btn[hidden] {
+            display: none;
         }
 
         .recent-grid {
@@ -276,7 +329,7 @@
             padding: 12px 14px;
             cursor: pointer;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 2px 8px -2px var(--v4-card-shadow);
-            transition: transform 0.3s var(--v4-ease-out), box-shadow 0.3s var(--v4-ease-out), border-color 0.3s var(--v4-ease-out);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -669,7 +722,15 @@
 
         <!-- 最新画布 -->
         <section class="recent-section">
-            <div class="section-title">最新画布</div>
+            <div class="section-header">
+                <div class="section-title">最新画布</div>
+                <button type="button" class="view-all-btn" id="viewAllBtn" hidden onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
+                    查看全部
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                </button>
+            </div>
             <div class="recent-grid" id="recentProjects">
                 <div class="recent-empty">暂无最近画布，开始创作后这里将显示你最近访问的画布</div>
             </div>
@@ -764,8 +825,10 @@
                         return;
                     }
                     console.log('[home] Recent canvases:', canvases);
+                    var viewAllBtn = document.getElementById('viewAllBtn');
+                    if (viewAllBtn) viewAllBtn.hidden = canvases.length <= 6;
                     var html = '';
-                    canvases.forEach(function(c) {
+                    canvases.slice(0, 6).forEach(function(c) {
                         try {
                             var name = escapeHtml(c.title || c.name || '未命名画布');
                             var canvasId = c.id || '';

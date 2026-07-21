@@ -4,6 +4,7 @@
 import os
 import sys
 import shutil
+import fnmatch
 import subprocess
 import platform
 
@@ -93,20 +94,29 @@ def copy_assets():
         if os.path.isfile(src):
             shutil.copy2(src, os.path.join(DIST_DESKTOP, f))
 
-    # 目录
+    # 目录（排除测试图片、API 配置、日志等敏感/临时文件）
+    COPY_IGNORE = shutil.ignore_patterns(
+        "*.pyc", "__pycache__",
+        "test-*.png", "tmp_*.png", "*.log", ".env",
+    )
     for folder in ["static", "tools", "packages"]:
         src = os.path.join(ROOT, folder)
         dst = os.path.join(DIST_DESKTOP, folder)
         if os.path.isdir(dst):
             shutil.rmtree(dst, ignore_errors=True)
         if os.path.isdir(src):
-            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("*.pyc", "__pycache__"))
+            shutil.copytree(src, dst, ignore=COPY_IGNORE)
 
-    # assets（不复制 input/output/uploads，安装后运行时创建）
+    # assets（排除 input/output/uploads + 测试图片/日志，安装后运行时创建）
+    ASSET_SKIP_ITEMS = {"input", "output", "uploads"}
+    ASSET_IGNORE = shutil.ignore_patterns("*.pyc", "__pycache__", "test-*.png", "tmp_*.png", "*.log")
     dst_assets = os.path.join(DIST_DESKTOP, "assets")
     os.makedirs(dst_assets, exist_ok=True)
     for item in os.listdir(os.path.join(ROOT, "assets")):
-        if item in ("input", "output", "uploads"):
+        if item in ASSET_SKIP_ITEMS:
+            continue
+        # 跳过测试图片和日志等临时文件
+        if any(fnmatch.fnmatch(item, pat) for pat in ("test-*.png", "tmp_*.png", "*.log")):
             continue
         src_p = os.path.join(ROOT, "assets", item)
         dst_p = os.path.join(dst_assets, item)
@@ -115,7 +125,7 @@ def copy_assets():
         elif os.path.isdir(src_p):
             if os.path.isdir(dst_p):
                 shutil.rmtree(dst_p, ignore_errors=True)
-            shutil.copytree(src_p, dst_p, ignore=shutil.ignore_patterns("*.pyc", "__pycache__"))
+            shutil.copytree(src_p, dst_p, ignore=ASSET_IGNORE)
 
     print(f"✅ 业务文件已复制到 {DIST_DESKTOP}")
 

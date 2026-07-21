@@ -42,6 +42,135 @@ def get_app_dir() -> str:
     return os.path.dirname(os.path.abspath(__file__))
 
 
+def _paint_mac_titlebar(win, color):
+    """同步 macOS 窗口顶部与主题色（须在主线程调用）。
+
+    - NSWindow 背景刷成页面顶部色：圆角边缘、webview 完成绘制前的窗口底色都跟主题。
+    - 标题栏容器视图刷透明：pywebview 建窗时给它设了固定系统色（不随窗口色变化），
+      刷透明后标题栏区域直接显示 webview 里的 App Header，天然随主题一致。
+      实测该容器只在红绿灯按钮上拦截点击，条带其余区域点击穿透到 webview，不影响交互。
+    """
+    from Cocoa import NSColor
+    try:
+        win.setBackgroundColor_(color)
+        frame = win.contentView().superview()
+        if frame is None:
+            return
+        for sub in frame.subviews():
+            try:
+                if 'Titlebar' in str(sub.className()) and sub.respondsToSelector_('setBackgroundColor:'):
+                    sub.setBackgroundColor_(NSColor.clearColor())
+            except Exception:
+                pass
+        _hide_mac_titlebar_chrome(win)
+    except Exception:
+        pass
+
+
+def _hide_mac_titlebar_chrome(win):
+    """隐藏标题栏装饰视图，消除窗口顶部 1pt 亮色细线（须在主线程调用；幂等）。
+
+    红绿灯整体平移把 NSTitlebarContainerView 挪离原位后，容器内随移的
+    _NSTitlebarDecorationView、背景填充 NSView 等会在顶缘画出一条横贯的
+    亮色细线（深色模式下明显）。这些只是装饰；红绿灯按钮挂在 NSTitlebarView 里，
+    隐藏其兄弟视图不影响按钮显示与点击。系统 relayout / 主题切换可能重新显示
+    这些视图，故在 applyTrafficLights_ 与 _paint_mac_titlebar 里重复调用。
+    """
+    try:
+        btn = win.standardWindowButton_(0)
+        if btn is None:
+            return
+        titlebar_view = btn.superview()
+        if titlebar_view is None:
+            return
+        container = titlebar_view.superview()
+        if container is not None:
+            for sub in container.subviews():
+                if sub is titlebar_view:
+                    continue
+                try:
+                    sub.setHidden_(True)
+                except Exception:
+                    pass
+        for sub in titlebar_view.subviews():
+            try:
+                if 'Widget' in str(sub.className()):
+                    continue
+                sub.setHidden_(True)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+# 窗口拖拽监视器状态（模块级，防止闭包/monitor token 被 GC）
+_native_drag_state = {"monitors": []}
+
+# 红绿灯目标位（窗口坐标 pt，与前端 CSS px 一一对应）：
+# 红灯左缘对齐主壳侧栏【面板本身】左缘（Boss 复核口径："红绿灯左边距 == 侧栏左边距"
+# 指悬浮 sidebar 面板距窗口左缘的 margin，即 .app-shell padding = 15pt；收起/展开态
+# 面板左缘均为 15，与图标列无关。曾误对齐图标列 44，方向反了）。
+# 注意 AppKit convertPoint 坐标系与屏幕/CGWindow 坐标系存在 +1pt 系统偏差（常量 44
+# 时 AX/像素实测 45），故常量设 14.0 抵消，使实测命中 15.0。
+# 中心线与主壳 .stage-actions 按钮同线（top:18 + 半高 18 = 36）。
+_MAC_TL_LEFT_X = 14.0
+_MAC_TL_CENTER_Y = 36.0
+
+
+def _end_native_window_drag():
+    """移除窗口拖拽用的本地事件监视器（须在主线程调用）"""
+    try:
+        from Cocoa import NSEvent
+        for mon in _native_drag_state["monitors"]:
+            try:
+                NSEvent.removeMonitor_(mon)
+            except Exception:
+                pass
+        _native_drag_state["monitors"] = []
+    except Exception:
+        pass
+
+
+def _begin_native_window_drag():
+    """安装 LeftMouseDragged/Up 本地监视器，让窗口跟随鼠标位移（须在主线程调用）。
+
+    pywebview（WKWebView）不支持 -webkit-app-region: drag，
+    movableByWindowBackground 又够不到盖满整个窗口的 webview 区域，
+    只能原生层按鼠标位移挪窗口。前端 Header 带 mousedown 时经桥调用。
+    """
+    from Cocoa import NSEvent, NSApp
+    try:
+        wins = NSApp.windows()
+        if not wins:
+            return
+        win = wins[0]
+        _end_native_window_drag()  # 防重复安装
+
+        start = {"mouse": NSEvent.mouseLocation(), "origin": win.frame().origin}
+
+        def on_event(event):
+            try:
+                if event.type() == 2:  # NSLeftMouseUp → 结束本次拖拽
+                    _end_native_window_drag()
+                    return event
+                cur = NSEvent.mouseLocation()
+                o = start["origin"]
+                win.setFrameOrigin_((
+                    o.x + (cur.x - start["mouse"].x),
+                    o.y + (cur.y - start["mouse"].y),
+                ))
+            except Exception:
+                pass
+            return event
+
+        # NSEventMaskLeftMouseDragged = 1 << 6, NSEventMaskLeftMouseUp = 1 << 2
+        mon = NSEvent.addLocalMonitorForEventsMatchingMask_handler_((1 << 6) | (1 << 2), on_event)
+        if mon:
+            _native_drag_state["monitors"].append(mon)
+    except Exception:
+        pass
+
+
 def main():
     hide_console()
     app_dir = get_app_dir()
@@ -106,6 +235,25 @@ def main():
         os.environ["NOVAI_LAN_URL"] = lan_url
         os.environ["NOVAI_LAN_IP"] = lan_ip
         log(f"LAN access: {lan_url}")
+        # 运行时确保防火墙规则存在（安装包已添加，此处兜底）
+        try:
+            import subprocess as sp
+            rule_name = "NOVAI Server (port 3000)"
+            result = sp.run(
+                f'netsh advfirewall firewall show rule name="{rule_name}"',
+                capture_output=True, text=True, shell=True, timeout=5
+            )
+            if "未找到" in result.stdout or "No rules match" in result.stdout:
+                log("Firewall rule missing, adding...")
+                sp.run(
+                    f'netsh advfirewall firewall add rule name="{rule_name}" dir=in action=allow protocol=TCP localport={PORT}',
+                    capture_output=True, shell=True, timeout=10
+                )
+                log("Firewall rule added")
+            else:
+                log("Firewall rule OK")
+        except Exception as e:
+            log(f"Firewall check skipped: {e}")
     else:
         log("LAN access: unable to detect local IP")
 
@@ -194,11 +342,166 @@ def main():
                         self._maximized = True
 
             def close(self):
-                # 关闭按钮改为隐藏窗口（最小化到托盘），不退出应用
                 try:
                     webview.windows[0].hide()
                 except Exception as e:
                     log(f"close hide error: {e}")
+
+            def quit_app(self):
+                """直接退出应用"""
+                log("quit_app: exiting")
+                webview.windows[0].destroy()
+                os._exit(0)
+
+            def save_file(self, data: str, filename: str = None) -> str:
+                """保存文件：接收 base64 数据，弹出原生另存为对话框，返回保存路径或空字符串"""
+                import base64, re
+                try:
+                    # 解析 data URL 或纯 base64
+                    b64 = data
+                    ext = ".png"
+                    if "," in data and data.startswith("data:"):
+                        header, b64 = data.split(",", 1)
+                        m = re.match(r"data:image/(\w+)", header)
+                        if m:
+                            ext = "." + m.group(1)
+                    raw = base64.b64decode(b64)
+
+                    default_name = filename or f"Art-{int(time.time())}{ext}"
+                    result = webview.windows[0].create_file_dialog(
+                        webview.SAVE_DIALOG,
+                        directory="",
+                        save_filename=default_name
+                    )
+                    if result:
+                        with open(result, "wb") as f:
+                            f.write(raw)
+                        log(f"save_file: saved to {result}")
+                        return result
+                    return ""
+                except Exception as e:
+                    log(f"save_file error: {e}")
+                    return ""
+
+            def get_data_dir(self) -> str:
+                """返回用户数据目录路径"""
+                return app_dir
+
+            def open_data_dir(self):
+                """在资源管理器中打开数据目录"""
+                import subprocess
+                subprocess.Popen(["explorer", app_dir])
+                log(f"open_data_dir: {app_dir}")
+
+            def select_directory(self) -> str:
+                """打开原生文件夹选择对话框，返回所选路径"""
+                result = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG, directory="")
+                if result and len(result) > 0:
+                    return result[0]
+                return ""
+
+            def set_auto_start(self, enable: bool):
+                """设置开机自启动（通过快捷方式写入启动文件夹）"""
+                try:
+                    import os as _os
+                    startup = _os.path.join(
+                        _os.getenv("APPDATA"),
+                        "Microsoft", "Windows", "Start Menu", "Programs", "Startup"
+                    )
+                    lnk = _os.path.join(startup, "NOVAI.lnk")
+                    if enable:
+                        import win32com.client
+                        shell = win32com.client.Dispatch("WScript.Shell")
+                        shortcut = shell.CreateShortcut(lnk)
+                        shortcut.TargetPath = sys.executable if getattr(sys, "frozen", False) else sys.argv[0]
+                        shortcut.WorkingDirectory = app_dir
+                        shortcut.Description = "NOVAI Studio"
+                        shortcut.Save()
+                        log(f"set_auto_start: enabled → {lnk}")
+                    else:
+                        if _os.path.exists(lnk):
+                            _os.remove(lnk)
+                            log(f"set_auto_start: disabled, removed {lnk}")
+                    return True
+                except Exception as e:
+                    log(f"set_auto_start error: {e}")
+                    return False
+
+            def set_titlebar_theme(self, r, g, b):
+                """前端主题切换时调用，把 NSWindow 背景设为主壳顶部实际背景色（RGB 0-255）"""
+                try:
+                    red = max(0.0, min(1.0, float(r) / 255.0))
+                    green = max(0.0, min(1.0, float(g) / 255.0))
+                    blue = max(0.0, min(1.0, float(b) / 255.0))
+                except (TypeError, ValueError):
+                    return
+                try:
+                    from Cocoa import NSApp, NSObject, NSColor
+
+                    # pyobjc 不允许同名 ObjC 类重复注册，helper 类只定义一次
+                    helper_cls = getattr(self, '_titlebar_helper_cls', None)
+                    if helper_cls is None:
+                        class _TitlebarColorHelper(NSObject):
+                            def applyColor_(self, color):
+                                try:
+                                    wins = NSApp.windows()
+                                    if wins:
+                                        _paint_mac_titlebar(wins[0], color)
+                                except Exception:
+                                    pass
+                        helper_cls = _TitlebarColorHelper
+                        self._titlebar_helper_cls = helper_cls
+
+                    color = NSColor.colorWithSRGBRed_green_blue_alpha_(red, green, blue, 1.0)
+                    helper = helper_cls.alloc().init()
+                    self._titlebar_color_helper = helper  # 保持引用防止 GC
+                    helper.performSelectorOnMainThread_withObject_waitUntilDone_(
+                        'applyColor:', color, False
+                    )
+                except Exception:
+                    pass
+
+            def start_window_drag(self):
+                """macOS：前端 Header 带 mousedown 后调用，原生层让窗口跟随鼠标拖动。
+
+                pywebview（WKWebView）不支持 -webkit-app-region: drag，
+                movableByWindowBackground 又够不到盖满窗口的 webview 区域，只能桥到原生层挪窗口。
+                """
+                if os.name == 'nt':
+                    return
+                try:
+                    from Cocoa import NSObject
+
+                    # pyobjc 不允许同名 ObjC 类重复注册，helper 类只定义一次
+                    helper_cls = getattr(self, '_drag_helper_cls', None)
+                    if helper_cls is None:
+                        class _WindowDragHelper(NSObject):
+                            def beginDrag_(self, _ignored):
+                                try:
+                                    _begin_native_window_drag()
+                                except Exception:
+                                    pass
+                        helper_cls = _WindowDragHelper
+                        self._drag_helper_cls = helper_cls
+
+                    helper = helper_cls.alloc().init()
+                    self._drag_helper = helper  # 保持引用防止 GC
+                    helper.performSelectorOnMainThread_withObject_waitUntilDone_(
+                        'beginDrag:', None, False
+                    )
+                except Exception as e:
+                    log(f"start_window_drag error: {e}")
+
+            def get_lan_url(self) -> dict:
+                """动态获取当前局域网访问地址"""
+                try:
+                    ip = get_lan_ip()
+                    if ip:
+                        url = f"http://{ip}:{PORT}"
+                        return {"ip": ip, "url": url, "port": PORT}
+                except Exception as e:
+                    log(f"get_lan_url error: {e}")
+                return {"ip": None, "url": None, "port": PORT}
 
         def _enable_frameless_resize(retries=12, delay=0.4):
             """子类化窗口 WndProc 实现无标题栏 + resize 边框。
@@ -272,12 +575,40 @@ def main():
             try:
                 # ── WndProc 子类化：拦截 WM_NCCALCSIZE 去掉标题栏区域 ──
                 WM_NCCALCSIZE = 0x0083
+                WM_NCHITTEST = 0x0084
                 orig_wndproc = [None]
 
                 @WINFUNCTYPE(ctypes.c_longlong, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
                 def new_wndproc(h, msg, wp, lp):
                     if msg == WM_NCCALCSIZE and wp:
                         return 0
+                    if msg == WM_NCHITTEST:
+                        # 先让系统判断，系统返回 HTCLIENT(1) 时再手动判断边框/标题栏区域
+                        result = user32.CallWindowProcW(orig_wndproc[0], h, msg, wp, lp)
+                        if result == 1:  # HTCLIENT
+                            x = ctypes.c_int16(lp & 0xFFFF).value
+                            y = ctypes.c_int16((lp >> 16) & 0xFFFF).value
+                            rc = wintypes.RECT()
+                            user32.GetWindowRect(h, ctypes.byref(rc))
+                            bw = 8  # 边框拖拽宽度
+                            title_h = 40  # 标题栏拖拽高度
+                            on_left = x <= rc.left + bw
+                            on_right = x >= rc.right - bw
+                            on_top = y <= rc.top + bw
+                            on_bottom = y >= rc.bottom - bw
+                            # 边框 resize 区域
+                            if on_top and on_left:     return 13  # HTTOPLEFT
+                            if on_top and on_right:    return 14  # HTTOPRIGHT
+                            if on_bottom and on_left:  return 16  # HTBOTTOMLEFT
+                            if on_bottom and on_right: return 17  # HTBOTTOMRIGHT
+                            if on_top:                 return 12  # HTTOP
+                            if on_bottom:              return 15  # HTBOTTOM
+                            if on_left:                return 10  # HTLEFT
+                            if on_right:               return 11  # HTRIGHT
+                            # 顶部标题栏区域 → 允许拖动窗口
+                            if y <= rc.top + title_h:  return 2   # HTCAPTION
+                            return result
+                        return result
                     return user32.CallWindowProcW(orig_wndproc[0], h, msg, wp, lp)
 
                 GWLP_WNDPROC = -4
@@ -305,6 +636,12 @@ def main():
                 # 保留 WndProc 引用防止 GC 崩溃
                 _enable_frameless_resize._wndproc = new_wndproc
                 _enable_frameless_resize._orig = orig_wndproc[0]
+
+                # 强制显示窗口（frameless 模式下 pywebview 可能未自动 show）
+                SW_SHOW = 5
+                if not user32.IsWindowVisible(hwnd):
+                    user32.ShowWindow(hwnd, SW_SHOW)
+                    log(f"_enable_frameless_resize: forced ShowWindow, was hidden")
 
                 log(f"_enable_frameless_resize: subclassed hwnd={hwnd} + WS_THICKFRAME added")
             except Exception as e:
@@ -380,23 +717,237 @@ def main():
                 pass
 
         api = Api()
+
+        # macOS vs Windows: 不同的窗口样式
+        if os.name == 'nt':
+            frameless = True
+            easy_drag = False
+        else:
+            frameless = False  # macOS: 原生标题栏，带红绿灯
+            easy_drag = False
+
         window = webview.create_window(
             title="",
             url=URL,
             width=1400,
             height=900,
-            min_size=(800, 600),
+            min_size=(1200, 800),
             resizable=True,
             fullscreen=False,
-            frameless=True,
-            easy_drag=False,
+            frameless=frameless,
+            easy_drag=easy_drag,
             js_api=api,
         )
+
+        # macOS: 尽早把标题栏容器刷透明，否则启动瞬间会闪 pywebview 设的固定灰条
+        # （主题色要等页面加载后由 delayed_mac_setup / theme.js 同步，透明化与主题无关）
+        if os.name != 'nt':
+            try:
+                from Cocoa import NSColor
+                _native_win = getattr(window, 'native', None)
+                if _native_win is not None:
+                    _frame = _native_win.contentView().superview()
+                    if _frame is not None:
+                        for _sub in _frame.subviews():
+                            if 'Titlebar' in str(_sub.className()) and _sub.respondsToSelector_('setBackgroundColor:'):
+                                _sub.setBackgroundColor_(NSColor.clearColor())
+            except Exception as e:
+                log(f"macOS early titlebar clear skipped: {e}")
+
+        # macOS: 红绿灯关闭 / Cmd+Q → 彻底退出
+        if os.name != 'nt':
+            def on_closing():
+                return True  # 允许销毁窗口
+
+            def on_closed():
+                os._exit(0)  # 窗口销毁后立即结束进程，daemon 线程随之终止
+
+            window.events.closing += on_closing
+            window.events.closed += on_closed
+
         # 启动系统托盘图标（后台线程）
-        threading.Thread(target=_start_tray_icon, daemon=True).start()
-        # 纯 Win32 移除标题栏 + 补 resize 边框
+        # 仅 Windows：pystray 的 macOS 后端会创建 NSWindow/NSStatusItem，
+        # macOS 强制要求 UI 对象在主线程实例化，子线程启动会直接 EXC_BREAKPOINT 崩溃。
+        # Mac 端关窗即退出 / Cmd+Q 退出已单独处理，托盘非必需。
+        if os.name == 'nt':
+            threading.Thread(target=_start_tray_icon, daemon=True).start()
+        else:
+            log("macOS: skip pystray tray icon (NSWindow must be on main thread)")
+
+        # Windows: 移除标题栏 + 补 resize 边框
         if os.name == "nt":
-            threading.Timer(1.5, _enable_frameless_resize).start()
+            threading.Thread(target=lambda: _enable_frameless_resize(retries=30, delay=0.3), daemon=True).start()
+
+        # macOS: 延迟设置 FullSizeContentView + 透明标题栏 + 背景拖动
+        if os.name != 'nt':
+            def delayed_mac_setup():
+                import time as _time
+                _time.sleep(1.2)  # 等 webview.start() 创建 NSWindow
+                try:
+                    from Cocoa import NSApp, NSObject, NSColor
+
+                    def _read_page_bg_rgb():
+                        """从主壳页面读 body 计算背景色（sRGB 0-1）；读不到回退默认亮主题 --bg"""
+                        import re as _re
+                        for _ in range(8):
+                            try:
+                                bg = window.evaluate_js(
+                                    "document.body ? getComputedStyle(document.body).backgroundColor : ''"
+                                )
+                                m = _re.match(r"rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)", str(bg or ""))
+                                if m:
+                                    return tuple(float(v) / 255.0 for v in m.groups())
+                            except Exception:
+                                pass
+                            _time.sleep(0.4)
+                        return (245 / 255, 245 / 255, 247 / 255)
+
+                    # 在子线程取色；勿放 setupWindow_ 主线程里 evaluate_js，会死锁
+                    initial_rgb = _read_page_bg_rgb()
+                    log(f"macOS: initial window bg rgb={tuple(round(v, 4) for v in initial_rgb)}")
+
+                    # NSWindow 操作必须在主线程执行（macOS 26 下子线程调用会 EXC_BREAKPOINT 崩溃），
+                    # 因此封装到 NSObject helper 中，通过 performSelectorOnMainThread 派发。
+                    class _MacWindowHelper(NSObject):
+                        def setupWindow_(self, win):
+                            try:
+                                # 1. 启用 fullSizeContentView — 内容区域延伸至标题栏区域
+                                style = win.styleMask()
+                                style |= (1 << 15)  # NSWindowStyleMaskFullSizeContentView = 32768
+                                win.setStyleMask_(style)
+
+                                # 2. 标题栏完全透明 (clearColor)，消除黑色 TitleBar
+                                win.setTitlebarAppearsTransparent_(True)
+                                win.setBackgroundColor_(NSColor.clearColor())
+                                win.setOpaque_(False)
+
+                                # 3. 隐藏标题文字 + 背景可拖动窗口
+                                win.setTitleVisibility_(1)  # NSWindowTitleHidden
+                                win.setMovableByWindowBackground_(True)
+
+                                # 4. 让 WKWebView 铺满整个 contentView（包括标题栏区域）
+                                content_view = win.contentView()
+                                content_view.setAutoresizesSubviews_(True)
+                                cv_bounds = content_view.bounds()
+                                for subview in content_view.subviews():
+                                    cn = str(subview.className()) if hasattr(subview, 'className') else ''
+                                    if 'WK' in cn or 'WebView' in cn:
+                                        subview.setFrame_(cv_bounds)
+                                        # NSViewWidthSizable(2) | NSViewHeightSizable(16) = 18
+                                        subview.setAutoresizingMask_(18)
+                                        break
+
+                                # 5. 初始窗口背景色跟随首屏主题（页面实际 --bg），不再用固定色
+                                _paint_mac_titlebar(
+                                    win,
+                                    NSColor.colorWithSRGBRed_green_blue_alpha_(*initial_rgb, 1.0)
+                                )
+
+                                # 6. 红绿灯平移：红灯左缘对齐侧栏面板左缘（实测 15，常量 14 抵消 +1pt 偏差），中心与 Header 按钮同线 y=36；
+                                #    同时隐藏随容器下移的标题栏装饰视图（顶部亮线来源）
+                                self.applyTrafficLights_(None)
+
+                                # 7. 系统 relayout（resize/进出全屏）会复位灯位，监听后重应用（幂等）；
+                                #    初始布局也可能晚于本方法完成，延迟补几次
+                                try:
+                                    from Cocoa import NSNotificationCenter
+                                    nc = NSNotificationCenter.defaultCenter()
+                                    for _name in (
+                                        "NSWindowDidResizeNotification",
+                                        "NSWindowDidEnterFullScreenNotification",
+                                        "NSWindowDidExitFullScreenNotification",
+                                    ):
+                                        nc.addObserver_selector_name_object_(
+                                            self, "applyTrafficLights:", _name, win
+                                        )
+                                    for _d in (0.3, 1.0, 2.5):
+                                        self.performSelector_withObject_afterDelay_(
+                                            "applyTrafficLights:", None, _d
+                                        )
+                                except Exception as e:
+                                    log(f"macOS traffic light observer error: {e}")
+
+                                log("macOS: fullSizeContentView + transparent titlebar + webview extended + traffic lights shifted")
+                            except Exception as e:
+                                log(f"macOS main-thread window setup error: {e}")
+
+                        def applyTrafficLights_(self, notification):
+                            """红绿灯整体平移：左缘到 _MAC_TL_LEFT_X、中心距顶 _MAC_TL_CENTER_Y（幂等；须主线程）。
+
+                            平移对象是按钮容器的父视图（NSTitlebarContainerView），不是按钮
+                            容器本身：容器在其内部有布局锚点，直接挪容器会被 AppKit relayout
+                            弹回原位（实测 x 方向每次都被弹回默认 7pt）；父视图整体平移时
+                            按钮在父视图内的相对位置不动，且天然留在父视图 bounds 内——
+                            点击命中不受影响（此前只挪容器导致按钮越出父视图 bounds，
+                            hitTest 截断、点击穿透到 webview，表现为"红绿灯点不了"）。
+                            所有测量/移动都经 convertPoint 换算到窗口坐标系进行：各层坐标系
+                            是否 flipped 不确定，直接读 frame.origin 会算错方向（曾把灯甩出
+                            屏幕）。按"当前 → 目标"差值移动，系统 relayout 复位后重复调用
+                            也安全；差值超阈值说明测量异常，跳过。
+                            """
+                            try:
+                                win = notification.object() if notification is not None else None
+                                if win is None:
+                                    _wins = NSApp.windows()
+                                    win = _wins[0] if _wins else None
+                                if win is None:
+                                    return
+                                _hide_mac_titlebar_chrome(win)
+                                btn = win.standardWindowButton_(0)  # NSWindowCloseButton
+                                if btn is None:
+                                    return
+                                container = btn.superview()
+                                if container is None:
+                                    return
+                                sup = container.superview()
+                                if sup is None:
+                                    return
+                                grand = sup.superview()
+                                if grand is None:
+                                    return
+                                win_h = win.frame().size.height
+                                # 灯左缘/中心 → 窗口坐标（y 向上），换算"距窗口顶"距离
+                                bf = btn.frame()
+                                center_win = btn.convertPoint_toView_(
+                                    (bf.size.width / 2.0, bf.size.height / 2.0), None
+                                )
+                                left_win = btn.convertPoint_toView_((0.0, bf.size.height / 2.0), None).x
+                                center_from_top = win_h - center_win.y
+                                dx = _MAC_TL_LEFT_X - left_win            # 需右移距离
+                                delta = _MAC_TL_CENTER_Y - center_from_top  # 需下移距离（窗口坐标 y 向上为负方向）
+                                if abs(dx) < 0.05 and abs(delta) < 0.05:
+                                    return
+                                if abs(dx) > 80.0 or abs(delta) > 60.0:
+                                    log(f"macOS: traffic light dx {round(dx, 2)} / dy {round(delta, 2)}pt over threshold, skip")
+                                    return
+                                # 父视图原点: 其 superview 坐标 → 窗口坐标，平移后转回
+                                sf = sup.frame()
+                                origin_win = grand.convertPoint_toView_((sf.origin.x, sf.origin.y), None)
+                                new_origin = grand.convertPoint_fromView_(
+                                    (origin_win.x + dx, origin_win.y - delta), None
+                                )
+                                sup.setFrameOrigin_(new_origin)
+                                log(f"macOS: traffic lights shifted dx {round(dx, 2)} dy {round(delta, 2)}pt "
+                                    f"(left {round(left_win, 2)} -> {_MAC_TL_LEFT_X}, center {round(center_from_top, 2)} -> {_MAC_TL_CENTER_Y})")
+                            except Exception as e:
+                                log(f"macOS traffic light shift error: {e}")
+
+                    wins = list(NSApp.windows())
+                    if wins:
+                        win = wins[0]
+
+                        # 派发到主线程执行窗口操作（waitUntilDone=True 阻塞等待完成）
+                        helper = _MacWindowHelper.alloc().init()
+                        delayed_mac_setup._helper = helper  # 保持引用防止 GC
+                        helper.performSelectorOnMainThread_withObject_waitUntilDone_(
+                            'setupWindow:', win, True
+                        )
+
+                except Exception as e:
+                    log(f"macOS delayed setup error: {e}")
+
+            threading.Thread(target=delayed_mac_setup, daemon=True).start()
+
         webview.start()
     except Exception:
         # pywebview 不可用时回退到系统浏览器

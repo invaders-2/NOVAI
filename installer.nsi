@@ -41,7 +41,7 @@ SetCompressor /SOLID lzma
 !define MUI_FINISHPAGE_SHOWREADME_FUNCTION CreateDesktopShortcut
 
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "LICENSE"
+!insertmacro MUI_PAGE_LICENSE "LICENSE.nsi"
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
@@ -72,12 +72,12 @@ Section "Install"
   File "VERSION"
   File "requirements.txt"
 
-  ; 目录
+  ; 目录（排除测试图片、API 配置、日志等敏感/临时文件）
   SetOutPath "$INSTDIR\static"
-  File /r /x "*.pyc" /x "__pycache__" "static\*.*"
+  File /r /x "*.pyc" /x "__pycache__" /x "test-*.png" /x "tmp_*.png" /x "*.log" /x ".env" "static\*.*"
 
   SetOutPath "$INSTDIR\tools"
-  File /r /x "*.pyc" /x "__pycache__" "tools\*.*"
+  File /r /x "*.pyc" /x "__pycache__" /x "test-*.png" /x "tmp_*.png" /x "*.log" /x ".env" "tools\*.*"
 
   SetOutPath "$INSTDIR"
 
@@ -85,9 +85,9 @@ Section "Install"
   File "安装即梦CLI.bat"
   File "登录即梦CLI.bat"
 
-  ; assets（图标等）
+  ; assets（图标等，排除 input/output/uploads + 测试/临时文件）
   SetOutPath "$INSTDIR\assets"
-  File /r /x "*.pyc" /x "__pycache__" "assets\*.*"
+  File /r /x "*.pyc" /x "__pycache__" /x "test-*.png" /x "tmp_*.png" /x "*.log" /x ".env" /x "input" /x "output" /x "uploads" "assets\*.*"
 
   ; ── 注册表 ──
   WriteRegStr HKLM "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\NOVAI.exe"
@@ -130,18 +130,47 @@ Section "Uninstall"
   ; 停止进程
   nsExec::ExecToLog 'taskkill /F /IM NOVAI.exe'
   Sleep 2000
+  nsExec::ExecToLog 'taskkill /F /IM msedge.exe'
+  Sleep 1000
 
-  ; 询问是否保留用户数据
-  MessageBox MB_YESNO|MB_ICONQUESTION "是否保留用户数据（节点、API、生成图片等）？$\r$\n$\r$\n选「是」保留，选「否」全部删除。" IDYES keep_data
+  ; 询问是否保留生成的数据与 API 设置
+  MessageBox MB_YESNO|MB_ICONQUESTION \
+    "是否保留生成的数据与 API 设置？$\r$\n$\r$\n\
+选「是」保留以下内容：$\r$\n\
+  · 画布 / 对话记录 / 项目文件$\r$\n\
+  · API 密钥与提供商配置$\r$\n\
+  · 素材库与输出图片$\r$\n$\r$\n\
+选「否」彻底删除所有用户数据。" \
+    IDYES keep_data
 
-  ; 删除用户数据
+  ; 删除用户数据目录
   RMDir /r "$APPDATA\NOVAI"
   Goto done_data
 
 keep_data:
-  ; 保留用户数据，不操作
+  ; 保留用户数据（$APPDATA\NOVAI 不删除）
 
 done_data:
+
+  ; 清理旧版安装残留（Local 目录）
+  IfFileExists "$LOCALAPPDATA\NOVAI" 0 +2
+    RMDir /r "$LOCALAPPDATA\NOVAI"
+
+  ; 清理浏览器 WebView 缓存
+  nsExec::ExecToLog 'cmd /c for /d %i in ("%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\IndexedDB\http_localhost_3000*") do rd /s /q "%i"'
+  nsExec::ExecToLog 'cmd /c rd /s /q "%LOCALAPPDATA%\Microsoft\Edge\User Data\Default\Local Storage\leveldb" 2>nul'
+
+  ; 清理 Temp 下 NOVAI 残留
+  FindFirst $0 $1 "$TEMP\NOVAI*"
+  StrCmp $0 0 skip_temp_clean
+loop_temp:
+  IfFileExists "$TEMP\$1" 0 next_temp
+    RMDir /r "$TEMP\$1"
+next_temp:
+  FindNext $0 $1
+  StrCmp $1 "" skip_temp_clean loop_temp
+skip_temp_clean:
+  FindClose $0
 
   ; 删除安装目录
   RMDir /r "$INSTDIR"

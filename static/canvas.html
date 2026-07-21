@@ -7,24 +7,67 @@
     <title>无限画布</title>
     <!-- 关键渲染路径优化：CSS 先于 JS 加载，浏览器可并行下载 CSS 和 JS -->
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/css/canvas.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.83.1784291998">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.83.1784312776">
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.83.1784291998"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/theme.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.83.1784312776"></script>
-    <script src="/static/js/shared/media.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/shared/viewport.js?v=1.0.83.1784296809"></script>
-    <script defer src="/static/js/touch-mouse.js?v=1.0.83.1784291998"></script>
-    <script src="/static/js/i18n.js?v=1.0.83.1784319389"></script>
+    <link rel="stylesheet" href="/static/css/canvas.css?v=1.0.85.1784619943.1784549660">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.85.1784619943.1784477206">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.85.1784619943.1784291998">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.85.1784619943.1784407300">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.85.1784619943.1784291998"></script>
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/theme.js?v=1.0.85.1784619943.1784477024"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.85.1784619943.1784622796"></script>
+    <script src="/static/js/shared/media.js?v=1.0.85.1784619943.1784291998"></script>
+    <script src="/static/js/shared/viewport.js?v=1.0.85.1784619943.1784296809"></script>
+    <script defer src="/static/js/touch-mouse.js?v=1.0.85.1784619943.1784512671"></script>
+    <script src="/static/js/i18n.js?v=1.0.85.1784619943.1784319389"></script>
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
+/* ═══ 隐藏滚动条 & 防止双滚动条 ═══ */
 html, body {
     touch-action: none;
+    width: 100%; height: 100%;
+    margin: 0; padding: 0;
+    overflow: hidden;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+html::-webkit-scrollbar, body::-webkit-scrollbar,
+#shell::-webkit-scrollbar, #board::-webkit-scrollbar,
+#world::-webkit-scrollbar { display: none; width: 0; height: 0; }
+#shell, #board, #world {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
         body { background: var(--bg) !important; color: var(--text) !important; }
+/* ═══ Canvas/SVG 响应式：跟随窗口缩放 ═══ */
+#shell { width: 100%; height: 100%; overflow: hidden; }
+#board {
+    width: 100%; height: calc(100% - var(--topbar-h, 52px));
+    position: relative; overflow: hidden;
+}
+#world { width: 100%; height: 100%; }
+svg.links { width: 100%; height: 100%; }
+
+/* ═══ 节点 hover：macOS 卡片式（拖动/框选/平移时禁用） ═══ */
+.node {
+    transition: box-shadow 0.18s ease-out, transform 0.18s ease-out;
+}
+body:not(.canvas-node-drag):not(.canvas-node-resize):not(.canvas-selecting):not(.canvas-board-pan) .node:hover {
+    filter: none;
+    transform: scale(1.01);
+    box-shadow: 0 8px 20px rgba(0,0,0,.12);
+}
+body.theme-dark:not(.canvas-node-drag):not(.canvas-node-resize):not(.canvas-selecting):not(.canvas-board-pan) .node:hover {
+    box-shadow: 0 8px 20px rgba(0,0,0,.5) !important;
+}
+
+/* ═══ 节点选中/拖动 ═══ */
+.node.selected, .node.dragging {
+    outline: 1px solid var(--selected-ring);
+    filter: brightness(1.03);
+    border-color: var(--selected-ring);
+}
+
+/* ═══ 工具栏单行：不换行，横向滚动兜底（canvas.css 统一管理） ═══ */
 /* --- Marvis 增强覆盖 (canvas.html) --- */
 .topbar { background: transparent !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; border-bottom: none !important; box-shadow: none !important; }
 /* Canvas nav - Apple glass (light mode) */
@@ -84,18 +127,18 @@ body.studio-theme-dark .toolbar {
             <div id="quickToolbar" class="panel toolbar editor-only collapsed">
                 <button class="tool-btn toolbar-toggle" type="button" onclick="toggleQuickToolbar()" title="展开快捷菜单" aria-label="展开快捷菜单"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
                 <div class="toolbar-items">
-                    <button class="tool-btn" onclick="addImageNode()"><i data-lucide="image-plus" class="w-4 h-4"></i><span data-i18n="canvas.image">图片</span></button>
-                    <button class="tool-btn" onclick="addPromptNode()"><i data-lucide="text-cursor-input" class="w-4 h-4"></i><span data-i18n="canvas.prompt">提示词</span></button>
-                    <button class="tool-btn" onclick="addLoopNode()"><i data-lucide="repeat-2" class="w-4 h-4"></i><span data-i18n="canvas.loop">循环</span></button>
-                    <button class="tool-btn" onclick="addLLMNode()"><i data-lucide="message-square-text" class="w-4 h-4"></i>LLM</button>
-                    <button class="tool-btn" onclick="addGeneratorNode()"><i data-lucide="wand-sparkles" class="w-4 h-4"></i><span data-i18n="canvas.apiGenerate">API生成</span></button>
-                    <button class="tool-btn" onclick="addMsGenNode()"><i data-lucide="cloud-lightning" class="w-4 h-4"></i><span data-i18n="canvas.msGenerate">MS生成</span></button>
-                    <button class="tool-btn" onclick="addVideoNode()"><i data-lucide="clapperboard" class="w-4 h-4"></i><span data-i18n="canvas.videoGenerate">视频生成</span></button>
-                    <button class="tool-btn" onclick="addRhNode()"><i data-lucide="workflow" class="w-4 h-4"></i><span data-i18n="canvas.rhGenerate">RH生成</span></button>
-                    <button class="tool-btn" onclick="addComfyNode()"><i data-lucide="workflow" class="w-4 h-4"></i>ComfyUI</button>
-                    <button class="tool-btn" onclick="addLTXDirectorNode()"><i data-lucide="film" class="w-4 h-4"></i><span data-i18n="canvas.ltxDirector">LTX Director</span></button>
-                    <button class="tool-btn" onclick="addOutputNode()"><i data-lucide="circle-dot" class="w-4 h-4"></i>Output</button>
-                    <button class="tool-btn" onclick="groupSelectedImages()"><i data-lucide="group" class="w-4 h-4"></i><span data-i18n="canvas.group">分组</span></button>
+                    <button class="tool-btn" onclick="addImageNode()" title="图片" aria-label="图片" data-i18n-title="canvas.image"><i data-lucide="image-plus" class="w-4 h-4"></i><span data-i18n="canvas.image">图片</span></button>
+                    <button class="tool-btn" onclick="addPromptNode()" title="提示词" aria-label="提示词" data-i18n-title="canvas.prompt"><i data-lucide="text-cursor-input" class="w-4 h-4"></i><span data-i18n="canvas.prompt">提示词</span></button>
+                    <button class="tool-btn" onclick="addLoopNode()" title="循环" aria-label="循环" data-i18n-title="canvas.loop"><i data-lucide="repeat-2" class="w-4 h-4"></i><span data-i18n="canvas.loop">循环</span></button>
+                    <button class="tool-btn" onclick="addLLMNode()" title="LLM" aria-label="LLM"><i data-lucide="message-square-text" class="w-4 h-4"></i><span>LLM</span></button>
+                    <button class="tool-btn" onclick="addGeneratorNode()" title="API生成" aria-label="API生成" data-i18n-title="canvas.apiGenerate"><i data-lucide="wand-sparkles" class="w-4 h-4"></i><span data-i18n="canvas.apiGenerate">API生成</span></button>
+                    <button class="tool-btn" onclick="addMsGenNode()" title="MS生成" aria-label="MS生成" data-i18n-title="canvas.msGenerate"><i data-lucide="cloud-lightning" class="w-4 h-4"></i><span data-i18n="canvas.msGenerate">MS生成</span></button>
+                    <button class="tool-btn" onclick="addVideoNode()" title="视频生成" aria-label="视频生成" data-i18n-title="canvas.videoGenerate"><i data-lucide="clapperboard" class="w-4 h-4"></i><span data-i18n="canvas.videoGenerate">视频生成</span></button>
+                    <button class="tool-btn" onclick="addRhNode()" title="RH生成" aria-label="RH生成" data-i18n-title="canvas.rhGenerate"><i data-lucide="workflow" class="w-4 h-4"></i><span data-i18n="canvas.rhGenerate">RH生成</span></button>
+                    <button class="tool-btn" onclick="addComfyNode()" title="ComfyUI" aria-label="ComfyUI"><i data-lucide="workflow" class="w-4 h-4"></i><span>ComfyUI</span></button>
+                    <button class="tool-btn" onclick="addLTXDirectorNode()" title="LTX Director" aria-label="LTX Director" data-i18n-title="canvas.ltxDirector"><i data-lucide="film" class="w-4 h-4"></i><span data-i18n="canvas.ltxDirector">LTX Director</span></button>
+                    <button class="tool-btn" onclick="addOutputNode()" title="Output" aria-label="Output"><i data-lucide="circle-dot" class="w-4 h-4"></i><span>Output</span></button>
+                    <button class="tool-btn" onclick="groupSelectedImages()" title="分组" aria-label="分组" data-i18n-title="canvas.group"><i data-lucide="group" class="w-4 h-4"></i><span data-i18n="canvas.group">分组</span></button>
                 </div>
                 <div class="toolbar-fixed">
                     <button id="workflowTransferToggle" class="tool-btn toolbar-workflow" type="button" title="导入导出工作流" aria-label="导入导出工作流"><i data-lucide="package-open" class="w-4 h-4"></i><span>工作流</span></button>
@@ -396,7 +439,7 @@ body.studio-theme-dark .toolbar {
         </div>
     </div>
 
-    <script defer src="/static/js/ltx-director-timeline.js?v=1.0.83.1784291998"></script>
-    <script defer src="/static/js/canvas.js?v=1.0.83.1784321211"></script>
+    <script defer src="/static/js/ltx-director-timeline.js?v=1.0.85.1784619943.1784291998"></script>
+    <script defer src="/static/js/canvas.js?v=1.0.85.1784619943.1784618484"></script>
 </body>
 </html>

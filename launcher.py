@@ -326,6 +326,8 @@ def main():
         class Api:
             def __init__(self):
                 self._maximized = False
+                self._fr_direction = ''
+                self._fr_geo = None
 
             def minimize(self):
                 webview.windows[0].minimize()
@@ -502,6 +504,53 @@ def main():
                 except Exception as e:
                     log(f"get_lan_url error: {e}")
                 return {"ip": None, "url": None, "port": PORT}
+
+            # ── Windows 无边框窗口边缘缩放（前端边缘条 mousedown/move/up 驱动）──
+            # WebView2 子窗口会吞掉顶层窗口的 WM_NCHITTEST，原生/子类化方案拿不到边框命中，
+            # 只能由前端检测边缘、经 js_api 桥在这里改窗口几何。
+            def begin_frameless_resize(self, direction: str):
+                """记录缩放拖拽起点时的窗口几何。direction ∈ n/s/e/w/ne/nw/se/sw"""
+                try:
+                    w = webview.windows[0]
+                    self._fr_direction = str(direction or '')
+                    self._fr_geo = (w.x, w.y, w.width, w.height)
+                except Exception as e:
+                    log(f"begin_frameless_resize error: {e}")
+                    self._fr_direction = ''
+                    self._fr_geo = None
+
+            def update_frameless_resize(self, dx: float, dy: float):
+                """按累计位移应用缩放；west/north 方向同步移动窗口保持对边不动"""
+                try:
+                    geo = self._fr_geo
+                    direction = self._fr_direction
+                    if not geo or not direction:
+                        return
+                    x, y, orig_w, orig_h = geo
+                    dx, dy = int(dx), int(dy)
+                    min_w, min_h = 1200, 800
+                    width, height = orig_w, orig_h
+                    new_x, new_y = x, y
+                    if 'e' in direction:
+                        width = max(min_w, orig_w + dx)
+                    if 's' in direction:
+                        height = max(min_h, orig_h + dy)
+                    if 'w' in direction:
+                        width = max(min_w, orig_w - dx)
+                        new_x = x + (orig_w - width)
+                    if 'n' in direction:
+                        height = max(min_h, orig_h - dy)
+                        new_y = y + (orig_h - height)
+                    w = webview.windows[0]
+                    if new_x != x or new_y != y:
+                        w.move(new_x, new_y)
+                    w.resize(width, height)
+                except Exception as e:
+                    log(f"update_frameless_resize error: {e}")
+
+            def end_frameless_resize(self):
+                self._fr_direction = ''
+                self._fr_geo = None
 
         def _enable_frameless_resize(retries=12, delay=0.4):
             """子类化窗口 WndProc 实现无标题栏 + resize 边框。

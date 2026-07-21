@@ -570,6 +570,8 @@
         body.route-canvas .sidebar { margin: 15px 0 15px 15px; }
         /* macOS 原生标题栏模式下其他页面边栏 = 外壳15 + 标题带48 = 63px，这里补齐同样的顶部偏移 */
         body.route-canvas.has-native-titlebar .sidebar { margin-top: 63px; }
+        /* Windows 无边框同理：48px 标题带 + 15px 内缩 */
+        body.route-canvas.has-frameless-titlebar .sidebar { margin-top: 63px; }
 
         /* ═══ 右上角快捷操作按钮 ═══ */
         .stage-actions {
@@ -642,6 +644,18 @@
         }
         body.has-native-titlebar .stage {
             margin-top: 48px;
+        }
+        /* Windows 无边框：侧栏与舞台同样让出 48px 自定义标题栏高度，否则标题栏压住边栏顶部 */
+        body.has-frameless-titlebar .sidebar {
+            margin-top: 48px;
+            height: calc(100vh - 30px - 48px);
+        }
+        body.has-frameless-titlebar .stage {
+            margin-top: 48px;
+        }
+        /* 右上角快捷按钮已并入自定义标题栏，无边框模式下隐藏避免被标题栏盖住 */
+        body.has-frameless-titlebar .stage-actions {
+            display: none;
         }
 
         iframe {
@@ -2938,6 +2952,31 @@
             opacity: 0.5;
         }
 
+        /* ═══ 无边框窗口边缘缩放条（WebView2 吞掉原生边框命中，用前端 8px 边缘条替代） ═══ */
+        .frameless-resize-strip {
+            position: fixed;
+            z-index: 2090;
+            display: none;
+            background: transparent;
+        }
+        body.has-frameless-titlebar .frameless-resize-strip { display: block; }
+        .rz-n  { top: 0; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+        .rz-s  { bottom: 0; left: 8px; right: 8px; height: 8px; cursor: ns-resize; }
+        .rz-w  { left: 0; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+        .rz-e  { right: 0; top: 8px; bottom: 8px; width: 8px; cursor: ew-resize; }
+        .rz-nw { top: 0; left: 0; width: 8px; height: 8px; cursor: nwse-resize; }
+        .rz-ne { top: 0; right: 0; width: 8px; height: 8px; cursor: nesw-resize; }
+        .rz-sw { bottom: 0; left: 0; width: 8px; height: 8px; cursor: nesw-resize; }
+        .rz-se { bottom: 0; right: 0; width: 8px; height: 8px; cursor: nwse-resize; }
+        /* 缩放拖动期间的全屏事件捕获层（鼠标进入 iframe 后壳页面收不到事件，用它接管到 mouseup） */
+        #framelessResizeOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: none;
+            background: transparent;
+        }
+
         /* ═══ 标题栏 Logo 只在 Windows frameless 模式随标题栏显示（.frameless-titlebar 其余模式 display:none），Mac 原生标题栏不渲染整个标题栏 ═══ */
 
         /* ═══ 全局隐藏滚动条，hover 时显示 ═══ */
@@ -2987,9 +3026,9 @@
 </head>
 
 <body>
-    <!-- 桌面 Frameless 标题栏 -->
-    <div class="frameless-titlebar" id="framelessTitlebar">
-        <div class="titlebar-logo">
+    <!-- 桌面 Frameless 标题栏（pywebview-drag-region：pywebview 官方拖动区标记，按钮区 JS 阻断拖动） -->
+    <div class="frameless-titlebar pywebview-drag-region" id="framelessTitlebar">
+        <div class="titlebar-logo pywebview-drag-region">
             <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M869.44,200.5L494.98,39.39c-98.45-42.36-208.12,29.86-208.12,137.03v14.48l82.33,35.42v-56.49c0-52.07,53.28-87.15,101.11-66.57l356.27,153.28c16.53,7.11,16.53,30.54,0,37.67l-48.96,21.05c-84.31,36.27-179.84,36.27-264.15,0l-267.88-115.26c-99.7-42.89-210.74,30.23-210.74,138.74v323.08c0,68.38,40.7,130.21,103.52,157.23l384.4,165.37c99.82,42.94,211.01-30.26,211.01-138.93v-2.62l-82.33-35.42v33.92c0,58.62-59.98,98.12-113.84,74.95l-345.18-148.51c-14.35-6.18-14.35-26.53,0-32.7l76.43-32.95c64.04-27.6,136.62-27.63,200.69-.07l278.94,120.01c113.84,48.98,240.66-34.51,240.66-158.45v-281.37c0-79.07-47.06-150.55-119.71-181.8ZM906.83,663.69c0,71.74-73.39,120.06-139.28,91.72l-33.77-14.53-82.33-35.42-155.17-66.76c-77.12-33.18-127.09-109.07-127.09-193.03v-91.04l-82.33-35.42v175.86c0,75.82-45.13,144.37-114.77,174.34l-24.08,10.36c-14.59,6.28-30.84-4.42-30.84-20.3v-326.53c0-53.75,54.99-89.95,104.37-68.7l298.17,128.27c79.94,34.39,131.73,113.06,131.73,200.08v85.91l82.33,35.42v-168.65c0-82.93,49.36-157.9,125.54-190.66l13.46-5.8c16.11-6.94,34.06,4.89,34.06,22.41v292.46Z"/></svg>
             <span>NOVAI</span>
         </div>
@@ -3000,17 +3039,27 @@
             <button class="titlebar-btn" id="titlebarSettingsBtn" onclick="openTitlebarSettings()" title="设置" type="button">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.36 1.08V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.08-.36H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .36-1.08V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.22.38.58.69 1 .86.2.08.42.13.65.14H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"></path></svg>
             </button>
-            <button class="titlebar-btn close" onclick="closeTitlebarWindow()" title="关闭" type="button">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-            </button>
             <button class="titlebar-btn" onclick="minimizeTitlebarWindow()" title="最小化" type="button">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path></svg>
             </button>
             <button class="titlebar-btn" onclick="maximizeTitlebarWindow()" title="最大化" type="button">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
             </button>
+            <button class="titlebar-btn close" onclick="closeTitlebarWindow()" title="关闭" type="button">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
         </div>
     </div>
+    <!-- 无边框窗口边缘缩放条（仅 has-frameless-titlebar 显示；拖动期用 overlay 接管鼠标事件） -->
+    <div class="frameless-resize-strip rz-n" data-dir="n"></div>
+    <div class="frameless-resize-strip rz-s" data-dir="s"></div>
+    <div class="frameless-resize-strip rz-w" data-dir="w"></div>
+    <div class="frameless-resize-strip rz-e" data-dir="e"></div>
+    <div class="frameless-resize-strip rz-nw" data-dir="nw"></div>
+    <div class="frameless-resize-strip rz-ne" data-dir="ne"></div>
+    <div class="frameless-resize-strip rz-sw" data-dir="sw"></div>
+    <div class="frameless-resize-strip rz-se" data-dir="se"></div>
+    <div id="framelessResizeOverlay"></div>
 
     <!-- ===== 首页 ===== -->
     <div class="homepage" id="homepage">
@@ -3632,6 +3681,64 @@
                 if (api && typeof api.start_window_drag === 'function') {
                     e.preventDefault();
                     api.start_window_drag();
+                }
+            });
+        })();
+
+        // ===== Windows 无边框：标题栏拖动防按钮误触 + 边缘缩放 =====
+        // 拖动：pywebview 官方 .pywebview-drag-region（customize.js 在 body 上冒泡判断），
+        // 按钮区 stopPropagation 阻断冒泡，避免按住按钮也触发窗口移动。
+        // 缩放：WebView2 子窗口吞掉顶层窗口 WM_NCHITTEST，原生边框/子类化都拿不到命中，
+        // 用前端 8px 边缘条 + 拖动期 overlay + js_api 桥（launcher.py begin/update/end_frameless_resize）。
+        (function initFramelessWindowControls(){
+            var actions = document.querySelector('.titlebar-actions');
+            if(actions) actions.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+
+            var overlay = document.getElementById('framelessResizeOverlay');
+            var active = '', startX = 0, startY = 0, lastDx = 0, lastDy = 0, rafPending = false;
+            function api(){
+                var a = window.pywebview && window.pywebview.api;
+                return (a && typeof a.begin_frameless_resize === 'function') ? a : null;
+            }
+            function sendUpdate(){
+                rafPending = false;
+                var a = api();
+                if(!a) return;
+                try { a.update_frameless_resize(lastDx, lastDy); } catch(e) {}
+            }
+            document.querySelectorAll('.frameless-resize-strip').forEach(function(strip){
+                strip.addEventListener('mousedown', function(e){
+                    if(e.button !== 0) return;
+                    var a = api();
+                    if(!a) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    active = strip.dataset.dir || '';
+                    startX = e.screenX; startY = e.screenY;
+                    lastDx = 0; lastDy = 0;
+                    try { a.begin_frameless_resize(active); } catch(err) {}
+                    if(overlay){
+                        overlay.style.display = 'block';
+                        overlay.style.cursor = getComputedStyle(strip).cursor;
+                    }
+                });
+            });
+            window.addEventListener('mousemove', function(e){
+                if(!active) return;
+                lastDx = e.screenX - startX;
+                lastDy = e.screenY - startY;
+                if(!rafPending){
+                    rafPending = true;
+                    requestAnimationFrame(sendUpdate);
+                }
+            });
+            window.addEventListener('mouseup', function(){
+                if(!active) return;
+                active = '';
+                if(overlay) overlay.style.display = 'none';
+                var a = api();
+                if(a && typeof a.end_frameless_resize === 'function'){
+                    try { a.end_frameless_resize(); } catch(e) {}
                 }
             });
         })();

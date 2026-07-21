@@ -190,6 +190,20 @@ def fix_info_plist(app_path, version):
     print(f"✅ Info.plist: version={version}, bundle={BUNDLE_ID}")
 
 
+def sign_app(app_path):
+    """ad-hoc 深度签名：云端/本机构建的 .app 无开发者证书，不签名下载后会被 Gatekeeper 判“已损坏”。
+    ad-hoc 签名（--sign -）让 Gatekeeper 按未公证应用处理（右键打开即可），而非直接报损坏。
+    彻底免提示需 Apple 开发者证书签名+公证，留作产品决策。"""
+    print("=== ad-hoc 签名 ===")
+    try:
+        run(f'codesign --force --deep --sign - "{app_path}"')
+        run(f'codesign --verify --deep --strict "{app_path}"')
+        print("✅ ad-hoc 签名完成并通过校验")
+    except subprocess.CalledProcessError as e:
+        # 签名失败不阻断构建（本机自用时 quarantine 不生效），但云端产物会回退到“已损坏”风险
+        print(f"⚠️  ad-hoc 签名失败（不阻断构建）: {e}")
+
+
 def build_dmg(app_path, version):
     """用 hdiutil 生成 .dmg 安装包"""
     print("=== 生成 DMG ===")
@@ -215,6 +229,16 @@ def build_dmg(app_path, version):
     if os.path.exists(apps_link):
         os.remove(apps_link)
     os.symlink("/Applications", apps_link)
+
+    # 兜底：极端情况下（签名未被认可/用户机器策略更严）双击此脚本清除隔离属性
+    fix_cmd = os.path.join(dmg_staging, "若提示已损坏双击我.command")
+    with open(fix_cmd, "w", encoding="utf-8") as f:
+        f.write("#!/bin/bash\n"
+                "xattr -dr com.apple.quarantine /Applications/NOVAI.app 2>/dev/null\n"
+                "xattr -dr com.apple.quarantine \"$HOME/Applications/NOVAI.app\" 2>/dev/null\n"
+                "echo \"已清除 NOVAI 的隔离属性，请重新打开。\"\n"
+                "read -n 1 -s -r -p \"按任意键关闭窗口...\"\n")
+    os.chmod(fix_cmd, 0o755)
 
     # hdiutil create
     cmd = (
@@ -254,6 +278,7 @@ def main():
         app_path = build_app()
         copy_business_files(app_path)
         fix_info_plist(app_path, version)
+        sign_app(app_path)
         build_dmg(app_path, version)
 
         # 也复制一份 .app 到 dist-desktop（方便直接测试）

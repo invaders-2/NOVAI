@@ -1,6 +1,8 @@
 # NOVAI — 无限画布 AI 创作平台
 
-> 自由地在无限画布上生成图像、视频，用节点串联工作流。
+> 自由地在无限画布上生成图像、视频，用节点串联工作流。内置 ModelScope 免费 API，开箱即用。
+
+NOVAI 是一款面向创作者的全能 AI 工作台。你可以在**无限画布**上拖拽、连线、组合各种 AI 能力——文生图、图生图、AI 视频生成、GPT 多模态对话——所有操作在一个界面中无缝衔接。搭配 **Photoshop 面板**和 **Chrome 扩展**，素材采集与创作流程一气呵成。
 
 ![首页](static/images/screenshots/home.png)
 
@@ -16,36 +18,67 @@
 
 ## 快速开始
 
-### 环境要求
+### 下载安装（推荐）
 
-- Python 3.10+（[下载](https://www.python.org/downloads/)，安装时勾选 "Add Python to PATH"）
-- Git（可选，用于自动更新）
+无需安装 Python、无需配置环境，下载安装包双击即用。
+
+#### Windows
+
+1. 下载 `NOVAI-Setup.exe` 安装包
+2. 双击安装，按引导完成（桌面快捷方式自动创建）
+3. 双击桌面「NOVAI」图标启动，浏览器自动打开 `http://127.0.0.1:3000/`
+
+#### macOS
+
+1. 下载 `NOVAI.dmg` 磁盘镜像
+2. 打开 DMG，将 `NOVAI.app` 拖入 `Applications` 文件夹
+3. 双击 `NOVAI.app` 启动，浏览器自动打开 `http://127.0.0.1:3000/`
+
+> **首次启动提示**：macOS 可能提示「无法打开，因为它来自未识别的开发者」，请前往 **系统设置 → 隐私与安全性 → 点击「仍要打开」** 即可。
+
+---
+
+### 手动安装（开发者）
+
+如果你希望从源码运行或参与开发：
+
+```bash
+# 克隆仓库
+git clone https://github.com/invaders-2/NOVAI.git
+cd NOVAI
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 启动服务
+python main.py
+```
+
+浏览器访问 `http://127.0.0.1:3000/`
+
+> 环境要求：Python 3.10+
+
+---
+
+## 常见问题
 
 ### Windows
 
-```
-首次使用：双击 install.bat → 安装依赖（创建虚拟环境 + 安装包）
-日常启动：双击 run.bat     → 启动服务
-一键启动：双击 启动.bat     → 自动检查依赖并启动（首次也可直接用这个）
-```
-
-浏览器自动打开 `http://127.0.0.1:3000/`
+| 问题 | 解决方法 |
+|------|---------|
+| **安装后打不开** | 检查防火墙是否拦截，尝试以管理员身份运行 |
+| **端口 3000 被占用** | 关闭占用该端口的程序，或在启动前设置环境变量 `DEPLOY_RUN_PORT=3001` 修改端口 |
+| **依赖安装失败** | 确保 Python 3.10+ 已安装且勾选了「Add Python to PATH」 |
+| **杀毒软件误报** | 将 NOVAI 安装目录添加至杀毒软件信任白名单 |
 
 ### macOS
 
-```
-首次使用：双击 mac-修复权限.command → 移除安全限制（仅需一次）
-日常启动：双击 启动.command         → 自动安装依赖并启动
-```
-
-> 如果 macOS 提示「无法打开」，到 系统设置 → 隐私与安全性 → 点击「仍要打开」
-
-### 手动安装
-
-```bash
-pip install -r requirements.txt
-python main.py
-```
+| 问题 | 解决方法 |
+|------|---------|
+| **「无法打开，因为它来自未识别的开发者」** | 前往 **系统设置 → 隐私与安全性** → 点击「仍要打开」 |
+| **「已损坏，无法打开」** | 终端运行：`sudo xattr -rd com.apple.quarantine /Applications/NOVAI.app` |
+| **端口 3000 被占用** | 终端运行 `lsof -i :3000` 查看占用进程，`kill <PID>` 结束它；或设置 `DEPLOY_RUN_PORT=3001` 修改端口 |
+| **依赖问题（手动安装时）** | 确保已安装 Python 3.10+：`python3 --version`，再执行 `pip3 install -r requirements.txt` |
 
 ---
 
@@ -75,9 +108,19 @@ python main.py
 
 ---
 
-## 更新
+## 下载与更新
 
-项目会检查 GitHub、Gitee、ModelScope 三个源的最新版本，自动推送更新通知。
+安装包及更新下载地址：
+
+| 平台 | 地址 |
+|------|------|
+| GitHub | https://github.com/invaders-2/NOVAI |
+| Gitee | https://gitee.com/invaders/novai |
+| ModelScope | https://modelscope.cn/studios/bllack/NOVAI |
+
+项目启动后会自动检查三个源的最新版本，推送更新通知，一键升级。
+
+---
 
 ### v1.0.86
 

@@ -803,13 +803,24 @@ def main():
             except Exception as e:
                 log(f"macOS early titlebar clear skipped: {e}")
 
-        # macOS: 红绿灯关闭 / Cmd+Q → 彻底退出
+        # macOS 惯例：红灯 / Cmd+W = 最小化到程序坞（不退出软件）；
+        # 真退出走 Cmd+Q / 程序坞右键“退出”——applicationShouldTerminate_ 放行，
+        # 且 NSApp terminate 不经过 windowShouldClose_，不会被这里的最小化拦截。
+        # 仅 Mac 生效；Windows 的 closeToTray 逻辑不受影响（本块本来只在非 nt 执行）。
         if os.name != 'nt':
             def on_closing():
-                return True  # 允许销毁窗口
+                # pywebview 语义：closing 事件返回 False = 取消本次关闭。
+                # 取消后改为把窗口最小化到 Dock（windowShouldClose_ 在 AppKit 主线程触发，可直接调）。
+                try:
+                    native = getattr(window, 'native', None)
+                    if native is not None:
+                        native.miniaturize_(None)
+                except Exception as e:
+                    log(f"macOS miniaturize-on-close error: {e}")
+                return False
 
             def on_closed():
-                os._exit(0)  # 窗口销毁后立即结束进程，daemon 线程随之终止
+                os._exit(0)  # 窗口真正销毁时兜底退出进程（红灯已被拦截，正常走不到这里）
 
             window.events.closing += on_closing
             window.events.closed += on_closed

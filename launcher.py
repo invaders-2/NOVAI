@@ -857,9 +857,42 @@ def main():
 
                     # NSWindow 操作必须在主线程执行（macOS 26 下子线程调用会 EXC_BREAKPOINT 崩溃），
                     # 因此封装到 NSObject helper 中，通过 performSelectorOnMainThread 派发。
+                    class _NOVAIAppEventDelegate(NSObject):
+                        """应用层事件兜底：frozen(PyInstaller) 构建里 ObjC 类 "AppDelegate" 会重复定义
+                        （启动日志可见 "AppDelegate is overriding existing Objective-C class"），
+                        导致 NSApp delegate 损坏——Dock 点图标窗口不恢复、Cmd+Q 被系统判“用户取消”。
+                        用独立命名的干净实现替换掉它（名字带 NOVAI 前缀，避开重名冲突）。"""
+
+                        def applicationShouldHandleReopen_hasVisibleWindows_(self, app, hasVisible):
+                            # Dock 图标点击：把最小化的主窗口恢复出来并前置
+                            try:
+                                for w in list(app.windows()):
+                                    try:
+                                        if w.isMiniaturized():
+                                            w.deminiaturize_(None)
+                                    except Exception:
+                                        pass
+                                app.activateIgnoringOtherApps_(True)
+                            except Exception:
+                                pass
+                            return True
+
+                        def applicationShouldTerminate_(self, app):
+                            # 放行退出；窗口关闭清理由 pywebview 的 WindowDelegate 正常处理
+                            return True
+
                     class _MacWindowHelper(NSObject):
                         def setupWindow_(self, win):
                             try:
+                                # 0. 先修复应用层 delegate（详见 _NOVAIAppEventDelegate 注释）
+                                try:
+                                    delegate = _NOVAIAppEventDelegate.alloc().init()
+                                    NSApp.setDelegate_(delegate)
+                                    delayed_mac_setup._app_delegate = delegate  # 保持引用防 GC
+                                    log("macOS: app delegate repaired (reopen/terminate)")
+                                except Exception as e:
+                                    log(f"macOS app delegate repair error: {e}")
+
                                 # 1. 启用 fullSizeContentView — 内容区域延伸至标题栏区域
                                 style = win.styleMask()
                                 style |= (1 << 15)  # NSWindowStyleMaskFullSizeContentView = 32768

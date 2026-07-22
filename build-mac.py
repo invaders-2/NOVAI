@@ -284,9 +284,11 @@ def main():
         fix_info_plist(app_path, version)
         build_dmg(app_path, version)
 
-        # 也复制一份 .app 到 dist-desktop（方便直接测试）；拷贝后同样需要重签
+        # 也复制一份 .app 到 dist-desktop（方便直接测试）；拷贝后同样需要重签。
+        # 先删旧 app：symlinks=True + dirs_exist_ok=True 时，已存在的符号链接会让 copytree 报 File exists
         dist_app = os.path.join(DIST, f"{APP_NAME}.app")
-        shutil.copytree(app_path, dist_app, symlinks=True, dirs_exist_ok=True)
+        shutil.rmtree(dist_app, ignore_errors=True)
+        shutil.copytree(app_path, dist_app, symlinks=True)
         sign_app(dist_app)
 
         print()

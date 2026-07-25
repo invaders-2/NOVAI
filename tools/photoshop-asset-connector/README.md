@@ -13,16 +13,20 @@ Adobe Photoshop UXP 面板插件，连接局域网内的 NOVAI 后端，双向�
 
 1. **开启 Photoshop 开发者模式**：
    `Photoshop → 首选项 → 插件 → 启用开发者模式` → 重启 Photoshop。
-   > Windows 如果没有该选项，可手动创建：
-   > - Win: `C:\Users\<用户名>\AppData\Roaming\Adobe\UXP\Developer\settings.json`
-   > - Mac: `~/Library/Preferences/Adobe/UXP/Developer/settings.json`
+   > 如果没有该选项，可手动创建 `settings.json`：
+   > - **Win**: `C:\Users\<用户名>\AppData\Roaming\Adobe\UXP\Developer\settings.json`
+   > - **Mac**: `~/Library/Preferences/Adobe/UXP/Developer/settings.json`
    >   内容：`{ "developer": true }`
 
-2. **打包**：双击 `package.command` 文件生成 `.ccx` 安装包。
-   > 如果无法双击运行，在终端执行：`chmod +x package.command` 后再双击。
-   > 生成 `NOVAI-画布工具-v0.3.1.ccx`（约 48KB）。
+2. **打包**：
+   - **Windows**：双击 `package.bat`，自动生成 `.ccx` 安装包
+   - **macOS**：双击 `package.command` 生成 `.ccx`（如无法双击，终端执行 `chmod +x package.command` 后再双击）
 
-3. **安装到 PS**：打开 Photoshop（24.0 以上）→ 增效工具 → 管理增效工具 → 右上 ⚙ → **从文件安装增效工具** → 选择 `.ccx` 文件 → 在「增效工具」菜单打开「NOVAI画布工具」。
+3. **安装到 PS**：
+   - **方式一（推荐）**：打开 Photoshop（24.0 以上）→ 增效工具 → 管理增效工具 → 右上 ⚙ → **从文件安装增效工具** → 选择 `.ccx` 文件
+   - **方式二（开发者）**：将整个插件文件夹复制到 `Adobe/UXP/develop/` 目录，重启 PS 后自动加载
+
+   安装后在「增效工具」菜单打开「NOVAI画布工具」。
 
 > 如果仍然空白，请检查：
 > - 安装 .ccx 时是否有安全提示，需要到「系统设置 → 隐私与安全性」允许。
@@ -82,7 +86,8 @@ js/ui.js          Spectrum UI 组件助手
 js/generate.js    生成 Tab（API / MS / RH / ComfyUI）
 js/agent.js       Agent Tab（对话 + 图像编辑）
 js/app.js         启动 / Tab 路由 / 事件绑定 / 自动连接
-package.command   双击打包为 .ccx 安装包
+package.command   macOS 打包脚本 (.ccx)
+package.bat       Windows 打包脚本 (.ccx)
 ```
 
 ## 版本

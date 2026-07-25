@@ -1,6 +1,16 @@
 {
   "versions": [
     {
+      "version": "1.0.87",
+      "date": "2026-07-25",
+      "changes": [
+        "智能画布修复：Composer popover 溢出裁剪修复（overflow: visible）、smart-popover 定位偏移修复",
+        "端口参数支持：main.py 支持命令行参数/环境变量自定义端口（NOVAI_PORT）",
+        "Photoshop 素材连接器：Windows 打包脚本与 manifest 更新",
+        "静态资源版本号刷新：canvas-list、smart-canvas 等页面缓存版本号同步更新"
+      ]
+    },
+    {
       "version": "1.0.86",
       "date": "2026-07-22",
       "changes": [

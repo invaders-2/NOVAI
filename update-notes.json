@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "1.0.88",
+      "date": "2026-07-25",
+      "changes": [
+        "手势缩放修复：NovaViewport 依赖内联化（safeScale/viewportTransform/screenToWorld），新增 canvasWheelZoomFactor 函数，修复触摸板/触屏捏合缩放异常"
+      ]
+    },
+    {
       "version": "1.0.87",
       "date": "2026-07-25",
       "changes": [

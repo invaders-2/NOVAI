@@ -1,34 +1,10 @@
 {
-  "version": "1.0.86",
-  "updated_at": "2026-07-21T22:45:00+08:00",
+  "version": "1.0.88",
+  "updated_at": "2026-07-25T23:59:00+08:00",
   "items": [
     {
       "type": "fix",
-      "text": "智能画布节点显示/缩放钳制修复：旧画布极小缩放视口自动重新适配，图片下载改用Blob方式修复桌面端下载失败"
-    },
-    {
-      "type": "feature",
-      "text": "生成图片/视频系统保存弹窗：下载走系统保存对话框，跨端体验统一"
-    },
-    {
-      "type": "fix",
-      "text": "composer编辑器锚定到节点正中下方，平移/缩放/拖动实时跟随，UI缩放环境下自动校准"
-    },
-    {
-      "type": "fix",
-      "text": "@输入图弹窗与画布卡片菜单不再被裁切：弹窗改挂body支持向上翻转+高度自适应，卡片菜单移到卡片层级置顶显示"
-    },
-    {
-      "type": "fix",
-      "text": "修复点击无限画布后左侧边栏位移（Mac原生标题栏模式下的横向+纵向偏移）"
-    },
-    {
-      "type": "feature",
-      "text": "Windows标题栏新布局：左侧Logo+NOVAI，右侧主题/设置/关闭/最小化/最大化整排对齐"
-    },
-    {
-      "type": "improvement",
-      "text": "新增Windows+Mac云端打包流水线（GitHub Actions），tag推送自动构建并发布Release"
+      "text": "手势缩放修复：NovaViewport 依赖内联化（safeScale/viewportTransform/screenToWorld），新增 canvasWheelZoomFactor 函数，修复触摸板/触屏捏合缩放异常"
     }
   ],
   "history": [

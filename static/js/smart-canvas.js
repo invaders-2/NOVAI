@@ -1296,7 +1296,8 @@ function isEditableTarget(target){
     return !!el?.closest?.('input, textarea, select, option, [contenteditable="true"], .prompt-node-control, .prompt-input');
 }
 function safeScale(value){
-    return NovaViewport.safeScale(value);
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 1;
 }
 function nodeScale(node){
     const v = Number(node?.scale);
@@ -2058,7 +2059,7 @@ function arrangeSelectedSmartNodes(){
     toast('已整理选中节点');
 }
 function applyViewport(){
-    world.style.transform = NovaViewport.viewportTransform(viewport);
+    world.style.transform = `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.scale})`;
     // world 被 transform:scale 缩放后，其内部带 backdrop-filter 的卡片（参数设置/合成卡等）
     // 会被部分浏览器（Chrome/Edge 等 Blink 内核）当作独立合成层先按 1x 栅格化、再整体缩放，
     // 缩小时位图被降采样 → 组件发虚。缩放态下关闭这些 backdrop-filter（底色本身已接近不透明，
@@ -2074,8 +2075,18 @@ function applyViewport(){
     }
 }
 function screenToWorld(event){
-    var rect = shell.getBoundingClientRect();
-    return NovaViewport.screenToWorld(event.clientX, event.clientY, rect, viewport);
+    const rect = shell.getBoundingClientRect();
+    return {
+        x:(event.clientX - rect.left - viewport.x) / viewport.scale,
+        y:(event.clientY - rect.top - viewport.y) / viewport.scale
+    };
+}
+function canvasWheelZoomFactor(event, pageSize){
+    const unit = event.deltaMode === 1 ? 40 : event.deltaMode === 2 ? pageSize : 1;
+    const isMac = /^Mac/.test(navigator.platform || '');
+    const sensitivity = 0.0008;
+    const macMultiplier = isMac ? 1.15 : 1;
+    return Math.exp(-event.deltaY * unit * sensitivity * macMultiplier);
 }
 function viewportCenter(){
     return {

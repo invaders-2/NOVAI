@@ -14927,6 +14927,8 @@ board.addEventListener('mousedown', e => {
 // gestureActive 标志用于防止 Chrome 中 gesture 和 wheel 双重缩放。
 let gestureActive = false, gestureState = null;
 document.addEventListener('gesturestart', e => {
+    // 图片编辑器打开时不缩放画布
+    if(document.getElementById('imageEditModal')?.classList.contains('open')) return;
     // 触屏双指捏合由 touch-mouse.js 桥接成 ctrl+wheel 处理，这里跳过避免双重缩放
     if(window.__novaTouchGestureActive){ e.preventDefault(); return; }
     // 当 lightbox 打开且非视频模式时，手势缩放应作用于 lightbox 图片而非画布
@@ -14958,6 +14960,7 @@ document.addEventListener('gesturestart', e => {
     };
 }, { capture: true });
 document.addEventListener('gesturechange', e => {
+    if(document.getElementById('imageEditModal')?.classList.contains('open')) return;
     e.preventDefault();
     if(!gestureState) return;
     if(gestureState.isLightbox){
@@ -15034,6 +15037,8 @@ board.onwheel = e => {
     if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
     trackpadLastPinchTime = now;
     if(e.ctrlKey || e.metaKey || e.__novaTouchPinch){
+        // 图片编辑器打开时不缩放画布
+        if(document.getElementById('imageEditModal')?.classList.contains('open')){ trackpadPinchAccum = 0; return; }
         // 触控板/触屏捏合缩放（Chrome）：gesture 活跃时跳过，避免双重缩放
         if(gestureActive){ trackpadPinchAccum = 0; return; }
         markBoardWheelGesture();

@@ -16489,6 +16489,8 @@ function markShellWheelGesture(){
 }
 
 document.addEventListener('gesturestart', e => {
+    // 图片编辑器打开时不缩放画布
+    if(imageEditModal.classList.contains('open')) return;
     // 触屏双指捏合由 touch-mouse.js 桥接成 ctrl+wheel 处理，这里跳过避免双重缩放
     if(window.__novaTouchGestureActive){ e.preventDefault(); return; }
     e.preventDefault();
@@ -16505,6 +16507,7 @@ document.addEventListener('gesturestart', e => {
     };
 }, { capture: true });
 document.addEventListener('gesturechange', e => {
+    if(imageEditModal.classList.contains('open')) return;
     e.preventDefault();
     if(!gestureState) return;
     const newScale = safeScale(gestureState.startScale * e.scale);
@@ -16533,6 +16536,8 @@ shell.addEventListener('wheel', e => {
     if(now - trackpadLastPinchTime > 200) trackpadPinchAccum = 0;
     trackpadLastPinchTime = now;
     if(e.ctrlKey || e.metaKey || e.__novaTouchPinch){
+        // 图片编辑器打开时不缩放画布
+        if(imageEditModal.classList.contains('open')){ trackpadPinchAccum = 0; return; }
         // gesture 活跃时跳过，避免 Chrome 上 gesture + wheel 双重缩放
         if(gestureActive){ trackpadPinchAccum = 0; return; }
         markShellWheelGesture();

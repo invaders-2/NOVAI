@@ -17,13 +17,13 @@ body {
 
 /* Nav */
 nav {
-  position: sticky; top: 0; z-index: 100;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
   height: 73px;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 24px;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border-bottom: none;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 nav .logo { display: flex; align-items: center; gap: 8px; }
 nav .logo svg { width: 20px; height: 20px; flex-shrink: 0; }
@@ -63,8 +63,8 @@ nav .logo-text { font-size: 16px; font-weight: 700; color: #dcdcdc; }
   position: relative;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   text-align: center;
-  min-height: 560px;
-  padding-bottom: 49px;
+  min-height: 640px;
+  padding: 73px 0 60px;
   overflow: hidden;
 }
 .hero video {
@@ -88,14 +88,35 @@ nav .logo-text { font-size: 16px; font-weight: 700; color: #dcdcdc; }
 .section-header p { font-size: 17px; font-weight: 400; color: #cdd1d6; margin-top: 12px; }
 .section-label { font-size: 12px; font-weight: 400; letter-spacing: 0.72px; color: #818a9d; text-transform: uppercase; margin-bottom: 12px; }
 
-/* Client logos row */
+/* Client logos row — scrolling marquee */
 .client-row {
-  display: flex; justify-content: center; align-items: center; gap: 40px;
-  padding: 0 24px 40px;
-  flex-wrap: wrap;
-  opacity: 0.5;
+  display: flex; overflow: hidden;
+  padding: 40px 0 48px;
+  width: 100%;
+  mask-image: linear-gradient(to right, transparent 0, #000 60px, #000 calc(100% - 60px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 60px, #000 calc(100% - 60px), transparent 100%);
 }
-.client-row img { height: 20px; filter: brightness(0) invert(1); }
+.client-track {
+  display: flex; align-items: center;
+  animation: marquee 30s linear infinite;
+  flex-shrink: 0;
+}
+.client-item {
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0; margin-right: 64px;
+}
+.client-item img { height: 24px; width: auto; filter: brightness(0) invert(1); }
+.client-item span {
+  font-size: 15px; font-weight: 500; letter-spacing: -0.2px;
+  color: rgba(255,255,255,.55);
+  white-space: nowrap;
+}
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+
 
 /* One API cards */
 .api-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
@@ -147,19 +168,89 @@ nav .logo-text { font-size: 16px; font-weight: 700; color: #dcdcdc; }
 .code-body { padding: 24px 20px; }
 .code-body pre { font-size: 14px; line-height: 1.7; font-family: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace; color: rgba(255,255,255,0.85); overflow-x: auto; }
 
-/* Model cards grid */
-.model-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-.model-card {
-  background: #131416;
-  border-radius: 20px;
-  border: 1px solid rgba(255,255,255,0.05);
-  padding: 8px;
-  transition: border-color 0.3s;
-  position: relative; overflow: hidden;
+/* Models section — asymmetric header */
+.models-header {
+  max-width: 1200px; margin: 0 auto; padding: 48px 24px 48px;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: 24px;
 }
-.model-card:hover { border-color: rgba(255,255,255,0.12); }
-.model-card video { width: 100%; border-radius: 12px; display: block; aspect-ratio: 1; object-fit: cover; }
-.model-card .mc-label { font-size: 14px; font-weight: 400; color: #a1afc5; padding: 12px 8px 8px; }
+.models-header-left { flex-shrink: 0; }
+.models-header-left .section-label { font-size: 12px; font-weight: 400; letter-spacing: 0.72px; color: #818a9d; text-transform: uppercase; margin-bottom: 12px; }
+.models-header-left h2 { font-size: 48px; font-weight: 400; letter-spacing: -1.2px; line-height: 1.1; color: #fff; }
+.models-header-right { max-width: 460px; }
+.models-header-right p { font-size: 20px; font-weight: 400; line-height: 1.4; color: #cdd1d6; margin-bottom: 16px; }
+.models-header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-models-primary {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 42px; padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 16px; font-weight: 500; line-height: 24px;
+  text-decoration: none; cursor: pointer;
+  background: #fff; color: #08090b; border: 1px solid #fff;
+  transition: all 0.2s;
+}
+.btn-models-primary:hover { background: #e5e5e5; }
+.btn-models-secondary {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 42px; padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 16px; font-weight: 500; line-height: 24px;
+  text-decoration: none; cursor: pointer;
+  background: transparent; color: #fff; border: 1px solid #2c3037;
+  transition: all 0.2s;
+}
+.btn-models-secondary:hover { border-color: #555; }
+
+/* Model cards grid */
+.model-cards {
+  display: flex; gap: 24px;
+  max-width: 1200px; margin: 0 auto; padding: 0 24px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.model-cards::-webkit-scrollbar { display: none; }
+.model-cards { -ms-overflow-style: none; scrollbar-width: none; }
+.model-card {
+  flex: 0 0 340px;
+  scroll-snap-align: start;
+  display: flex; flex-direction: column;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.model-card .mc-media {
+  position: relative;
+  width: 100%; aspect-ratio: 1;
+  background: #1b1e23;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.model-card .mc-media video,
+.model-card .mc-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.model-card .mc-media .mc-overlay {
+  position: absolute; bottom: 20px; left: 20px; right: 20px;
+  display: flex; flex-direction: column; gap: 4px;
+  pointer-events: none;
+}
+.model-card .mc-media .mc-name { font-size: 22px; font-weight: 400; letter-spacing: -0.22px; line-height: 1.1; color: #fff; }
+.model-card .mc-media .mc-tagline { font-size: 14px; font-weight: 400; line-height: 1.3; color: rgba(255,255,255,0.85); }
+.model-card .mc-specs { margin-top: 0; }
+.mc-spec-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; gap: 16px;
+  border-bottom: 1px solid #3d424b;
+}
+.mc-spec-row:last-child { border-bottom: none; }
+.mc-spec-label { font-size: 12px; font-weight: 500; line-height: 1.3; color: #818a9d; white-space: nowrap; }
+.mc-spec-value { font-size: 13px; font-weight: 400; line-height: 1.3; color: #fff; text-align: right; }
+.model-card .mc-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 12px;
+  font-size: 16px; font-weight: 400; line-height: 1.2; color: #fff; text-decoration: none;
+}
+.model-card .mc-link:hover { opacity: 0.7; }
 
 /* Enterprise */
 .ent-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
@@ -191,27 +282,28 @@ footer .flinks { display: flex; gap: 16px; }
 @media (max-width: 768px) {
   .hero h1 { font-size: 36px; letter-spacing: -0.8px; }
   .section-header h2 { font-size: 32px; letter-spacing: -0.8px; }
-  .api-cards, .model-cards, .ent-grid { grid-template-columns: 1fr; }
-  .client-row { gap: 20px; }
+  .api-cards, .ent-grid { grid-template-columns: 1fr; }
+  .models-header { flex-direction: column; }
+  .models-header-left h2 { font-size: 32px; letter-spacing: -0.8px; }
 }
 </style>
 </head>
 <body>
 
-<!-- Nav -->
-<nav>
-  <span class="logo">
-    <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M869.44,200.5L494.98,39.39c-98.45-42.36-208.12,29.86-208.12,137.03v14.48l82.33,35.42v-56.49c0-52.07,53.28-87.15,101.11-66.57l356.27,153.28c16.53,7.11,16.53,30.54,0,37.67l-48.96,21.05c-84.31,36.27-179.84,36.27-264.15,0l-267.88-115.26c-99.7-42.89-210.74,30.23-210.74,138.74v323.08c0,68.38,40.7,130.21,103.52,157.23l384.4,165.37c99.82,42.94,211.01-30.26,211.01-138.93v-2.62l-82.33-35.42v33.92c0,58.62-59.98,98.12-113.84,74.95l-345.18-148.51c-14.35-6.18-14.35-26.53,0-32.7l76.43-32.95c64.04-27.6,136.62-27.63,200.69-.07l278.94,120.01c113.84,48.98,240.66-34.51,240.66-158.45v-281.37c0-79.07-47.06-150.55-119.71-181.8ZM906.83,663.69c0,71.74-73.39,120.06-139.28,91.72l-33.77-14.53-82.33-35.42-155.17-66.76c-77.12-33.18-127.09-109.07-127.09-193.03v-91.04l-82.33-35.42v175.86c0,75.82-45.13,144.37-114.77,174.34l-24.08,10.36c-14.59,6.28-30.84-4.42-30.84-20.3v-326.53c0-53.75,54.99-89.95,104.37-68.7l298.17,128.27c79.94,34.39,131.73,113.06,131.73,200.08v85.91l82.33,35.42v-168.65c0-82.93,49.36-157.9,125.54-190.66l13.46-5.8c16.11-6.94,34.06,4.89,34.06,22.41v292.46Z"/></svg>
-    <span class="logo-text">NOVAI</span>
-  </span>
-  <div class="nav-links">
-    <a href="https://github.com/invaders-2/NOVAI" target="_blank" rel="noopener" class="btn btn-subtle">GitHub</a>
-    <a href="#download" class="btn btn-white">Download</a>
-  </div>
-</nav>
-
 <!-- Hero -->
 <section class="hero">
+  <!-- Nav inside hero -->
+  <nav>
+    <span class="logo">
+      <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M869.44,200.5L494.98,39.39c-98.45-42.36-208.12,29.86-208.12,137.03v14.48l82.33,35.42v-56.49c0-52.07,53.28-87.15,101.11-66.57l356.27,153.28c16.53,7.11,16.53,30.54,0,37.67l-48.96,21.05c-84.31,36.27-179.84,36.27-264.15,0l-267.88-115.26c-99.7-42.89-210.74,30.23-210.74,138.74v323.08c0,68.38,40.7,130.21,103.52,157.23l384.4,165.37c99.82,42.94,211.01-30.26,211.01-138.93v-2.62l-82.33-35.42v33.92c0,58.62-59.98,98.12-113.84,74.95l-345.18-148.51c-14.35-6.18-14.35-26.53,0-32.7l76.43-32.95c64.04-27.6,136.62-27.63,200.69-.07l278.94,120.01c113.84,48.98,240.66-34.51,240.66-158.45v-281.37c0-79.07-47.06-150.55-119.71-181.8ZM906.83,663.69c0,71.74-73.39,120.06-139.28,91.72l-33.77-14.53-82.33-35.42-155.17-66.76c-77.12-33.18-127.09-109.07-127.09-193.03v-91.04l-82.33-35.42v175.86c0,75.82-45.13,144.37-114.77,174.34l-24.08,10.36c-14.59,6.28-30.84-4.42-30.84-20.3v-326.53c0-53.75,54.99-89.95,104.37-68.7l298.17,128.27c79.94,34.39,131.73,113.06,131.73,200.08v85.91l82.33,35.42v-168.65c0-82.93,49.36-157.9,125.54-190.66l13.46-5.8c16.11-6.94,34.06,4.89,34.06,22.41v292.46Z"/></svg>
+      <span class="logo-text">NOVAI</span>
+    </span>
+    <div class="nav-links">
+      <a href="https://github.com/invaders-2/NOVAI" target="_blank" rel="noopener" class="btn btn-subtle">GitHub</a>
+      <a href="#download" class="btn btn-white">Download</a>
+    </div>
+  </nav>
+
   <video autoplay muted loop playsinline poster="">
     <source src="https://d3phaj0sisr2ct.cloudfront.net/devportal/banners/devportal-landing-hero-robin-30s.mp4" type="video/mp4">
     <source src="https://d3phaj0sisr2ct.cloudfront.net/devportal/banners/devportal-landing-hero-robin-30s.webm" type="video/webm">
@@ -227,20 +319,30 @@ footer .flinks { display: flex; gap: 16px; }
   </div>
 </section>
 
-<!-- Trusted By -->
+<!-- Partner logos -->
 <div class="client-row">
-  <img src="https://dev.runwayml.com/assets/2hour.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/cloudflare.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/elevenlabs.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/expedia.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/runware.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/gamma.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/freepik.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/krea.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/quora.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/shutterstock.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/silverside.svg" alt="">
-  <img src="https://dev.runwayml.com/assets/storyblocks.svg" alt="">
+  <div class="client-track">
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg" alt=""><span>OpenAI</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/anthropic.svg" alt=""><span>Anthropic</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg" alt=""><span>Google</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/deepseek.svg" alt=""><span>DeepSeek</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/mistral.svg" alt=""><span>Mistral</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/meta.svg" alt=""><span>Meta</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg" alt=""><span>xAI</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/alibaba.svg" alt=""><span>Alibaba</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/stability.svg" alt=""><span>Stability</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/cohere.svg" alt=""><span>Cohere</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg" alt=""><span>OpenAI</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/anthropic.svg" alt=""><span>Anthropic</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg" alt=""><span>Google</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/deepseek.svg" alt=""><span>DeepSeek</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/mistral.svg" alt=""><span>Mistral</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/meta.svg" alt=""><span>Meta</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg" alt=""><span>xAI</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/alibaba.svg" alt=""><span>Alibaba</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/stability.svg" alt=""><span>Stability</span></div>
+    <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/cohere.svg" alt=""><span>Cohere</span></div>
+  </div>
 </div>
 
 <!-- One API -->
@@ -369,43 +471,141 @@ class MyFilter extends Extension {
 </div>
 
 <!-- State-of-the-art Models -->
-<div class="section-header">
-  <p class="section-label">AI Models</p>
-  <h2>State-of-the-art Models</h2>
-  <p>8 种协议接入，覆盖图像、视频、语言全模态。</p>
+<div class="models-header">
+  <div class="models-header-left">
+    <p class="section-label">AI 模型</p>
+    <h2>前沿 AI 模型</h2>
+  </div>
+  <div class="models-header-right">
+    <p>整合 OpenAI、Gemini、火山引擎等业界主流模型，统一 API 接入，一站调用。</p>
+    <div class="models-header-btns">
+      <a href="https://github.com/invaders-2/NOVAI" target="_blank" rel="noopener" class="btn-models-primary">查看全部模型</a>
+      <a href="docs.html" class="btn-models-secondary">查看文档</a>
+    </div>
+  </div>
 </div>
 <div class="model-cards">
+  <!-- Row 1 -->
   <div class="model-card">
-    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gen4-5.mp4"></video>
-    <div class="mc-label">文生图</div>
+    <div class="mc-media">
+      <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gen4-5.mp4"></video>
+      <div class="mc-overlay">
+        <span class="mc-name">文生图</span>
+        <span class="mc-tagline">高保真文生图</span>
+      </div>
+    </div>
+    <div class="mc-specs">
+      <div class="mc-spec-row"><span class="mc-spec-label">协议</span><span class="mc-spec-value">OpenAI · 火山引擎</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">SDXL · Flux · Seedream</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">分辨率</span><span class="mc-spec-value">1024 × 1024</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">费用</span><span class="mc-spec-value">免费</span></div>
+    </div>
   </div>
   <div class="model-card">
-    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-aleph2.mp4"></video>
-    <div class="mc-label">图生视频</div>
+    <div class="mc-media">
+      <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-aleph2.mp4"></video>
+      <div class="mc-overlay">
+        <span class="mc-name">图生视频</span>
+        <span class="mc-tagline">图生视频生成</span>
+      </div>
+    </div>
+    <div class="mc-specs">
+      <div class="mc-spec-row"><span class="mc-spec-label">协议</span><span class="mc-spec-value">RunningHub · 即梦</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">可灵 · Seedance · Wan</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">时长</span><span class="mc-spec-value">5s – 10s</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">费用</span><span class="mc-spec-value">按量付费</span></div>
+    </div>
   </div>
   <div class="model-card">
-    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2.mp4"></video>
-    <div class="mc-label">GPT 对话</div>
+    <div class="mc-media">
+      <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2.mp4"></video>
+      <div class="mc-overlay">
+        <span class="mc-name">GPT 对话</span>
+        <span class="mc-tagline">多模态对话与推理</span>
+      </div>
+    </div>
+    <div class="mc-specs">
+      <div class="mc-spec-row"><span class="mc-spec-label">协议</span><span class="mc-spec-value">OpenAI · Gemini</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">GPT-4o · Gemini 2.5 Pro</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">上下文</span><span class="mc-spec-value">128K tokens</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">多模态</span><span class="mc-spec-value">图像 · 语音 · 视频</span></div>
+    </div>
   </div>
   <div class="model-card">
-    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2-mini.mp4"></video>
-    <div class="mc-label">自动化工作流</div>
+    <div class="mc-media">
+      <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2-mini.mp4"></video>
+      <div class="mc-overlay">
+        <span class="mc-name">自动化工作流</span>
+        <span class="mc-tagline">可视化节点编排</span>
+      </div>
+    </div>
+    <div class="mc-specs">
+      <div class="mc-spec-row"><span class="mc-spec-label">节点</span><span class="mc-spec-value">200+</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">连线模式</span><span class="mc-spec-value">拖拽式可视化</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">自定义</span><span class="mc-spec-value">Python 脚本节点</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">分享</span><span class="mc-spec-value">一键导出工作流</span></div>
+    </div>
+  </div>
+  <!-- Row 2 -->
+  <div class="model-card">
+    <div class="mc-media">
+      <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gemini-omni-flash.mp4"></video>
+      <div class="mc-overlay">
+        <span class="mc-name">ComfyUI 集成</span>
+        <span class="mc-tagline">导入 ComfyUI 工作流</span>
+      </div>
+    </div>
+    <div class="mc-specs">
+      <div class="mc-spec-row"><span class="mc-spec-label">协议</span><span class="mc-spec-value">ComfyUI</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">工作流</span><span class="mc-spec-value">JSON 导入导出</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">运行环境</span><span class="mc-spec-value">本地 · 无需服务器</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">费用</span><span class="mc-spec-value">免费</span></div>
+    </div>
   </div>
   <div class="model-card">
-    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gemini-omni-flash.mp4"></video>
-    <div class="mc-label">ComfyUI 集成</div>
+    <div class="mc-media">
+      <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedream5-pro.mp4"></video>
+      <div class="mc-overlay">
+        <span class="mc-name">ModelScope</span>
+        <span class="mc-tagline">社区模型，零成本</span>
+      </div>
+    </div>
+    <div class="mc-specs">
+      <div class="mc-spec-row"><span class="mc-spec-label">协议</span><span class="mc-spec-value">ModelScope</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">全部社区模型</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">GPU</span><span class="mc-spec-value">免费云端算力</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">费用</span><span class="mc-spec-value">免费</span></div>
+    </div>
   </div>
   <div class="model-card">
-    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedream5-pro.mp4"></video>
-    <div class="mc-label">ModelScope</div>
+    <div class="mc-media">
+      <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gpt-image-2.mp4"></video>
+      <div class="mc-overlay">
+        <span class="mc-name">火山引擎</span>
+        <span class="mc-tagline">豆包 AI，高吞吐</span>
+      </div>
+    </div>
+    <div class="mc-specs">
+      <div class="mc-spec-row"><span class="mc-spec-label">协议</span><span class="mc-spec-value">火山引擎</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">全部豆包系列</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">速度</span><span class="mc-spec-value">极速推理</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">费用</span><span class="mc-spec-value">按量付费</span></div>
+    </div>
   </div>
   <div class="model-card">
-    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gpt-image-2.mp4"></video>
-    <div class="mc-label">火山引擎</div>
-  </div>
-  <div class="model-card">
-    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gemini-image3-pro.mp4"></video>
-    <div class="mc-label">Gemini</div>
+    <div class="mc-media">
+      <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gemini-image3-pro.mp4"></video>
+      <div class="mc-overlay">
+        <span class="mc-name">Gemini</span>
+        <span class="mc-tagline">Google 前沿模型</span>
+      </div>
+    </div>
+    <div class="mc-specs">
+      <div class="mc-spec-row"><span class="mc-spec-label">协议</span><span class="mc-spec-value">Gemini</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">2.5 Pro · Imagen 3</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">多模态</span><span class="mc-spec-value">文本 · 图像 · 音频</span></div>
+      <div class="mc-spec-row"><span class="mc-spec-label">费用</span><span class="mc-spec-value">免费额度</span></div>
+    </div>
   </div>
 </div>
 

@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOVAI — 给创作者的 AI 画布</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, sans-serif;
+  background: #000;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.5;
+}
+::selection { background: rgba(255,255,255,0.2); }
+
+/* Nav */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  height: 73px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: none;
+}
+nav .logo { display: flex; align-items: center; gap: 8px; }
+nav .logo svg { width: 20px; height: 20px; flex-shrink: 0; }
+nav .logo-text { font-size: 16px; font-weight: 700; color: #dcdcdc; }
+.nav-links { display: flex; align-items: center; gap: 24px; }
+.nav-links a { font-size: 16px; font-weight: 400; color: #fff; text-decoration: none; }
+.nav-links a:hover { opacity: 0.7; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 40px; padding: 0 12px;
+  border-radius: 8px;
+  font-size: 16px; font-weight: 600;
+  text-decoration: none; border: none; cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn:active { transform: scale(0.96); }
+.btn-white {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.25);
+  font-weight: 500;
+}
+.btn-white:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.4); transform: scale(1.02); opacity: 1; }
+.btn-outline { background: transparent; color: #a1afc5; font-weight: 400; font-size: 14px; padding: 4px 8px; border: 1px solid #2c3037; }
+.btn-outline:hover { border-color: #555; }
+.btn-subtle {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  color: #fff; font-weight: 500;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.btn-subtle:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.25); transform: scale(1.02); opacity: 1; }
+
+/* Hero */
+.hero {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  min-height: 560px;
+  padding-bottom: 49px;
+  overflow: hidden;
+}
+.hero video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.hero-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.3);
+}
+.hero-content { position: relative; z-index: 2; padding: 0 24px; max-width: min(574px, 100%); animation: fadeUp 0.8s cubic-bezier(0.4,0,0.2,1); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.hero h1 { font-size: 55px; font-weight: 400; letter-spacing: -1.65px; line-height: 1.05; color: #fff; margin-bottom: 16px; }
+.hero p { font-size: 17px; font-weight: 400; line-height: 1.55; color: #cdd1d6; max-width: 520px; margin: 0 auto 24px; }
+.hero .btns { display: flex; gap: 10px; justify-content: center; }
+
+/* Section headers */
+.section-header { text-align: center; padding: 48px 24px 48px; }
+.section-header h2 { font-size: 48px; font-weight: 400; letter-spacing: -1.2px; line-height: 1.1; color: #fff; }
+.section-header p { font-size: 17px; font-weight: 400; color: #cdd1d6; margin-top: 12px; }
+.section-label { font-size: 12px; font-weight: 400; letter-spacing: 0.72px; color: #818a9d; text-transform: uppercase; margin-bottom: 12px; }
+
+/* Client logos row */
+.client-row {
+  display: flex; justify-content: center; align-items: center; gap: 40px;
+  padding: 0 24px 40px;
+  flex-wrap: wrap;
+  opacity: 0.5;
+}
+.client-row img { height: 20px; filter: brightness(0) invert(1); }
+
+/* One API cards */
+.api-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.api-card {
+  background: #131416;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 24px;
+  transition: border-color 0.3s;
+}
+.api-card:hover { border-color: rgba(255,255,255,0.12); }
+.api-card img { width: 100%; border-radius: 12px; margin-bottom: 16px; }
+.api-card h3 { font-size: 16px; font-weight: 400; color: #fff; margin-bottom: 6px; }
+.api-card p { font-size: 14px; font-weight: 400; color: #818a9d; line-height: 1.6; }
+
+/* Model router */
+.router-wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.router-img { width: 100%; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
+.router-cta { text-align: center; margin-top: 24px; }
+
+/* Code block */
+.code-wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.code-container {
+  background: #131416;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+.code-tabs { display: flex; gap: 0; border-bottom: 1px solid #1b1e23; }
+.code-tab {
+  padding: 14px 20px;
+  font-size: 14px; font-weight: 400;
+  color: #818a9d;
+  cursor: pointer; background: none; border: none;
+  transition: color 0.15s;
+}
+.code-tab:hover { color: #cdd1d6; }
+.code-tab.active { color: #fff; border-bottom: 1px solid #fff; margin-bottom: -1px; }
+.code-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px 14px 20px;
+  border-bottom: 1px solid #1b1e23;
+}
+.code-lang-tabs { display: flex; gap: 4px; }
+.code-lang { padding: 4px 12px; font-size: 14px; color: #818a9d; cursor: pointer; background: none; border: none; border-radius: 4px; }
+.code-lang.active { color: #fff; }
+.code-copy { font-size: 14px; color: #818a9d; cursor: pointer; background: none; border: none; }
+.code-copy:hover { color: #fff; }
+.code-body { padding: 24px 20px; }
+.code-body pre { font-size: 14px; line-height: 1.7; font-family: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace; color: rgba(255,255,255,0.85); overflow-x: auto; }
+
+/* Model cards grid */
+.model-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.model-card {
+  background: #131416;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 8px;
+  transition: border-color 0.3s;
+  position: relative; overflow: hidden;
+}
+.model-card:hover { border-color: rgba(255,255,255,0.12); }
+.model-card video { width: 100%; border-radius: 12px; display: block; aspect-ratio: 1; object-fit: cover; }
+.model-card .mc-label { font-size: 14px; font-weight: 400; color: #a1afc5; padding: 12px 8px 8px; }
+
+/* Enterprise */
+.ent-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.ent-item {
+  background: #131416;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 24px;
+}
+.ent-item h3 { font-size: 16px; font-weight: 400; color: #fff; margin-bottom: 4px; }
+.ent-item p { font-size: 14px; font-weight: 400; color: #818a9d; }
+
+/* CTA */
+.cta-section { text-align: center; padding: 120px 24px 80px; }
+.cta-section h2 { font-size: 38px; font-weight: 400; letter-spacing: -0.95px; line-height: 1.1; color: #fff; margin-bottom: 12px; }
+.cta-section p { font-size: 20px; font-weight: 400; color: #cdd1d6; margin-bottom: 32px; }
+.cta-section .btns { display: flex; gap: 10px; justify-content: center; }
+
+/* Footer */
+footer { border-top: none; padding: 20px 24px; }
+footer .finner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+footer, footer a { font-size: 14px; font-weight: 400; color: #818a9d; text-decoration: none; }
+footer a:hover { color: #cdd1d6; }
+footer .flinks { display: flex; gap: 16px; }
+
+/* Video poster fallback */
+.video-poster { position: absolute; inset: 0; background-size: cover; background-position: center; }
+
+@media (max-width: 768px) {
+  .hero h1 { font-size: 36px; letter-spacing: -0.8px; }
+  .section-header h2 { font-size: 32px; letter-spacing: -0.8px; }
+  .api-cards, .model-cards, .ent-grid { grid-template-columns: 1fr; }
+  .client-row { gap: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <span class="logo">
+    <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path fill="#fff" d="M869.44,200.5L494.98,39.39c-98.45-42.36-208.12,29.86-208.12,137.03v14.48l82.33,35.42v-56.49c0-52.07,53.28-87.15,101.11-66.57l356.27,153.28c16.53,7.11,16.53,30.54,0,37.67l-48.96,21.05c-84.31,36.27-179.84,36.27-264.15,0l-267.88-115.26c-99.7-42.89-210.74,30.23-210.74,138.74v323.08c0,68.38,40.7,130.21,103.52,157.23l384.4,165.37c99.82,42.94,211.01-30.26,211.01-138.93v-2.62l-82.33-35.42v33.92c0,58.62-59.98,98.12-113.84,74.95l-345.18-148.51c-14.35-6.18-14.35-26.53,0-32.7l76.43-32.95c64.04-27.6,136.62-27.63,200.69-.07l278.94,120.01c113.84,48.98,240.66-34.51,240.66-158.45v-281.37c0-79.07-47.06-150.55-119.71-181.8ZM906.83,663.69c0,71.74-73.39,120.06-139.28,91.72l-33.77-14.53-82.33-35.42-155.17-66.76c-77.12-33.18-127.09-109.07-127.09-193.03v-91.04l-82.33-35.42v175.86c0,75.82-45.13,144.37-114.77,174.34l-24.08,10.36c-14.59,6.28-30.84-4.42-30.84-20.3v-326.53c0-53.75,54.99-89.95,104.37-68.7l298.17,128.27c79.94,34.39,131.73,113.06,131.73,200.08v85.91l82.33,35.42v-168.65c0-82.93,49.36-157.9,125.54-190.66l13.46-5.8c16.11-6.94,34.06,4.89,34.06,22.41v292.46Z"/></svg>
+    <span class="logo-text">NOVAI</span>
+  </span>
+  <div class="nav-links">
+    <a href="https://github.com/invaders-2/NOVAI" target="_blank" rel="noopener" class="btn btn-subtle">GitHub</a>
+    <a href="#download" class="btn btn-white">Download</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <video autoplay muted loop playsinline poster="">
+    <source src="https://d3phaj0sisr2ct.cloudfront.net/devportal/banners/devportal-landing-hero-robin-30s.mp4" type="video/mp4">
+    <source src="https://d3phaj0sisr2ct.cloudfront.net/devportal/banners/devportal-landing-hero-robin-30s.webm" type="video/webm">
+  </video>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <h1>给创作者的 AI 画布</h1>
+    <p>连线 AI 节点，构建自动化创作流水线。图像、视频、语言模型 —— 一个无限画布自由调用。</p>
+    <div class="btns">
+      <a href="#download" class="btn btn-white">开始使用</a>
+      <a href="https://github.com/invaders-2/NOVAI" target="_blank" rel="noopener" class="btn btn-subtle">GitHub 查看</a>
+    </div>
+  </div>
+</section>
+
+<!-- Trusted By -->
+<div class="client-row">
+  <img src="https://dev.runwayml.com/assets/2hour.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/cloudflare.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/elevenlabs.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/expedia.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/runware.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/gamma.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/freepik.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/krea.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/quora.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/shutterstock.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/silverside.svg" alt="">
+  <img src="https://dev.runwayml.com/assets/storyblocks.svg" alt="">
+</div>
+
+<!-- One API -->
+<div class="section-header">
+  <p class="section-label">Platform</p>
+  <h2>NOVAI · 创作一切</h2>
+  <p>可视化节点串联任意 AI 能力，从创意到产出一步到位。</p>
+</div>
+<div class="api-cards">
+  <div class="api-card">
+    <img src="https://d3phaj0sisr2ct.cloudfront.net/devportal/landing/one-api/access.png" alt="">
+    <h3>ACCESS</h3>
+    <p>8 种 AI 协议统一接入，ModelScope 免费内置。</p>
+  </div>
+  <div class="api-card">
+    <img src="https://d3phaj0sisr2ct.cloudfront.net/devportal/landing/one-api/evaluate.png" alt="">
+    <h3>CONNECT</h3>
+    <p>拖拽节点自由连线，构建你的专属 AI 流水线。</p>
+  </div>
+  <div class="api-card">
+    <img src="https://d3phaj0sisr2ct.cloudfront.net/devportal/landing/one-api/automate.png" alt="">
+    <h3>AUTOMATE</h3>
+    <p>文生图 → 图生视频 → GPT 对话，一键全链路。</p>
+  </div>
+  <div class="api-card">
+    <img src="https://d3phaj0sisr2ct.cloudfront.net/devportal/landing/one-api/control.png" alt="">
+    <h3>CONTROL</h3>
+    <p>桌面端原生体验，无需 Python 环境，开箱即用。</p>
+  </div>
+</div>
+
+<!-- Model Routers -->
+<div class="section-header">
+  <p class="section-label">Workflow</p>
+  <h2>Node Routing · 智能优化</h2>
+  <p>智能路由自动选择最优模型，平衡速度、质量与成本。</p>
+</div>
+<div class="router-wrap">
+  <img class="router-img" src="https://d3phaj0sisr2ct.cloudfront.net/devportal/landing/model-routers/model-router-diagram-2x.png" alt="">
+  <div class="router-cta">
+    <a href="https://github.com/invaders-2/NOVAI" target="_blank" rel="noopener" class="btn btn-outline">View on GitHub &rarr;</a>
+  </div>
+</div>
+
+<!-- Seamless Integration -->
+<div class="section-header">
+  <p class="section-label">Developer Experience</p>
+  <h2>Seamless Integration</h2>
+  <p>从画布到本地，从本地到云端。完全开源，自由定制。</p>
+</div>
+<div class="code-wrap">
+  <div class="code-container">
+    <div class="code-tabs">
+      <button class="code-tab active">模型</button>
+      <button class="code-tab">工作流</button>
+      <button class="code-tab">扩展</button>
+    </div>
+    <div class="code-header">
+      <div class="code-lang-tabs">
+        <button class="code-lang active">Python</button>
+        <button class="code-lang">TypeScript</button>
+      </div>
+      <button class="code-copy">复制代码</button>
+    </div>
+    <div class="code-body" id="code-body">
+<pre data-tab="模型" data-lang="Python"># Install NOVAI
+pip install novai
+
+# Generate an image
+from novai import Canvas
+canvas = Canvas()
+node = canvas.add_model("stable-diffusion-xl")
+result = node.generate("A cyberpunk city at dusk")
+result.save("output.png")</pre>
+<pre data-tab="模型" data-lang="TypeScript" style="display:none">// Install NOVAI
+// npm install @novai/sdk
+
+import { Canvas } from "@novai/sdk";
+const canvas = new Canvas();
+const node = canvas.addModel("stable-diffusion-xl");
+const result = await node.generate("A cyberpunk city at dusk");
+result.save("output.png");</pre>
+<pre data-tab="工作流" data-lang="Python" style="display:none"># Create an AI pipeline
+from novai import Workflow
+
+wf = Workflow()
+wf.add_node("input", "text_prompt")
+wf.add_node("process", "stable-diffusion-xl")
+wf.add_node("output", "image_saver")
+wf.connect("input", "process")
+wf.connect("process", "output")
+
+wf.run("A futuristic city")
+# Outputs to /output/result.png</pre>
+<pre data-tab="工作流" data-lang="TypeScript" style="display:none">import { Workflow } from "@novai/sdk";
+
+const wf = new Workflow();
+wf.addNode("input", "text_prompt");
+wf.addNode("process", "stable-diffusion-xl");
+wf.addNode("output", "image_saver");
+wf.connect("input", "process");
+wf.connect("process", "output");
+
+await wf.run("A futuristic city");</pre>
+<pre data-tab="Extensions" data-lang="Python" style="display:none"># Register a custom node
+from novai import Extension, NodeRegistry
+
+@NodeRegistry.register("my-filter")
+class MyFilter(Extension):
+    def process(self, image):
+        # Apply custom filter
+        return image.invert().blur(2)
+
+# Now use in canvas:
+canvas.add_model("my-filter")</pre>
+<pre data-tab="Extensions" data-lang="TypeScript" style="display:none">import { Extension, registerNode } from "@novai/sdk";
+
+@registerNode("my-filter")
+class MyFilter extends Extension {
+  process(image: Image) {
+    return image.invert().blur(2);
+  }
+}</pre>
+    </div>
+  </div>
+</div>
+
+<!-- State-of-the-art Models -->
+<div class="section-header">
+  <p class="section-label">AI Models</p>
+  <h2>State-of-the-art Models</h2>
+  <p>8 种协议接入，覆盖图像、视频、语言全模态。</p>
+</div>
+<div class="model-cards">
+  <div class="model-card">
+    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gen4-5.mp4"></video>
+    <div class="mc-label">文生图</div>
+  </div>
+  <div class="model-card">
+    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-aleph2.mp4"></video>
+    <div class="mc-label">图生视频</div>
+  </div>
+  <div class="model-card">
+    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2.mp4"></video>
+    <div class="mc-label">GPT 对话</div>
+  </div>
+  <div class="model-card">
+    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2-mini.mp4"></video>
+    <div class="mc-label">自动化工作流</div>
+  </div>
+  <div class="model-card">
+    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gemini-omni-flash.mp4"></video>
+    <div class="mc-label">ComfyUI 集成</div>
+  </div>
+  <div class="model-card">
+    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedream5-pro.mp4"></video>
+    <div class="mc-label">ModelScope</div>
+  </div>
+  <div class="model-card">
+    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gpt-image-2.mp4"></video>
+    <div class="mc-label">火山引擎</div>
+  </div>
+  <div class="model-card">
+    <video autoplay muted loop playsinline src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gemini-image3-pro.mp4"></video>
+    <div class="mc-label">Gemini</div>
+  </div>
+</div>
+
+<!-- Enterprise -->
+<div class="section-header">
+  <h2>Built for Creators</h2>
+  <p>开箱即用的桌面端体验，无需 Python 环境。</p>
+</div>
+<div class="ent-grid" style="margin-bottom:80px">
+  <div class="ent-item">
+    <h3>开源免费</h3>
+    <p>代码完全开源，数据不外传。</p>
+  </div>
+  <div class="ent-item">
+    <h3>离线可用</h3>
+    <p>支持本地模型运行，无需网络。</p>
+  </div>
+  <div class="ent-item">
+    <h3>跨平台</h3>
+    <p>macOS / Windows 原生支持。</p>
+  </div>
+  <div class="ent-item">
+    <h3>插件生态</h3>
+    <p>Photoshop 面板 + Chrome 扩展。</p>
+  </div>
+  <div class="ent-item">
+    <h3>200+ 节点</h3>
+    <p>超大画布流畅运行无压力。</p>
+  </div>
+  <div class="ent-item">
+    <h3>社区驱动</h3>
+    <p>GitHub 社区持续贡献新节点。</p>
+  </div>
+  <div class="ent-item">
+    <h3>实时协作</h3>
+    <p>分享工作流，一键复刻创作链路。</p>
+  </div>
+  <div class="ent-item">
+    <h3>持续更新</h3>
+    <p>每周迭代，快速跟进最新模型。</p>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section" id="download">
+  <h2>AI into Your Workflow</h2>
+  <p>免费下载，无需注册。代码开源，数据不外传。</p>
+  <div class="btns">
+    <a href="https://github.com/invaders-2/NOVAI/releases/download/v1.0.90/NOVAI-1.0.90-arm64.dmg" class="btn btn-white">macOS 下载</a>
+    <a href="https://github.com/invaders-2/NOVAI/releases/download/v1.0.90/NOVAI-Setup-1.0.90.exe" class="btn btn-subtle">Windows 下载</a>
+  </div>
+</div>
+
+<footer>
+  <div class="finner">
+    <span>&copy; 2025 NOVAI</span>
+    <div class="flinks">
+      <a href="https://github.com/invaders-2/NOVAI" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://gitee.com/invaders/novai" target="_blank" rel="noopener">Gitee</a>
+      <a href="https://modelscope.cn/studios/bllack/NOVAI" target="_blank" rel="noopener">ModelScope</a>
+      <a href="docs.html">帮助文档</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+const tabs = document.querySelectorAll('.code-tab');
+const langs = document.querySelectorAll('.code-lang');
+const pres = document.querySelectorAll('#code-body pre');
+
+function updateCode() {
+  const activeTab = document.querySelector('.code-tab.active')?.textContent;
+  const activeLang = document.querySelector('.code-lang.active')?.textContent;
+  pres.forEach(pre => {
+    const match = pre.dataset.tab === activeTab && pre.dataset.lang === activeLang;
+    pre.style.display = match ? 'block' : 'none';
+  });
+}
+
+tabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    updateCode();
+  });
+});
+
+langs.forEach(lang => {
+  lang.addEventListener('click', () => {
+    langs.forEach(l => l.classList.remove('active'));
+    lang.classList.add('active');
+    updateCode();
+  });
+});
+
+document.querySelector('.code-copy').addEventListener('click', () => {
+  const visible = Array.from(pres).find(p => p.style.display !== 'none');
+  if (visible) navigator.clipboard.writeText(visible.textContent);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>帮助文档 — NOVAI</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, sans-serif;
+  background: #000;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.6;
+  display: flex;
+}
+::selection { background: rgba(255,255,255,0.2); }
+
+/* Sidebar */
+.sidebar {
+  position: sticky; top: 0;
+  width: 260px; min-width: 260px; height: 100vh;
+  background: #08080a;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 32px 24px;
+  display: flex; flex-direction: column;
+}
+.sidebar-title {
+  font-size: 20px; font-weight: 600; color: #fff;
+  margin-bottom: 6px;
+}
+.sidebar-version {
+  font-size: 13px; color: #555;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+/* Sidebar sections */
+.sidebar-section { margin-top: 8px; }
+.sidebar-section-title {
+  font-size: 12px; font-weight: 600; color: #818a9d;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.sidebar-section a {
+  display: block; font-size: 14px; color: #7eb8ff;
+  text-decoration: none; padding: 3px 0;
+}
+.sidebar-section a:hover { color: #fff; }
+
+/* Main content */
+.main {
+  flex: 1; min-width: 0;
+  max-width: 820px;
+  padding: 48px 48px 80px;
+}
+.main h1 { font-size: 32px; font-weight: 500; letter-spacing: -0.8px; color: #fff; margin-bottom: 8px; }
+.main h2 {
+  font-size: 36px; font-weight: 500; letter-spacing: -0.8px; color: #fff;
+  margin-top: 64px; margin-bottom: 16px;
+  padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.main h3 { font-size: 22px; font-weight: 500; color: #e0e0e0; margin-top: 32px; margin-bottom: 12px; }
+.main p { font-size: 15px; color: #a1afc5; margin-bottom: 14px; }
+.main a { color: #7eb8ff; text-decoration: none; }
+.main a:hover { text-decoration: underline; }
+.main ul, .main ol { margin: 0 0 14px 20px; color: #a1afc5; font-size: 15px; }
+.main li { margin-bottom: 6px; }
+.main code {
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+  font-size: 13px; background: #131416; padding: 2px 6px; border-radius: 4px;
+  color: #cdd1d6;
+}
+.main pre {
+  background: #131416; border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px; padding: 16px 20px; margin: 12px 0 20px;
+  overflow-x: auto;
+}
+.main pre code { background: none; padding: 0; font-size: 13px; line-height: 1.7; }
+.main table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 14px; }
+.main th, .main td {
+  text-align: left; padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.main th { color: #818a9d; font-weight: 500; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+.main td { color: #a1afc5; }
+.main strong { color: #cdd1d6; font-weight: 600; }
+.main .note {
+  background: rgba(126,184,255,0.06); border-left: 3px solid #7eb8ff;
+  padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0;
+  font-size: 14px; color: #a1afc5;
+}
+.main .warn {
+  background: rgba(255,180,50,0.06); border-left: 3px solid #f5a623;
+  padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0;
+  font-size: 14px; color: #a1afc5;
+}
+.main img.doc-screenshot {
+  width: auto; max-width: 100%; max-height: 60vh;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  margin: 8px 0 16px;
+  object-fit: contain; display: block;
+}
+.main .img-caption {
+  font-size: 13px; color: #555; margin-top: -12px; margin-bottom: 16px;
+}
+
+/* TOC inside main */
+.toc { margin-bottom: 40px; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; }
+.toc h4 { font-size: 14px; color: #818a9d; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.toc a { display: block; font-size: 14px; color: #7eb8ff; text-decoration: none; padding: 3px 0; }
+.toc a:hover { color: #fff; }
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { padding: 24px 20px 60px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-title">帮助文档</div>
+  <p class="sidebar-version">NOVAI v1.0.89 — 无限画布 AI 创作平台</p>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <h1>帮助文档</h1>
+  <p>NOVAI v1.0.89 — 无限画布 AI 创作平台</p>
+
+  <div class="toc">
+    <h4>目录</h4>
+    <a href="#quick-start">如何开始使用 NOVAI</a>
+    <a href="#install">安装与运行</a>
+    <a href="#overview">产品概览</a>
+    <a href="#features">功能介绍</a>
+    <a href="#canvas">创建画布</a>
+    <a href="#nodes">创建节点</a>
+    <a href="#generate-image">生成图片</a>
+    <a href="#generate-video">生成视频</a>
+    <a href="#gpt-chat">GPT 聊天</a>
+    <a href="#api-protocols">AI 协议配置</a>
+    <a href="#models">内置模型列表</a>
+    <a href="#faq">常见问题</a>
+    <a href="#changelog">更新日志</a>
+  </div>
+
+  <!-- ===== 如何开始使用 ===== -->
+  <h2 id="quick-start">如何开始使用 NOVAI</h2>
+  <p>NOVAI 是一款面向创作者的<strong>无限画布 AI 创作平台</strong>。你可以在无限画布上自由缩放、拖拽、连线，组合各种 AI 能力——文生图、图生图、AI 视频生成、GPT 多模态对话——所有操作在一个界面中无缝衔接。</p>
+
+  <h3>三步上手</h3>
+  <ol>
+    <li><strong>下载安装</strong>：根据你的操作系统下载对应安装包，双击安装启动。</li>
+    <li><strong>配置 API</strong>：首次启动后进入「API 设置」页面。内置 ModelScope 免费 API 可直接使用，也可添加自己的 API Key。</li>
+    <li><strong>开始创作</strong>：打开「无限画布」，拖入节点、输入提示词即可生成图片或视频。</li>
+  </ol>
+
+  <div class="note">
+    <strong>提示</strong>：NOVAI 内置 ModelScope 免费 API，无需注册即可体验生图和对话功能。视频生成等高级功能需要配置对应平台的 API Key。
+  </div>
+
+  <!-- ===== 安装与运行 ===== -->
+  <h2 id="install">安装与运行</h2>
+
+  <h3>推荐：下载安装包</h3>
+  <p>无需安装 Python、无需配置环境，下载安装包双击即用。</p>
+  <p><strong>Windows</strong>：下载 <code>NOVAI-Setup.exe</code>，双击安装，桌面自动创建快捷方式。</p>
+  <p><strong>macOS</strong>：下载 <code>NOVAI.dmg</code>，拖入 Applications 文件夹即可。首次启动若提示"无法验证开发者"，请前往 <strong>系统设置 → 隐私与安全性</strong> 中点击"仍要打开"。</p>
+
+  <div class="note">
+    <strong>注意</strong>：macOS 版本需要 macOS 12.0 及以上系统；Windows 版本需要 Windows 10 及以上。
+  </div>
+
+  <h3>从源码运行</h3>
+  <p>如需从源码运行或参与开发：</p>
+  <pre><code>git clone https://github.com/invaders-2/NOVAI.git
+cd NOVAI
+pip install -r requirements.txt
+python main.py</code></pre>
+
+  <!-- ===== 产品概览 ===== -->
+  <h2 id="overview">产品概览</h2>
+  <p>启动 NOVAI 后，你会看到如下主界面：</p>
+
+  <img class="doc-screenshot" src="docs-screenshots/01-home.png" alt="NOVAI 主界面">
+  <p class="img-caption">图 1：NOVAI 主界面，包含无限画布、节点面板和工具栏。</p>
+
+  <p>NOVAI 的核心区域包括：</p>
+  <ul>
+    <li><strong>无限画布</strong>：中央最大区域，支持缩放（Ctrl+滚轮）、平移（空格+拖拽），画布大小无限制。</li>
+    <li><strong>节点面板</strong>：左侧面板，列出所有可用的 AI 节点，包括图像生成、视频生成、GPT 对话、工具处理等类别。</li>
+    <li><strong>工具栏</strong>：顶部工具栏，包含画布控制（缩放、适应画布）、节点搜索、设置入口和导出功能。</li>
+    <li><strong>状态栏</strong>：底部显示当前 API 连接状态、队列中的任务数量和 GPU 使用情况。</li>
+  </ul>
+
+  <!-- ===== 功能介绍 ===== -->
+  <h2 id="features">功能介绍</h2>
+
+  <h3>核心能力</h3>
+  <table>
+    <tr><th>功能</th><th>说明</th></tr>
+    <tr><td>文生图</td><td>通过提示词生成高质量图像，支持 SDXL、Flux、Midjourney 风格</td></tr>
+    <tr><td>图生图</td><td>上传参考图进行风格迁移、变体生成、局部重绘</td></tr>
+    <tr><td>图生视频</td><td>静态图生成动态视频，支持运镜控制和帧率设置</td></tr>
+    <tr><td>文生视频</td><td>通过文字描述直接生成短视频片段</td></tr>
+    <tr><td>GPT 多模态对话</td><td>支持文本、图片输入的多模态对话能力，可串联到工作流节点</td></tr>
+    <tr><td>工作流自动化</td><td>拖拽节点连线，构建自动化 AI 创作流水线</td></tr>
+    <tr><td>批量处理</td><td>一键批量生成，支持参数模板</td></tr>
+    <tr><td>历史记录</td><td>自动保存生成历史，支持回看和再编辑</td></tr>
+  </table>
+
+  <!-- ===== 创建画布 ===== -->
+  <h2 id="canvas">创建画布</h2>
+  <p>点击左侧面板的「新建画布」按钮，或使用快捷键 <code>Ctrl+N</code>（macOS: <code>Cmd+N</code>）创建新的无限画布。</p>
+
+  <img class="doc-screenshot" src="docs-screenshots/02-canvas.png" alt="NOVAI 画布操作">
+  <p class="img-caption">图 2：在无限画布上拖入节点并连线构建工作流。</p>
+
+  <h3>画布操作</h3>
+  <ul>
+    <li><strong>缩放</strong>：Ctrl + 滚轮（macOS: Cmd + 滚轮），缩放范围 10%~800%</li>
+    <li><strong>平移</strong>：空格键 + 鼠标拖拽，或鼠标中键拖拽</li>
+    <li><strong>适应画布</strong>：双击空白区域，自动将所有节点适配到当前视口</li>
+    <li><strong>框选</strong>：按住 Shift 拖拽可框选多个节点批量移动</li>
+    <li><strong>右键菜单</strong>：画布空白处右键可快速添加节点、粘贴或调整画布设置</li>
+  </ul>
+
+  <!-- ===== 创建节点 ===== -->
+  <h2 id="nodes">创建节点</h2>
+  <p>节点是 NOVAI 工作流的最小执行单元。每个节点代表一个 AI 能力或处理步骤。</p>
+
+  <h3>添加节点</h3>
+  <ol>
+    <li>从左侧节点面板拖拽任意节点到画布上</li>
+    <li>或双击画布空白区域，在弹出的搜索框中输入节点名称快速添加</li>
+  </ol>
+
+  <h3>节点类型</h3>
+  <table>
+    <tr><th>类别</th><th>节点</th><th>说明</th></tr>
+    <tr><td>图像生成</td><td>SDXL / Flux / DALL-E</td><td>文生图和图生图模型</td></tr>
+    <tr><td>视频生成</td><td>Stable Video / Runway Gen</td><td>图生视频和文生视频</td></tr>
+    <tr><td>语言模型</td><td>GPT-4o / Claude / Gemini</td><td>多模态对话和文本生成</td></tr>
+    <tr><td>图像处理</td><td>Upscale / RemoveBG / Inpaint</td><td>图像后处理和编辑</td></tr>
+    <tr><td>输入/输出</td><td>Text Input / Image Load / File Save</td><td>数据输入和结果保存</td></tr>
+    <tr><td>逻辑控制</td><td>If / Loop / Batch</td><td>条件判断和循环控制</td></tr>
+  </table>
+
+  <h3>连线规则</h3>
+  <p>节点左侧为<strong>输入端口</strong>，右侧为<strong>输出端口</strong>。从输出端口拖拽到另一个节点的输入端口即可建立连接。数据类型不匹配时连线会显示为红色虚线，运行时自动跳过该连接。</p>
+
+  <!-- ===== 生成图片 ===== -->
+  <h2 id="generate-image">生成图片</h2>
+  <p>NOVAI 支持多种图片生成模式，通过不同的节点组合实现灵活的图像创作流程。</p>
+
+  <h3>文生图</h3>
+  <ol>
+    <li>从左侧面板拖入「Text Input」节点，输入提示词</li>
+    <li>拖入「SDXL」或「Flux」节点</li>
+    <li>从 Text Input 的输出端连线到模型节点的输入端</li>
+    <li>右键点击模型节点选择「运行此节点」，或按 <code>Ctrl+Enter</code> 运行整个工作流</li>
+  </ol>
+
+  <img class="doc-screenshot" src="docs-screenshots/04-generate.png" alt="NOVAI 图片生成">
+  <p class="img-caption">图 3：文生图工作流示例，提示词 → SDXL → 图片输出。</p>
+
+  <h3>提示词技巧</h3>
+  <ul>
+    <li><strong>正面提示词</strong>：描述你想要的画面内容、风格、构图</li>
+    <li><strong>负面提示词</strong>：描述不想要出现的元素，如 "blurry, low quality, watermark"</li>
+    <li><strong>权重控制</strong>：使用 <code>(keyword:1.2)</code> 语法增强某个关键词的权重</li>
+    <li><strong>风格参考</strong>：在提示词中指定艺术风格，如 "oil painting"、"anime style"、"photorealistic"</li>
+  </ul>
+
+  <div class="warn">
+    <strong>注意</strong>：生成高分辨率图片时建议先以较低分辨率快速生成预览，确认效果后再提升分辨率。大尺寸生成可能消耗较多 API 配额。
+  </div>
+
+  <!-- ===== 生成视频 ===== -->
+  <h2 id="generate-video">生成视频</h2>
+  <p>视频生成需要先有一张参考图（可从前置节点传入），或直接使用文本描述生成。</p>
+
+  <h3>图生视频步骤</h3>
+  <ol>
+    <li>确保画布上已有一个图像输出节点（如 SDXL 生成的图片）</li>
+    <li>拖入「Stable Video」节点</li>
+    <li>将图像节点的输出端连线到视频节点的输入端</li>
+    <li>在视频节点参数面板中设置：帧数（默认 25 帧）、运动强度（1-10）、帧率（默认 24fps）</li>
+    <li>运行节点，生成的 MP4 会自动保存到输出目录</li>
+  </ol>
+
+  <div class="note">
+    <strong>提示</strong>：视频生成耗时较长（通常 30 秒~3 分钟），建议先调低帧数和分辨率做快速测试，确认效果后再提升参数。
+  </div>
+
+  <!-- ===== GPT 聊天 ===== -->
+  <h2 id="gpt-chat">GPT 聊天</h2>
+  <p>NOVAI 内置 GPT 多模态对话节点，支持文本输入和图片输入，可用于创意构思、提示词优化、代码生成等场景。</p>
+
+  <img class="doc-screenshot" src="docs-screenshots/03-chat.png" alt="NOVAI GPT 聊天">
+  <p class="img-caption">图 4：GPT 对话节点支持多轮对话和图片输入。</p>
+
+  <h3>使用方式</h3>
+  <ol>
+    <li>拖入「GPT Chat」节点到画布</li>
+    <li>双击节点打开对话面板，直接输入消息并发送</li>
+    <li>支持上传图片作为对话上下文（点击输入框左侧的图片图标）</li>
+    <li>对话历史保存在节点内部，可导出为 Markdown 或 JSON</li>
+  </ol>
+
+  <h3>在工作流中使用</h3>
+  <p>GPT Chat 节点支持与其他节点连线：</p>
+  <ul>
+    <li><strong>输入</strong>：可接收 Text Input 节点的文本，作为对话的系统提示或用户消息</li>
+    <li><strong>输出</strong>：对话结果可传递给下游节点，如将 GPT 生成的提示词直接输入到 SDXL 节点</li>
+  </ul>
+
+  <!-- ===== AI 协议配置 ===== -->
+  <h2 id="api-protocols">AI 协议配置</h2>
+  <p>NOVAI 支持 8 种 AI 服务协议，覆盖国内外主流 AI 平台。你可以在「设置 → API 配置」页面管理所有 API Key。</p>
+
+  <img class="doc-screenshot" src="docs-screenshots/05-settings.png" alt="NOVAI API 设置">
+  <p class="img-caption">图 5：API 配置页面，支持多种协议接入。</p>
+
+  <h3>支持的协议</h3>
+  <table>
+    <tr><th>协议</th><th>代表平台</th><th>适用模型</th></tr>
+    <tr><td>OpenAI Compatible</td><td>OpenAI / 智谱 / DeepSeek</td><td>GPT-4o, GPT-4, GLM</td></tr>
+    <tr><td>Anthropic</td><td>Claude</td><td>Claude 3.5 Sonnet, Opus</td></tr>
+    <tr><td>Gemini</td><td>Google AI</td><td>Gemini 2.0 Flash, Pro</td></tr>
+    <tr><td>ModelScope</td><td>阿里 ModelScope</td><td>SDXL, Qwen</td></tr>
+    <tr><td>Volcano Engine</td><td>火山引擎</td><td>Doubao, Seedream</td></tr>
+    <tr><td>Replicate</td><td>Replicate.com</td><td>Flux, SDXL</td></tr>
+    <tr><td>ComfyUI</td><td>本地 ComfyUI</td><td>自定义工作流</td></tr>
+    <tr><td>Custom HTTP</td><td>自建服务</td><td>任意兼容 OpenAI API 的服务</td></tr>
+  </table>
+
+  <h3>内置免费 API</h3>
+  <p>NOVAI 内置了 ModelScope 的免费 API，无需任何配置即可使用基础的文生图和 GPT 对话功能。免费 API 有以下限制：</p>
+  <ul>
+    <li>图像生成：每天 100 次免费调用</li>
+    <li>GPT 对话：每分钟最多 10 次请求</li>
+    <li>不支持视频生成和高级模型</li>
+  </ul>
+  <p>如需解除限制，请在设置中添加自己的 API Key。</p>
+
+  <div class="warn">
+    <strong>安全提醒</strong>：API Key 仅存储在本地电脑上，不会上传到任何服务器。切换设备时需要重新配置。
+  </div>
+
+  <!-- ===== 内置模型列表 ===== -->
+  <h2 id="models">内置模型列表</h2>
+  <p>以下是 NOVAI 当前版本预设的模型节点清单，随版本更新会持续扩充：</p>
+
+  <table>
+    <tr><th>节点名称</th><th>类型</th><th>来源</th></tr>
+    <tr><td>SDXL 1.0</td><td>图像生成</td><td>ModelScope / Replicate</td></tr>
+    <tr><td>Flux.1 Dev</td><td>图像生成</td><td>Replicate</td></tr>
+    <tr><td>DALL-E 3</td><td>图像生成</td><td>OpenAI</td></tr>
+    <tr><td>Stable Video</td><td>视频生成</td><td>Replicate</td></tr>
+    <tr><td>Runway Gen-3</td><td>视频生成</td><td>Runway</td></tr>
+    <tr><td>GPT-4o</td><td>多模态对话</td><td>OpenAI / 智谱 / DeepSeek</td></tr>
+    <tr><td>Claude 3.5 Sonnet</td><td>文本对话</td><td>Anthropic</td></tr>
+    <tr><td>Gemini 2.0 Flash</td><td>多模态对话</td><td>Google AI</td></tr>
+    <tr><td>Upscale 4x</td><td>图像处理</td><td>内置</td></tr>
+    <tr><td>Remove Background</td><td>图像处理</td><td>内置</td></tr>
+    <tr><td>Inpaint</td><td>图像处理</td><td>内置</td></tr>
+  </table>
+
+  <!-- ===== 常见问题 ===== -->
+  <h2 id="faq">常见问题</h2>
+
+  <h3>Q: 为什么我的图片生成失败了？</h3>
+  <p>常见原因：① API Key 无效或余额不足；② 网络连接问题；③ 提示词触发了内容安全过滤。请检查 API 设置中的连接测试结果，并尝试更换提示词。</p>
+
+  <h3>Q: macOS 提示"无法验证开发者"怎么办？</h3>
+  <p>前往 <strong>系统设置 → 隐私与安全性</strong>，在底部找到 NOVAI 的拦截记录，点击「仍要打开」。只需操作一次，后续启动不再提示。</p>
+
+  <h3>Q: 如何分享我的工作流？</h3>
+  <p>右键点击画布空白区域，选择「导出工作流」即可保存为 <code>.novai</code> 文件。将此文件发送给其他人，对方通过「导入工作流」即可复现完全相同的节点和连线。</p>
+
+  <h3>Q: 视频生成为什么这么慢？</h3>
+  <p>视频生成是计算密集型任务，耗时取决于帧数、分辨率和模型复杂度。建议先以较低参数测试，确认效果后再提升。</p>
+
+  <h3>Q: 支持离线使用吗？</h3>
+  <p>部分功能支持离线。如果你在本地部署了 ComfyUI 或 Ollama，可通过 Custom HTTP 协议连接到本地服务，实现完全离线运行。内置的图像处理节点（Upscale、RemoveBG）也可离线使用。</p>
+
+  <h3>Q: 数据会传到云端吗？</h3>
+  <p>不会。NOVAI 是纯本地桌面应用，你的提示词、图片和工作流数据仅存储在你的电脑上。只有当调用云端 API（如 OpenAI、ModelScope）时，对应的请求数据才会发送到对应平台。</p>
+
+  <!-- ===== 更新日志 ===== -->
+  <h2 id="changelog">更新日志</h2>
+
+  <h3>v1.0.89 (2025-07-20)</h3>
+  <ul>
+    <li>新增：ComfyUI 协议支持，可直接连接本地 ComfyUI 工作流</li>
+    <li>新增：节点搜索功能，双击画布快速查找和添加节点</li>
+    <li>优化：画布渲染性能提升 40%，200+ 节点流畅运行</li>
+    <li>修复：macOS 下部分快捷键冲突问题</li>
+    <li>修复：视频生成节点在某些网络环境下超时的问题</li>
+  </ul>
+
+  <h3>v1.0.88 (2025-07-13)</h3>
+  <ul>
+    <li>新增：批量处理模式，支持参数模板一键批量生成</li>
+    <li>新增：历史记录面板，可回看和重新编辑过往生成结果</li>
+    <li>优化：API 配置页面 UI 改版，支持一键测试连接</li>
+    <li>修复：Windows 下高分屏缩放显示异常</li>
+  </ul>
+
+  <h3>v1.0.87 (2025-07-06)</h3>
+  <ul>
+    <li>新增：Gemini 2.0 Flash 模型节点</li>
+    <li>新增：工作流导入/导出功能（.novai 格式）</li>
+    <li>优化：提示词输入框支持语法高亮和自动补全</li>
+    <li>修复：部分情况下节点连线断开后无法重连的问题</li>
+  </ul>
+
+  <h3>v1.0.86 (2025-06-29)</h3>
+  <ul>
+    <li>新增：Loop 和 Batch 逻辑控制节点</li>
+    <li>优化：首次启动引导流程</li>
+    <li>修复：图片输出节点中文路径兼容性问题</li>
+  </ul>
+
+  <h3>v1.0.85 及更早</h3>
+  <p>初始版本发布，包含：无限画布、SDXL 图像生成、GPT 对话、基础节点系统、ModelScope 免费 API 内置。详见 <a href="https://github.com/invaders-2/NOVAI/releases" target="_blank">GitHub Releases</a>。</p>
+
+</main>
+
+</body>
+</html>

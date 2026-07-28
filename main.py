@@ -2049,7 +2049,8 @@ def github_bytes(url: str) -> bytes:
 
 def download_github_update_files(files: List[str], staging_root: str) -> None:
     staging_root_abs = os.path.abspath(staging_root)
-    for rel in files:
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    def _download_one(rel):
         safe_update_target(rel)
         raw_url = f"{GITHUB_RAW_ROOT}/{urllib.parse.quote(rel, safe='/')}"
         data = github_bytes(raw_url)
@@ -2059,6 +2060,15 @@ def download_github_update_files(files: List[str], staging_root: str) -> None:
         os.makedirs(os.path.dirname(stage_path), exist_ok=True)
         with open(stage_path, "wb") as f:
             f.write(data)
+        return rel
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(_download_one, rel): rel for rel in files}
+        for future in as_completed(futures):
+            rel = futures[future]
+            try:
+                future.result()
+            except Exception as e:
+                raise RuntimeError(f"下载文件 {rel} 失败: {e}") from e
 
 def modelscope_update_file_list() -> List[str]:
     """通过 ModelScope 仓库文件 API 列出所有允许更新的文件（不依赖 git）。"""
@@ -2092,7 +2102,8 @@ def download_modelscope_update_files(staging_root: str) -> List[str]:
     if not any(f.startswith("static/") for f in files):
         raise RuntimeError("ModelScope 未返回 static 文件，已取消更新")
     staging_root_abs = os.path.abspath(staging_root)
-    for rel in files:
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    def _download_one(rel):
         safe_update_target(rel)
         data = modelscope_file_bytes(rel)
         stage_path = os.path.abspath(os.path.join(staging_root_abs, *rel.split("/")))
@@ -2101,6 +2112,15 @@ def download_modelscope_update_files(staging_root: str) -> List[str]:
         os.makedirs(os.path.dirname(stage_path), exist_ok=True)
         with open(stage_path, "wb") as f:
             f.write(data)
+        return rel
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(_download_one, rel): rel for rel in files}
+        for future in as_completed(futures):
+            rel = futures[future]
+            try:
+                future.result()
+            except Exception as e:
+                raise RuntimeError(f"下载文件 {rel} 失败: {e}") from e
     return files
 
 def safe_update_target(path: str) -> str:
@@ -2140,19 +2160,19 @@ def schedule_self_restart(delay_seconds: int = 3) -> bool:
             if has_desktop_exe:
                 launch_line = (
                     f"echo [%date% %time%] starting NOVAI.exe >> \"%LOG_FILE%\"\r\n"
-                    f"start \"NOVAI\" /D \"%APP_DIR%\" \"\"%APP_DIR%\\NOVAI.exe\"\"\r\n"
+                    f"start \"\" /D \"%APP_DIR%\" \"%APP_DIR%\\NOVAI.exe\"\r\n"
                 )
             else:
                 launch_line = (
                     f"if exist \"%LAUNCHER%\" (\r\n"
                     f"  echo [%date% %time%] starting launcher: %LAUNCHER% >> \"%LOG_FILE%\"\r\n"
-                    f"  start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k call \"%LAUNCHER%\"\r\n"
+                    f"  start \"\" /D \"%APP_DIR%\" cmd /c call \"%LAUNCHER%\"\r\n"
                     f") else (\r\n"
                     f"  echo [%date% %time%] launcher missing, fallback to python main.py >> \"%LOG_FILE%\"\r\n"
                     f"  if exist \"%APP_DIR%\\python\\python.exe\" (\r\n"
-                    f"    start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k \"\"%APP_DIR%\\python\\python.exe\" main.py\"\r\n"
+                    f"    start \"\" /D \"%APP_DIR%\" \"%APP_DIR%\\python\\python.exe\" main.py\r\n"
                     f"  ) else (\r\n"
-                    f"    start \"ComfyUI-API-Modelscope\" /D \"%APP_DIR%\" cmd /k python main.py\r\n"
+                    f"    start \"\" /D \"%APP_DIR%\" cmd /c python main.py\r\n"
                     f"  )\r\n"
                     f")\r\n"
                 )

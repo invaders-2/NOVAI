@@ -370,8 +370,13 @@ def main():
                     raw = base64.b64decode(b64)
 
                     default_name = filename or f"Art-{int(time.time())}{ext}"
+                    try:
+                        from webview import FileDialog as _Fd
+                        _SAVE = _Fd.SAVE
+                    except ImportError:
+                        _SAVE = getattr(webview, 'SAVE_DIALOG', 30)
                     result = webview.windows[0].create_file_dialog(
-                        webview.SAVE_DIALOG,
+                        _SAVE,
                         directory="",
                         save_filename=default_name
                     )

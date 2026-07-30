@@ -334,7 +334,9 @@ RUNNINGHUB_FALLBACK_CHAT_MODELS = [
     "openai/gpt-5.1",
 ]
 JIMENG_DEFAULT_IMAGE_MODELS = [
+    "5.0Pro",
     "5.0",
+    "4.7",
     "4.6",
     "4.5",
     "4.1",
@@ -347,10 +349,8 @@ JIMENG_DEFAULT_VIDEO_MODELS = [
     "seedance2.0fast_vip",
     "seedance2.0",
     "seedance2.0fast",
-    "3.5pro",
-    "3.0pro",
-    "3.0",
-    "3.0fast",
+    "seedance2.0mini",
+    "seedance1.5pro",
 ]
 CODEX_DEFAULT_IMAGE_MODELS = ["gpt-image-2"]
 CODEX_DEFAULT_CHAT_MODELS = ["gpt-5.5"]
@@ -4359,6 +4359,15 @@ def is_apimart_provider(provider):
     base_url = str((provider or {}).get("base_url") or "").lower()
     return provider_protocol(provider) == "apimart" or "apimart.ai" in base_url
 
+def is_fhl_provider(provider):
+    base_url = str((provider or {}).get("base_url") or "").strip().lower()
+    name = str((provider or {}).get("name") or "").strip().lower()
+    try:
+        host = urllib.parse.urlsplit(base_url).netloc.lower()
+    except Exception:
+        host = ""
+    return host in {"www.fhl.mom", "fhl.mom"} or name in {"fhl", "fhl-image"}
+
 def detect_image_request_mode(base_url="", models=None):
     base = str(base_url or "").strip().lower()
     if "apihub.agnes-ai.com" in base:
@@ -5676,8 +5685,8 @@ def jimeng_ratio_from_size(size, fallback="1:1"):
 
 # 官方 dreamina 支持的图片模型（来自 text2image/image2image -h）。
 # image2image 不支持 3.0/3.1。
-JIMENG_TEXT2IMAGE_MODELS = {"3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "5.0"}
-JIMENG_IMAGE2IMAGE_MODELS = {"4.0", "4.1", "4.5", "4.6", "5.0"}
+JIMENG_TEXT2IMAGE_MODELS = {"3.0", "3.1", "4.0", "4.1", "4.5", "4.6", "4.7", "5.0", "5.0Pro"}
+JIMENG_IMAGE2IMAGE_MODELS = {"4.0", "4.1", "4.5", "4.6", "4.7", "5.0", "5.0Pro"}
 
 # 新版 CLI 把 --model_version 改成了 --model，旧版仍是 --model_version。
 # 通过解析 help 输出自动适配，避免跨平台兼容问题。
@@ -5698,7 +5707,10 @@ def jimeng_model_flag(subcommand: str) -> str:
     return flag
 
 def jimeng_normalize_image_model(model):
-    match = re.search(r"(\d+\.\d+)", str(model or ""))
+    text = str(model or "").strip()
+    if re.search(r"\b5(?:\.0)?\s*[-_ ]?pro\b", text, re.IGNORECASE):
+        return "5.0Pro"
+    match = re.search(r"(\d+\.\d+)", text)
     return match.group(1) if match else ""
 
 def jimeng_image_model_version(model, mode="text2image"):
@@ -5716,30 +5728,60 @@ def jimeng_image_resolution(model, size, mode="text2image"):
         desired = "2k"
     else:
         width, height = parse_size_pair(size)
-        desired = "4k" if max(width, height) > 2048 else "2k"
+        # 修复生图分辨率强制变2K
+        longest_side = max(width, height)
+        pixel_count = width * height
+        if longest_side > 3072 or pixel_count > 6000000:
+            desired = "4k"
+        elif longest_side > 1536 or pixel_count > 1572864:
+            desired = "2k"
+        else:
+            desired = "1k"
     # 按官方规则收敛到模型允许的分辨率
     version = jimeng_normalize_image_model(model)
     if mode == "image2image":
-        # image2image 只支持 2k/4k
+        # image2image 仅 5.0Pro 支持 1k；其他模型只支持 2k/4k。
+        if version == "5.0Pro":
+            return desired if desired in ("1k", "2k", "4k") else "1k"
         return "4k" if desired == "4k" else "2k"
-    if version in ("3.0", "3.1"):
-        # 3.0/3.1 只支持 1k/2k
+    if version in ("3.0", "3.1", "5.0Pro"):
+        # 3.0/3.1/5.0Pro 支持 1k/2k；5.0Pro 另外支持 4k。
+        if version == "5.0Pro" and desired == "4k":
+            return "4k"
         return "1k" if desired == "1k" else "2k"
     # 4.x/5.0 只支持 2k/4k
     return "4k" if desired == "4k" else "2k"
 
-# 仅 VIP seedance 支持 1080P；其余模型最高 720P（官方无 480P 选项）
-JIMENG_VIDEO_1080P_MODELS = {"seedance2.0_vip", "seedance2.0fast_vip"}
+# 当前 dreamina CLI 接受小写分辨率值；只有 seedance2.0_vip 支持 1080p/4k，
+# 其余视频模型最高 720p。CLI 省略该参数时可能提交非法 video_resolution_type，
+# 因此"自动"模式显式使用 720p。
+JIMENG_VIDEO_HIGH_RES_MODELS = {"seedance2.0_vip"}
+JIMENG_VIDEO_MODEL_VERSIONS = {
+    "seedance1.5pro",
+    "seedance2.0",
+    "seedance2.0fast",
+    "seedance2.0_vip",
+    "seedance2.0fast_vip",
+    "seedance2.0mini",
+}
 
 def jimeng_video_resolution(model, resolution):
+    if not str(resolution or "").strip():
+        return "720p"
     version = jimeng_video_model_version(model)
     requested = str(resolution or "").strip().upper()
-    if requested not in {"480P", "720P", "1080P"}:
+    if requested in {"4K", "4KP"}:
+        requested = "4k"
+    elif requested in {"1080P", "1080"}:
+        requested = "1080p"
+    elif requested in {"720P", "720"}:
+        requested = "720p"
+    else:
         text = str(model or "").lower()
-        requested = "1080P" if "1080" in text else "720P"
-    if requested == "1080P" and version in JIMENG_VIDEO_1080P_MODELS:
-        return "1080P"
-    return "720P"
+        requested = "1080p" if "1080" in text else "720p"
+    if version not in JIMENG_VIDEO_HIGH_RES_MODELS:
+        return "720p"
+    return requested if requested in {"720p", "1080p", "4k"} else "720p"
 
 # 各模型支持的时长区间（秒）：3.0 系列 3-10，3.5pro 4-12，seedance 4-15
 def jimeng_video_duration_range(model):
@@ -5772,25 +5814,19 @@ def jimeng_video_model_version(model):
     value = str(model or "").strip()
     low = value.lower()
     aliases = {
+        "seedance1.5pro": "seedance1.5pro",
         "seedance2.0fast_vip": "seedance2.0fast_vip",
         "seedance2.0_vip": "seedance2.0_vip",
         "seedance2.0fast": "seedance2.0fast",
         "seedance2.0": "seedance2.0",
-        "3.0_fast": "3.0fast",
-        "3.0fast": "3.0fast",
-        "3.0_pro": "3.0pro",
-        "3.0pro": "3.0pro",
-        "3.5_pro": "3.5pro",
-        "3.5pro": "3.5pro",
-        "3.0": "3.0",
     }
     for key, mapped in aliases.items():
         if key in low:
-            return mapped
+            return mapped if mapped in JIMENG_VIDEO_MODEL_VERSIONS else ""
     return ""
 
 def jimeng_video_resolution_arg(model, resolution):
-    return jimeng_video_resolution(model, resolution).lower()
+    return jimeng_video_resolution(model, resolution)
 
 def jimeng_video_ratio_arg(aspect_ratio):
     value = str(aspect_ratio or "").strip()
@@ -5803,8 +5839,9 @@ def jimeng_append_model_resolution_args(args, payload: CanvasVideoRequest, inclu
     model_version = jimeng_video_model_version(payload.model)
     if include_model and model_version:
         args.append(f"{jimeng_model_flag('text2video')}={model_version}")
-    if payload.resolution:
-        args.append(f"--video_resolution={jimeng_video_resolution_arg(payload.model, payload.resolution)}")
+    resolution = jimeng_video_resolution_arg(payload.model, payload.resolution)
+    if resolution:
+        args.append(f"--video_resolution={resolution}")
 
 def jimeng_video_ref_role(ref):
     role = getattr(ref, "role", "")
@@ -6044,11 +6081,25 @@ async def generate_jimeng_video(payload: CanvasVideoRequest, provider):
                 args = [
                     "multiframe2video",
                     f"--images={','.join(jimeng_cli_path_arg(path) for path in image_paths)}",
-                    f"--prompt={payload.prompt}",
-                    f"--duration={duration}",
                     f"--poll={jimeng_poll_seconds()}",
                 ]
-                jimeng_append_model_resolution_args(args, payload, include_model=True)
+                # multiframe2video 不支持 --model_version（模型固定）；但新版 CLI 要求
+                # --video_resolution（仅 720p/1080p）。ratio 仍由首张参考图推断。
+                mf_res = "1080p" if str(payload.resolution or "").strip().lower() in {"1080p", "1080"} else "720p"
+                args.append(f"--video_resolution={mf_res}")
+                # 转场段数 = 图片数 - 1。正好 2 张用 shorthand（--prompt + 单个 --duration）；
+                # 3 张及以上按段重复 --transition-prompt / --transition-duration。
+                segments = max(1, len(image_paths) - 1)
+                seg_duration = jimeng_transition_duration(payload.duration, segments)
+                if len(image_paths) <= 2:
+                    if str(payload.prompt or "").strip():
+                        args.append(f"--prompt={payload.prompt}")
+                    args.append(f"--duration={seg_duration}")
+                else:
+                    for seg_prompt in jimeng_multiframe_transition_prompts(payload.prompt, segments):
+                        args.append(f"--transition-prompt={seg_prompt}")
+                    for _ in range(segments):
+                        args.append(f"--transition-duration={seg_duration}")
         elif image_refs:
             image_path, created = await jimeng_prepare_local_media(jimeng_video_ref_url(image_refs[0]), "image")
             temp_paths.extend(created)
@@ -6078,12 +6129,14 @@ async def generate_jimeng_video(payload: CanvasVideoRequest, provider):
                 f"--prompt={payload.prompt}",
                 f"--duration={duration}",
                 f"--ratio={payload.aspect_ratio or '16:9'}",
-                f"--video_resolution={jimeng_video_resolution(payload.model, payload.resolution)}",
                 f"--poll={jimeng_poll_seconds()}",
             ]
             model_version = jimeng_video_model_version(payload.model)
             if model_version:
-                args.append(f"{jimeng_model_flag('text2video')}={model_version}")
+                args.append(f"--model_version={model_version}")
+            resolution = jimeng_video_resolution_arg(payload.model, payload.resolution)
+            if resolution:
+                args.append(f"--video_resolution={resolution}")
         raw = await run_jimeng_cli(args, timeout=jimeng_poll_seconds() + 180)
         urls = await jimeng_store_outputs(raw, "video")
         return {"videos": urls, "task_id": jimeng_submit_id(raw) or None, "raw": raw}

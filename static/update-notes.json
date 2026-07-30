@@ -1,13 +1,44 @@
 {
-  "version": "1.0.88",
-  "updated_at": "2026-07-25T23:59:00+08:00",
+  "version": "1.0.91",
+  "updated_at": "2026-07-30T18:19:00+08:00",
   "items": [
     {
+      "type": "feature",
+      "text": "即梦（Jimeng）CLI 面板集成：画布即梦节点支持 CLI 安装按钮与状态追踪，即梦图片/视频生成全流程支持"
+    },
+    {
+      "type": "feature",
+      "text": "多视频模型扩展：新增灵境（Lingjing）、土豆（Tudou）、Grok、Agnes、玉璃（Yuli）等多个视频生成供应商"
+    },
+    {
+      "type": "feature",
+      "text": "HuggingFace 与 ModelScope 模型源支持，新增 hf-mirror.com 国内镜像路由"
+    },
+    {
       "type": "fix",
-      "text": "手势缩放修复：NovaViewport 依赖内联化（safeScale/viewportTransform/screenToWorld），新增 canvasWheelZoomFactor 函数，修复触摸板/触屏捏合缩放异常"
+      "text": "SSL 绕过修复：60 处 httpx.AsyncClient 补全 http2=False、verify=_SSL_CONTEXT、trust_env=_TRUST_ENV，解决 VPN 代理导致的 SSL 解密失败报错"
+    },
+    {
+      "type": "fix",
+      "text": "Win 端下载/保存对话框兼容性修复，接入 NovaUtils.downloadBlob 三层降级方案"
+    },
+    {
+      "type": "improvement",
+      "text": "Windows 下载弹窗 SAVE_DIALOG 兼容性修复（launcher.py 双层 fallback）"
     }
   ],
   "history": [
+    {
+      "version": "1.0.88",
+      "updated_at": "2026-07-25T23:59:00+08:00",
+      "items": [
+        {
+          "type": "fix",
+          "text": "手势缩放修复：NovaViewport 依赖内联化（safeScale/viewportTransform/screenToWorld），新增 canvasWheelZoomFactor 函数，修复触摸板/触屏捏合缩放异常"
+        }
+      ]
+    },
+    {
     {
       "version": "1.0.83",
       "updated_at": "2026-07-17T16:50:00+08:00",

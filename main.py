@@ -53,6 +53,11 @@ _NO_PROXY_SESSION = requests.Session()
 _NO_PROXY_SESSION.trust_env = False
 _NO_PROXY_SESSION.verify = False
 
+# 正式会话，可选走代理（NOVAI_USE_PROXY=1 时走系统代理）
+_SESSION = requests.Session()
+_SESSION.trust_env = _TRUST_ENV
+_SESSION.verify = _SSL_CONTEXT if isinstance(_SSL_CONTEXT, ssl.SSLContext) else True
+
 QUIET_ACCESS_PATHS = {
     "/api/queue_status",
     "/api/canvases",
@@ -2123,6 +2128,68 @@ def download_modelscope_update_files(staging_root: str) -> List[str]:
                 raise RuntimeError(f"下载文件 {rel} 失败: {e}") from e
     return files
 
+def gitee_json(url: str, *, timeout: int = 30, use_etag_cache: bool = False) -> Any:
+    resp = _SESSION.get(url, headers={"User-Agent": "NOVAI-Updater"}, timeout=timeout)
+    resp.raise_for_status()
+    return json.loads(resp.content.decode("utf-8"))
+
+def gitee_bytes(url: str, *, timeout: int = 60) -> bytes:
+    resp = _SESSION.get(url, headers={"User-Agent": "NOVAI-Updater"}, timeout=timeout)
+    if resp.status_code == 451:
+        return b""
+    resp.raise_for_status()
+    return resp.content
+
+def gitee_update_file_list() -> Tuple[List[str], List[str], List[str]]:
+    tree_data = gitee_json(GITEE_TREE_URL, use_etag_cache=True)
+    entries = (tree_data.get("tree") or []) if isinstance(tree_data, dict) else []
+    if not entries:
+        entries = (tree_data or {}).get("tree") or []
+    static_files = []
+    root_files = []
+    for entry in entries:
+        path = str(entry.get("path") or "").replace("\\", "/")
+        if entry.get("type") == "blob" and update_allowed_file(path):
+            if path.startswith("static/"):
+                static_files.append(path)
+            else:
+                root_files.append(path)
+    if "main.py" not in root_files:
+        root_files.append("main.py")
+    if "VERSION" not in root_files:
+        root_files.append("VERSION")
+    static_files = sorted(set(static_files))
+    root_files = sorted(set(root_files))
+    files = root_files + static_files
+    if not static_files:
+        raise RuntimeError("Gitee 未返回 static 文件，已取消更新")
+    return root_files, static_files, files
+
+def download_gitee_update_files(files: List[str], staging_root: str) -> None:
+    staging_root_abs = os.path.abspath(staging_root)
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    def _download_one(rel):
+        safe_update_target(rel)
+        raw_url = f"{GITEE_RAW_ROOT}/{urllib.parse.quote(rel, safe='/')}"
+        data = gitee_bytes(raw_url)
+        if not data:
+            return None
+        stage_path = os.path.abspath(os.path.join(staging_root_abs, *rel.split("/")))
+        if os.path.commonpath([staging_root_abs, stage_path]) != staging_root_abs:
+            raise ValueError(f"更新暂存路径不安全：{rel}")
+        os.makedirs(os.path.dirname(stage_path), exist_ok=True)
+        with open(stage_path, "wb") as f:
+            f.write(data)
+        return rel
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        futures = {executor.submit(_download_one, rel): rel for rel in files}
+        for future in as_completed(futures):
+            rel = futures[future]
+            try:
+                future.result()
+            except Exception as e:
+                raise RuntimeError(f"下载文件 {rel} 失败: {e}") from e
+
 def safe_update_target(path: str) -> str:
     rel = str(path or "").replace("\\", "/").lstrip("/")
     if not update_allowed_file(rel):
@@ -2281,18 +2348,24 @@ def staged_update_file_list(staging_root: str) -> Tuple[List[str], List[str], Li
     static_files = sorted(set(static_files))
     return root_files, static_files, root_files + static_files
 
-UPDATE_SOURCE_LABELS = {"github": "GitHub", "modelscope": "ModelScope"}
+FALLBACK_SOURCES = ["gitee", "modelscope", "github"]
+
+UPDATE_SOURCE_LABELS = {"gitee": "Gitee", "github": "GitHub", "modelscope": "ModelScope"}
 
 def normalize_update_source(value: str) -> str:
-    source = str(value or "github").strip().lower()
+    source = str(value or "gitee").strip().lower()
     if source == "ms":
         return "modelscope"
-    if source not in {"github", "modelscope"}:
-        return "github"
+    if source not in {"gitee", "github", "modelscope"}:
+        return "gitee"
     return source
 
 def stage_update_from_source(source: str, staging_root: str) -> Tuple[List[str], List[str], List[str]]:
     """下载指定源的更新文件到 staging，返回 (root_files, static_files, files)。失败抛异常。"""
+    if source == "gitee":
+        root_files, static_files, files = gitee_update_file_list()
+        download_gitee_update_files(files, staging_root)
+        return root_files, static_files, files
     if source == "modelscope":
         download_modelscope_update_files(staging_root)
         return staged_update_file_list(staging_root)
@@ -2309,8 +2382,7 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
     # 冗余设计：先用用户选择的源，失败后自动切换到另一个源兜底，全部失败才报错
     source_order = [requested_source]
     if req.fallback:
-        other = "modelscope" if requested_source == "github" else "github"
-        source_order.append(other)
+        source_order.extend(s for s in FALLBACK_SOURCES if s != requested_source)
     try:
         backup_root = os.path.join(DATA_DIR, "update_backups", time.strftime("%Y%m%d-%H%M%S"))
 

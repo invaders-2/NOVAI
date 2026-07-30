@@ -1,26 +1,46 @@
 {
   "version": "1.0.91",
-  "updated_at": "2026-07-30T18:19:00+08:00",
+  "updated_at": "2026-07-30T18:30:00+08:00",
   "items": [
     {
       "type": "feature",
-      "text": "即梦（Jimeng）CLI 面板集成：画布即梦节点支持 CLI 安装按钮与状态追踪，即梦图片/视频生成全流程支持"
+      "text": "Jimeng 5.0Pro/4.7 图生视频模型支持，分辨率自适应策略重构(1k/2k/4k)"
     },
     {
       "type": "feature",
-      "text": "多视频模型扩展：新增灵境（Lingjing）、土豆（Tudou）、Grok、Agnes、玉璃（Yuli）等多个视频生成供应商"
+      "text": "Jimeng seedance2.0mini/seedance1.5pro 视频模型支持，CLI 分辨率参数规范化"
     },
     {
       "type": "feature",
-      "text": "HuggingFace 与 ModelScope 模型源支持，新增 hf-mirror.com 国内镜像路由"
+      "text": "Gitee 更新链路正式接入：支持一键从 Gitee 源检查/下载更新，三源兜底 gitee→modelscope→github"
+    },
+    {
+      "type": "feature",
+      "text": "即梦（Jimeng）CLI 面板集成：画布即梦节点支持 CLI 安装按钮与状态追踪"
+    },
+    {
+      "type": "feature",
+      "text": "多视频模型扩展：Lingjing/土豆/Grok/Agnes/玉璃 等多视频生成供应商接入"
+    },
+    {
+      "type": "feature",
+      "text": "HuggingFace/ModelScope 模型源支持，hf-mirror.com 国内镜像路由"
     },
     {
       "type": "fix",
-      "text": "SSL 绕过修复：60 处 httpx.AsyncClient 补全 http2=False、verify=_SSL_CONTEXT、trust_env=_TRUST_ENV，解决 VPN 代理导致的 SSL 解密失败报错"
+      "text": "SSL 绕过修复：60+ 处 httpx.AsyncClient 补全 http2=False / verify=_SSL_CONTEXT / trust_env=_TRUST_ENV"
     },
     {
       "type": "fix",
-      "text": "Win 端下载/保存对话框兼容性修复，接入 NovaUtils.downloadBlob 三层降级方案"
+      "text": "Jimeng 视频生成分辨率修复（seedance2.0 原先强制变 2K 问题）"
+    },
+    {
+      "type": "fix",
+      "text": "Windows 下载/保存弹窗兼容性修复，NovaUtils.downloadBlob 三层降级方案"
+    },
+    {
+      "type": "improvement",
+      "text": "FHL provider 识别接入，扩展 API 源兼容性"
     },
     {
       "type": "improvement",
@@ -38,7 +58,6 @@
         }
       ]
     },
-    {
     {
       "version": "1.0.83",
       "updated_at": "2026-07-17T16:50:00+08:00",

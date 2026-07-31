@@ -1253,10 +1253,10 @@ function zoomBarApplyScale(nextScale){
     scheduleViewportSave();
 }
 function zoomBarZoomIn(){
-    zoomBarApplyScale((viewport.scale || 1) * 1.25);
+    zoomBarApplyScale(Math.round((viewport.scale || 1) * 100 + 5) / 100);
 }
 function zoomBarZoomOut(){
-    zoomBarApplyScale((viewport.scale || 1) * 0.8);
+    zoomBarApplyScale(Math.round((viewport.scale || 1) * 100 - 5) / 100);
 }
 function zoomBarReset(){
     zoomBarApplyScale(1);

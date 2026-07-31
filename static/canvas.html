@@ -113,10 +113,10 @@ body.studio-theme-dark .toolbar {
 .toolbar button.active { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
 .canvas-board { background: var(--bg) !important; }
 /* ═══ 画布浮窗全屏（iframe 内铺满，父页面侧边栏仍可见，故不用 requestFullscreen） ═══ */
-#shell.board-fullscreen .topbar { display: none !important; }
 #shell.board-fullscreen #board {
-    position: fixed; inset: 0;
-    width: 100vw; height: 100vh;
+    position: fixed; left: 0; right: 0; bottom: 0;
+    top: var(--topbar-h, 52px);
+    width: 100vw; height: calc(100vh - var(--topbar-h, 52px));
     z-index: 60;
     background: var(--bg);
 }

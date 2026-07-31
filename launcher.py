@@ -337,10 +337,28 @@ def main():
                     import ctypes
                     hwnd = ctypes.windll.user32.GetForegroundWindow()
                     if self._maximized:
-                        ctypes.windll.user32.ShowWindow(hwnd, 1)  # SW_NORMAL
+                        if self._fr_geo:
+                            x, y, w, h = self._fr_geo
+                            ctypes.windll.user32.SetWindowPos(hwnd, 0, x, y, w, h, 0x0040)
                         self._maximized = False
                     else:
-                        ctypes.windll.user32.ShowWindow(hwnd, 3)  # SW_MAXIMIZE
+                        # 记录当前窗口位置，用于还原
+                        class RECT(ctypes.Structure):
+                            _fields_ = [("left","i"),("top","i"),("right","i"),("bottom","i")]
+                        r = RECT()
+                        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
+                        self._fr_geo = (r.left, r.top, r.right - r.left, r.bottom - r.top)
+                        # 取系统工作区（屏幕去掉任务栏）
+                        class RECT2(ctypes.Structure):
+                            _fields_ = [("left","i"),("top","i"),("right","i"),("bottom","i")]
+                        wa = RECT2()
+                        ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(wa), 0)
+                        ctypes.windll.user32.SetWindowPos(
+                            hwnd, 0,
+                            wa.left, wa.top,
+                            wa.right - wa.left, wa.bottom - wa.top,
+                            0x0040  # SWP_NOZORDER
+                        )
                         self._maximized = True
 
             def close(self):
@@ -381,10 +399,11 @@ def main():
                         save_filename=default_name
                     )
                     if result:
-                        with open(result, "wb") as f:
+                        path = str(result[0] if isinstance(result, (list, tuple)) else result)
+                        with open(path, "wb") as f:
                             f.write(raw)
-                        log(f"save_file: saved to {result}")
-                        return result
+                        log(f"save_file: saved to {path}")
+                        return path
                     return ""
                 except Exception as e:
                     log(f"save_file error: {e}")
@@ -402,9 +421,12 @@ def main():
 
             def select_directory(self) -> str:
                 """打开原生文件夹选择对话框，返回所选路径"""
-                result = webview.windows[0].create_file_dialog(webview.FOLDER_DIALOG, directory="")
+                result = webview.windows[0].create_file_dialog(
+                    webview.FOLDER_DIALOG,
+                    directory=app_dir
+                )
                 if result and len(result) > 0:
-                    return result[0]
+                    return str(result[0])
                 return ""
 
             def set_auto_start(self, enable: bool):

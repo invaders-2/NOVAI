@@ -259,6 +259,25 @@ else:
 
 OUTPUT_DIR = os.path.join(_DATA_ROOT, "output")
 ASSETS_DIR = os.path.join(_DATA_ROOT, "assets")
+
+# 启动时从 config.json 读自定义素材路径，覆盖 ASSETS_DIR
+def _load_startup_storage_path():
+    try:
+        _cfg_file = os.path.join(os.environ.get("NOVAI_DATA_DIR", os.path.expanduser("~/.NOVAI")), "config.json")
+        if os.path.isfile(_cfg_file):
+            import json as _j
+            with open(_cfg_file, "r", encoding="utf-8") as _f:
+                _cfg = _j.load(_f)
+            custom = str(_cfg.get("storage_path", "")).strip()
+            if custom and os.path.isdir(custom):
+                return custom
+    except Exception:
+        pass
+    return ""
+
+_custom_storage = _load_startup_storage_path()
+if _custom_storage:
+    ASSETS_DIR = _custom_storage
 OUTPUT_INPUT_DIR = os.path.join(ASSETS_DIR, "input")
 OUTPUT_OUTPUT_DIR = os.path.join(ASSETS_DIR, "output")
 ASSET_LIBRARY_DIR = os.path.join(ASSETS_DIR, "library")
@@ -8952,6 +8971,23 @@ def apimart_size_resolution(size):
     best = min(common, key=lambda item: abs(ratio - item[0] / item[1]))
     return best[2], resolution
 
+def apimart_image_model_lc(model=""):
+    return str(model or "").strip().lower()
+
+def apimart_image_resolution_for_model(model="", resolution="1K"):
+    """APIMart 文档：Lite 与 Gemini 2.5 Nano Banana 系列仅支持 1K。
+    若模型不支持更高分辨率，强制回落到 1K，避免后端做异常降级导致偏色/质量异常。"""
+    value = apimart_image_model_lc(model)
+    if "lite" in value or value in {
+        "nano-banana",
+        "nano-banana-ext",
+        "gemini-2.5-flash-image-preview",
+        "gemini-2.5-flash-image-preview-official",
+    }:
+        return "1K"
+    text = str(resolution or "1K").strip().upper()
+    return text if text in {"0.5K", "1K", "2K", "4K"} else "1K"
+
 VOLCENGINE_MIN_PIXELS = 3_686_400
 VOLCENGINE_MIN_EDGE = 1536
 VOLCENGINE_MAX_EDGE = 4096
@@ -10444,6 +10480,8 @@ async def generate_ai_image(prompt, size, quality, model, reference_images=None,
             response = await client.post(gen_url, headers=api_headers(provider=provider, model=model), json=body)
         elif is_apimart:
             apimart_size, resolution = apimart_size_resolution(size)
+            # Nano Banana / Lite 等模型仅支持 1K，强制回落避免后端异常降级导致偏色
+            resolution = apimart_image_resolution_for_model(model, resolution)
             # APIMart 的 GPT-Image-2 图生图仍走 /images/generations，
             # 通过 image_urls 传参考图，不使用 OpenAI multipart /images/edits。
             body = {
@@ -17637,16 +17675,6 @@ def run_workflow(name: str, payload: WorkflowRunRequest):
     )
     return generate(req)
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3000))
-    # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
-    # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
-    # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。
-    uvicorn.run(app, host="0.0.0.0", port=port,
-                ws_ping_interval=None, ws_ping_timeout=None)
-
-
 # ═══ 素材库存储目录配置 ═══
 import json as _json
 
@@ -17666,15 +17694,59 @@ def _save_novai_config(config):
 @app.get("/api/config/storage")
 async def get_storage_path():
     config = _load_novai_config()
-    default_path = os.path.join(os.environ.get("NOVAI_DATA_DIR", os.path.expanduser("~/.NOVAI")), "assets")
+    # 默认路径优先用安装目录下的 assets，避免指向系统盘 APPDATA
+    app_dir = os.environ.get("NOVAI_APP_DIR", "")
+    if app_dir:
+        default_path = os.path.join(app_dir, "assets")
+    else:
+        default_path = os.path.join(os.environ.get("NOVAI_DATA_DIR", os.path.expanduser("~/.NOVAI")), "assets")
     return {"path": config.get("storage_path", default_path)}
 
 @app.post("/api/config/storage")
 async def set_storage_path(data: dict):
     config = _load_novai_config()
-    config["storage_path"] = data.get("path", "")
+    new_path = data.get("path", "").strip()
+    if not new_path:
+        return {"ok": False, "error": "路径不能为空"}
+
+    old_path = config.get("storage_path", "")
+    new_path_abs = os.path.abspath(os.path.expanduser(new_path))
+
+    # 迁移旧素材
+    migrated = 0
+    if old_path and os.path.isdir(old_path):
+        old_abs = os.path.abspath(os.path.expanduser(old_path))
+        if old_abs != new_path_abs:
+            os.makedirs(new_path_abs, exist_ok=True)
+            for item in os.listdir(old_abs):
+                src = os.path.join(old_abs, item)
+                dst = os.path.join(new_path_abs, item)
+                try:
+                    shutil.move(src, dst)
+                    migrated += 1
+                except Exception:
+                    pass
+            # 旧目录清空后删除
+            try:
+                if not os.listdir(old_abs):
+                    os.rmdir(old_abs)
+            except Exception:
+                pass
+
+    config["storage_path"] = new_path_abs
     _save_novai_config(config)
-    return {"ok": True, "path": config["storage_path"]}
+    return {"ok": True, "path": new_path_abs, "migrated": migrated}
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3000))
+    # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
+    # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
+    # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。
+    uvicorn.run(app, host="0.0.0.0", port=port,
+                ws_ping_interval=None, ws_ping_timeout=None)
+
+
 
 @app.post("/api/native-save")
 async def native_save(data: dict):

@@ -1213,6 +1213,112 @@ function screenToWorld(clientX, clientY){
 function applyViewport(){
     world.style.transform = NovaViewport.viewportTransform(viewport);
     scheduleMinimapRender();
+    updateZoomBarLevel();
+}
+const ZOOM_BAR_MIN_SCALE = 0.12;
+const ZOOM_BAR_MAX_SCALE = 8;
+// minus 不在 lucide-subset.js 里，按 api-settings.js 的做法先补注册再 createIcons。
+function registerZoomBarIcons(){
+    const icons = window.lucide?.icons;
+    if(!icons) return;
+    if(!icons.Minus) icons.Minus = [["path", {d:"M5 12h14"}]];
+}
+function clampZoomBarScale(value){
+    const n = Number(value);
+    if(!Number.isFinite(n) || n <= 0) return 1;
+    return Math.max(ZOOM_BAR_MIN_SCALE, Math.min(ZOOM_BAR_MAX_SCALE, n));
+}
+function updateZoomBarLevel(){
+    const label = document.getElementById('canvasZoomLevel');
+    if(!label) return;
+    label.textContent = `${Math.round((viewport.scale || 1) * 100)}%`;
+}
+// 以可视区中心为锚点缩放，避免内容跳走。
+function zoomBarApplyScale(nextScale){
+    const target = clampZoomBarScale(nextScale);
+    const oldScale = viewport.scale || 1;
+    if(Math.abs(target - oldScale) < 1e-6){
+        updateZoomBarLevel();
+        return;
+    }
+    const rect = board.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    viewport.x = cx - (cx - viewport.x) * (target / oldScale);
+    viewport.y = cy - (cy - viewport.y) * (target / oldScale);
+    viewport.scale = target;
+    applyViewport();
+    renderLinks();
+    renderSelectionHub();
+    scheduleViewportSave();
+}
+function zoomBarZoomIn(){
+    zoomBarApplyScale((viewport.scale || 1) * 1.25);
+}
+function zoomBarZoomOut(){
+    zoomBarApplyScale((viewport.scale || 1) * 0.8);
+}
+function zoomBarReset(){
+    zoomBarApplyScale(1);
+}
+function zoomBarFitAll(){
+    const rect = board.getBoundingClientRect();
+    if(!nodes.length){
+        zoomBarApplyScale(1);
+        return;
+    }
+    const rects = nodes.map(estimatedNodeRect);
+    const minX = Math.min(...rects.map(r => r.x));
+    const minY = Math.min(...rects.map(r => r.y));
+    const maxX = Math.max(...rects.map(r => r.x + r.w));
+    const maxY = Math.max(...rects.map(r => r.y + r.h));
+    const width = Math.max(1, maxX - minX);
+    const height = Math.max(1, maxY - minY);
+    const nextScale = clampZoomBarScale(Math.min(rect.width * 0.9 / width, rect.height * 0.9 / height));
+    viewport.scale = nextScale;
+    viewport.x = rect.width / 2 - (minX + maxX) / 2 * nextScale;
+    viewport.y = rect.height / 2 - (minY + maxY) / 2 * nextScale;
+    applyViewport();
+    renderLinks();
+    renderSelectionHub();
+    scheduleViewportSave();
+}
+function zoomBarCenter(){
+    const pool = selected.size
+        ? nodes.filter(n => selected.has(n.id))
+        : nodes;
+    if(!pool.length) return;
+    const rects = pool.map(estimatedNodeRect);
+    const minX = Math.min(...rects.map(r => r.x));
+    const minY = Math.min(...rects.map(r => r.y));
+    const maxX = Math.max(...rects.map(r => r.x + r.w));
+    const maxY = Math.max(...rects.map(r => r.y + r.h));
+    centerViewportOnWorldPoint({x:(minX + maxX) / 2, y:(minY + maxY) / 2});
+    scheduleViewportSave();
+}
+function boardFullscreenActive(){
+    return Boolean(shell?.classList.contains('board-fullscreen'));
+}
+function setBoardFullscreen(on){
+    if(!shell) return;
+    shell.classList.toggle('board-fullscreen', Boolean(on));
+    const btn = document.getElementById('canvasFullscreenBtn');
+    if(btn){
+        btn.innerHTML = `<i data-lucide="${on ? 'minimize-2' : 'maximize'}" class="w-4 h-4"></i>`;
+        btn.title = on ? '退出全屏' : '全屏';
+        btn.setAttribute('aria-label', btn.title);
+        registerZoomBarIcons();
+        refreshIcons();
+    }
+    // 可视区尺寸变了，重算 transform 与依赖 board 矩形的图层。
+    requestAnimationFrame(() => {
+        applyViewport();
+        renderLinks();
+        renderSelectionHub();
+    });
+}
+function toggleBoardFullscreen(){
+    setBoardFullscreen(!boardFullscreenActive());
 }
 function estimatedNodeRect(n){
     const el = nodesEl?.querySelector?.(`.node[data-id="${CSS.escape(n.id)}"]`);
@@ -15144,6 +15250,7 @@ window.addEventListener('keydown', e => {
     if(key === 'r' && !isEditableTarget(e.target)) isRKeyDown = true;
     if(e.key === 'Shift' && !e.altKey && !isEditableTarget(document.activeElement)) setKnifeMode(true);
     if(e.key === 'Escape' && document.getElementById('imageEditModal').classList.contains('open')) { closeImageEditor(); return; }
+    if(e.key === 'Escape' && boardFullscreenActive()) { setBoardFullscreen(false); return; }
     if(e.key === 'Escape' && promptTemplateModal?.classList.contains('open')) { closePromptTemplateModal(); return; }
     if(outputLightbox.classList.contains('open') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')){
         if(navigateOutputLightbox(e.key === 'ArrowRight' ? 1 : -1)){
@@ -15262,6 +15369,8 @@ function escapeAttr(str){ return window.NovaUtils ? NovaUtils.escapeAttr(str) : 
 window.onload = async () => {
     applyTheme(localStorage.getItem('studio_theme') || localStorage.getItem(CANVAS_THEME_KEY) || 'light');
     applyQuickToolbarState();
+    registerZoomBarIcons();
+    refreshIcons();
     if(window.StudioI18n) StudioI18n.apply();
     document.title = tr('canvas.title');
     initOutputCompareEvents();
@@ -15320,8 +15429,14 @@ window.redoEditDrawing = redoEditDrawing;
 window.resetCropBox = resetCropBox;
 window.setBrushTool = setBrushTool;
 window.setGridCustomOrientation = setGridCustomOrientation;
+window.toggleBoardFullscreen = toggleBoardFullscreen;
 window.toggleGridCustomMode = toggleGridCustomMode;
 window.toggleQuickToolbar = toggleQuickToolbar;
+window.zoomBarCenter = zoomBarCenter;
+window.zoomBarFitAll = zoomBarFitAll;
+window.zoomBarReset = zoomBarReset;
+window.zoomBarZoomIn = zoomBarZoomIn;
+window.zoomBarZoomOut = zoomBarZoomOut;
 window.undoEditDrawing = undoEditDrawing;
 window.undoGridCustomLine = undoGridCustomLine;
 })();

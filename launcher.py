@@ -335,20 +335,29 @@ def main():
             def maximize(self):
                 if os.name == "nt":
                     import ctypes
-                    hwnd = ctypes.windll.user32.GetForegroundWindow()
+                    # 优先用 pywebview native handle，比 GetForegroundWindow 可靠
+                    hwnd = None
+                    try:
+                        native = getattr(webview.windows[0], 'native', None)
+                        if native:
+                            hwnd = int(native.Handle.ToInt32())
+                    except Exception:
+                        pass
+                    if not hwnd:
+                        hwnd = ctypes.windll.user32.GetForegroundWindow()
+                    if not hwnd:
+                        return
                     if self._maximized:
                         if self._fr_geo:
                             x, y, w, h = self._fr_geo
                             ctypes.windll.user32.SetWindowPos(hwnd, 0, x, y, w, h, 0x0040)
                         self._maximized = False
                     else:
-                        # 记录当前窗口位置，用于还原
                         class RECT(ctypes.Structure):
                             _fields_ = [("left","i"),("top","i"),("right","i"),("bottom","i")]
                         r = RECT()
                         ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
                         self._fr_geo = (r.left, r.top, r.right - r.left, r.bottom - r.top)
-                        # 取系统工作区（屏幕去掉任务栏）
                         class RECT2(ctypes.Structure):
                             _fields_ = [("left","i"),("top","i"),("right","i"),("bottom","i")]
                         wa = RECT2()
@@ -357,7 +366,7 @@ def main():
                             hwnd, 0,
                             wa.left, wa.top,
                             wa.right - wa.left, wa.bottom - wa.top,
-                            0x0040  # SWP_NOZORDER
+                            0x0040
                         )
                         self._maximized = True
 

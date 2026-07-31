@@ -1,6 +1,13 @@
 {
   "versions": [
     {
+      "version": "1.0.95",
+      "date": "2026-07-31",
+      "changes": [
+        "Win客户端：彻底修复放大按钮无效（改用EnumWindows按PID枚举主窗口，最可靠方式）"
+      ]
+    },
+    {
       "version": "1.0.94",
       "date": "2026-07-31",
       "changes": [

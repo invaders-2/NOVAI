@@ -334,19 +334,38 @@ def main():
 
             def maximize(self):
                 if os.name == "nt":
-                    import ctypes
-                    # 优先用 pywebview native handle，比 GetForegroundWindow 可靠
+                    import ctypes, os as _os
+                    from ctypes import wintypes
+
+                    # 按当前进程 PID 找主窗口，比 GetForegroundWindow/native.Handle 都可靠
                     hwnd = None
-                    try:
-                        native = getattr(webview.windows[0], 'native', None)
-                        if native:
-                            hwnd = int(native.Handle.ToInt32())
-                    except Exception:
-                        pass
+                    pid = _os.getpid()
+                    EnumWindows = ctypes.windll.user32.EnumWindows
+                    GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
+                    IsWindowVisible = ctypes.windll.user32.IsWindowVisible
+                    GetParent = ctypes.windll.user32.GetParent
+
+                    found = []
+                    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+                    def _cb(h, _):
+                        if not IsWindowVisible(h):
+                            return True
+                        if GetParent(h):
+                            return True
+                        p = wintypes.DWORD()
+                        GetWindowThreadProcessId(h, ctypes.byref(p))
+                        if p.value == pid:
+                            found.append(h)
+                        return True
+                    EnumWindows(_cb, 0)
+                    if found:
+                        hwnd = found[0]
+
                     if not hwnd:
                         hwnd = ctypes.windll.user32.GetForegroundWindow()
                     if not hwnd:
                         return
+
                     if self._maximized:
                         if self._fr_geo:
                             x, y, w, h = self._fr_geo
@@ -358,9 +377,7 @@ def main():
                         r = RECT()
                         ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
                         self._fr_geo = (r.left, r.top, r.right - r.left, r.bottom - r.top)
-                        class RECT2(ctypes.Structure):
-                            _fields_ = [("left","i"),("top","i"),("right","i"),("bottom","i")]
-                        wa = RECT2()
+                        wa = RECT()
                         ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(wa), 0)
                         ctypes.windll.user32.SetWindowPos(
                             hwnd, 0,

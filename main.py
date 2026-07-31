@@ -2453,13 +2453,22 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
         if os.path.isdir(static_dir):
             os.makedirs(os.path.dirname(backup_static_dir), exist_ok=True)
             shutil.copytree(static_dir, backup_static_dir)
-            shutil.rmtree(static_dir)
+        # 逐文件覆盖，不整删 static 目录，避免 Win 下部分文件失败导致目录丢失
+        os.makedirs(static_dir, exist_ok=True)
         try:
-            shutil.copytree(staged_static_dir, static_dir)
+            for root_w, dirs, names in os.walk(staged_static_dir):
+                rel_root = os.path.relpath(root_w, staged_static_dir)
+                dst_root = os.path.join(static_dir, rel_root) if rel_root != "." else static_dir
+                os.makedirs(dst_root, exist_ok=True)
+                for name in names:
+                    src_f = os.path.join(root_w, name)
+                    dst_f = os.path.join(dst_root, name)
+                    tmp_f = dst_f + ".update_tmp"
+                    shutil.copy2(src_f, tmp_f)
+                    os.replace(tmp_f, dst_f)
         except Exception:
-            if os.path.isdir(static_dir):
-                shutil.rmtree(static_dir, ignore_errors=True)
             if os.path.isdir(backup_static_dir):
+                shutil.rmtree(static_dir, ignore_errors=True)
                 shutil.copytree(backup_static_dir, static_dir)
             raise
         updated.extend(static_files)

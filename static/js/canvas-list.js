@@ -503,9 +503,10 @@ function openCanvas(c){
     const enc = encodeURIComponent(c.id);
     const project = encodeURIComponent(c.project || currentProjectId || 'default');
     rememberProjectId(c.project || currentProjectId || 'default');
+    const t = Date.now();
     window.location.href = (c.kind === 'smart')
-        ? `/static/smart-canvas.html?id=${enc}&project=${project}&t=1783654693`
-        : `/static/canvas.html?id=${enc}&project=${project}&t=1783654693`;
+        ? `/static/smart-canvas.html?id=${enc}&project=${project}&t=${t}`
+        : `/static/canvas.html?id=${enc}&project=${project}&t=${t}`;
 }
 
 /* ===== Card create flow ===== */

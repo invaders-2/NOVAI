@@ -52,6 +52,13 @@ _TRUST_ENV = os.getenv("NOVAI_USE_PROXY", "").strip().lower() in ("1", "true", "
 _NO_PROXY_SESSION = requests.Session()
 _NO_PROXY_SESSION.trust_env = False
 _NO_PROXY_SESSION.verify = False
+if os.environ.get("NOVAI_USE_PROXY", "0") == "1":
+    _NO_PROXY_SESSION.trust_env = True
+
+# 正式会话，可选走代理（NOVAI_USE_PROXY=1 时走系统代理）
+_SESSION = requests.Session()
+_SESSION.trust_env = _TRUST_ENV
+_SESSION.verify = _SSL_CONTEXT if isinstance(_SSL_CONTEXT, ssl.SSLContext) else True
 
 # 正式会话，可选走代理（NOVAI_USE_PROXY=1 时走系统代理）
 _SESSION = requests.Session()
@@ -1599,6 +1606,7 @@ def fetch_update_notes_with_fallback(preferred_source: str, version: str, timeou
     urls = {
         "github": GITHUB_UPDATE_NOTES_URL,
         "modelscope": MODELSCOPE_UPDATE_NOTES_URL,
+        "gitee": GITEE_UPDATE_NOTES_URL,
     }
     preferred = preferred_source if preferred_source in urls else "github"
     order = [preferred, "modelscope" if preferred == "github" else "github"]
@@ -2017,7 +2025,7 @@ def update_allowed_file(path: str) -> bool:
     if not path or any(part in {"", ".", ".."} for part in path.split("/")):
         return False
     return (
-        path in {"main.py", "VERSION", "安装即梦CLI.bat", "安装即梦CLI.command", "登录即梦CLI.bat", "登录即梦CLI.command"}
+        path in {"main.py", "VERSION", "安装即梦CLI.bat", "安装即梦CLI.command", "登录即梦CLI.bat", "登录即梦CLI.command", "launcher.py", "novai-desktop.py", "app.py", "build.py", "build-all.py", "build-desktop.py", "build-mac.py", "installer.py"}
         or path.startswith("static/")
         or path.startswith("tools/")
     )
@@ -2155,7 +2163,7 @@ def gitee_json(url: str, *, timeout: int = 30, use_etag_cache: bool = False) -> 
 def gitee_bytes(url: str, *, timeout: int = 60) -> bytes:
     resp = _SESSION.get(url, headers={"User-Agent": "NOVAI-Updater"}, timeout=timeout)
     if resp.status_code == 451:
-        return b""
+        raise RuntimeError("Gitee 返回 451：内容因法律原因不可用")
     resp.raise_for_status()
     return resp.content
 

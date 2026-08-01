@@ -7,18 +7,18 @@
     <title>无限画布</title>
     <!-- 关键渲染路径优化：CSS 先于 JS 加载，浏览器可并行下载 CSS 和 JS -->
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/css/canvas.css?v=1.0.91.1785382758.1785489260">
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.91.1785382758.1785489260">
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.91.1785382758.1785489260">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.91.1785382758.1785489260">
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.91.1785382758.1785489260"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.91.1785382758.1785489260"></script>
-    <script src="/static/js/theme.js?v=1.0.91.1785382758.1785489260"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.91.1785382758.1785489260"></script>
-    <script src="/static/js/shared/media.js?v=1.0.91.1785382758.1785489260"></script>
-    <script src="/static/js/shared/viewport.js?v=1.0.91.1785382758.1785489260"></script>
-    <script defer src="/static/js/touch-mouse.js?v=1.0.91.1785382758.1785489260"></script>
-    <script src="/static/js/i18n.js?v=1.0.91.1785382758.1785489260"></script>
+    <link rel="stylesheet" href="/static/css/canvas.css?v=1.0.95.1785515348.1785572774">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.95.1785515348.1785519958">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.95.1785515348.1785519964">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.95.1785515348.1785519958">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.95.1785515348.1785519966"></script>
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.95.1785515348.1785519966"></script>
+    <script src="/static/js/theme.js?v=1.0.95.1785515348.1785519963"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.95.1785515348.1785519963"></script>
+    <script src="/static/js/shared/media.js?v=1.0.95.1785515348.1785519963"></script>
+    <script src="/static/js/shared/viewport.js?v=1.0.95.1785515348.1785519963"></script>
+    <script defer src="/static/js/touch-mouse.js?v=1.0.95.1785515348.1785519964"></script>
+    <script src="/static/js/i18n.js?v=1.0.95.1785515348.1785519962"></script>
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
 /* ═══ 隐藏滚动条 & 防止双滚动条 ═══ */
@@ -37,9 +37,11 @@ html::-webkit-scrollbar, body::-webkit-scrollbar,
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
-        body { background: var(--bg) !important; color: var(--text) !important; }
+        body { background-color: var(--bg); background-image: radial-gradient(var(--grid-color) 1px, transparent 1px); background-size: 24px 24px; color: var(--text) !important; }
 /* ═══ Canvas/SVG 响应式：跟随窗口缩放 ═══ */
-#shell { width: 100%; height: 100%; overflow: hidden; }
+#shell {
+    width: 100%; height: 100%; overflow: hidden;
+}
 #board {
     width: 100%; height: calc(100% - var(--topbar-h, 52px));
     position: relative; overflow: hidden;
@@ -122,7 +124,7 @@ body.studio-theme-dark .toolbar {
 }
 /* ═══ 底部胶囊缩放工具栏 ═══ */
 .canvas-zoombar {
-    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+    position: fixed; left: 50%; bottom: 15px; transform: translateX(-50%);
     z-index: 26; height: 36px; padding: 0 6px;
     display: flex; align-items: center; gap: 2px;
     border-radius: 999px;
@@ -257,8 +259,6 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
                 <button type="button" onclick="zoomBarZoomOut()" title="缩小" aria-label="缩小"><i data-lucide="minus" class="w-4 h-4"></i></button>
                 <button id="canvasZoomLevel" class="zoombar-level" type="button" onclick="zoomBarReset()" title="重置为 100%" aria-label="重置缩放">100%</button>
                 <button type="button" onclick="zoomBarZoomIn()" title="放大" aria-label="放大"><i data-lucide="plus" class="w-4 h-4"></i></button>
-                <div class="zoombar-sep"></div>
-                <button id="canvasFullscreenBtn" type="button" onclick="toggleBoardFullscreen()" title="全屏" aria-label="全屏"><i data-lucide="maximize" class="w-4 h-4"></i></button>
             </div>
             <aside id="canvasAssetPanel" class="canvas-asset-panel">
                 <div class="canvas-asset-head">
@@ -517,7 +517,7 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         </div>
     </div>
 
-    <script defer src="/static/js/ltx-director-timeline.js?v=1.0.91.1785382758.1785489260"></script>
-    <script defer src="/static/js/canvas.js?v=1.0.91.1785382758.1785508825"></script>
+    <script defer src="/static/js/ltx-director-timeline.js?v=1.0.95.1785515348.1785519963"></script>
+    <script defer src="/static/js/canvas.js?v=1.0.95.1785515348.1785570869"></script>
 </body>
 </html>

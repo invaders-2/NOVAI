@@ -1303,7 +1303,7 @@ function setBoardFullscreen(on){
     if(!shell) return;
     shell.classList.toggle('board-fullscreen', Boolean(on));
     const btn = document.getElementById('canvasFullscreenBtn');
-    if(btn){
+    if (btn) {
         btn.innerHTML = `<i data-lucide="${on ? 'minimize-2' : 'maximize'}" class="w-4 h-4"></i>`;
         btn.title = on ? '退出全屏' : '全屏';
         btn.setAttribute('aria-label', btn.title);

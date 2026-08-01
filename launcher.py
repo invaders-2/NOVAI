@@ -337,49 +337,76 @@ def main():
                     import ctypes, os as _os
                     from ctypes import wintypes
 
+                    user32 = ctypes.windll.user32
+
+                    # ── 64 位兼容函数原型（参照 _enable_frameless_resize 写法）──
+                    # ctypes 默认返回 c_int（32 位），64 位句柄/指针会被截断导致崩溃
+                    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+
+                    class RECT(ctypes.Structure):
+                        _fields_ = [
+                            ("left", ctypes.c_long),
+                            ("top", ctypes.c_long),
+                            ("right", ctypes.c_long),
+                            ("bottom", ctypes.c_long),
+                        ]
+
+                    user32.EnumWindows.restype = ctypes.c_bool
+                    user32.EnumWindows.argtypes = [WNDENUMPROC, wintypes.LPARAM]
+                    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+                    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+                    user32.IsWindowVisible.restype = ctypes.c_bool
+                    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+                    user32.GetParent.restype = wintypes.HWND
+                    user32.GetParent.argtypes = [wintypes.HWND]
+                    user32.GetForegroundWindow.restype = wintypes.HWND
+                    user32.GetForegroundWindow.argtypes = []
+                    user32.GetWindowRect.restype = ctypes.c_bool
+                    user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(RECT)]
+                    user32.SystemParametersInfoW.restype = ctypes.c_bool
+                    user32.SystemParametersInfoW.argtypes = [wintypes.UINT, wintypes.UINT, ctypes.POINTER(RECT), wintypes.UINT]
+                    user32.SetWindowPos.restype = ctypes.c_bool
+                    user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+                    user32.GetWindowLongW.restype = ctypes.c_longlong
+                    user32.GetWindowLongW.argtypes = [wintypes.HWND, ctypes.c_int]
+
                     # 按当前进程 PID 找主窗口，比 GetForegroundWindow/native.Handle 都可靠
                     hwnd = None
                     pid = _os.getpid()
-                    EnumWindows = ctypes.windll.user32.EnumWindows
-                    GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
-                    IsWindowVisible = ctypes.windll.user32.IsWindowVisible
-                    GetParent = ctypes.windll.user32.GetParent
 
                     found = []
-                    @ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+                    @WNDENUMPROC
                     def _cb(h, _):
-                        if not IsWindowVisible(h):
+                        if not user32.IsWindowVisible(h):
                             return True
-                        if GetParent(h):
+                        if user32.GetParent(h):
                             return True
                         p = wintypes.DWORD()
-                        GetWindowThreadProcessId(h, ctypes.byref(p))
+                        user32.GetWindowThreadProcessId(h, ctypes.byref(p))
                         if p.value == pid:
                             found.append(h)
                         return True
-                    EnumWindows(_cb, 0)
+                    user32.EnumWindows(_cb, 0)
                     if found:
                         hwnd = found[0]
 
                     if not hwnd:
-                        hwnd = ctypes.windll.user32.GetForegroundWindow()
+                        hwnd = user32.GetForegroundWindow()
                     if not hwnd:
                         return
 
                     if self._maximized:
                         if self._fr_geo:
                             x, y, w, h = self._fr_geo
-                            ctypes.windll.user32.SetWindowPos(hwnd, 0, x, y, w, h, 0x0040)
+                            user32.SetWindowPos(hwnd, 0, x, y, w, h, 0x0040)
                         self._maximized = False
                     else:
-                        class RECT(ctypes.Structure):
-                            _fields_ = [("left","i"),("top","i"),("right","i"),("bottom","i")]
                         r = RECT()
-                        ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(r))
+                        user32.GetWindowRect(hwnd, ctypes.byref(r))
                         self._fr_geo = (r.left, r.top, r.right - r.left, r.bottom - r.top)
                         wa = RECT()
-                        ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(wa), 0)
-                        ctypes.windll.user32.SetWindowPos(
+                        user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(wa), 0)
+                        user32.SetWindowPos(
                             hwnd, 0,
                             wa.left, wa.top,
                             wa.right - wa.left, wa.bottom - wa.top,

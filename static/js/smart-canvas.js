@@ -2068,6 +2068,7 @@ function applyViewport(){
     shell.style.backgroundSize = '24px 24px';
     shell.style.backgroundPosition = '0 0';
     renderMinimap();
+    updateZoomBarLevel();
     // composer 是屏幕空间元素，不随 world transform 移动，平移/缩放后按选中节点重新锚定。
     if(composer.classList.contains('open')){
         const active = selectedNode();
@@ -2170,6 +2171,67 @@ function fitAllNodesViewport(){
     viewport.y = shell.clientHeight / 2 - cy * viewport.scale;
     applyViewport();
     scheduleSave();
+}
+const ZOOM_BAR_MIN_SCALE = 0.12;
+const ZOOM_BAR_MAX_SCALE = 8;
+// minus 不在 lucide-subset.js 里，按 api-settings.js 的做法先补注册再 createIcons。
+function registerZoomBarIcons(){
+    const icons = window.lucide?.icons;
+    if(!icons) return;
+    if(!icons.Minus) icons.Minus = [["path", {d:"M5 12h14"}]];
+}
+function clampZoomBarScale(value){
+    const n = Number(value);
+    if(!Number.isFinite(n) || n <= 0) return 1;
+    return Math.max(ZOOM_BAR_MIN_SCALE, Math.min(ZOOM_BAR_MAX_SCALE, n));
+}
+function updateZoomBarLevel(){
+    const label = document.getElementById('canvasZoomLevel');
+    if(!label) return;
+    label.textContent = `${Math.round((viewport.scale || 1) * 100)}%`;
+}
+// 以可视区中心为锚点缩放，避免内容跳走。
+function zoomBarApplyScale(nextScale){
+    const target = clampZoomBarScale(nextScale);
+    const oldScale = viewport.scale || 1;
+    if(Math.abs(target - oldScale) < 1e-6){
+        updateZoomBarLevel();
+        return;
+    }
+    const rect = shell.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    viewport.x = cx - (cx - viewport.x) * (target / oldScale);
+    viewport.y = cy - (cy - viewport.y) * (target / oldScale);
+    viewport.scale = target;
+    applyViewport();
+    scheduleSave();
+}
+function zoomBarZoomIn(){
+    zoomBarApplyScale(Math.round((viewport.scale || 1) * 100 + 5) / 100);
+}
+function zoomBarZoomOut(){
+    zoomBarApplyScale(Math.round((viewport.scale || 1) * 100 - 5) / 100);
+}
+function zoomBarReset(){
+    zoomBarApplyScale(1);
+}
+function zoomBarFitAll(){
+    fitAllNodesViewport();
+    updateZoomBarLevel();
+}
+function zoomBarCenter(){
+    const pool = selectedNodeIds().length
+        ? nodes.filter(n => selectedNodeIds().includes(n.id))
+        : nodes;
+    if(!pool.length) return;
+    const rects = pool.map(nodeRect);
+    const minX = Math.min(...rects.map(r => r.x));
+    const minY = Math.min(...rects.map(r => r.y));
+    const maxX = Math.max(...rects.map(r => r.x + r.width));
+    const maxY = Math.max(...rects.map(r => r.y + r.height));
+    centerViewportOnWorldPoint({x:(minX + maxX) / 2, y:(minY + maxY) / 2});
+    updateZoomBarLevel();
 }
 function enterZoomPreview(){
     if(zoomPreviewState) return;
@@ -17488,7 +17550,9 @@ window.onload = async () => {
     loadPromptTemplateOverrides();
     await loadPromptTemplates();
     if(window.StudioI18n) window.StudioI18n.apply();
+    registerZoomBarIcons();
     if(window.lucide) lucide.createIcons();
+    updateZoomBarLevel();
     connectAssetLibrarySyncSocket();
     await loadConfig();
     await loadAssetLibrary();
@@ -17527,4 +17591,9 @@ window.togglePanoramaPreview = togglePanoramaPreview;
 window.togglePreviewCompare = togglePreviewCompare;
 window.undoEditDrawing = undoEditDrawing;
 window.undoGridCustomLine = undoGridCustomLine;
+window.zoomBarCenter = zoomBarCenter;
+window.zoomBarFitAll = zoomBarFitAll;
+window.zoomBarReset = zoomBarReset;
+window.zoomBarZoomIn = zoomBarZoomIn;
+window.zoomBarZoomOut = zoomBarZoomOut;
 })();

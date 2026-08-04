@@ -705,6 +705,20 @@ document.querySelector('.code-copy').addEventListener('click', () => {
   const visible = Array.from(pres).find(p => p.style.display !== 'none');
   if (visible) navigator.clipboard.writeText(visible.textContent);
 });
+
+// 模型卡片水平滚动：鼠标滚轮 deltaY -> scrollLeft
+const modelCards = document.querySelector('.model-cards');
+if (modelCards) {
+  modelCards.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const canScroll = e.deltaY > 0
+      ? modelCards.scrollLeft + modelCards.clientWidth < modelCards.scrollWidth - 1
+      : modelCards.scrollLeft > 0;
+    if (!canScroll) return;
+    modelCards.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+}
 </script>
 
 </body>

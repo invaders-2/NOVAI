@@ -38,79 +38,94 @@ body {
 /* Sidebar sections */
 .sidebar-section { margin-top: 8px; }
 .sidebar-section-title {
-  font-size: 12px; font-weight: 600; color: #818a9d;
-  text-transform: uppercase; letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  font-size: 11px; font-weight: 600; color: #555;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 10px;
 }
 .sidebar-section a {
-  display: block; font-size: 14px; color: #7eb8ff;
-  text-decoration: none; padding: 3px 0;
+  display: block; font-size: 13.5px; color: #818a9d;
+  text-decoration: none; padding: 5px 10px; border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
 }
-.sidebar-section a:hover { color: #fff; }
+.sidebar-section a:hover { color: #fff; background: rgba(255,255,255,0.05); }
 
 /* Main content */
 .main {
   flex: 1; min-width: 0;
-  max-width: 820px;
-  padding: 48px 48px 80px;
+  max-width: 860px;
+  padding: 56px 48px 96px;
 }
-.main h1 { font-size: 32px; font-weight: 500; letter-spacing: -0.8px; color: #fff; margin-bottom: 8px; }
-.main h2 {
-  font-size: 36px; font-weight: 500; letter-spacing: -0.8px; color: #fff;
-  margin-top: 64px; margin-bottom: 16px;  padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.08);
+
+/* Doc modules — 卡片化章节 */
+.doc-module {
+  background: #131416;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 32px 36px 36px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset, 0 10px 30px rgba(0,0,0,0.25);
 }
-.main h2:first-child { margin-top: 0; }
-.main h3 { font-size: 22px; font-weight: 500; color: #e0e0e0; margin-top: 32px; margin-bottom: 12px; }
-.main p { font-size: 15px; color: #a1afc5; margin-bottom: 14px; }
-.main a { color: #7eb8ff; text-decoration: none; }
-.main a:hover { text-decoration: underline; }
-.main ul, .main ol { margin: 0 0 14px 20px; color: #a1afc5; font-size: 15px; }
-.main li { margin-bottom: 6px; }
-.main code {
+.doc-module h2 {
+  font-size: 22px; font-weight: 600; letter-spacing: -0.4px; color: #fff;
+  margin-bottom: 18px;
+}
+.doc-module h3 {
+  font-size: 17px; font-weight: 600; letter-spacing: -0.2px; color: #fff;
+  margin-top: 28px; margin-bottom: 10px;
+}
+.doc-module h3::before {
+  content: ''; display: inline-block; width: 3px; height: 14px;
+  background: #7eb8ff; border-radius: 2px; margin-right: 10px; vertical-align: -2px;
+}
+.doc-module p { font-size: 15px; color: #cdd1d6; line-height: 1.75; margin-bottom: 14px; }
+.doc-module a { color: #7eb8ff; text-decoration: none; border-bottom: 1px solid rgba(126,184,255,0.3); }
+.doc-module a:hover { border-bottom-color: #7eb8ff; }
+.doc-module ul, .doc-module ol { margin: 0 0 16px 22px; color: #cdd1d6; font-size: 15px; line-height: 1.7; }
+.doc-module li { margin-bottom: 8px; }
+.doc-module li::marker { color: #555; }
+.doc-module code {
   font-family: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
-  font-size: 13px; background: #131416; padding: 2px 6px; border-radius: 4px;
-  color: #cdd1d6;
+  font-size: 13px; background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px;
+  color: #e8eaf0;
 }
-.main pre {
-  background: #131416; border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 12px; padding: 16px 20px; margin: 12px 0 20px;
+.doc-module pre {
+  background: #0b0b0d; border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px; padding: 18px 22px; margin: 14px 0 22px;
   overflow-x: auto;
 }
-.main pre code { background: none; padding: 0; font-size: 13px; line-height: 1.7; }
-.main table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 14px; }
-.main th, .main td {
-  text-align: left; padding: 10px 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+.doc-module pre code { background: none; padding: 0; font-size: 13px; line-height: 1.7; }
+.doc-module table { width: 100%; border-collapse: collapse; margin: 14px 0 22px; font-size: 14px; }
+.doc-module th, .doc-module td {
+  text-align: left; padding: 11px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
-.main th { color: #818a9d; font-weight: 500; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
-.main td { color: #a1afc5; }
-.main strong { color: #cdd1d6; font-weight: 600; }
-.main .note {
-  background: rgba(126,184,255,0.06); border-left: 3px solid #7eb8ff;
-  padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0;
-  font-size: 14px; color: #a1afc5;
+.doc-module th {
+  background: rgba(255,255,255,0.03);
+  color: #818a9d; font-weight: 600; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;
 }
-.main .warn {
-  background: rgba(255,180,50,0.06); border-left: 3px solid #f5a623;
-  padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 16px 0;
-  font-size: 14px; color: #a1afc5;
+.doc-module td { color: #cdd1d6; line-height: 1.6; }
+.doc-module tr:hover td { background: rgba(255,255,255,0.02); }
+.doc-module strong { color: #fff; font-weight: 600; }
+.doc-module .note {
+  background: rgba(126,184,255,0.07); border: 1px solid rgba(126,184,255,0.14); border-left: 3px solid #7eb8ff;
+  padding: 14px 18px; border-radius: 10px; margin: 18px 0;
+  font-size: 14px; color: #cdd1d6; line-height: 1.7;
 }
-.main img.doc-screenshot {
+.doc-module .warn {
+  background: rgba(245,166,35,0.06); border: 1px solid rgba(245,166,35,0.16); border-left: 3px solid #f5a623;
+  padding: 14px 18px; border-radius: 10px; margin: 18px 0;
+  font-size: 14px; color: #cdd1d6; line-height: 1.7;
+}
+.doc-module img.doc-screenshot {
   width: auto; max-width: 100%; max-height: 60vh;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.08);
-  margin: 8px 0 16px;
+  margin: 10px 0 14px;
   object-fit: contain; display: block;
 }
-.main .img-caption {
-  font-size: 13px; color: #555; margin-top: -12px; margin-bottom: 16px;
+.doc-module .img-caption {
+  font-size: 13px; color: #666; margin-top: -8px; margin-bottom: 18px; line-height: 1.5;
 }
-
-/* TOC inside main */
-.toc { margin-bottom: 40px; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; }
-.toc h4 { font-size: 14px; color: #818a9d; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-.toc a { display: block; font-size: 14px; color: #7eb8ff; text-decoration: none; padding: 3px 0; }
-.toc a:hover { color: #fff; }
 
 @media (max-width: 768px) {
   .sidebar { display: none; }
@@ -145,6 +160,7 @@ body {
 
 <!-- Main Content -->
 <main class="main">
+  <section class="doc-module">
 <!-- ===== 如何开始使用 ===== -->
   <h2 id="quick-start">如何开始使用 NOVAI</h2>
   <p>NOVAI 是一款面向创作者的<strong>无限画布 AI 创作平台</strong>。你可以在无限画布上自由缩放、拖拽、连线，组合各种 AI 能力——文生图、图生图、AI 视频生成、GPT 多模态对话——所有操作在一个界面中无缝衔接。</p>
@@ -160,7 +176,11 @@ body {
     <strong>提示</strong>：NOVAI 内置 ModelScope 免费 API，无需注册即可体验生图和对话功能。视频生成等高级功能需要配置对应平台的 API Key。
   </div>
 
-  <!-- ===== 安装与运行 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 安装与运行 ===== -->
   <h2 id="install">安装与运行</h2>
 
   <h3>推荐：下载安装包</h3>
@@ -179,7 +199,11 @@ cd NOVAI
 pip install -r requirements.txt
 python main.py</code></pre>
 
-  <!-- ===== 产品概览 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 产品概览 ===== -->
   <h2 id="overview">产品概览</h2>
   <p>启动 NOVAI 后，你会看到如下主界面：</p>
 
@@ -194,7 +218,11 @@ python main.py</code></pre>
     <li><strong>状态栏</strong>：底部显示当前 API 连接状态、队列中的任务数量和 GPU 使用情况。</li>
   </ul>
 
-  <!-- ===== 功能介绍 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 功能介绍 ===== -->
   <h2 id="features">功能介绍</h2>
 
   <h3>核心能力</h3>
@@ -210,7 +238,11 @@ python main.py</code></pre>
     <tr><td>历史记录</td><td>自动保存生成历史，支持回看和再编辑</td></tr>
   </table>
 
-  <!-- ===== 创建画布 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 创建画布 ===== -->
   <h2 id="canvas">创建画布</h2>
   <p>点击左侧面板的「新建画布」按钮，或使用快捷键 <code>Ctrl+N</code>（macOS: <code>Cmd+N</code>）创建新的无限画布。</p>
 
@@ -226,7 +258,11 @@ python main.py</code></pre>
     <li><strong>右键菜单</strong>：画布空白处右键可快速添加节点、粘贴或调整画布设置</li>
   </ul>
 
-  <!-- ===== 创建节点 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 创建节点 ===== -->
   <h2 id="nodes">创建节点</h2>
   <p>节点是 NOVAI 工作流的最小执行单元。每个节点代表一个 AI 能力或处理步骤。</p>
 
@@ -250,7 +286,11 @@ python main.py</code></pre>
   <h3>连线规则</h3>
   <p>节点左侧为<strong>输入端口</strong>，右侧为<strong>输出端口</strong>。从输出端口拖拽到另一个节点的输入端口即可建立连接。数据类型不匹配时连线会显示为红色虚线，运行时自动跳过该连接。</p>
 
-  <!-- ===== 生成图片 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 生成图片 ===== -->
   <h2 id="generate-image">生成图片</h2>
   <p>NOVAI 支持多种图片生成模式，通过不同的节点组合实现灵活的图像创作流程。</p>
 
@@ -277,7 +317,11 @@ python main.py</code></pre>
     <strong>注意</strong>：生成高分辨率图片时建议先以较低分辨率快速生成预览，确认效果后再提升分辨率。大尺寸生成可能消耗较多 API 配额。
   </div>
 
-  <!-- ===== 生成视频 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 生成视频 ===== -->
   <h2 id="generate-video">生成视频</h2>
   <p>视频生成需要先有一张参考图（可从前置节点传入），或直接使用文本描述生成。</p>
 
@@ -294,7 +338,11 @@ python main.py</code></pre>
     <strong>提示</strong>：视频生成耗时较长（通常 30 秒~3 分钟），建议先调低帧数和分辨率做快速测试，确认效果后再提升参数。
   </div>
 
-  <!-- ===== GPT 聊天 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== GPT 聊天 ===== -->
   <h2 id="gpt-chat">GPT 聊天</h2>
   <p>NOVAI 内置 GPT 多模态对话节点，支持文本输入和图片输入，可用于创意构思、提示词优化、代码生成等场景。</p>
 
@@ -316,7 +364,11 @@ python main.py</code></pre>
     <li><strong>输出</strong>：对话结果可传递给下游节点，如将 GPT 生成的提示词直接输入到 SDXL 节点</li>
   </ul>
 
-  <!-- ===== AI 协议配置 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== AI 协议配置 ===== -->
   <h2 id="api-protocols">AI 协议配置</h2>
   <p>NOVAI 支持 8 种 AI 服务协议，覆盖国内外主流 AI 平台。你可以在「设置 → API 配置」页面管理所有 API Key。</p>
 
@@ -349,7 +401,11 @@ python main.py</code></pre>
     <strong>安全提醒</strong>：API Key 仅存储在本地电脑上，不会上传到任何服务器。切换设备时需要重新配置。
   </div>
 
-  <!-- ===== 内置模型列表 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 内置模型列表 ===== -->
   <h2 id="models">内置模型列表</h2>
   <p>以下是 NOVAI 当前版本预设的模型节点清单，随版本更新会持续扩充：</p>
 
@@ -368,7 +424,11 @@ python main.py</code></pre>
     <tr><td>Inpaint</td><td>图像处理</td><td>内置</td></tr>
   </table>
 
-  <!-- ===== 常见问题 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 常见问题 ===== -->
   <h2 id="faq">常见问题</h2>
 
   <h3>Q: 为什么我的图片生成失败了？</h3>
@@ -389,7 +449,11 @@ python main.py</code></pre>
   <h3>Q: 数据会传到云端吗？</h3>
   <p>不会。NOVAI 是纯本地桌面应用，你的提示词、图片和工作流数据仅存储在你的电脑上。只有当调用云端 API（如 OpenAI、ModelScope）时，对应的请求数据才会发送到对应平台。</p>
 
-  <!-- ===== 更新日志 ===== -->
+  
+  </section>
+
+  <section class="doc-module">
+<!-- ===== 更新日志 ===== -->
   <h2 id="changelog">更新日志</h2>
 
   <h3>v1.0.89 (2025-07-20)</h3>
@@ -426,7 +490,7 @@ python main.py</code></pre>
 
   <h3>v1.0.85 及更早</h3>
   <p>初始版本发布，包含：无限画布、SDXL 图像生成、GPT 对话、基础节点系统、ModelScope 免费 API 内置。详见 <a href="https://github.com/invaders-2/NOVAI/releases" target="_blank">GitHub Releases</a>。</p>
-
+  </section>
 </main>
 
 </body>

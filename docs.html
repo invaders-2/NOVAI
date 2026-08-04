@@ -6,7 +6,7 @@
 <title>帮助文档 — NOVAI</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 40px; }
 body {
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, sans-serif;
   background: #000;
@@ -56,17 +56,16 @@ body {
   padding: 56px 48px 96px;
 }
 
-/* Doc modules — 卡片化章节 */
+/* Doc modules — 无框章节，滚动吸附 */
 .doc-module {
-  background: #131416;
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 16px;
-  padding: 32px 36px 36px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset, 0 10px 30px rgba(0,0,0,0.25);
+  padding: 36px 0 44px;
+  scroll-snap-align: start;
+}
+.doc-module + .doc-module {
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 .doc-module h2 {
-  font-size: 22px; font-weight: 600; letter-spacing: -0.4px; color: #fff;
+  font-size: 30px; font-weight: 600; letter-spacing: -0.6px; color: #fff;
   margin-bottom: 18px;
 }
 .doc-module h3 {
@@ -130,6 +129,7 @@ body {
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .main { padding: 24px 20px 60px; }
+  html { scroll-snap-type: y proximity; scroll-padding-top: 16px; }
 }
 </style>
 </head>

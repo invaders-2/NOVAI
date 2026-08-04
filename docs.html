@@ -6,7 +6,7 @@
 <title>帮助文档 — NOVAI</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 16px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; scroll-snap-type: y proximity; scroll-padding-top: 40px; }
+html { font-size: 16px; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; scroll-snap-type: y mandatory; scroll-padding-top: 40px; }
 body {
   font-family: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, sans-serif;
   background: #000;
@@ -48,6 +48,11 @@ body {
   transition: color 0.15s, background 0.15s;
 }
 .sidebar-section a:hover { color: #fff; background: rgba(255,255,255,0.05); }
+.sidebar-section a.active {
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+  font-weight: 500;
+}
 
 /* Main content */
 .main {
@@ -56,10 +61,13 @@ body {
   padding: 56px 48px 96px;
 }
 
-/* Doc modules — 无框章节，滚动吸附 */
+/* Doc modules — 逐块全屏，无框章节 */
 .doc-module {
-  padding: 36px 0 44px;
+  min-height: calc(100vh - 40px);
+  padding: 40px 0 48px;
   scroll-snap-align: start;
+  display: flex; flex-direction: column;
+  justify-content: flex-start;
 }
 .doc-module + .doc-module {
   border-top: 1px solid rgba(255,255,255,0.06);
@@ -129,7 +137,7 @@ body {
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .main { padding: 24px 20px 60px; }
-  html { scroll-snap-type: y proximity; scroll-padding-top: 16px; }
+  html { scroll-snap-type: y mandatory; scroll-padding-top: 16px; }
 }
 </style>
 </head>
@@ -160,7 +168,7 @@ body {
 
 <!-- Main Content -->
 <main class="main">
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="quick-start">
 <!-- ===== 如何开始使用 ===== -->
   <h2 id="quick-start">如何开始使用 NOVAI</h2>
   <p>NOVAI 是一款面向创作者的<strong>无限画布 AI 创作平台</strong>。你可以在无限画布上自由缩放、拖拽、连线，组合各种 AI 能力——文生图、图生图、AI 视频生成、GPT 多模态对话——所有操作在一个界面中无缝衔接。</p>
@@ -179,7 +187,7 @@ body {
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="install">
 <!-- ===== 安装与运行 ===== -->
   <h2 id="install">安装与运行</h2>
 
@@ -202,7 +210,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="overview">
 <!-- ===== 产品概览 ===== -->
   <h2 id="overview">产品概览</h2>
   <p>启动 NOVAI 后，你会看到如下主界面：</p>
@@ -221,7 +229,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="features">
 <!-- ===== 功能介绍 ===== -->
   <h2 id="features">功能介绍</h2>
 
@@ -241,7 +249,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="canvas">
 <!-- ===== 创建画布 ===== -->
   <h2 id="canvas">创建画布</h2>
   <p>点击左侧面板的「新建画布」按钮，或使用快捷键 <code>Ctrl+N</code>（macOS: <code>Cmd+N</code>）创建新的无限画布。</p>
@@ -261,7 +269,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="nodes">
 <!-- ===== 创建节点 ===== -->
   <h2 id="nodes">创建节点</h2>
   <p>节点是 NOVAI 工作流的最小执行单元。每个节点代表一个 AI 能力或处理步骤。</p>
@@ -289,7 +297,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="generate-image">
 <!-- ===== 生成图片 ===== -->
   <h2 id="generate-image">生成图片</h2>
   <p>NOVAI 支持多种图片生成模式，通过不同的节点组合实现灵活的图像创作流程。</p>
@@ -320,7 +328,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="generate-video">
 <!-- ===== 生成视频 ===== -->
   <h2 id="generate-video">生成视频</h2>
   <p>视频生成需要先有一张参考图（可从前置节点传入），或直接使用文本描述生成。</p>
@@ -341,7 +349,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="gpt-chat">
 <!-- ===== GPT 聊天 ===== -->
   <h2 id="gpt-chat">GPT 聊天</h2>
   <p>NOVAI 内置 GPT 多模态对话节点，支持文本输入和图片输入，可用于创意构思、提示词优化、代码生成等场景。</p>
@@ -367,7 +375,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="api-protocols">
 <!-- ===== AI 协议配置 ===== -->
   <h2 id="api-protocols">AI 协议配置</h2>
   <p>NOVAI 支持 8 种 AI 服务协议，覆盖国内外主流 AI 平台。你可以在「设置 → API 配置」页面管理所有 API Key。</p>
@@ -404,7 +412,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="models">
 <!-- ===== 内置模型列表 ===== -->
   <h2 id="models">内置模型列表</h2>
   <p>以下是 NOVAI 当前版本预设的模型节点清单，随版本更新会持续扩充：</p>
@@ -427,7 +435,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="faq">
 <!-- ===== 常见问题 ===== -->
   <h2 id="faq">常见问题</h2>
 
@@ -452,7 +460,7 @@ python main.py</code></pre>
   
   </section>
 
-  <section class="doc-module">
+  <section class="doc-module" data-section-id="changelog">
 <!-- ===== 更新日志 ===== -->
   <h2 id="changelog">更新日志</h2>
 
@@ -492,6 +500,29 @@ python main.py</code></pre>
   <p>初始版本发布，包含：无限画布、SDXL 图像生成、GPT 对话、基础节点系统、ModelScope 免费 API 内置。详见 <a href="https://github.com/invaders-2/NOVAI/releases" target="_blank">GitHub Releases</a>。</p>
   </section>
 </main>
+
+
+<script>
+(function() {
+  const links = document.querySelectorAll('.sidebar-section a');
+  const sections = document.querySelectorAll('.doc-module');
+  if (!sections.length) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const sid = entry.target.dataset.sectionId;
+        links.forEach(link => {
+          const href = link.getAttribute('href');
+          link.classList.toggle('active', href === '#' + sid);
+        });
+      }
+    });
+  }, { threshold: 0.3, rootMargin: '-40px 0px -40% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+})();
+</script>
 
 </body>
 </html>

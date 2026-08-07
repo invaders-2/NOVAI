@@ -2737,7 +2737,7 @@ function addLLMNode(point){
         llmProvider:providerId,
         model:resolveChatModel('', providerId),
         mode:'node',
-        systemPrompt:'你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.',
+        systemPrompt:'You are a helpful assistant. Rewrite the input into a concise image prompt.',
         chatInput:'',
         messages:[],
         outputText:'',
@@ -11926,13 +11926,6 @@ async function callCanvasLLM(node, message, messages=[], options={}){
     const model = resolveChatModel(node.model || node.llmMsModel, llmProv);
     const images = llmInputImages(node);
     const videos = llmInputVideos(node);
-    // 新强约束系统提示词（与默认一致）：老节点保存的旧默认提示词提交时自动替换为它，保证强约束在老节点也生效
-    const STRONG_SYSTEM_PROMPT = '你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.';
-    // 旧默认系统提示词列表（trim 后精确匹配即视为遗留默认值，自动升级为新强约束）
-    const legacyDefaults = ['You are a helpful prompt assistant.', 'You are a helpful assistant. Rewrite the input into a concise image prompt.'];
-    // 旧默认 → 新强约束；否则用节点保存的值（空值回退新强约束，保持原有默认行为）
-    const rawSystemPrompt = (node.systemPrompt || '').trim();
-    const finalSystemPrompt = legacyDefaults.includes(rawSystemPrompt) ? STRONG_SYSTEM_PROMPT : (rawSystemPrompt || STRONG_SYSTEM_PROMPT);
     const result = await cascadeFetch('/api/canvas-llm', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -11941,7 +11934,7 @@ async function callCanvasLLM(node, message, messages=[], options={}){
             model,
             ms_model: llmProv === 'modelscope' ? model : '',
             provider: llmProv,
-            system_prompt:finalSystemPrompt,
+            system_prompt:node.systemPrompt || '',
             messages,
             images,
             videos,
@@ -11952,7 +11945,7 @@ async function callCanvasLLM(node, message, messages=[], options={}){
         }
         return r.json();
     });
-    return cleanLlmPromptOutput(result.text || '');
+    return result.text || '';
 }
 async function runLLMNode(nodeId, opts={}){
     const node = nodes.find(n => n.id === nodeId);

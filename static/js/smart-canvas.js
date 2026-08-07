@@ -6336,7 +6336,7 @@ function createPromptNode(x, y, options={}){
         llmProvider:providerId,
         llmModel:resolveChatModel('', providerId),
         llmSystemEnabled:false,
-        llmSystemPrompt:'你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.',
+        llmSystemPrompt:'You are a helpful prompt assistant.',
         llmInstruction:'',
         created_at:Date.now()
     };
@@ -7433,7 +7433,7 @@ function promptNodeBodyHtml(node){
                 <button class="prompt-node-run prompt-node-control" type="button" ${node.running ? 'disabled' : ''}><i data-lucide="${node.running ? 'loader-2' : 'play'}"></i><span>${node.running ? escapeHtml(tr('common.running')) : escapeHtml(tr('common.run'))}</span></button>
                 <button class="prompt-node-pill prompt-node-control prompt-system-toggle ${node.llmSystemEnabled ? 'active' : ''}" type="button"><i data-lucide="${node.llmSystemEnabled ? 'toggle-right' : 'toggle-left'}"></i><span>${escapeHtml(node.llmSystemEnabled ? tr('smart.promptLlmDisableSystem') : tr('smart.promptLlmEnableSystem'))}</span></button>
             </div>
-            ${node.llmSystemEnabled ? `<textarea class="prompt-node-control prompt-llm-system" placeholder="${escapeHtml(tr('smart.promptLlmSystemPlaceholder'))}">${escapeHtml(systemPrompt || '你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.')}</textarea>` : ''}
+            ${node.llmSystemEnabled ? `<textarea class="prompt-node-control prompt-llm-system" placeholder="${escapeHtml(tr('smart.promptLlmSystemPlaceholder'))}">${escapeHtml(systemPrompt || 'You are a helpful prompt assistant.')}</textarea>` : ''}
         </div>` : '';
     return `<div class="prompt-node-card">
         <textarea class="prompt-node-text prompt-node-control" ${readonly} placeholder="${escapeHtml(tr('smart.promptPlaceholderNode'))}">${escapeHtml(node.text || '')}</textarea>
@@ -15462,12 +15462,6 @@ async function runPromptLLMNode(nodeId){
     const message = promptNodeLLMInputText(node).trim();
     if(!message){ toast(tr('smart.promptLlmNeedText')); return; }
     const systemPrompt = (node.llmSystemPrompt || '').trim();
-    // 新强约束系统提示词（与节点默认一致）：老节点保存的旧默认提示词提交时自动替换为它，保证强约束在老节点也生效
-    const STRONG_SYSTEM_PROMPT = '你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.';
-    // 旧默认系统提示词列表（trim 后精确匹配即视为遗留默认值，自动升级为新强约束）
-    const legacyDefaults = ['You are a helpful prompt assistant.', 'You are a helpful assistant. Rewrite the input into a concise image prompt.'];
-    // 旧默认 → 新强约束；否则用节点保存的值；开关关闭时仍为空
-    const finalSystemPrompt = legacyDefaults.includes(systemPrompt) ? STRONG_SYSTEM_PROMPT : systemPrompt;
     node.llmEnabled = true;
     node.running = true;
     render();
@@ -15490,13 +15484,13 @@ async function runPromptLLMNode(nodeId){
                 model,
                 provider,
                 ms_model: provider === 'modelscope' ? model : '',
-                system_prompt:node.llmSystemEnabled ? (finalSystemPrompt || '你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.') : ''
+                system_prompt:node.llmSystemEnabled ? (systemPrompt || '') : ''
             })
         }).then(async r => {
             if(!r.ok) throw new Error(await r.text());
             return r.json();
         });
-        node.text = cleanLlmPromptOutput(result.text || '');
+        node.text = (result.text || '').trim();
         node.llmProvider = provider;
         node.llmModel = model;
         scheduleSave();

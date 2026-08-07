@@ -14703,6 +14703,8 @@ async def canvas_llm(payload: CanvasLLMRequest):
     # 判断协议：APIMart 异步 vs 标准 OpenAI
     _llm_provider = get_api_provider(payload.provider) if payload.provider not in ("modelscope",) else {}
     _is_apimart = is_apimart_provider(_llm_provider)
+    # Gemini 协议原生支持视频理解：视频直接传 video_url，不抽帧
+    _is_gemini = effective_protocol(_llm_provider, model) == "gemini"
     system_prompt = (payload.system_prompt or "").strip()
     upstream_messages = [{"role": "system", "content": system_prompt}] if system_prompt else []
     for item in payload.messages[-MAX_HISTORY_MESSAGES:]:
@@ -14727,6 +14729,14 @@ async def canvas_llm(payload: CanvasLLMRequest):
         ok_videos = 0
         for video in video_inputs[:3]:
             if not video or not isinstance(video, str):
+                continue
+            if _is_gemini:
+                # Gemini 协议原生支持视频理解：直接传 video_url，不抽帧
+                ref_url = media_reference_to_url(video)
+                if not ref_url:
+                    continue
+                content_parts.append({"type": "video_url", "video_url": {"url": ref_url}})
+                ok_videos += 1
                 continue
             frame_urls = await video_reference_to_frame_data_urls(video, max_frames=6, max_size=768)
             if frame_urls:

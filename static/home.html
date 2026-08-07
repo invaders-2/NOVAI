@@ -613,6 +613,294 @@
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             white-space: nowrap;
         }
+
+        /* ===== 模板中心 ===== */
+        .template-section {
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.26s both;
+        }
+
+        .template-subtitle {
+            font-size: 12px;
+            color: var(--v4-muted);
+            padding-left: 4px;
+            margin-bottom: 10px;
+        }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .template-card {
+            background: var(--v4-card-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid transparent;
+            border-radius: 16px;
+            padding: 10px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--v4-card-shadow);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .template-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--v4-card-shadow-hover);
+            border-color: rgba(0,0,0,0.12);
+        }
+        .theme-dark .template-card:hover,
+        [data-theme="dark"] .template-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .template-card:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 2px;
+        }
+
+        .template-cover {
+            width: 100%;
+            aspect-ratio: 4 / 3;
+            object-fit: cover;
+            border-radius: 10px;
+            display: block;
+            background: var(--v4-bg);
+        }
+
+        .template-card-body {
+            padding: 10px 6px 4px;
+        }
+
+        .template-card-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--v4-text);
+            margin-bottom: 4px;
+            letter-spacing: 0.01em;
+        }
+
+        .template-card-desc {
+            font-size: 12px;
+            color: var(--v4-muted);
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .template-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .template-tag {
+            background: var(--v4-card-bg);
+            border: 1px solid rgba(0,0,0,0.06);
+            border-radius: 999px;
+            padding: 2px 10px;
+            font-size: 10px;
+            color: var(--v4-muted);
+            white-space: nowrap;
+        }
+        .theme-dark .template-tag,
+        [data-theme="dark"] .template-tag {
+            border-color: rgba(255,255,255,0.1);
+        }
+
+        .template-empty {
+            font-size: 13px;
+            color: var(--v4-muted);
+            padding: 24px 0;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
+
+        /* ===== 模板预览弹窗 ===== */
+        .template-modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 24px;
+        }
+
+        .template-modal-mask.show {
+            display: flex;
+        }
+
+        .template-modal {
+            width: 100%;
+            max-width: 560px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: var(--v4-card-solid);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border-radius: 16px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.2);
+            padding: 16px;
+            animation: fadeUp 0.35s var(--v4-ease-out) both;
+        }
+
+        .template-modal-cover {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 12px;
+            display: block;
+            background: var(--v4-bg);
+        }
+
+        .template-modal-body {
+            padding: 14px 4px 0;
+        }
+
+        .template-modal-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--v4-text);
+        }
+
+        .template-modal-meta {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .template-modal-desc {
+            font-size: 12px;
+            color: var(--v4-muted);
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        .template-preview-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--v4-muted);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin: 16px 0 8px;
+            padding-left: 2px;
+        }
+
+        .template-topo {
+            height: 260px;
+            border-radius: 12px;
+            background: var(--v4-bg);
+            border: 1px solid rgba(0,0,0,0.06);
+            overflow: hidden;
+            position: relative;
+        }
+        .theme-dark .template-topo,
+        [data-theme="dark"] .template-topo {
+            border-color: rgba(255,255,255,0.08);
+        }
+
+        .template-topo svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .template-topo-loading,
+        .template-topo-error {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--v4-muted);
+        }
+
+        .template-topo-loading.hidden,
+        .template-topo-error.hidden {
+            display: none;
+        }
+
+        .template-modal-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .template-apply-btn {
+            flex: 1;
+            background: var(--v4-btn-bg);
+            color: var(--v4-btn-text);
+            border: none;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            font-family: inherit;
+            letter-spacing: 0.01em;
+        }
+
+        .template-apply-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 20px -6px var(--v4-card-shadow-hover);
+        }
+
+        .template-apply-btn:active {
+            transform: scale(0.98);
+        }
+
+        .template-apply-btn:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 2px;
+        }
+
+        .template-close-btn {
+            background: transparent;
+            border: 1px solid rgba(0,0,0,0.1);
+            color: var(--v4-muted);
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            font-family: inherit;
+        }
+        .theme-dark .template-close-btn,
+        [data-theme="dark"] .template-close-btn {
+            border-color: rgba(255,255,255,0.14);
+        }
+
+        .template-close-btn:hover {
+            background: var(--v4-card-bg);
+            color: var(--v4-text);
+        }
+
+        .template-close-btn:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 640px) {
+            .template-grid {
+                grid-template-columns: 1fr;
+            }
+            .template-modal {
+                max-height: 85vh;
+            }
+        }
     </style>
 </head>
 <body>
@@ -756,6 +1044,15 @@
             </div>
         </section>
 
+        <!-- 模板中心 -->
+        <section class="template-section" id="templateSection" hidden>
+            <div class="section-header">
+                <div class="section-title">模板中心</div>
+            </div>
+            <div class="template-subtitle">精选云端工作流模板，点击卡片预览拓扑，一键套用到无限画布</div>
+            <div class="template-grid" id="templateGrid"></div>
+        </section>
+
         <!-- 快捷入口区 -->
         <section class="cta-section">
             <button class="cta-button" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
@@ -790,6 +1087,31 @@
                 系统就绪
             </div>
         </section>
+    </div>
+
+    <!-- 模板预览弹窗 -->
+    <div class="template-modal-mask" id="templateModal">
+        <div class="template-modal" role="dialog" aria-modal="true" aria-label="模板预览">
+            <img class="template-modal-cover" id="templateModalCover" alt="模板封面">
+            <div class="template-modal-body">
+                <div class="template-modal-name" id="templateModalName"></div>
+                <div class="template-modal-meta">
+                    <div class="template-tags" id="templateModalTags"></div>
+                    <span class="template-tag" id="templateModalNodeCount"></span>
+                </div>
+                <div class="template-modal-desc" id="templateModalDesc"></div>
+                <div class="template-preview-label">工作流拓扑</div>
+                <div class="template-topo">
+                    <svg id="templateTopoSvg"></svg>
+                    <div class="template-topo-loading" id="templateTopoLoading">拓扑加载中…</div>
+                    <div class="template-topo-error hidden" id="templateTopoError">模板加载失败</div>
+                </div>
+                <div class="template-modal-actions">
+                    <button type="button" class="template-apply-btn" id="templateApplyBtn">套用此模板</button>
+                    <button type="button" class="template-close-btn" id="templateModalCloseBtn">关闭</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -937,6 +1259,291 @@
             div.textContent = str;
             return div.innerHTML;
         }
+
+        // ===== 模板中心 =====
+        (function initTemplateCenter() {
+            var TEMPLATES_BASE = 'https://invaders-2.github.io/NOVAI/templates/index.json';
+            var FETCH_TIMEOUT = 8000;
+            var section = document.getElementById('templateSection');
+            var grid = document.getElementById('templateGrid');
+            var modal = document.getElementById('templateModal');
+            var templatesById = {};
+            var currentTemplate = null;
+
+            if (!section || !grid || !modal) return;
+
+            function fetchWithTimeout(url, timeout, asJson) {
+                return new Promise(function(resolve, reject) {
+                    var timer = setTimeout(function() { reject(new Error('fetch timeout')); }, timeout);
+                    fetch(url, { cache: 'no-store' }).then(function(r) {
+                        clearTimeout(timer);
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return asJson === false ? r.blob() : r.json();
+                    }).then(resolve, function(err) {
+                        clearTimeout(timer);
+                        reject(err);
+                    });
+                });
+            }
+
+            function closestCard(el) {
+                while (el && el !== grid && !(el.classList && el.classList.contains('template-card'))) {
+                    el = el.parentNode;
+                }
+                return (el && el !== grid) ? el : null;
+            }
+
+            function renderTemplates(templates) {
+                if (!templates || !templates.length) {
+                    grid.innerHTML = '<div class="template-empty">暂无模板</div>';
+                    section.hidden = false;
+                    return;
+                }
+                var html = '';
+                templates.forEach(function(t) {
+                    var id = escapeHtml(t.id || '');
+                    var name = escapeHtml(t.name || '未命名模板');
+                    var desc = escapeHtml(t.desc || '');
+                    var cover = t.cover ? ' src="' + escapeHtml(t.cover) + '"' : '';
+                    var tagsHtml = '';
+                    if (Array.isArray(t.tags) && t.tags.length) {
+                        tagsHtml = '<div class="template-tags">' +
+                            t.tags.slice(0, 2).map(function(tag) {
+                                return '<span class="template-tag">' + escapeHtml(String(tag)) + '</span>';
+                            }).join('') +
+                            '</div>';
+                    }
+                    html += '<div class="template-card" role="button" tabindex="0" data-id="' + id + '">' +
+                        '<img class="template-cover" loading="lazy"' + cover + ' alt="' + name + '">' +
+                        '<div class="template-card-body">' +
+                        '<div class="template-card-name">' + name + '</div>' +
+                        '<div class="template-card-desc">' + desc + '</div>' +
+                        tagsHtml +
+                        '</div></div>';
+                });
+                grid.innerHTML = html;
+                section.hidden = false;
+            }
+
+            function openTemplate(t) {
+                currentTemplate = t;
+                document.getElementById('templateModalCover').src = t.cover || '';
+                document.getElementById('templateModalCover').alt = t.name || '模板封面';
+                document.getElementById('templateModalName').textContent = t.name || '未命名模板';
+                document.getElementById('templateModalDesc').textContent = t.desc || '';
+                var tagsEl = document.getElementById('templateModalTags');
+                tagsEl.innerHTML = '';
+                if (Array.isArray(t.tags)) {
+                    t.tags.slice(0, 2).forEach(function(tag) {
+                        var span = document.createElement('span');
+                        span.className = 'template-tag';
+                        span.textContent = tag;
+                        tagsEl.appendChild(span);
+                    });
+                }
+                document.getElementById('templateModalNodeCount').textContent =
+                    (t.nodeCount ? t.nodeCount + ' 个节点' : '');
+                loadTopology(t);
+                modal.classList.add('show');
+            }
+
+            function closeModal() {
+                modal.classList.remove('show');
+                currentTemplate = null;
+            }
+
+            function applyTemplate() {
+                if (!currentTemplate) return;
+                var t = currentTemplate;
+                closeModal();
+                window.parent.postMessage({
+                    type: 'navigate',
+                    route: 'canvas',
+                    workflowUrl: t.workflow || '',
+                    workflowName: t.name || ''
+                }, '*');
+            }
+
+            function loadTopology(t) {
+                var svg = document.getElementById('templateTopoSvg');
+                var loading = document.getElementById('templateTopoLoading');
+                var error = document.getElementById('templateTopoError');
+                svg.innerHTML = '';
+                loading.classList.remove('hidden');
+                error.classList.add('hidden');
+                if (!t.workflow) {
+                    loading.classList.add('hidden');
+                    error.classList.remove('hidden');
+                    return;
+                }
+                fetchWithTimeout(t.workflow, 20000, false)
+                    .then(function(blob) {
+                        var form = new FormData();
+                        form.append('file', blob, 'workflow.zip');
+                        return fetch('/api/canvas-workflows/import', { method: 'POST', body: form });
+                    })
+                    .then(function(r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    })
+                    .then(function(data) {
+                        loading.classList.add('hidden');
+                        if (data && Array.isArray(data.nodes) && data.nodes.length) {
+                            renderTopology(svg, data.nodes, data.connections || []);
+                            document.getElementById('templateModalNodeCount').textContent =
+                                data.nodes.length + ' 个节点';
+                        } else {
+                            error.classList.remove('hidden');
+                        }
+                    })
+                    .catch(function() {
+                        loading.classList.add('hidden');
+                        error.classList.remove('hidden');
+                    });
+            }
+
+            // 拓扑 SVG 渲染：节点按 x/y 归一化缩放，连线贝塞尔
+            var NODE_COLORS = {
+                image:     { fill: 'rgba(10, 132, 255, 0.12)',  stroke: '#0a84ff' },
+                llm:       { fill: 'rgba(175, 82, 222, 0.12)',  stroke: '#af52de' },
+                generator: { fill: 'rgba(52, 199, 89, 0.12)',   stroke: '#34c759' },
+                output:    { fill: 'rgba(142, 142, 147, 0.16)', stroke: '#8e8e93' }
+            };
+            var NODE_W = 110;
+            var NODE_H = 44;
+            var TOPO_H = 260;
+            var TOPO_PAD = 30;
+            var SVG_NS = 'http://www.w3.org/2000/svg';
+
+            function nodeColor(type) {
+                return NODE_COLORS[type] || NODE_COLORS.output;
+            }
+
+            function findNodeById(nodes, id) {
+                if (id === undefined || id === null) return null;
+                for (var i = 0; i < nodes.length; i++) {
+                    if (nodes[i].id === id || String(nodes[i].id) === String(id)) return nodes[i];
+                }
+                return null;
+            }
+
+            function connectionEndpoints(nodes, c) {
+                if (!c) return { a: null, b: null };
+                var from = c.from !== undefined ? c.from : (c.source && (c.source.node !== undefined ? c.source.node : c.source.id));
+                var to = c.to !== undefined ? c.to : (c.target && (c.target.node !== undefined ? c.target.node : c.target.id));
+                return { a: findNodeById(nodes, from), b: findNodeById(nodes, to) };
+            }
+
+            function renderTopology(svg, nodes, connections) {
+                var w = svg.clientWidth || 520;
+                svg.setAttribute('viewBox', '0 0 ' + w + ' ' + TOPO_H);
+                svg.setAttribute('width', w);
+                svg.setAttribute('height', TOPO_H);
+                svg.innerHTML = '';
+
+                var xs = nodes.map(function(n) { return Number(n.x) || 0; });
+                var ys = nodes.map(function(n) { return Number(n.y) || 0; });
+                var minX = Math.min.apply(null, xs);
+                var maxX = Math.max.apply(null, xs);
+                var minY = Math.min.apply(null, ys);
+                var maxY = Math.max.apply(null, ys);
+                var spanX = Math.max(maxX - minX, 1);
+                var spanY = Math.max(maxY - minY, 1);
+                var scale = Math.min((w - TOPO_PAD * 2 - NODE_W) / spanX, (TOPO_H - TOPO_PAD * 2 - NODE_H) / spanY);
+                if (!isFinite(scale) || scale < 0) scale = 1;
+
+                function px(x) { return TOPO_PAD + (x - minX) * scale; }
+                function py(y) { return TOPO_PAD + (y - minY) * scale; }
+
+                // 连线（先画，位于节点下层）
+                connections.forEach(function(c) {
+                    var ends = connectionEndpoints(nodes, c);
+                    if (!ends.a || !ends.b) return;
+                    var x1 = px(Number(ends.a.x) || 0) + NODE_W / 2;
+                    var y1 = py(Number(ends.a.y) || 0) + NODE_H / 2;
+                    var x2 = px(Number(ends.b.x) || 0) + NODE_W / 2;
+                    var y2 = py(Number(ends.b.y) || 0) + NODE_H / 2;
+                    var dx = Math.abs(x2 - x1) / 2;
+                    var d = 'M ' + x1 + ' ' + y1 +
+                        ' C ' + (x1 + dx) + ' ' + y1 +
+                        ', ' + (x2 - dx) + ' ' + y2 +
+                        ', ' + x2 + ' ' + y2;
+                    var path = document.createElementNS(SVG_NS, 'path');
+                    path.setAttribute('d', d);
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('stroke', 'var(--v4-muted)');
+                    path.setAttribute('stroke-opacity', '0.45');
+                    path.setAttribute('stroke-width', '1.5');
+                    svg.appendChild(path);
+                });
+
+                // 节点
+                nodes.forEach(function(n) {
+                    var x = px(Number(n.x) || 0);
+                    var y = py(Number(n.y) || 0);
+                    var type = n.type || 'output';
+                    var col = nodeColor(type);
+                    var g = document.createElementNS(SVG_NS, 'g');
+                    var rect = document.createElementNS(SVG_NS, 'rect');
+                    rect.setAttribute('x', x);
+                    rect.setAttribute('y', y);
+                    rect.setAttribute('width', NODE_W);
+                    rect.setAttribute('height', NODE_H);
+                    rect.setAttribute('rx', 10);
+                    rect.setAttribute('fill', col.fill);
+                    rect.setAttribute('stroke', col.stroke);
+                    rect.setAttribute('stroke-width', '1');
+                    g.appendChild(rect);
+                    var text = document.createElementNS(SVG_NS, 'text');
+                    text.setAttribute('x', x + NODE_W / 2);
+                    text.setAttribute('y', y + NODE_H / 2);
+                    text.setAttribute('text-anchor', 'middle');
+                    text.setAttribute('dominant-baseline', 'central');
+                    text.setAttribute('font-size', '10');
+                    text.setAttribute('style', 'fill:var(--v4-muted);font-weight:600');
+                    text.textContent = type;
+                    g.appendChild(text);
+                    svg.appendChild(g);
+                });
+            }
+
+            // 事件绑定
+            grid.addEventListener('click', function(e) {
+                var card = closestCard(e.target);
+                if (!card) return;
+                var t = templatesById[card.getAttribute('data-id')];
+                if (t) openTemplate(t);
+            });
+            grid.addEventListener('keydown', function(e) {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                var card = closestCard(e.target);
+                if (!card) return;
+                e.preventDefault();
+                var t = templatesById[card.getAttribute('data-id')];
+                if (t) openTemplate(t);
+            });
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) closeModal();
+            });
+            document.getElementById('templateModalCloseBtn').addEventListener('click', closeModal);
+            document.getElementById('templateApplyBtn').addEventListener('click', applyTemplate);
+            window.addEventListener('keydown', function(e) {
+                if ((e.key === 'Escape' || e.keyCode === 27) && modal.classList.contains('show')) {
+                    closeModal();
+                }
+            });
+
+            // 拉取云端模板列表；失败或超时则静默隐藏整个区块
+            fetchWithTimeout(TEMPLATES_BASE, FETCH_TIMEOUT)
+                .then(function(data) {
+                    var templates = (data && Array.isArray(data.templates)) ? data.templates : [];
+                    templates.forEach(function(t) { templatesById[t.id] = t; });
+                    renderTemplates(templates);
+                })
+                .catch(function() {
+                    section.hidden = true;
+                });
+        })();
     </script>
 </body>
 </html>

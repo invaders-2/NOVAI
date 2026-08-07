@@ -3966,6 +3966,36 @@
                             }, 300);
                         }
                     }
+                    // 模板套用：携带 workflowUrl 时切到画布页，并等待画布 iframe 进入 canvas.html 后透传导入消息
+                    if (event.data.workflowUrl) {
+                        if (route !== 'canvas') {
+                            const canvasTrigger = document.querySelector(`[onclick*="'canvas'"],[onclick*='"canvas"']`);
+                            switchUI(canvasTrigger, 'canvas');
+                        }
+                        const wfFrame = document.getElementById('frame-canvas');
+                        if (wfFrame) {
+                            const wfMsg = { type: 'import-workflow', url: event.data.workflowUrl, name: event.data.workflowName || '模板' };
+                            let wfTries = 0;
+                            const wfSend = () => {
+                                wfTries++;
+                                const w = wfFrame.contentWindow;
+                                let ready = false;
+                                try {
+                                    // frame-canvas 可能停在 canvas-list 选画布页（未加载 canvas.js），需等其进入 canvas.html 编辑器页
+                                    ready = !!w && String(w.location.pathname || '').indexOf('canvas.html') !== -1 && w.document.readyState === 'complete';
+                                } catch(e) {}
+                                if (ready) {
+                                    try { w.postMessage(wfMsg, '*'); } catch(e) {}
+                                } else if (wfTries < 400) {
+                                    setTimeout(wfSend, 300); // 最长等待约 120 秒（含用户在选画布页手动选择/新建画布的时间）
+                                } else {
+                                    // 120 秒超时仍未就绪：写入 sessionStorage 兜底，画布打开后由 canvas.js 补导入
+                                    try { sessionStorage.setItem('novai_pending_workflow', JSON.stringify({ url: wfMsg.url, name: wfMsg.name })); } catch(e) {}
+                                }
+                            };
+                            wfSend();
+                        }
+                    }
                 }
                 return;
             }

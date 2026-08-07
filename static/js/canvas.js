@@ -237,7 +237,59 @@ window.addEventListener('message', event => {
         refreshCanvasConfigFromSettings();
         if(canvas) syncRemoteCanvasNow();
     }
+    if(event.data?.type === 'import-workflow' && event.data.url){
+        // 模板套用：接收主页面（index.html）透传的导入消息
+        handleImportWorkflowMessage(event.data.url, event.data.name || '模板');
+    }
 });
+
+/* —— 模板套用：导入工作流模板（画布未就绪时暂存，就绪后自动执行） —— */
+let lastWorkflowImportUrl = '';
+let lastWorkflowImportAt = 0;
+function flushPendingWorkflowImport(){
+    if(!canvas) return;
+    // 1) 内存暂存路径：画布未就绪时收到的 import-workflow 消息
+    const pending = window.__pendingWorkflowImport;
+    if(pending){
+        window.__pendingWorkflowImport = null;
+        importWorkflowAssetUrl(pending.url, pending.name || '模板');
+    }
+    // 2) sessionStorage 兜底路径：index.html 轮询超时写入，画布就绪后补导入
+    let ssPending = null;
+    try{ ssPending = JSON.parse(sessionStorage.getItem('novai_pending_workflow') || 'null'); }catch(e){}
+    if(ssPending && ssPending.url){
+        sessionStorage.removeItem('novai_pending_workflow'); // 先移除，防止重复导入
+        // 复用 5 秒内同一 url 去重，避免与刚导入的消息重复执行
+        const now = Date.now();
+        if(ssPending.url === lastWorkflowImportUrl && now - lastWorkflowImportAt < 5000) return;
+        lastWorkflowImportUrl = ssPending.url;
+        lastWorkflowImportAt = now;
+        importWorkflowAssetUrl(ssPending.url, ssPending.name || '模板');
+    }
+}
+function handleImportWorkflowMessage(url, name){
+    // 5 秒内同一 url 去重，防止短时间内重复触发导入
+    const now = Date.now();
+    if(url === lastWorkflowImportUrl && now - lastWorkflowImportAt < 5000) return;
+    lastWorkflowImportUrl = url;
+    lastWorkflowImportAt = now;
+    if(canvas){
+        importWorkflowAssetUrl(url, name || '模板');
+        return;
+    }
+    // 画布尚未初始化：暂存消息，等待画布打开后自动导入
+    window.__pendingWorkflowImport = { url, name: name || '模板' };
+    // 轮询等待画布就绪（每 200ms 一次，最多 5 次）
+    let retries = 0;
+    const poll = () => {
+        retries++;
+        if(canvas){ flushPendingWorkflowImport(); return; }
+        if(retries < 5) setTimeout(poll, 200);
+    };
+    setTimeout(poll, 200);
+    // 兜底：1.5 秒后仍尝试一次（画布未就绪时导入函数内部会直接返回）
+    setTimeout(flushPendingWorkflowImport, 1500);
+}
 window.addEventListener('studio-lang-change', () => {
     document.title = tr('canvas.title');
     refreshGateViewControls();
@@ -2056,6 +2108,8 @@ async function createCanvas(){
         setCreateMode(false);
         await loadCanvasList(false);
         renderCanvasList();
+        // 画布初始化完成：若存在模板套用的待导入消息，立即执行
+        flushPendingWorkflowImport();
     } catch(e) {
         setStatus(tr('canvas.createFailed'));
         console.error(e);
@@ -2207,6 +2261,8 @@ async function openCanvas(id){
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
         setStatus('Ready');
+        // 画布初始化完成：若存在模板套用的待导入消息，立即执行
+        flushPendingWorkflowImport();
     } catch(e) {
         setStatus(tr('canvas.openFailed'));
         console.error(e);

@@ -14755,6 +14755,8 @@ async def canvas_llm(payload: CanvasLLMRequest):
     if image_inputs or video_inputs:
         content_parts = [{"type": "text", "text": payload.message}]
         ok_imgs = 0
+        if image_inputs:
+            content_parts.append({"type": "text", "text": f"以下为输入参考图：{len(image_inputs)} 张（多角度产品图等），均已上传。"})
         for img in image_inputs[:8]:
             if not img or not isinstance(img, str):
                 continue
@@ -14778,7 +14780,7 @@ async def canvas_llm(payload: CanvasLLMRequest):
             frame_urls = await video_reference_to_frame_data_urls(video, max_frames=6, max_size=768)
             if frame_urls:
                 ok_videos += 1
-                content_parts.append({"type": "text", "text": f"以下是视频 {ok_videos} 按时间顺序抽取的关键帧，请结合这些画面理解视频内容。"})
+                content_parts.append({"type": "text", "text": f"以下是输入媒体清单：\n- 视频{ok_videos}：参考视频（完整视频已提供，以下 {len(frame_urls)} 张关键帧按时间顺序抽取自该视频，代表视频画面内容）\n所有视频与图片均已上传完毕，请直接基于以上素材执行任务，不要要求用户重新上传或提供任何文件。"})
                 for frame_url in frame_urls:
                     content_parts.append({"type": "image_url", "image_url": {"url": frame_url}})
             else:

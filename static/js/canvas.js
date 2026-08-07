@@ -2737,7 +2737,7 @@ function addLLMNode(point){
         llmProvider:providerId,
         model:resolveChatModel('', providerId),
         mode:'node',
-        systemPrompt:'You are a helpful assistant. Rewrite the input into a concise image prompt.',
+        systemPrompt:'你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.',
         chatInput:'',
         messages:[],
         outputText:'',
@@ -11791,6 +11791,30 @@ async function runComfyNode(nodeId, opts={}){
         if(!opts.cascade){ node.running = false; refreshRunNodes(node, out); }
     }
 }
+// 清洗 LLM 节点输出为纯提示词：去代码块围栏、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
+function cleanLlmPromptOutput(text){
+    if(!text) return text;
+    let t = String(text).trim();
+    // 1) 去 Markdown 代码块围栏
+    t = t.replace(/^```[a-zA-Z]*\s*/gm, '').replace(/\s*```\s*$/gm, '').trim();
+    // 2) 剥离常见废话前缀行（最多剥 2 行，行首匹配；匹配到才剥）
+    const junkPrefix = /^(以下是|下面是|基于|根据|好的|当然|我(为|将|来)|可以直接|整体|总结|分析|先说|关于|针对|已为|为您|给你)/;
+    const lines = t.split('\n');
+    let cut = 0;
+    while(cut < lines.length && cut < 2){
+        const line = lines[cut].trim();
+        if(!line) { cut++; continue; }
+        if(junkPrefix.test(line) && line.length < 80) { cut++; continue; }  // 短废话行
+        break;
+    }
+    if(cut) t = lines.slice(cut).join('\n').trim();
+    // 3) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行）
+    const tailLines = t.split('\n');
+    const last = tailLines[tailLines.length - 1]?.trim() || '';
+    if(/^(希望|如需|如有|有问题|欢迎|如果)/.test(last) && last.length < 60) tailLines.pop();
+    t = tailLines.join('\n').trim();
+    return t;
+}
 async function callCanvasLLM(node, message, messages=[], options={}){
     const llmProv = resolveChatProviderId(node.llmProvider || 'comfly');
     const model = resolveChatModel(node.model || node.llmMsModel, llmProv);
@@ -11804,7 +11828,7 @@ async function callCanvasLLM(node, message, messages=[], options={}){
             model,
             ms_model: llmProv === 'modelscope' ? model : '',
             provider: llmProv,
-            system_prompt:node.systemPrompt || 'You are a helpful assistant.',
+            system_prompt:node.systemPrompt || '你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.',
             messages,
             images,
             videos,
@@ -11815,7 +11839,7 @@ async function callCanvasLLM(node, message, messages=[], options={}){
         }
         return r.json();
     });
-    return result.text || '';
+    return cleanLlmPromptOutput(result.text || '');
 }
 async function runLLMNode(nodeId, opts={}){
     const node = nodes.find(n => n.id === nodeId);

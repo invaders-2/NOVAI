@@ -8198,8 +8198,6 @@ function bindPromptNodeControls(el, node){
     const instructionEl = el.querySelector('.prompt-llm-instruction');
     if(instructionEl) {
         bindScrollableText(instructionEl);
-        // 富文本渲染：把 node.llmInstruction 里的 @名称 转成内联小 token（存储仍是纯文本，提交解析不动）
-        renderLlmInstructionRich(instructionEl);
         // 输入时序列化回纯文本 @名称（token span → @名称，换行 → \n），与旧 textarea 存储格式一致
         instructionEl.oninput = () => {
             node.llmInstruction = llmInstructionRichText(instructionEl);
@@ -8223,6 +8221,9 @@ function bindPromptNodeControls(el, node){
         instructionEl.addEventListener('keydown', event => {
             if(event.key === 'Escape') closeMentionPicker();
         });
+        // 富文本渲染放最后：先绑事件再初始化渲染，渲染异常也不影响绑定与输入
+        // 富文本渲染：把 node.llmInstruction 里的 @名称 转成内联小 token（存储仍是纯文本，提交解析不动）
+        try { renderLlmInstructionRich(instructionEl); } catch(e) { console.warn('[llm-instruction] rich render failed', e); }
     }
     const instructionResizeEl = el.querySelector('[data-llm-instruction-resize]');
     if(instructionResizeEl) instructionResizeEl.addEventListener('mousedown', e => {
@@ -13176,7 +13177,16 @@ function textBeforeCaret(){
     return range.toString();
 }
 function renderMentionPicker(source){
-    const node = selectedNode();
+    // 指令框 @ 兜底：直接点击/输入 LLM 指令框时，该节点可能不在"选中"状态（selectedNode() 返回 null 或别的节点），
+    // 若当前提及目标是 .prompt-llm-instruction，用指令框所在节点覆盖，保证候选与提交给 LLM 的媒体一致
+    let node = selectedNode();
+    if(mentionTargetEl && mentionTargetEl.classList?.contains('prompt-llm-instruction')){
+        const nodeEl = mentionTargetEl.closest('.image-node');
+        if(nodeEl && nodeEl.dataset.id){
+            const fromEl = nodes.find(n => n.id === nodeEl.dataset.id);
+            if(fromEl) node = fromEl;
+        }
+    }
     const inputItems = inputMentionCandidateImages(node);
     const assetLibs = assetLibraries();
     if(!activeAssetLibraryId || !assetLibs.some(lib => lib.id === activeAssetLibraryId)) activeAssetLibraryId = assetLibrary.active_library_id || assetLibs[0]?.id || '';
@@ -13397,11 +13407,17 @@ function positionMentionPickerAtCaret(){
     mentionPicker.style.top = `${(top - baseY) / ratio}px`;
 }
 function maybeOpenMentionPicker(){
-    recoverMentionTargetEl();
-    saveMentionRange();
-    const before = textBeforeCaret();
-    if(/@$/.test(before)) showMentionPicker();
-    else closeMentionPicker();
+    // 最少防御：输入事件链上的任何异常都不得阻断后续输入；失败时关掉弹层避免残留
+    try{
+        recoverMentionTargetEl();
+        saveMentionRange();
+        const before = textBeforeCaret();
+        if(/@$/.test(before)) showMentionPicker();
+        else closeMentionPicker();
+    }catch(e){
+        console.warn('[mention] maybeOpenMentionPicker failed', e);
+        closeMentionPicker();
+    }
 }
 // 按选中节点找回当前渲染中的 LLM 指令框（render() 重建后旧元素会脱离文档）
 function currentLlmInstructionBox(){

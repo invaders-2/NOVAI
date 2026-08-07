@@ -7875,6 +7875,19 @@ async def volcengine_video_reference_content_items(value, max_frames=4, max_size
             "video_url": {"url": text},
             "role": "reference_video",
         }]
+    # 本地视频（/assets、/output 等）→ 上传公网临时托管，作为真视频参考传给火山
+    if not text.startswith(("http://", "https://")):
+        try:
+            uploaded = await upload_local_video_to_cloud(text)
+            public_url = (uploaded or {}).get("url")
+            if public_url:
+                return [{
+                    "type": "video_url",
+                    "video_url": {"url": public_url},
+                    "role": "reference_video",
+                }]
+        except Exception:
+            pass  # 上传失败/超时 → 继续走抽帧兜底
     frame_urls = await video_reference_to_frame_data_urls(text, max_frames=max_frames, max_size=max_size)
     return [
         {

@@ -15309,13 +15309,32 @@ function llmInstructionWithMentionRefs(text, mediaRefs){
     }
     return out;
 }
-// 清洗 LLM 节点输出为纯提示词：去代码块围栏、「提示词」标记行截断、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
+// 清洗 LLM 节点输出为纯提示词：去代码块围栏、段落级剥离（环境限制/任务总结/末尾引导段）、
+// 「提示词」标记行截断、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
 function cleanLlmPromptOutput(text){
     if(!text) return text;
     let t = String(text).trim();
     // 1) 去 Markdown 代码块围栏
     t = t.replace(/^```[a-zA-Z]*\s*/gm, '').replace(/\s*```\s*$/gm, '').trim();
-    // 2) 「提示词」标记行截断（在剥前缀之前做）：找第一个含“提示词/prompt”且 ≤80 字的行，
+    // 2) 段落级剥离（先于标记截断/前缀剥离，避免废话段落干扰后续逐行规则）：
+    //    按空行分段（\n{2,}），删除环境限制段、任务总结段、末尾引导段，剩余段用 \n\n 重拼。
+    //    文本无空行分段（整段一行）时跳过，防止误伤单段正文。
+    if(/\n{2,}/.test(t)){
+        let paras = t.split(/\n{2,}/).map(p => p.trim()).filter(p => p);
+        // 2a) 环境限制段：段内出现“没有可用工具/无法直接产出/没有文件系统/作为任务说明”等语义，整段删除
+        const envLimitRe = /(没有可用的|无法在这里直接|不能直接产出|没有[\s\S]*执行工具|没有文件系统|作为[\s\S]*任务说明|无法直接产出|没有工具)/;
+        paras = paras.filter(p => !envLimitRe.test(p));
+        // 2b) 任务总结段：剩余首段以“已理解任务/任务理解/好的，我/我理解/明白，/收到，”开头且总段数>1，删首段（最多循环 2 次）
+        const summaryRe = /^(已理解任务|任务理解|好的，我|我理解|明白，|收到，)/;
+        let summaryPeeled = 0;
+        while(paras.length > 1 && summaryPeeled < 2 && summaryRe.test(paras[0])){ paras.shift(); summaryPeeled++; }
+        // 2c) 末尾引导段：最后一段以“你可以把这段/你可以将这段/请将以下”开头则删除（指示用户复制的废话）
+        if(paras.length > 1 && /^(你可以把这段|你可以将这段|请将以下)/.test(paras[paras.length - 1])) paras.pop();
+        // 2d) 用 \n\n 重拼剩余段落；剥离后为空则回退剥离前文本，避免清空输出
+        const joined = paras.join('\n\n').trim();
+        if(joined) t = joined;
+    }
+    // 3) 「提示词」标记行截断（在剥前缀之前做）：找第一个含“提示词/prompt”且 ≤80 字的行，
     //    该行及其之前全部丢弃、从该行之后开始；标记行以“：”结尾（如“提示词：”）则从冒号后内容开始。
     //    截断后为空或太短（<20 字）说明可能是正文误命中，回退原文继续走前缀剥离逻辑。
     const markerLines = t.split('\n');
@@ -15336,8 +15355,8 @@ function cleanLlmPromptOutput(text){
         }
         if(rest.length >= 20) t = rest;
     }
-    // 3) 剥离常见废话前缀行（最多剥 2 个非空行，行首匹配；匹配到才剥，空行不占配额）
-    const junkPrefix = /^(可以|好的|当然|以下是|下面是|基于|根据|我(为|将|来)|可直接|整体|总结|分析|先说|关于|针对|已为|为您|给你)/;
+    // 4) 剥离常见废话前缀行（最多剥 2 个非空行，行首匹配；匹配到才剥，空行不占配额）
+    const junkPrefix = /^(可以|好的|当然|以下是|下面是|基于|根据|我(为|将|来)|可直接|整体|总结|分析|先说|关于|针对|已为|为您|给你|已理解|明白|收到|了解|明白了|好的，我|我理解)/;
     const lines = t.split('\n');
     let peeled = 0;
     let cut = 0;
@@ -15352,11 +15371,13 @@ function cleanLlmPromptOutput(text){
         // 剥空则不生效：整段只有一句废话行时保留原文，避免把输出清空
         if(rest) t = rest;
     }
-    // 4) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行；剥空不生效）
+    // 5) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行；剥空不生效）
     const tailLines = t.split('\n');
     const last = tailLines[tailLines.length - 1]?.trim() || '';
     if(/^(希望|如需|如有|有问题|欢迎|如果)/.test(last) && last.length < 60 && tailLines.length > 1) tailLines.pop();
     t = tailLines.join('\n').trim();
+    // 6) 兜底：结果为空则回退原始文本（避免把输出清空）
+    if(!t) return String(text).trim();
     return t;
 }
 async function runPromptLLMNode(nodeId){

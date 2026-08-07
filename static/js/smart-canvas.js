@@ -7426,6 +7426,7 @@ function promptNodeBodyHtml(node){
             <select class="prompt-node-control prompt-llm-model">${chatModelOptions(node.llmModel, node.llmProvider)}</select>
             <div class="prompt-llm-instruction-wrap">
                 <textarea class="prompt-node-control prompt-llm-instruction" placeholder="${escapeHtml(tr('smart.promptLlmInstructionPlaceholder'))}" style="height:${promptLlmInstructionHeight(node)}px">${escapeHtml(node.llmInstruction || '')}</textarea>
+                <div class="prompt-llm-mentioned" style="display:none;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
                 <div class="prompt-llm-instruction-resize prompt-node-control" data-llm-instruction-resize="1" title="拖动调整高度"><span></span></div>
             </div>
             ${upstreamPromptHtml}
@@ -8198,7 +8199,7 @@ function bindPromptNodeControls(el, node){
     const instructionEl = el.querySelector('.prompt-llm-instruction');
     if(instructionEl) {
         bindScrollableText(instructionEl);
-        instructionEl.oninput = e => { node.llmInstruction = e.target.value; scheduleSave(); };
+        instructionEl.oninput = e => { node.llmInstruction = e.target.value; scheduleSave(); updateLlmMentionedChips(instructionEl); };
         // @ 提及支持（textarea 纯文本版）：聚焦时设为提及目标，输入 @ 弹出候选
         instructionEl.addEventListener('input', maybeOpenMentionPicker);
         instructionEl.addEventListener('keyup', maybeOpenMentionPicker);
@@ -8216,6 +8217,27 @@ function bindPromptNodeControls(el, node){
         });
         instructionEl.addEventListener('keydown', event => {
             if(event.key === 'Escape') closeMentionPicker();
+        });
+        // 「已引用」chips：节点重渲染后指令里可能已有 @ 引用，绑定控件时初始化一次
+        updateLlmMentionedChips(instructionEl);
+        // × 移除引用：从指令文本删掉对应 @名称（只删第一个匹配），并同步节点数据
+        const mentionedContainer = el.querySelector('.prompt-llm-mentioned');
+        if(mentionedContainer) mentionedContainer.addEventListener('click', e => {
+            const btn = e.target.closest('.prompt-llm-mentioned-remove');
+            if(!btn) return;
+            const name = btn.dataset.name;
+            if(!name) return;
+            const value = String(instructionEl.value || '');
+            const idx = value.indexOf('@' + name);
+            if(idx < 0) return;
+            let end = idx + 1 + name.length;
+            if(/\s/.test(value[end] || '')) end++;  // 顺带吃掉名称后紧跟的空格
+            instructionEl.value = value.slice(0, idx) + value.slice(end);
+            node.llmInstruction = instructionEl.value;
+            scheduleSave();
+            updateLlmMentionedChips(instructionEl);
+            instructionEl.focus();
+            instructionEl.selectionStart = instructionEl.selectionEnd = idx;
         });
     }
     const instructionResizeEl = el.querySelector('[data-llm-instruction-resize]');
@@ -13135,7 +13157,20 @@ function closeMentionPicker(){
     mentionPickerFromTextarea = false;
     if(selectedNode()) renderInputThumbsRow(selectedNode());
 }
+// 失效找回：节点重渲染后旧 textarea 会脱离文档，换成当前渲染的指令框（优先用正在聚焦的 .prompt-llm-instruction）
+function recoverMentionTargetEl(){
+    if(!mentionTargetEl || document.contains(mentionTargetEl)) return;
+    const active = document.activeElement;
+    if(active && active.classList?.contains('prompt-llm-instruction')){
+        mentionTargetEl = active;
+        return;
+    }
+    const fresh = currentLlmInstructionTextarea();
+    if(fresh) mentionTargetEl = fresh;
+    else mentionTargetEl = null;
+}
 function saveMentionRange(){
+    recoverMentionTargetEl();
     // textarea 无 DOM Range：光标位置实时读 selectionStart 即可，mentionRange 置空避免误用
     if(mentionTargetEl && mentionTargetEl.tagName === 'TEXTAREA'){
         mentionRange = null;
@@ -13147,6 +13182,7 @@ function saveMentionRange(){
     }
 }
 function textBeforeCaret(){
+    recoverMentionTargetEl();
     // textarea：取 selectionStart 之前的文本，等价于 contenteditable 的 range.toString()
     if(mentionTargetEl && mentionTargetEl.tagName === 'TEXTAREA'){
         return String(mentionTargetEl.value || '').slice(0, mentionTargetEl.selectionStart);
@@ -13383,6 +13419,7 @@ function positionMentionPickerAtCaret(){
     mentionPicker.style.top = `${(top - baseY) / ratio}px`;
 }
 function maybeOpenMentionPicker(){
+    recoverMentionTargetEl();
     saveMentionRange();
     const before = textBeforeCaret();
     if(/@$/.test(before)) showMentionPicker();
@@ -13397,6 +13434,12 @@ function currentLlmInstructionTextarea(){
 // textarea 模式：在光标处插入纯文本 @名称（替换已输入的 @），并触发 input 事件同步节点数据
 function insertMentionTokenIntoTextarea(ta, img){
     if(!ta) return;
+    // 失效找回：ta 已脱离文档（节点被重渲染替换）时换用当前渲染的指令框，保证写入与光标都落在活元素上
+    if(!document.contains(ta)){
+        const fresh = currentLlmInstructionTextarea();
+        if(!fresh){ closeMentionPicker(); return; }
+        ta = fresh;
+    }
     const name = img.alias || img.name || '图片';
     const value = String(ta.value || '');
     const start = ta.selectionStart ?? value.length;
@@ -13414,6 +13457,46 @@ function insertMentionTokenIntoTextarea(ta, img){
     ta.dispatchEvent(new Event('input', {bubbles:true}));
     closeMentionPicker();
     ta.focus();
+    updateLlmMentionedChips(ta);
+}
+// 指令框下方「已引用」chips：从 ta.value 提取 @名称，与 LLM 节点候选媒体匹配后渲染缩略图 chips，可 × 移除
+function updateLlmMentionedChips(ta){
+    const wrap = ta && ta.closest ? ta.closest('.prompt-llm-instruction-wrap') : null;
+    const container = wrap ? wrap.querySelector('.prompt-llm-mentioned') : null;
+    if(!container) return;
+    const nodeEl = wrap.closest('.image-node');
+    const node = nodeEl ? nodes.find(n => n.id === nodeEl.dataset.id) : selectedNode();
+    const candidates = node ? mentionCandidateMediaForLlmNode(node) : [];
+    const names = String(ta.value || '').match(/@([^\s@]+)/g) || [];
+    if(!candidates.length || !names.length){
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+    const seen = new Set();
+    const chips = [];
+    names.forEach(raw => {
+        const name = raw.slice(1);
+        if(!name || seen.has(name)) return;
+        seen.add(name);
+        const item = candidates.find(c => c.name === name || c.alias === name);
+        if(!item) return;
+        const kind = item.kind || mediaKindForItem(item);
+        const media = kind === 'video'
+            ? smartVideoPreviewHtml(item, 112, 'style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex:0 0 auto"')
+            : kind === 'audio'
+            ? '<span style="width:56px;height:56px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--line);color:var(--muted);flex:0 0 auto"><i data-lucide="file-audio"></i></span>'
+            : smartPreviewImgHtml(item, 112, 'style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex:0 0 auto"');
+        chips.push(`<div class="prompt-llm-mentioned-chip" title="${escapeHtml(name)}" style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px 3px 3px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:11px;font-weight:600;color:var(--text);max-width:190px">${media}<span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(name)}</span><button type="button" class="prompt-llm-mentioned-remove" data-name="${escapeHtml(name)}" title="移除引用" style="border:0;background:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:2px">×</button></div>`);
+    });
+    if(!chips.length){
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = chips.join('');
+    container.style.display = 'flex';
+    if(window.lucide) lucide.createIcons({ root: container });
 }
 function insertMentionToken(img){
     if(!img?.url) return;
@@ -13421,6 +13504,7 @@ function insertMentionToken(img){
     if(mentionTargetEl && mentionTargetEl.tagName === 'TEXTAREA'){
         const ta = document.contains(mentionTargetEl) ? mentionTargetEl : currentLlmInstructionTextarea();
         if(ta){
+            if(mentionTargetEl !== ta) mentionTargetEl = ta;  // 找回后同步引用，避免下次 @ 仍指向旧元素
             insertMentionTokenIntoTextarea(ta, img);
             return;
         }
@@ -15166,27 +15250,53 @@ function llmInstructionWithMentionRefs(text, mediaRefs){
     }
     return out;
 }
-// 清洗 LLM 节点输出为纯提示词：去代码块围栏、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
+// 清洗 LLM 节点输出为纯提示词：去代码块围栏、「提示词」标记行截断、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
 function cleanLlmPromptOutput(text){
     if(!text) return text;
     let t = String(text).trim();
     // 1) 去 Markdown 代码块围栏
     t = t.replace(/^```[a-zA-Z]*\s*/gm, '').replace(/\s*```\s*$/gm, '').trim();
-    // 2) 剥离常见废话前缀行（最多剥 2 行，行首匹配；匹配到才剥）
-    const junkPrefix = /^(以下是|下面是|基于|根据|好的|当然|我(为|将|来)|可以直接|整体|总结|分析|先说|关于|针对|已为|为您|给你)/;
+    // 2) 「提示词」标记行截断（在剥前缀之前做）：找第一个含“提示词/prompt”且 ≤80 字的行，
+    //    该行及其之前全部丢弃、从该行之后开始；标记行以“：”结尾（如“提示词：”）则从冒号后内容开始。
+    //    截断后为空或太短（<20 字）说明可能是正文误命中，回退原文继续走前缀剥离逻辑。
+    const markerLines = t.split('\n');
+    let markerIdx = -1;
+    for(let i = 0; i < markerLines.length; i++){
+        const line = markerLines[i].trim();
+        if(!line) continue;
+        if(/提示词|prompt/i.test(line) && line.length <= 80){ markerIdx = i; break; }
+    }
+    if(markerIdx >= 0){
+        const markerLine = markerLines[markerIdx].trim();
+        let rest = markerLines.slice(markerIdx + 1).join('\n').trim();
+        const colonIdx = Math.max(markerLine.lastIndexOf(':'), markerLine.lastIndexOf('：'));
+        const afterColon = colonIdx >= 0 ? markerLine.slice(colonIdx + 1).trim() : '';
+        if(afterColon){
+            // 如“专业提示词：一双白鞋…”，保留冒号后的同段内容；纯“提示词：”结尾则只取后续行
+            rest = afterColon + (rest ? '\n' + rest : '');
+        }
+        if(rest.length >= 20) t = rest;
+    }
+    // 3) 剥离常见废话前缀行（最多剥 2 个非空行，行首匹配；匹配到才剥，空行不占配额）
+    const junkPrefix = /^(可以|好的|当然|以下是|下面是|基于|根据|我(为|将|来)|可直接|整体|总结|分析|先说|关于|针对|已为|为您|给你)/;
     const lines = t.split('\n');
+    let peeled = 0;
     let cut = 0;
-    while(cut < lines.length && cut < 2){
+    while(cut < lines.length && peeled < 2){
         const line = lines[cut].trim();
-        if(!line) { cut++; continue; }
-        if(junkPrefix.test(line) && line.length < 80) { cut++; continue; }  // 短废话行
+        if(!line) { cut++; continue; }  // 空行跳过，不占剥离配额
+        if(junkPrefix.test(line) && line.length < 80) { peeled++; cut++; continue; }  // 短废话行
         break;
     }
-    if(cut) t = lines.slice(cut).join('\n').trim();
-    // 3) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行）
+    if(cut){
+        const rest = lines.slice(cut).join('\n').trim();
+        // 剥空则不生效：整段只有一句废话行时保留原文，避免把输出清空
+        if(rest) t = rest;
+    }
+    // 4) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行；剥空不生效）
     const tailLines = t.split('\n');
     const last = tailLines[tailLines.length - 1]?.trim() || '';
-    if(/^(希望|如需|如有|有问题|欢迎|如果)/.test(last) && last.length < 60) tailLines.pop();
+    if(/^(希望|如需|如有|有问题|欢迎|如果)/.test(last) && last.length < 60 && tailLines.length > 1) tailLines.pop();
     t = tailLines.join('\n').trim();
     return t;
 }

@@ -6565,6 +6565,36 @@ async def video_first_frame(req: VideoFirstFrameRequest):
         raise HTTPException(status_code=502, detail=(proc.stderr or "截取首帧失败").strip()[:300])
     return {"url": output_url_for(filename, "input")}
 
+class VideoLastFrameRequest(BaseModel):
+    url: str
+
+@app.post("/api/video-last-frame")
+async def video_last_frame(req: VideoLastFrameRequest):
+    """抽取视频尾帧保存为图片（assets/input/），返回图片 URL。给画布「截尾帧」按钮用。"""
+    path = output_file_from_url(req.url)
+    if not path or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="视频文件不存在")
+    filename = f"lastframe_{uuid.uuid4().hex[:10]}.jpg"
+    out_path = output_path_for(filename, "input")
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise HTTPException(status_code=502, detail="未找到 ffmpeg，无法截取尾帧")
+    cmd = [
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+        "-sseof", "-0.2",  # 从视频末尾往前 0.2 秒抽帧，避免末尾黑场/不完整帧
+        "-i", path,
+        "-frames:v", "1",
+        "-q:v", "2",
+        out_path,
+    ]
+    try:
+        proc = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=30)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"截取尾帧超时或失败：{exc}") from exc
+    if proc.returncode != 0 or not os.path.exists(out_path) or os.path.getsize(out_path) <= 0:
+        raise HTTPException(status_code=502, detail=(proc.stderr or "截取尾帧失败").strip()[:300])
+    return {"url": output_url_for(filename, "input")}
+
 def local_media_file_by_basename(name: str):
     safe = os.path.basename(urllib.parse.unquote(str(name or "")))
     if not safe:

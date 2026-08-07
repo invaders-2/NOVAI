@@ -8995,6 +8995,17 @@ function renderVideoBody(node){
         e.stopPropagation();
         captureVideoFirstFrame(node, btn.dataset.videoUrl);
     });
+    // 「截尾帧」事件委托：与截首帧对称
+    wrap.addEventListener('mousedown', e => {
+        // 阻止 mousedown 冒泡，避免触发输入项拖拽
+        if(e.target.closest('.video-last-frame-btn')) e.stopPropagation();
+    });
+    wrap.addEventListener('click', e => {
+        const btn = e.target.closest('.video-last-frame-btn');
+        if(!btn) return;
+        e.stopPropagation();
+        captureVideoLastFrame(node, btn.dataset.videoUrl);
+    });
     return wrap;
 }
 // 截取视频首帧：调后端 /api/video-first-frame 抽帧，成功后把首帧创建为图片节点
@@ -9015,6 +9026,25 @@ async function captureVideoFirstFrame(node, url){
         setStatus(langIsEn() ? 'First frame extracted — edit it, then drag it back as the video first frame' : '已截取首帧图片节点，编辑后可拖回视频节点作为首帧');
     } catch(err) {
         showErrorModal(err.message || '截取首帧失败', '截取首帧');
+    }
+}
+// 截取视频尾帧：调后端 /api/video-last-frame 抽帧，成功后把尾帧创建为图片节点（与截首帧对称）
+async function captureVideoLastFrame(node, url){
+    if(!url){ showErrorModal('未找到视频地址', '截取尾帧'); return; }
+    try {
+        const res = await fetch('/api/video-last-frame', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url})
+        });
+        const data = await res.json().catch(() => ({}));
+        if(!res.ok) throw new Error(apiErrorMessage(data, `截取尾帧失败（HTTP ${res.status}）`));
+        const frameUrl = data?.url;
+        if(!frameUrl) throw new Error('接口未返回图片地址');
+        createImageCardFromUrl(frameUrl, {x:(Number(node.x)||0) + 40, y:(Number(node.y)||0) + 40}, '视频尾帧');
+        setStatus(langIsEn() ? 'Last frame extracted — edit it, then drag it back as the video last frame' : '已截取尾帧图片节点，编辑后可拖回视频节点作为尾帧');
+    } catch(err) {
+        showErrorModal(err.message || '截取尾帧失败', '截取尾帧');
     }
 }
 function renderPromptPreview(container, promptInputs){
@@ -9071,11 +9101,16 @@ function renderVideoImageInputs(list, node, imageInputs){
         const firstFrameBtn = kind === 'video'
             ? `<button type="button" class="video-first-frame-btn" data-video-url="${escapeHtml(src.refs?.[0]?.url || src.preview || '')}" title="截取首帧为图片" style="position:absolute;right:2px;bottom:2px;z-index:2;height:16px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:8px;padding:0 6px;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;"><i data-lucide="camera" style="width:10px;height:10px;"></i></button>`
             : '';
+        // 「截尾帧」小按钮：与截首帧对称，仅视频输入项显示，放在首帧按钮左侧（right:22px）避免重叠
+        const lastFrameBtn = kind === 'video'
+            ? `<button type="button" class="video-last-frame-btn" data-video-url="${escapeHtml(src.refs?.[0]?.url || src.preview || '')}" title="截取尾帧为图片" style="position:absolute;right:22px;bottom:2px;z-index:2;height:16px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:8px;padding:0 6px;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;"><i data-lucide="flag" style="width:10px;height:10px;"></i></button>`
+            : '';
         item.innerHTML = `
             <div class="video-input-thumb">
                 <span class="input-index">${i + 1}</span>
                 ${previewHtml}
                 ${firstFrameBtn}
+                ${lastFrameBtn}
                 <span class="input-label">${escapeHtml(typeLabel)}</span>
             </div>
             ${frameLabel ? `<div class="video-frame-label">${frameLabel}</div>` : ''}

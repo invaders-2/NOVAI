@@ -11806,8 +11806,8 @@ function cleanLlmPromptOutput(text){
         // 2a) 环境限制段：段内出现“没有可用工具/无法直接产出/没有文件系统/作为任务说明”等语义，整段删除
         const envLimitRe = /(没有可用的|无法在这里直接|不能直接产出|没有[\s\S]*执行工具|没有文件系统|作为[\s\S]*任务说明|无法直接产出|没有工具)/;
         paras = paras.filter(p => !envLimitRe.test(p));
-        // 2b) 任务总结段：剩余首段以“已理解任务/任务理解/好的，我/我理解/明白，/收到，”开头且总段数>1，删首段（最多循环 2 次）
-        const summaryRe = /^(已理解任务|任务理解|好的，我|我理解|明白，|收到，)/;
+        // 2b) 任务总结段：剩余首段以“已理解任务/任务理解/好的，我/我理解/明白，/收到，/我已查看/目标是把/任务目标/我先看”等开头且总段数>1，删首段（最多循环 2 次）
+        const summaryRe = /^(已理解任务|任务理解|好的，我|我理解|明白，|收到，|^我已查看|^我已经查看|^目标(是|为|把)|^任务目标|^我(先|已经)(看|分析))/;
         let summaryPeeled = 0;
         while(paras.length > 1 && summaryPeeled < 2 && summaryRe.test(paras[0])){ paras.shift(); summaryPeeled++; }
         // 2c) 末尾引导段：最后一段以“你可以把这段/你可以将这段/请将以下”开头则删除（指示用户复制的废话）
@@ -11838,7 +11838,7 @@ function cleanLlmPromptOutput(text){
         if(rest.length >= 20) t = rest;
     }
     // 4) 剥离常见废话前缀行（最多剥 2 个非空行，行首匹配；匹配到才剥，空行不占配额）
-    const junkPrefix = /^(可以|好的|当然|以下是|下面是|基于|根据|我(为|将|来)|可直接|整体|总结|分析|先说|关于|针对|已为|为您|给你|已理解|明白|收到|了解|明白了|好的，我|我理解)/;
+    const junkPrefix = /^(可以|好的|当然|以下是|下面是|基于|根据|我(为|将|来)|可直接|整体|总结|分析|先说|关于|针对|已为|为您|给你|已理解|明白|收到|了解|明白了|好的，我|我理解|我已查看|我已经查看|我先(看|分析)|目标(是|为|把)|任务目标|基于素材)/;
     const lines = t.split('\n');
     let peeled = 0;
     let cut = 0;
@@ -11867,6 +11867,13 @@ async function callCanvasLLM(node, message, messages=[], options={}){
     const model = resolveChatModel(node.model || node.llmMsModel, llmProv);
     const images = llmInputImages(node);
     const videos = llmInputVideos(node);
+    // 新强约束系统提示词（与默认一致）：老节点保存的旧默认提示词提交时自动替换为它，保证强约束在老节点也生效
+    const STRONG_SYSTEM_PROMPT = '你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.';
+    // 旧默认系统提示词列表（trim 后精确匹配即视为遗留默认值，自动升级为新强约束）
+    const legacyDefaults = ['You are a helpful prompt assistant.', 'You are a helpful assistant. Rewrite the input into a concise image prompt.'];
+    // 旧默认 → 新强约束；否则用节点保存的值（空值回退新强约束，保持原有默认行为）
+    const rawSystemPrompt = (node.systemPrompt || '').trim();
+    const finalSystemPrompt = legacyDefaults.includes(rawSystemPrompt) ? STRONG_SYSTEM_PROMPT : (rawSystemPrompt || STRONG_SYSTEM_PROMPT);
     const result = await cascadeFetch('/api/canvas-llm', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -11875,7 +11882,7 @@ async function callCanvasLLM(node, message, messages=[], options={}){
             model,
             ms_model: llmProv === 'modelscope' ? model : '',
             provider: llmProv,
-            system_prompt:node.systemPrompt || '你是一名专业的 AI 提示词工程师。请直接输出一条完整、可直接用于 AI 视频/图像生成的提示词（中文），严格遵循：1) 只输出提示词本身，禁止任何前言、解释、分析过程、总结或客套话；2) 不要使用 Markdown 代码块、列表编号或任何格式包装；3) 提示词需完整覆盖画面内容、动作、运镜、场景、风格与产品细节，可直接粘贴使用。\nYou are a professional AI prompt engineer. Output ONLY the final prompt itself — no preamble, no explanation, no analysis, no summary, no Markdown formatting. The prompt must be complete and ready to use.',
+            system_prompt:finalSystemPrompt,
             messages,
             images,
             videos,

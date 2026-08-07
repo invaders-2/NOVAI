@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "updated": "2026-08-07",
+  "templates": [
+    {
+      "id": "model-outfit-swap",
+      "name": "模特换装",
+      "desc": "参考图驱动的模特换装：AI 将裙子改为米白色、鞋子改为浅棕色，一键生成新效果图",
+      "cover": "https://invaders-2.github.io/NOVAI/templates/covers/model-outfit-swap.jpg",
+      "workflow": "https://invaders-2.github.io/NOVAI/templates/workflows/model-outfit-swap.zip",
+      "tags": ["电商", "换装", "生图"],
+      "nodeCount": 8
+    }
+  ]
+}

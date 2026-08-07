@@ -17450,6 +17450,63 @@ if(composerTemplateBtn) composerTemplateBtn.onclick = event => {
     }
     openPromptTemplatePanel(activeComposerNode()?.id || selectedNode()?.id || '', promptTemplateSelectedId, {target:'composer'});
 };
+// ✨ 自动生成提示词：收集当前设置面板的参考视频/参考图 → 视觉 LLM 生成 Seedance 提示词 → 填入主提示词框
+const composerAutoPromptBtn = document.getElementById('composerAutoPromptBtn');
+async function autoGenerateComposerPrompt(){
+    if(!composerAutoPromptBtn || composerAutoPromptBtn.disabled) return;
+    const subject = activeSettingsSubject();
+    const refs = currentUploadMediaRefs(subject);
+    const uploadedRefs = applyUploadedUrlsToSmartRefs(refs, settings);
+    const manualVideo = manualSmartVideoLink(settings)?.url || '';
+    const videos = manualVideo
+        ? manualSmartMediaLinks(settings).map(item => item.url).filter(Boolean)
+        : videoRefsOnly(uploadedRefs).map(ref => ref.url).filter(Boolean);
+    const images = imageRefsOnly(uploadedRefs).map(ref => ref.url).filter(Boolean);
+    // asset:// 认证地址后端无法消费（抽帧/直传都不支持），过滤掉
+    const usableVideos = videos.filter(url => !String(url || '').startsWith('asset://'));
+    const usableImages = images.filter(url => !String(url || '').startsWith('asset://'));
+    if(!usableVideos.length && !usableImages.length){
+        toast('请先添加参考视频或参考图，再自动生成提示词');
+        return;
+    }
+    const intent = (promptInput?.textContent || '').trim();
+    const prevHtml = composerAutoPromptBtn.innerHTML;
+    const prevWidth = composerAutoPromptBtn.style.width;
+    composerAutoPromptBtn.disabled = true;
+    composerAutoPromptBtn.style.width = 'auto';
+    composerAutoPromptBtn.style.padding = '0 8px';
+    composerAutoPromptBtn.innerHTML = '<span style="font-size:12px;white-space:nowrap;">生成中…</span>';
+    try {
+        const data = await fetch('/api/video-auto-prompt', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({videos:usableVideos, images:usableImages, prompt:intent})
+        }).then(async r => {
+            const json = await r.json().catch(() => ({}));
+            if(!r.ok) throw new Error(json.detail || ('生成失败：HTTP ' + r.status));
+            return json;
+        });
+        const promptText = String(data.prompt || '').trim();
+        if(!promptText) throw new Error('生成失败：返回为空');
+        setPromptText(promptText);
+        promptInput.dispatchEvent(new Event('input', {bubbles:true}));
+        savePromptDraftForCurrent();
+        scheduleSave();
+        toast('已生成提示词，可编辑后确认');
+    } catch(e) {
+        toast((e.message || '生成失败').slice(0, 160));
+    } finally {
+        composerAutoPromptBtn.disabled = false;
+        composerAutoPromptBtn.style.width = prevWidth;
+        composerAutoPromptBtn.style.padding = '';
+        composerAutoPromptBtn.innerHTML = prevHtml;
+    }
+}
+if(composerAutoPromptBtn) composerAutoPromptBtn.onclick = event => {
+    event.preventDefault();
+    event.stopPropagation();
+    autoGenerateComposerPrompt();
+};
 if(promptPresetSelect) promptPresetSelect.onchange = () => renderPromptPresetPanel(promptPresetSelect.value);
 [promptPresetName, promptPresetText].forEach(input => {
     input?.addEventListener('input', () => {

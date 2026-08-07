@@ -8831,6 +8831,7 @@ function renderVideoBody(node){
         <div class="video-input-head">
             <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Media</div>
             <div class="video-input-actions">
+                <button type="button" class="tool-btn" data-video-auto-prompt title="✨ 自动生成提示词（视觉 LLM + Seedance 规则）"><i data-lucide="sparkles" class="w-4 h-4"></i><span>自动提示词</span></button>
                 <button type="button" class="tool-btn" data-video-manual-url title="手动输入视频 URL"><i data-lucide="link" class="w-4 h-4"></i><span>输入网址</span></button>
                 <button type="button" class="tool-btn" data-video-temp-sh ${node.tempShUploading ? 'disabled' : ''} title="上传当前输入视频到云端直链"><i data-lucide="upload-cloud" class="w-4 h-4"></i><span>${node.tempShUploading ? '上传中...' : '上传云端'}</span></button>
             </div>
@@ -8976,6 +8977,50 @@ function renderVideoBody(node){
                 await setCanvasManualVideoUrl(node.id);
             } catch(err) {
                 showErrorModal(err.message || '设置视频网址失败', '输入网址');
+            }
+        };
+    });
+    // ✨ 自动生成提示词：收集该视频节点的参考图/参考视频 → 视觉 LLM 生成 Seedance 提示词 → 复制到剪贴板
+    wrap.querySelectorAll('[data-video-auto-prompt]').forEach(btn => {
+        btn.onmousedown = e => e.stopPropagation();
+        btn.onclick = async e => {
+            e.stopPropagation();
+            if(btn.disabled) return;
+            const sources = orderedSources(node, generatorSources(node));
+            const allRefs = sources.flatMap(s => s.refs || []);
+            const mediaRefs = applyUploadedUrlToRefs((allRefs || []).filter(ref => ['image','video','audio'].includes(mediaKindForRef(ref))), node);
+            const images = imageRefsOnly(mediaRefs).map(ref => ref.url).filter(Boolean);
+            const manualVideo = manualVideoUrlForNode(node);
+            const videos = manualVideo ? [manualVideo] : videoRefsOnly(mediaRefs).map(ref => tempShUploadedUrlForNode(node, ref.url));
+            // asset:// 认证地址后端无法消费（抽帧/直传都不支持），过滤掉
+            const usableVideos = videos.filter(url => !String(url || '').startsWith('asset://'));
+            const usableImages = images.filter(url => !String(url || '').startsWith('asset://'));
+            if(!usableVideos.length && !usableImages.length){
+                alert('请先为视频节点添加参考视频或参考图，再自动生成提示词');
+                return;
+            }
+            const intent = sources.map(s => s.prompt).filter(Boolean).join('\n\n');
+            const label = btn.querySelector('span');
+            const prevLabel = label ? label.textContent : '';
+            btn.disabled = true;
+            if(label) label.textContent = '生成中…';
+            try {
+                const res = await fetch('/api/video-auto-prompt', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({videos:usableVideos, images:usableImages, prompt:intent})
+                });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data.detail || ('生成失败：HTTP ' + res.status));
+                const promptText = String(data.prompt || '').trim();
+                if(!promptText) throw new Error('生成失败：返回为空');
+                try { await navigator.clipboard.writeText(promptText); } catch(err) {}
+                alert(`已生成提示词并复制到剪贴板，请粘贴到上游提示词节点使用：\n\n${promptText}`);
+            } catch(err) {
+                showErrorModal(err.message || '自动生成提示词失败', '自动生成提示词');
+            } finally {
+                btn.disabled = false;
+                if(label) label.textContent = prevLabel;
             }
         };
     });

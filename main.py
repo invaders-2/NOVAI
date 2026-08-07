@@ -2855,6 +2855,11 @@ class CanvasLLMRequest(BaseModel):
     images: List[str] = []   # 可以是 /output/*.png、/assets/*.png 本地路径 或 http(s) URL 或 data URL
     videos: List[str] = []   # 可以是 /output/*.mp4、/assets/*.mp4 本地路径 或 http(s) URL 或 data URL
 
+class VideoAutoPromptRequest(BaseModel):
+    videos: List[str] = []   # 参考视频：/output|/assets 本地路径 或 http(s) URL 或 data URL
+    images: List[str] = []   # 参考图：/output|/assets 本地路径 或 http(s) URL 或 data URL
+    prompt: str = ""         # 简短用户意图，可为空
+
 class ConversationCreateRequest(BaseModel):
     title: str = "新对话"
 
@@ -3869,6 +3874,7 @@ def looks_like_vision_chat_model(model):
     vision_keys = [
         "vision", "vl-", "-vl-", "internvl", "qvq", "qwen-vl",
         "doubao-vision", "glm-4v", "minicpm-v",
+        "gemini", "gpt-4o",
     ]
     return any(key in lc for key in vision_keys)
 
@@ -14985,6 +14991,108 @@ async def canvas_llm(payload: CanvasLLMRequest):
         raise HTTPException(status_code=502, detail=f"解析回复内容失败：{exc}") from exc
     raw_data = unwrap_apimart_response(raw) if isinstance(raw, dict) else {}
     return {"text": text, "model": model, "raw_usage": raw_data.get("usage")}
+
+# --- 自动生成视频提示词（视觉 LLM + Seedance 规则） ---
+
+VIDEO_AUTO_PROMPT_SYSTEM_PROMPT = (
+    "你是火山即梦 Seedance 2.0 视频生成提示词专家。根据用户意图与输入素材（参考视频关键帧、参考图），"
+    "生成一条符合 Seedance 2.0 规范的中文视频生成提示词，规则：\n"
+    "1. 声明每个素材的用途：参考视频 → 镜头运动、动作编排、节奏；参考图 → 产品/人物/场景外观\n"
+    "2. 若用户意图是替换（产品/人物/静物/场景）：明确写「仅将视频中的X替换为参考图中的Y，其余画面（场景、人物、动作、运镜、节奏、光照）与参考视频保持一致」，并详细描述新对象的外观细节（材质、颜色、形状、特征），细节从参考图观察得来\n"
+    "3. 若用户意图是其他（如风格迁移、生成新场景）：按意图生成，参考视频仍提供动作骨架\n"
+    "4. 提示词需包含：画面内容、动作、运镜、场景、风格；时长控制在 4-15 秒\n"
+    "5. 只输出提示词本身，禁止前言、解释、分析、Markdown 代码块、编号列表\n"
+    "6. 用中文输出"
+)
+
+@app.post("/api/video-auto-prompt")
+async def video_auto_prompt(payload: VideoAutoPromptRequest):
+    # 1) 素材校验：视频取第一个抽 4 帧，图片取前 3 张
+    videos = [v for v in (payload.videos or []) if is_video_reference_value(v)]
+    images = [img for img in (payload.images or []) if is_image_reference_value(img)]
+    if not videos and not images:
+        raise HTTPException(status_code=400, detail="请至少提供一段参考视频或一张参考图，才能自动生成提示词。")
+    image_urls = []
+    for img in images[:3]:
+        ref_url = media_reference_to_url(img, max_image_size=1024)
+        if ref_url:
+            image_urls.append(ref_url)
+    video_frame_urls = []
+    if videos:
+        video_frame_urls = await video_reference_to_frame_data_urls(videos[0], max_frames=4, max_size=768)
+    if not image_urls and not video_frame_urls:
+        raise HTTPException(status_code=400, detail="无法读取参考素材（参考视频/参考图无效或不可访问），请检查素材后重试。")
+    # 2) 选一个支持图片/视频的视觉 LLM：过滤 codex/gemini-cli 协议，优先 Gemini 协议（原生视频理解）
+    vision_candidates = []
+    for _p in load_api_providers():
+        if not _p.get("enabled", True):
+            continue
+        if is_codex_provider(_p) or is_gemini_cli_provider(_p):
+            continue
+        if not provider_env_key_value(_p["id"]):
+            continue
+        for _m in (_p.get("chat_models") or []):
+            if looks_like_vision_chat_model(_m):
+                vision_candidates.append((_p, _m))
+    if not vision_candidates:
+        raise HTTPException(status_code=400, detail="未配置支持图片/视频的 LLM 模型，请先配置 Gemini/Qwen-VL 等视觉模型。")
+    vision_candidates.sort(key=lambda item: 0 if effective_protocol(item[0], item[1]) == "gemini" else 1)
+    provider, model = vision_candidates[0]
+    # 3) 构造多模态消息（仿 canvas-llm）：Gemini 协议直传视频，非 Gemini 抽帧传图
+    user_intent = (payload.prompt or "").strip()
+    intent_text = f"用户意图：{user_intent}" if user_intent else "用户意图：（未填写，请基于参考素材生成一条合适的视频提示词）"
+    content_parts: List[Dict[str, Any]] = [{"type": "text", "text": intent_text}]
+    if image_urls:
+        content_parts.append({"type": "text", "text": f"以下为参考图：{len(image_urls)} 张（多角度产品图等），均已上传。"})
+        for ref_url in image_urls:
+            content_parts.append({"type": "image_url", "image_url": {"url": ref_url}})
+    _is_gemini = effective_protocol(provider, model) == "gemini"
+    if videos:
+        if _is_gemini:
+            video_url = media_reference_to_url(videos[0])
+            if video_url:
+                content_parts.append({"type": "text", "text": "以下为参考视频（完整视频已提供，观察其镜头运动、动作编排与节奏）。"})
+                content_parts.append({"type": "video_url", "video_url": {"url": video_url}})
+        if video_frame_urls:
+            content_parts.append({"type": "text", "text": f"以下为参考视频关键帧：{len(video_frame_urls)} 张（按时间顺序抽取，代表视频画面内容）。"})
+            for frame_url in video_frame_urls:
+                content_parts.append({"type": "image_url", "image_url": {"url": frame_url}})
+    upstream_messages = [
+        {"role": "system", "content": VIDEO_AUTO_PROMPT_SYSTEM_PROMPT},
+        {"role": "user", "content": content_parts},
+    ]
+    # 4) 调 LLM（复用 canvas-llm 的请求构造/发请求/解析方式，超时 90s）
+    chat_base, chat_hdrs, resolved_model = resolve_chat_provider(provider.get("id"), model, "")
+    print(f"[video-auto-prompt] model={resolved_model} provider={provider.get('id')} images={len(image_urls)} video_frames={len(video_frame_urls)}")
+    _is_apimart = is_apimart_provider(provider)
+    raw = None
+    try:
+        async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV, timeout=90) as client:
+            req_body = {"model": resolved_model, "messages": upstream_messages}
+            if _is_apimart:
+                req_body["stream"] = False
+            response = await client.post(f"{chat_base}/chat/completions", headers=chat_hdrs, json=req_body)
+            response.raise_for_status()
+            if not response.content:
+                raise HTTPException(status_code=502, detail="提示词生成失败：上游接口返回了空响应")
+            raw = response.json()
+    except httpx.HTTPStatusError as exc:
+        body = exc.response.text or ""
+        friendly = friendly_chat_error_detail(body, resolved_model, provider)
+        raise HTTPException(status_code=502, detail=f"提示词生成失败：{friendly or body[:300]}") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"提示词生成失败：请求上游接口失败：{exc}") from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"提示词生成失败：{exc}") from exc
+    try:
+        text = text_from_chat_response(raw).strip() if isinstance(raw, dict) else ""
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"提示词生成失败：解析回复内容失败：{exc}") from exc
+    if not text:
+        raise HTTPException(status_code=502, detail="提示词生成失败：上游返回了空回复")
+    return {"prompt": text}
 
 # --- 对话管理 ---
 

@@ -36,7 +36,6 @@
             --chip-border: rgba(0,0,0,0.1);
             --mask-color: #f5f5f7;
             --icon-filter: none;
-            --lan-bg: rgba(255,255,255,0.8);
             --media-text: #ffffff;
             --media-text-soft: rgba(255,255,255,0.85);
             --focus-ring: rgba(0,0,0,0.35);
@@ -73,7 +72,6 @@
             --chip-border: rgba(255,255,255,0.1);
             --mask-color: #000;
             --icon-filter: brightness(0) invert(1);
-            --lan-bg: rgba(255,255,255,0.06);
             --media-text: #ffffff;
             --media-text-soft: rgba(255,255,255,0.85);
             --focus-ring: rgba(255,255,255,0.5);
@@ -359,40 +357,55 @@
             50% { opacity: 0.35; }
         }
 
-        /* ===== 局域网访问通知条（主题适配） ===== */
-        .lan-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 0; }
-        .lan-notice {
-            display: none;
-            align-items: center; justify-content: space-between; gap: 16px;
-            padding: 14px 18px;
-            background: var(--lan-bg);
-            border: 1px solid var(--chip-border);
-            border-radius: 14px;
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        /* ===== 局域网访问（手机/iPad 扫码，官网风格正式区块） ===== */
+        .lan-section { max-width: 1200px; margin: 0 auto; padding: 72px 24px 0; }
+        .lan-card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
             position: relative;
         }
+        .lan-notice { display: none; }
         .lan-notice.visible { display: flex; }
+        .lan-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            background: var(--media-bg);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--text-soft);
+            flex-shrink: 0;
+        }
+        .lan-icon svg { width: 20px; height: 20px; }
         .lan-notice-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-        .lan-notice-title { font-size: 13px; font-weight: 500; color: var(--text-strong); display: flex; align-items: center; gap: 6px; }
-        .lan-notice-title svg { width: 14px; height: 14px; color: var(--text-faint); flex-shrink: 0; }
-        .lan-notice-url { font-size: 12px; color: var(--text-faint); font-family: ui-monospace, "SF Mono", Menlo, monospace; word-break: break-all; }
-        .lan-notice-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .lan-notice-title { font-size: 16px; font-weight: 500; color: var(--text-strong); display: flex; align-items: center; gap: 6px; }
+        .lan-notice-desc { font-size: 13px; color: var(--text-faint); }
+        .lan-notice-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .lan-notice-url {
+            font-size: 12px; color: var(--text-soft);
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            word-break: break-all;
+        }
         .lan-qr-btn {
-            width: 32px; height: 32px; border-radius: 8px;
-            border: 1px solid var(--chip-border);
-            background: transparent; color: var(--text-soft);
+            width: 38px; height: 38px; border-radius: 10px;
+            border: 1px solid var(--card-border);
+            background: var(--card-border); color: var(--text-soft);
             cursor: pointer; display: flex; align-items: center; justify-content: center;
             transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
             position: relative;
         }
         .lan-qr-btn:hover { background: var(--chip-bg-hover); color: var(--text-strong); border-color: var(--btn-glass-border); }
-        .lan-qr-btn svg { width: 16px; height: 16px; }
+        .lan-qr-btn svg { width: 14px; height: 14px; }
         .lan-qr-popup {
             display: none;
             position: absolute; top: calc(100% + 8px); right: 0;
             padding: 12px;
             background: var(--card-solid);
-            border: 1px solid var(--chip-border);
+            border: 1px solid var(--card-border);
             border-radius: 12px;
             box-shadow: 0 8px 32px var(--shadow-color);
             z-index: 100;
@@ -402,7 +415,7 @@
         .lan-qr-popup img { display: block; width: 140px; height: 140px; border-radius: 6px; }
         .lan-qr-popup-label { font-size: 11px; color: var(--text-faint); text-align: center; margin-top: 6px; }
         .lan-close-btn {
-            width: 24px; height: 24px; border-radius: 6px;
+            width: 28px; height: 28px; border-radius: 8px;
             border: none; background: transparent; color: var(--text-faint);
             cursor: pointer; display: flex; align-items: center; justify-content: center;
             transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
@@ -510,55 +523,13 @@
             .cta-section { padding: 80px 20px 56px; }
             .cta-section h2 { font-size: 30px; letter-spacing: -0.75px; }
             .template-grid { grid-template-columns: 1fr; }
-            .lan-notice { flex-direction: column; align-items: stretch; }
-            .lan-notice-actions { justify-content: flex-end; }
+            .lan-card { flex-direction: column; align-items: stretch; }
+            .lan-notice-actions { justify-content: flex-end; flex-wrap: wrap; }
         }
 
     </style>
 </head>
 <body>
-    <div class="lan-wrap">
-        <!-- 局域网访问通知条（手机/iPad 扫码访问） -->
-        <div class="lan-notice" id="lanNotice">
-            <div class="lan-notice-text">
-                <div class="lan-notice-title">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
-                        <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
-                        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-                        <line x1="12" y1="20" x2="12.01" y2="20"/>
-                    </svg>
-                    <span>手机 / iPad 访问</span>
-                </div>
-                <div class="lan-notice-url" id="lanNoticeUrl"></div>
-            </div>
-            <div class="lan-notice-actions">
-                <button class="lan-qr-btn" id="lanQrBtn" title="显示二维码">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"/>
-                        <rect x="14" y="3" width="7" height="7"/>
-                        <rect x="3" y="14" width="7" height="7"/>
-                        <line x1="14" y1="14" x2="14" y2="14.01"/>
-                        <line x1="20" y1="14" x2="20" y2="14.01"/>
-                        <line x1="14" y1="20" x2="14" y2="20.01"/>
-                        <line x1="17" y1="17" x2="17" y2="17.01"/>
-                        <line x1="20" y1="20" x2="20" y2="20.01"/>
-                    </svg>
-                    <div class="lan-qr-popup" id="lanQrPopup">
-                        <img id="lanQrImg" alt="二维码"/>
-                        <div class="lan-qr-popup-label">扫码访问</div>
-                    </div>
-                </button>
-                <button class="lan-close-btn" id="lanCloseBtn" title="关闭">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Hero 区（官网同款：全屏视频背景 + 毛玻璃按钮） -->
     <section class="hero">
         <video autoplay muted loop playsinline poster="">
@@ -773,6 +744,49 @@
             <div class="mc-specs">
                 <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">Gen-4.5</span></div>
                 <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">视频生成</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 局域网访问（手机/iPad 扫码） -->
+    <section class="lan-section">
+        <div class="lan-card lan-notice" id="lanNotice">
+            <div class="lan-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                    <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                    <line x1="12" y1="20" x2="12.01" y2="20"/>
+                </svg>
+            </div>
+            <div class="lan-notice-text">
+                <div class="lan-notice-title">手机 / iPad 访问</div>
+                <div class="lan-notice-desc">同一 Wi-Fi 下扫码，手机/平板继续创作</div>
+            </div>
+            <div class="lan-notice-actions">
+                <div class="lan-notice-url" id="lanNoticeUrl"></div>
+                <button class="lan-qr-btn" id="lanQrBtn" title="显示二维码">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                        <line x1="14" y1="14" x2="14" y2="14.01"/>
+                        <line x1="20" y1="14" x2="20" y2="14.01"/>
+                        <line x1="14" y1="20" x2="14" y2="20.01"/>
+                        <line x1="17" y1="17" x2="17" y2="17.01"/>
+                        <line x1="20" y1="20" x2="20" y2="20.01"/>
+                    </svg>
+                    <div class="lan-qr-popup" id="lanQrPopup">
+                        <img id="lanQrImg" alt="二维码"/>
+                        <div class="lan-qr-popup-label">扫码访问</div>
+                    </div>
+                </button>
+                <button class="lan-close-btn" id="lanCloseBtn" title="关闭">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
             </div>
         </div>
     </section>

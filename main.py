@@ -7902,6 +7902,77 @@ def probe_local_audio_duration_seconds(value: str) -> Optional[float]:
     except Exception:
         return None
 
+async def normalize_reference_video(path: str) -> str:
+    """把参考视频标准化为 1280x720@30fps H.264（libx264 veryfast / yuv420p / aac 48kHz 双声道 / faststart）。
+
+    参考视频过大或编码特殊（如 HEVC）会导致火山下载/抽帧失败，标准化后成功率更高。
+    成功返回新的临时 .mp4 路径；任何失败（ffmpeg 缺失/非零退出/超时）静默返回原 path，不抛错。
+    调用方负责在不再需要时删除返回的新路径。
+    """
+    if not path or not os.path.isfile(path):
+        return path
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return path
+    ffprobe = shutil.which("ffprobe")
+    out_path = ""
+    try:
+        has_audio = False
+        if ffprobe:
+            try:
+                probe = subprocess.run(
+                    [
+                        ffprobe, "-v", "error",
+                        "-select_streams", "a:0",
+                        "-show_entries", "stream=codec_type",
+                        "-of", "csv=p=0",
+                        path,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=20,
+                )
+                has_audio = probe.returncode == 0 and "audio" in str(probe.stdout or "")
+            except Exception:
+                has_audio = False
+        fd, out_path = tempfile.mkstemp(prefix="canvas_llm_video_norm_", suffix=".mp4")
+        os.close(fd)
+        cmd = [
+            ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+            "-i", path,
+        ]
+        if not has_audio:
+            # 原视频无音轨：anullsrc 补静音轨（-shortest 保证随视频结束），避免部分场景无音轨报错。
+            # 注意：所有 -i 输入必须集中在输出选项之前，否则 -c:v/-vf 会被当作下一个输入的
+            # 解码/滤镜选项（"Unknown decoder 'libx264'"）。
+            cmd += ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
+        cmd += [
+            "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30",
+            "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+        ]
+        if has_audio:
+            cmd += ["-map", "0:v:0", "-map", "0:a:0", "-c:a", "aac", "-ar", "48000", "-ac", "2"]
+        else:
+            cmd += ["-shortest", "-c:a", "aac", "-ar", "48000", "-ac", "2"]
+        cmd += ["-movflags", "+faststart", out_path]
+        proc = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=120)
+        if proc.returncode != 0:
+            print(f"[canvas-llm] video normalize failed: {proc.stderr[:300]}")
+            try: os.remove(out_path)
+            except OSError: pass
+            return path
+        if not os.path.isfile(out_path) or os.path.getsize(out_path) == 0:
+            try: os.remove(out_path)
+            except OSError: pass
+            return path
+        return out_path
+    except Exception as e:
+        print(f"[canvas-llm] video normalize error: {e}")
+        if out_path and os.path.exists(out_path):
+            try: os.remove(out_path)
+            except OSError: pass
+        return path
+
 async def volcengine_video_reference_content_items(value, max_frames=4, max_size=768):
     text = str(value or "").strip()
     if not text:
@@ -7923,7 +7994,21 @@ async def volcengine_video_reference_content_items(value, max_frames=4, max_size
                 "video_url": {"url": public_url},
                 "role": "reference_video",
             }]
-    frame_urls = await video_reference_to_frame_data_urls(text, max_frames=max_frames, max_size=max_size)
+    # 抽帧兜底前先标准化视频（1280x720@30fps H.264）：HEVC 等特殊编码/超大分辨率会导致
+    # ffmpeg 抽帧失败，先标准化再抽帧成功率更高。标准化失败时静默用原文件。
+    frame_input = text
+    norm_path = ""
+    local_path = output_file_from_url(text)
+    if local_path:
+        norm_path = await normalize_reference_video(local_path)
+        if norm_path and norm_path != local_path:
+            frame_input = norm_path
+    try:
+        frame_urls = await video_reference_to_frame_data_urls(frame_input, max_frames=max_frames, max_size=max_size)
+    finally:
+        if norm_path and norm_path != local_path and os.path.exists(norm_path):
+            try: os.remove(norm_path)
+            except OSError: pass
     return [
         {
             "type": "image_url",
@@ -7938,6 +8023,9 @@ async def video_reference_to_frame_data_urls(value, max_frames=6, max_size=768):
     if not isinstance(value, str) or not value:
         return []
     path = output_file_from_url(value)
+    # 支持绝对路径（如 normalize_reference_video 输出的临时文件）：存在的文件路径直接用
+    if not path and os.path.exists(value):
+        path = value
     cleanup_path = ""
     if not path and value.startswith(("http://", "https://")):
         suffix = os.path.splitext(urllib.parse.urlparse(value).path)[1] or ".mp4"

@@ -77,30 +77,72 @@
             gap: 40px;
         }
 
-        /* ===== Hero 区 ===== */
+        /* ===== Hero 区（视频背景 + 大字排版） ===== */
         .hero {
+            position: relative;
             text-align: center;
-            animation: fadeUp 0.7s var(--v4-ease-out) both;
+            border-radius: 20px;
+            overflow: hidden;
+            padding: 96px 32px 84px;
+        }
+
+        .hero-media {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+        }
+
+        .hero-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        .hero-video.active {
+            opacity: 1;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(245, 245, 247, 0.84);
+        }
+
+        .theme-dark .hero-overlay,
+        [data-theme="dark"] .hero-overlay {
+            background: rgba(12, 12, 12, 0.78);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-subtitle {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--v4-muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+            animation: fadeDown 0.6s var(--v4-ease-out) both;
         }
 
         .hero-title {
-            font-size: 47px;
+            font-size: 64px;
             font-weight: 400;
-            letter-spacing: 0.02em;
-            line-height: 1.1;
-            margin-bottom: 12px;
+            letter-spacing: -1.5px;
+            line-height: 1.05;
+            margin-bottom: 16px;
             background: linear-gradient(135deg, var(--v4-text) 0%, var(--v4-muted) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-        }
-
-        .hero-subtitle {
-            font-size: 17px;
-            font-weight: 500;
-            color: var(--v4-muted);
-            margin-bottom: 12px;
-            letter-spacing: 0.01em;
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.05s both;
         }
 
         .hero-desc {
@@ -109,10 +151,16 @@
             max-width: 400px;
             margin: 0 auto;
             line-height: 1.6;
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.1s both;
         }
 
         @keyframes fadeUp {
             from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-12px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -163,15 +211,40 @@
         }
 
         .feature-card-icon {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 12px;
+            border-radius: 14px;
             background: var(--v4-bg);
             color: var(--v4-muted);
             flex-shrink: 0;
+            transition: transform 0.3s var(--v4-ease-out);
+        }
+
+        .feature-card:nth-child(1) .feature-card-icon {
+            background: linear-gradient(135deg, rgba(10, 132, 255, 0.12) 0%, rgba(10, 132, 255, 0.02) 100%);
+            color: #0a84ff;
+        }
+
+        .feature-card:nth-child(2) .feature-card-icon {
+            background: linear-gradient(135deg, rgba(175, 82, 222, 0.12) 0%, rgba(175, 82, 222, 0.02) 100%);
+            color: #af52de;
+        }
+
+        .feature-card:nth-child(3) .feature-card-icon {
+            background: linear-gradient(135deg, rgba(52, 199, 89, 0.12) 0%, rgba(52, 199, 89, 0.02) 100%);
+            color: #34c759;
+        }
+
+        .feature-card:nth-child(4) .feature-card-icon {
+            background: linear-gradient(135deg, rgba(255, 149, 0, 0.12) 0%, rgba(255, 149, 0, 0.02) 100%);
+            color: #ff9500;
+        }
+
+        .feature-card:hover .feature-card-icon {
+            transform: scale(1.1) rotate(-3deg);
         }
 
         .feature-card-icon svg {
@@ -241,8 +314,12 @@
 
         .cta-button:hover {
             transform: scale(1.03);
-            box-shadow: 0 6px 20px -6px var(--v4-card-shadow-hover);
-            background: linear-gradient(135deg, var(--v4-btn-bg) 0%, #444 100%);
+            box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(135deg, var(--v4-btn-bg) 0%, var(--v4-muted) 100%);
+        }
+
+        .cta-button:not(:hover) {
+            animation: ctaFloat 3s ease-in-out infinite;
         }
 
         .cta-button:active {
@@ -257,6 +334,11 @@
         .cta-button svg {
             width: 16px;
             height: 16px;
+        }
+
+        @keyframes ctaFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
         }
 
         /* ===== 最近项目 ===== */
@@ -402,6 +484,92 @@
             grid-column: 1 / -1;
         }
 
+        /* ===== 灵感画廊 ===== */
+        .gallery-section {
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.42s both;
+        }
+
+        .gallery-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--v4-focus-ring);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            padding-left: 4px;
+        }
+
+        .gallery-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--v4-text);
+            letter-spacing: -0.01em;
+            margin-bottom: 6px;
+        }
+
+        .gallery-desc {
+            font-size: 12px;
+            color: var(--v4-muted);
+            line-height: 1.5;
+            margin-bottom: 14px;
+            padding-left: 4px;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .gallery-card {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            aspect-ratio: 4 / 3;
+            background: var(--v4-bg);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--v4-card-shadow);
+        }
+
+        .gallery-card:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 2px;
+        }
+
+        .gallery-card video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.5s var(--v4-ease-out);
+        }
+
+        .gallery-card:hover video {
+            transform: scale(1.03);
+        }
+
+        .gallery-card-info {
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            background: rgba(245, 245, 247, 0.72);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--v4-text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .theme-dark .gallery-card-info,
+        [data-theme="dark"] .gallery-card-info {
+            background: var(--v4-card-solid);
+        }
+
         /* ===== 底部状态 ===== */
         .status-bar {
             text-align: center;
@@ -435,18 +603,25 @@
                 padding: 48px 0 32px;
                 gap: 32px;
             }
+            .hero {
+                padding: 64px 20px 56px;
+            }
             .hero-title { font-size: 40px; }
-            .hero-subtitle { font-size: 15px; }
+            .hero-subtitle { font-size: 11px; }
             .cards-grid {
                 grid-template-columns: 1fr;
             }
             .recent-grid {
                 grid-template-columns: 1fr;
             }
+            .gallery-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 480px) {
             .hero-title { font-size: 34px; }
+            .hero { padding: 56px 16px 48px; }
             .feature-card { padding: 18px 16px; }
         }
 
@@ -581,7 +756,7 @@
             .lan-notice-actions { justify-content: flex-end; }
         }
 
-        /* ===== 引擎能力徽章条 ===== */
+        /* ===== 引擎能力徽章条（模型 logo 滚动墙） ===== */
         .engine-strip {
             text-align: center;
             animation: fadeUp 0.7s var(--v4-ease-out) 0.2s both;
@@ -591,27 +766,64 @@
             font-size: 12px;
             font-weight: 500;
             color: var(--v4-muted);
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             letter-spacing: 0.02em;
         }
 
-        .engine-badges {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 8px;
+        .engine-marquee {
+            overflow: hidden;
+            padding: 4px 0;
+            -webkit-mask-image: linear-gradient(to right, transparent 0, #000 60px, #000 calc(100% - 60px), transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #000 60px, #000 calc(100% - 60px), transparent 100%);
         }
 
-        .engine-badge {
+        .theme-dark .engine-marquee,
+        [data-theme="dark"] .engine-marquee {
+            -webkit-mask-image: linear-gradient(to right, transparent 0, #fff 60px, #fff calc(100% - 60px), transparent 100%);
+            mask-image: linear-gradient(to right, transparent 0, #fff 60px, #fff calc(100% - 60px), transparent 100%);
+        }
+
+        .engine-track {
+            display: flex;
+            width: max-content;
+            animation: marquee 30s linear infinite;
+        }
+
+        .engine-marquee:hover .engine-track {
+            animation-play-state: paused;
+        }
+
+        .engine-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             background: var(--v4-card-bg);
             border: 1px solid rgba(0, 0, 0, 0.06);
             border-radius: 999px;
-            padding: 6px 14px;
-            font-size: 11px;
+            padding: 8px 16px;
+            font-size: 12px;
             color: var(--v4-muted);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
             white-space: nowrap;
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+
+        .theme-dark .engine-item,
+        [data-theme="dark"] .engine-item {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .engine-item img {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        @keyframes marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
         }
 
         /* ===== 模板中心 ===== */
@@ -945,13 +1157,21 @@
             </div>
         </div>
 
-        <!-- Hero 区 -->
+        <!-- Hero 区（视频背景 + 轮播） -->
         <section class="hero">
-            <h1 class="hero-title">NOVAI</h1>
-            <p class="hero-subtitle">多引擎 AI 图像与视频创作平台</p>
-            <p class="hero-desc">
-                一站式 AI 创作工作台：双画布、在线生图、多模态对话、素材管理于一体。内置 ModelScope 免费 API，兼容 OpenAI 协议，开箱即用。
-            </p>
+            <div class="hero-media" aria-hidden="true">
+                <video class="hero-video active" src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedream5-pro.mp4" autoplay muted loop playsinline preload="metadata"></video>
+                <video class="hero-video" src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2.mp4" autoplay muted loop playsinline preload="metadata"></video>
+                <video class="hero-video" src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gpt-image-2.mp4" autoplay muted loop playsinline preload="metadata"></video>
+                <div class="hero-overlay"></div>
+            </div>
+            <div class="hero-content">
+                <p class="hero-subtitle">多引擎 AI 图像与视频创作平台</p>
+                <h1 class="hero-title">NOVAI</h1>
+                <p class="hero-desc">
+                    一站式 AI 创作工作台：双画布、在线生图、多模态对话、素材管理于一体。内置 ModelScope 免费 API，兼容 OpenAI 协议，开箱即用。
+                </p>
+            </div>
         </section>
 
         <!-- 功能卡片区 -->
@@ -1030,17 +1250,36 @@
             </div>
         </section>
 
-        <!-- 引擎能力徽章条 -->
+        <!-- 引擎能力徽章条（模型 logo 滚动墙） -->
         <section class="engine-strip">
             <div class="engine-strip-title">支持引擎</div>
-            <div class="engine-badges">
-                <span class="engine-badge">ModelScope 免费</span>
-                <span class="engine-badge">OpenAI 兼容</span>
-                <span class="engine-badge">火山引擎</span>
-                <span class="engine-badge">ComfyUI 工作流</span>
-                <span class="engine-badge">RunningHub 云端</span>
-                <span class="engine-badge">即梦 CLI</span>
-                <span class="engine-badge">局域网访问</span>
+            <div class="engine-marquee">
+                <div class="engine-track">
+                    <div class="engine-item"><span>ModelScope</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg" alt="OpenAI" loading="lazy"><span>OpenAI</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/deepseek.svg" alt="DeepSeek" loading="lazy"><span>DeepSeek</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg" alt="Google Gemini" loading="lazy"><span>Google / Gemini</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/anthropic.svg" alt="Anthropic" loading="lazy"><span>Anthropic</span></div>
+                    <div class="engine-item"><span>火山引擎</span></div>
+                    <div class="engine-item"><span>ComfyUI</span></div>
+                    <div class="engine-item"><span>RunningHub</span></div>
+                    <div class="engine-item"><span>即梦</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/meta.svg" alt="Meta" loading="lazy"><span>Meta</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/stability.svg" alt="Stability" loading="lazy"><span>Stability</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg" alt="xAI" loading="lazy"><span>xAI</span></div>
+                    <div class="engine-item"><span>ModelScope</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg" alt="OpenAI" loading="lazy"><span>OpenAI</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/deepseek.svg" alt="DeepSeek" loading="lazy"><span>DeepSeek</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg" alt="Google Gemini" loading="lazy"><span>Google / Gemini</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/anthropic.svg" alt="Anthropic" loading="lazy"><span>Anthropic</span></div>
+                    <div class="engine-item"><span>火山引擎</span></div>
+                    <div class="engine-item"><span>ComfyUI</span></div>
+                    <div class="engine-item"><span>RunningHub</span></div>
+                    <div class="engine-item"><span>即梦</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/meta.svg" alt="Meta" loading="lazy"><span>Meta</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/stability.svg" alt="Stability" loading="lazy"><span>Stability</span></div>
+                    <div class="engine-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg" alt="xAI" loading="lazy"><span>xAI</span></div>
+                </div>
             </div>
         </section>
 
@@ -1077,6 +1316,31 @@
             </div>
             <div class="recent-grid" id="recentProjects">
                 <div class="recent-empty">暂无最近画布，开始创作后这里将显示你最近访问的画布</div>
+            </div>
+        </section>
+
+        <!-- 灵感画廊：AI 生成示例视频 -->
+        <section class="gallery-section">
+            <div class="gallery-label">GALLERY</div>
+            <h2 class="gallery-title">看看 AI 能做什么</h2>
+            <p class="gallery-desc">由不同引擎实时生成的示例作品，探索 NOVAI 的创作上限</p>
+            <div class="gallery-grid">
+                <div class="gallery-card">
+                    <video src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedream5-pro.mp4" autoplay muted loop playsinline preload="metadata"></video>
+                    <div class="gallery-card-info">图像生成 · Seedream</div>
+                </div>
+                <div class="gallery-card">
+                    <video src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2.mp4" autoplay muted loop playsinline preload="metadata"></video>
+                    <div class="gallery-card-info">视频生成 · Seedance</div>
+                </div>
+                <div class="gallery-card">
+                    <video src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gpt-image-2.mp4" autoplay muted loop playsinline preload="metadata"></video>
+                    <div class="gallery-card-info">图像生成 · GPT Image</div>
+                </div>
+                <div class="gallery-card">
+                    <video src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gen4-5.mp4" autoplay muted loop playsinline preload="metadata"></video>
+                    <div class="gallery-card-info">前沿视频模型 · GEN-4.5</div>
+                </div>
             </div>
         </section>
 
@@ -1546,6 +1810,43 @@
                 .catch(function() {
                     section.hidden = true;
                 });
+        })();
+
+        // ===== Hero 视频背景轮播（3 个视频 6 秒交叉淡入淡出） =====
+        (function initHeroVideoCarousel() {
+            var videos = document.querySelectorAll('.hero-video');
+            if (!videos.length) return;
+            var current = 0;
+
+            function playVideo(v) {
+                try {
+                    var p = v.play();
+                    if (p && typeof p.catch === 'function') p.catch(function() {});
+                } catch (e) { /* 自动播放策略拒绝时静默 */ }
+            }
+
+            function showNext() {
+                var next = (current + 1) % videos.length;
+                videos[current].classList.remove('active');
+                current = next;
+                videos[current].classList.add('active');
+                playVideo(videos[current]);
+            }
+
+            playVideo(videos[0]);
+            setInterval(showNext, 6000);
+        })();
+
+        // ===== 灵感画廊视频播放保障（muted autoplay 策略兜底） =====
+        (function initGalleryVideos() {
+            var videos = document.querySelectorAll('.gallery-card video');
+            if (!videos.length) return;
+            videos.forEach(function(v) {
+                try {
+                    var p = v.play();
+                    if (p && typeof p.catch === 'function') p.catch(function() {});
+                } catch (e) { /* 自动播放策略拒绝时静默 */ }
+            });
         })();
     </script>
 </body>

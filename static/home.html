@@ -580,6 +580,39 @@
             .lan-notice { flex-direction: column; align-items: stretch; }
             .lan-notice-actions { justify-content: flex-end; }
         }
+
+        /* ===== 引擎能力徽章条 ===== */
+        .engine-strip {
+            text-align: center;
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.2s both;
+        }
+
+        .engine-strip-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--v4-muted);
+            margin-bottom: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .engine-badges {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .engine-badge {
+            background: var(--v4-card-bg);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 11px;
+            color: var(--v4-muted);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -627,9 +660,9 @@
         <!-- Hero 区 -->
         <section class="hero">
             <h1 class="hero-title">NOVAI</h1>
-            <p class="hero-subtitle">AI 图像与视频生成平台</p>
+            <p class="hero-subtitle">多引擎 AI 图像与视频创作平台</p>
             <p class="hero-desc">
-                一站式 AI 创作工作台，集在线生图、智能对话、无限画布与素材管理于一体，让你的创意即刻落地。
+                一站式 AI 创作工作台：双画布、在线生图、多模态对话、素材管理于一体。内置 ModelScope 免费 API，兼容 OpenAI 协议，开箱即用。
             </p>
         </section>
 
@@ -706,6 +739,20 @@
                     </div>
                     <div class="feature-card-desc">集中管理生成作品与上传素材，快速检索与复用</div>
                 </div>
+            </div>
+        </section>
+
+        <!-- 引擎能力徽章条 -->
+        <section class="engine-strip">
+            <div class="engine-strip-title">支持引擎</div>
+            <div class="engine-badges">
+                <span class="engine-badge">ModelScope 免费</span>
+                <span class="engine-badge">OpenAI 兼容</span>
+                <span class="engine-badge">火山引擎</span>
+                <span class="engine-badge">ComfyUI 工作流</span>
+                <span class="engine-badge">RunningHub 云端</span>
+                <span class="engine-badge">即梦 CLI</span>
+                <span class="engine-badge">局域网访问</span>
             </div>
         </section>
 

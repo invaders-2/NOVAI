@@ -3874,7 +3874,7 @@ def looks_like_vision_chat_model(model):
     vision_keys = [
         "vision", "vl-", "-vl-", "internvl", "qvq", "qwen-vl",
         "doubao-vision", "glm-4v", "minicpm-v",
-        "gemini", "gpt-4o",
+        "gemini", "gpt-4o", "gpt-5",
         # 灵境中转 Claude（claude-fable-5 等）支持图片输入；豆包 Seed 1.6 多模态（doubao-seed-1-6-*）
         "claude", "seed-1-6", "1-6",
     ]
@@ -15036,17 +15036,21 @@ async def video_auto_prompt(payload: VideoAutoPromptRequest):
         chat_models = _p.get("chat_models") or []
         if chat_models:
             for _m in chat_models:
+                # 火山方舟直调仅接受推理接入点 ep-xxx 模型名，普通模型名（含用户自定义怪名）直调默认不可靠，不入候选
+                if is_volcengine_provider(_p) and not str(_m or "").strip().lower().startswith("ep-"):
+                    continue
                 if looks_like_vision_chat_model(_m):
                     vision_candidates.append((_p, _m))
         else:
             # chat_models 未配置（依赖默认模型）时，用 preferred_chat_model 判默认模型是否支持视觉
             _default_model = preferred_chat_model(_p)
             if _default_model and looks_like_vision_chat_model(_default_model):
-                vision_candidates.append((_p, _default_model))
+                if not is_volcengine_provider(_p) or str(_default_model or "").strip().lower().startswith("ep-"):
+                    vision_candidates.append((_p, _default_model))
     print(f"[video-auto-prompt] providers={len(load_api_providers())} candidates={len(vision_candidates)}")
     if not vision_candidates:
         raise HTTPException(status_code=400, detail="未配置支持图片/视频的 LLM 模型，请先配置 Gemini/Qwen-VL 等视觉模型。")
-    vision_candidates.sort(key=lambda item: 0 if effective_protocol(item[0], item[1]) == "gemini" else 1)
+    vision_candidates.sort(key=lambda item: (0 if effective_protocol(item[0], item[1]) == "gemini" else 1, 0 if not is_volcengine_provider(item[0]) else 1))
     provider, model = vision_candidates[0]
     # 3) 构造多模态消息（仿 canvas-llm）：Gemini 协议直传视频，非 Gemini 抽帧传图
     user_intent = (payload.prompt or "").strip()

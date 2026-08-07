@@ -14607,13 +14607,18 @@ async def canvas_video(payload: CanvasVideoRequest):
                         image_like_urls.add(url)
                         return True
 
-                    for ref in payload.images[:9]:
+                    image_refs = list((payload.images or [])[:9])
+                    has_last_frame = any(volcengine_content_role(ref.role, "image") == "last_frame" for ref in image_refs if ref and getattr(ref, "url", ""))
+                    for ref in image_refs:
                         url = volcengine_media_reference_url(ref.url, max_image_size=1536)
                         if not url:
                             continue
                         role = volcengine_content_role(ref.role, "image")
                         if role in {"first_frame", "last_frame"}:
                             append_volcengine_image(url, role)
+                        elif has_last_frame:
+                            # 火山规则：last frame 不能与 reference_image 混用 → 非首尾帧图丢弃
+                            continue
                         elif payload.multimodal:
                             # 智能多帧/多参模式：多张图作为参考图提交，不能全部伪装成首帧。
                             append_volcengine_image(url, "reference_image")

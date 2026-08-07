@@ -6425,6 +6425,38 @@ def generate_video_preview_image(path: str, width: int) -> Image.Image:
         except OSError:
             pass
 
+def video_preview_placeholder_image(width: int) -> Image.Image:
+    """ffmpeg 抽帧失败时的占位封面：深灰底(#1b1e23) + 居中白色圆角播放按钮 + VIDEO 文字。"""
+    from PIL import ImageDraw, ImageFont
+    height = max(64, int(width * 0.75))
+    img = Image.new("RGB", (width, height), (27, 30, 35))  # #1b1e23
+    draw = ImageDraw.Draw(img)
+    icon_size = max(28, int(width * 0.18))
+    cx, cy = width // 2, height // 2
+    radius = max(6, int(icon_size * 0.28))
+    draw.rounded_rectangle(
+        [cx - icon_size // 2, cy - icon_size // 2, cx + icon_size // 2, cy + icon_size // 2],
+        radius=radius, fill=(255, 255, 255),
+    )
+    tri_w, tri_h = icon_size * 0.36, icon_size * 0.42
+    draw.polygon(
+        [(cx - tri_w * 0.35, cy - tri_h / 2), (cx - tri_w * 0.35, cy + tri_h / 2), (cx + tri_w * 0.55, cy)],
+        fill=(27, 30, 35),
+    )
+    if width >= 160:
+        try:
+            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", max(12, int(width * 0.045)))
+        except Exception:
+            font = ImageFont.load_default()
+        text = "VIDEO"
+        bbox = draw.textbbox((0, 0), text, font=font)
+        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+        draw.text(
+            (cx - tw / 2 - bbox[0], cy + icon_size * 0.95 - th / 2 - bbox[1]),
+            text, fill=(160, 165, 175), font=font,
+        )
+    return img
+
 @app.get("/api/media-preview")
 async def media_preview(url: str, w: int = 512):
     path = output_file_from_url(url)
@@ -6443,7 +6475,12 @@ async def media_preview(url: str, w: int = 512):
         # 同步 PIL 处理 + 落盘，放到线程里执行，避免阻塞事件循环（几十张首次生成会卡死整个 loop → 缩略图全空白）
         os.makedirs(MEDIA_PREVIEW_DIR, exist_ok=True)
         if is_video_preview_file(path):
-            img = generate_video_preview_image(path, width)
+            try:
+                img = generate_video_preview_image(path, width)
+            except Exception as exc:
+                # ffmpeg 抽帧失败（缺 ffmpeg / 视频损坏 / 超时）→ 生成占位封面，保证前端封面不黑屏
+                print(f"[MEDIA-PREVIEW] 视频抽帧失败，生成占位封面：{exc}", flush=True)
+                img = video_preview_placeholder_image(width)
         else:
             with Image.open(path) as source:
                 img = ImageOps.exif_transpose(source)

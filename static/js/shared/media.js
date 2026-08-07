@@ -131,7 +131,8 @@
     function videoFallbackHtml(url, attrs=''){
         const original = originalMediaUrl(url);
         const src = displayMediaUrl(original);
-        return `<video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+        const poster = mediaPreviewUrl(original, 512);
+        return `<video src="${escapeAttr(src)}" poster="${escapeAttr(poster)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
     }
 
     function videoFallbackHtmlFromItem(url, attrs=''){

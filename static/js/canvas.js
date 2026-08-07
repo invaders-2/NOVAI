@@ -88,7 +88,8 @@ function canvasVideoFallbackHtml(url, attrs=''){ return window.NovaMedia ? NovaM
 function _localVideoFallbackHtml(url, attrs=''){
     const original = canvasOriginalMediaUrl(url);
     const src = canvasDisplayMediaUrl(original);
-    return `<video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+    const poster = canvasMediaPreviewUrl(original, 512);
+    return `<video src="${escapeAttr(src)}" poster="${escapeAttr(poster)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
 }
 function canvasVideoPlayerHtml(url, attrs=''){ return window.NovaMedia ? NovaMedia.videoPlayerHtml(url, attrs) : _localVideoPlayerHtml(url, attrs); }
 function _localVideoPlayerHtml(url, attrs=''){

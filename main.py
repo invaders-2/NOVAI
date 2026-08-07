@@ -7912,19 +7912,17 @@ async def volcengine_video_reference_content_items(value, max_frames=4, max_size
             "video_url": {"url": text},
             "role": "reference_video",
         }]
-    # 本地视频（/assets、/output 等）→ 上传公网临时托管，作为真视频参考传给火山
+    # 本地视频（/assets、/output 等）→ 优先用配置的公网隧道 URL 作真视频参考传给火山。
+    # 火山服务器在北京，temp.sh/litterbox 等国外图床下载不到会报 "resource download failed"，
+    # 所以不再上传国外图床：未配置 PUBLIC_BASE_URL 时直接落到下方抽帧兜底，保证不报错。
     if not text.startswith(("http://", "https://")):
-        try:
-            uploaded = await upload_local_video_to_cloud(text)
-            public_url = (uploaded or {}).get("url")
-            if public_url:
-                return [{
-                    "type": "video_url",
-                    "video_url": {"url": public_url},
-                    "role": "reference_video",
-                }]
-        except Exception:
-            pass  # 上传失败/超时 → 继续走抽帧兜底
+        public_url = local_asset_public_url(text)
+        if public_url:
+            return [{
+                "type": "video_url",
+                "video_url": {"url": public_url},
+                "role": "reference_video",
+            }]
     frame_urls = await video_reference_to_frame_data_urls(text, max_frames=max_frames, max_size=max_size)
     return [
         {

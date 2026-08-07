@@ -14608,13 +14608,18 @@ async def canvas_video(payload: CanvasVideoRequest):
                         return True
 
                     image_refs = list((payload.images or [])[:9])
+                    has_ref_media = bool([v for v in (payload.videos or []) if str(v or "").strip()]) or bool([a for a in (payload.audios or []) if str(a or "").strip()])
+                    has_first_frame = any(volcengine_content_role(ref.role, "image") == "first_frame" for ref in image_refs if ref and getattr(ref, "url", ""))
                     has_last_frame = any(volcengine_content_role(ref.role, "image") == "last_frame" for ref in image_refs if ref and getattr(ref, "url", ""))
                     for ref in image_refs:
                         url = volcengine_media_reference_url(ref.url, max_image_size=1536)
                         if not url:
                             continue
                         role = volcengine_content_role(ref.role, "image")
-                        if role in {"first_frame", "last_frame"}:
+                        if (role in {"first_frame", "last_frame"}) and has_ref_media:
+                            # 火山规则：首尾帧不能与参考视频/音频混用 → 降级为参考图（保留参考媒体能力）
+                            append_volcengine_image(url, "reference_image")
+                        elif role in {"first_frame", "last_frame"}:
                             append_volcengine_image(url, role)
                         elif has_last_frame:
                             # 火山规则：last frame 不能与 reference_image 混用 → 非首尾帧图丢弃

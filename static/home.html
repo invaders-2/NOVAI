@@ -21,7 +21,6 @@
             --card-border: rgba(0,0,0,0.06);
             --card-border-hover: rgba(0,0,0,0.14);
             --media-bg: #e8e8ed;
-            --hero-overlay: rgba(245,245,247,0.82);
             --btn-glass-bg: rgba(255,255,255,0.7);
             --btn-glass-border: rgba(0,0,0,0.12);
             --btn-glass-hover-bg: rgba(255,255,255,0.9);
@@ -59,7 +58,6 @@
             --card-border: rgba(255,255,255,0.05);
             --card-border-hover: rgba(255,255,255,0.12);
             --media-bg: #1b1e23;
-            --hero-overlay: rgba(0,0,0,0.3);
             --btn-glass-bg: rgba(255,255,255,0.15);
             --btn-glass-border: rgba(255,255,255,0.25);
             --btn-glass-hover-bg: rgba(255,255,255,0.25);
@@ -141,12 +139,17 @@
             width: 100%; height: 100%;
             object-fit: cover;
         }
-        .hero-overlay { position: absolute; inset: 0; background: var(--hero-overlay); }
         .hero-content {
             position: relative; z-index: 2;
             max-width: min(574px, 100%);
             animation: fadeUp 0.8s cubic-bezier(0.4,0,0.2,1);
+            /* 无蒙版：轻微文字阴影保证视频上可读（浅色主题白影托底） */
+            text-shadow: 0 1px 12px rgba(255,255,255,0.85), 0 2px 24px rgba(255,255,255,0.5);
         }
+        html.theme-dark .hero-content {
+            text-shadow: 0 1px 12px rgba(0,0,0,0.6), 0 2px 24px rgba(0,0,0,0.4);
+        }
+        .hero-content .btn { text-shadow: none; } /* 毛玻璃按钮有底色，不受文字阴影影响 */
         @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .hero h1 { font-size: 55px; font-weight: 400; letter-spacing: -1.65px; line-height: 1.05; color: var(--text-strong); margin-bottom: 16px; }
         .hero-subtitle { font-size: 17px; font-weight: 400; line-height: 1.55; color: var(--text-soft); margin-bottom: 12px; }
@@ -241,34 +244,48 @@
         .cta-section p { font-size: 20px; font-weight: 400; color: var(--text-soft); margin-bottom: 32px; }
         .cta-section .btns { display: flex; gap: 10px; justify-content: center; }
 
-        /* ===== 灵感画廊（官网 model-card 视觉） ===== */
+        /* ===== 灵感画廊（官网 model-card 横向轮播） ===== */
         .gallery-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            display: flex;
             gap: 24px;
             max-width: 1200px; margin: 0 auto; padding: 0 24px 4px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
         }
+        .gallery-grid::-webkit-scrollbar { display: none; }
+        .gallery-grid { -ms-overflow-style: none; scrollbar-width: none; }
         .gallery-card {
-            position: relative;
-            background: var(--media-bg);
-            border: 1px solid var(--card-border);
+            flex: 0 0 340px;
+            scroll-snap-align: start;
+            display: flex; flex-direction: column;
             border-radius: 8px;
             overflow: hidden;
         }
         .gallery-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-        .gallery-card .mc-media { position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; }
+        .gallery-card .mc-media { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; }
         .gallery-card video {
             width: 100%; height: 100%; object-fit: cover; display: block;
             transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
         }
         .gallery-card:hover video { transform: scale(1.03); }
         .gallery-card .mc-overlay {
-            position: absolute; bottom: 16px; left: 16px; right: 16px;
+            position: absolute; bottom: 20px; left: 20px; right: 20px;
             display: flex; flex-direction: column; gap: 4px;
             pointer-events: none;
         }
-        .gallery-card .mc-name { font-size: 22px; font-weight: 400; letter-spacing: -0.22px; line-height: 1.1; color: var(--media-text); }
-        .gallery-card .mc-tagline { font-size: 14px; font-weight: 400; line-height: 1.3; color: var(--media-text-soft); }
+        .gallery-card .mc-name { font-size: 22px; font-weight: 400; letter-spacing: -0.22px; line-height: 1.1; color: #fff; }
+        .gallery-card .mc-tagline { font-size: 14px; font-weight: 400; line-height: 1.3; color: rgba(255,255,255,0.85); }
+        .gallery-card .mc-specs { margin-top: 0; }
+        .mc-spec-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 0; gap: 16px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        html.theme-dark .mc-spec-row { border-bottom-color: rgba(255,255,255,0.08); }
+        .mc-spec-row:last-child { border-bottom: none; }
+        .mc-spec-label { font-size: 12px; font-weight: 500; line-height: 1.3; color: var(--text-faint); white-space: nowrap; }
+        .mc-spec-value { font-size: 13px; font-weight: 400; line-height: 1.3; color: var(--text-strong); text-align: right; }
 
         /* ===== 最近画布 ===== */
         .recent-section { max-width: 1200px; margin: 0 auto; padding: 72px 24px 0; }
@@ -482,7 +499,7 @@
             .hero h1 { font-size: 36px; letter-spacing: -0.8px; }
             .section-header h2 { font-size: 32px; letter-spacing: -0.8px; }
             .cards-grid { grid-template-columns: 1fr; }
-            .gallery-grid { grid-template-columns: 1fr; }
+            .gallery-card { flex: 0 0 280px; }
             .recent-grid { grid-template-columns: 1fr; }
             .cta-section { padding: 80px 20px 56px; }
             .cta-section h2 { font-size: 30px; letter-spacing: -0.75px; }
@@ -542,7 +559,6 @@
             <source src="https://d3phaj0sisr2ct.cloudfront.net/devportal/banners/devportal-landing-hero-robin-30s.mp4" type="video/mp4">
             <source src="https://d3phaj0sisr2ct.cloudfront.net/devportal/banners/devportal-landing-hero-robin-30s.webm" type="video/webm">
         </video>
-        <div class="hero-overlay"></div>
         <div class="hero-content">
             <h1>NOVAI</h1>
             <p class="hero-subtitle">多引擎 AI 图像与视频创作平台</p>
@@ -698,7 +714,7 @@
     <div class="section-header">
         <p class="section-label">灵感画廊</p>
         <h2>看看 AI 能做什么</h2>
-        <p>由不同引擎实时生成的示例作品，探索 NOVAI 的创作上限</p>
+        <p>用 NOVAI 接主流模型，视频皆由 AI 生成。由不同引擎实时生成的示例作品，探索 NOVAI 的创作上限。</p>
     </div>
     <section class="gallery-grid">
         <div class="gallery-card" tabindex="0">
@@ -709,6 +725,10 @@
                     <span class="mc-tagline">高保真 · 多风格图像</span>
                 </div>
             </div>
+            <div class="mc-specs">
+                <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">Seedream 5.0</span></div>
+                <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">文生图 · 图生图</span></div>
+            </div>
         </div>
         <div class="gallery-card" tabindex="0">
             <div class="mc-media">
@@ -717,6 +737,10 @@
                     <span class="mc-name">Seedance 视频生成</span>
                     <span class="mc-tagline">图生视频 · 动态一致</span>
                 </div>
+            </div>
+            <div class="mc-specs">
+                <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">Seedance 2.0</span></div>
+                <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">文生视频</span></div>
             </div>
         </div>
         <div class="gallery-card" tabindex="0">
@@ -727,6 +751,10 @@
                     <span class="mc-tagline">对话式图像生成</span>
                 </div>
             </div>
+            <div class="mc-specs">
+                <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">GPT Image 2</span></div>
+                <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">对话式生图</span></div>
+            </div>
         </div>
         <div class="gallery-card" tabindex="0">
             <div class="mc-media">
@@ -735,6 +763,10 @@
                     <span class="mc-name">GEN-4.5 前沿视频</span>
                     <span class="mc-tagline">新一代视频生成模型</span>
                 </div>
+            </div>
+            <div class="mc-specs">
+                <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">Gen-4.5</span></div>
+                <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">视频生成</span></div>
             </div>
         </div>
     </section>
@@ -1234,6 +1266,17 @@
                     if (p && typeof p.catch === 'function') p.catch(function() {});
                 } catch (e) { /* 自动播放策略拒绝时静默 */ }
             });
+        })();
+        // ===== 灵感画廊横向轮播（滚轮横滚） =====
+        (function initGalleryWheel() {
+            var scroller = document.querySelector('.gallery-grid');
+            if (!scroller) return;
+            scroller.addEventListener('wheel', function(e) {
+                if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && scroller.scrollWidth > scroller.clientWidth) {
+                    e.preventDefault();
+                    scroller.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
         })();
     </script>
 </body>

@@ -119,11 +119,20 @@
             border: 1px solid var(--btn-outline-border); border-radius: 8px;
         }
         .btn-outline:hover { border-color: var(--btn-outline-border-hover); color: var(--text-soft); }
-        .hero .btn-outline {
-            height: 40px; padding: 0 20px; font-size: 15px; font-weight: 400;
-            color: var(--text-strong); border-color: var(--btn-glass-border);
+        .hero .btn-white {
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.25);
+            font-weight: 500;
         }
-        .hero .btn-outline:hover { border-color: var(--btn-glass-border-hover); color: var(--text-strong); }
+        .hero .btn-white:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.4); transform: scale(1.02); }
+        .hero .btn-outline {
+            background: transparent; color: #a1afc5; font-weight: 400;
+            font-size: 14px; padding: 4px 8px; height: auto;
+            border: 1px solid #2c3037; border-radius: 8px;
+        }
+        .hero .btn-outline:hover { border-color: #555; color: #a1afc5; }
 
         /* ===== Hero（全屏视频背景） ===== */
         .hero {
@@ -143,19 +152,16 @@
             position: relative; z-index: 2;
             max-width: min(574px, 100%);
             animation: fadeUp 0.8s cubic-bezier(0.4,0,0.2,1);
-            /* 无蒙版：轻微文字阴影保证视频上可读（浅色主题白影托底） */
-            text-shadow: 0 1px 12px rgba(255,255,255,0.85), 0 2px 24px rgba(255,255,255,0.5);
-        }
-        html.theme-dark .hero-content {
+            /* 官网固定深色文字阴影，保证视频上可读（不随主题变化） */
             text-shadow: 0 1px 12px rgba(0,0,0,0.6), 0 2px 24px rgba(0,0,0,0.4);
         }
         .hero-content .btn { text-shadow: none; } /* 毛玻璃按钮有底色，不受文字阴影影响 */
         @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .hero h1 { font-size: 55px; font-weight: 400; letter-spacing: -1.65px; line-height: 1.05; color: var(--text-strong); margin-bottom: 16px; }
-        .hero-subtitle { font-size: 17px; font-weight: 400; line-height: 1.55; color: var(--text-soft); margin-bottom: 12px; }
+        .hero h1 { font-size: 55px; font-weight: 400; letter-spacing: -1.65px; line-height: 1.05; color: #fff; margin-bottom: 16px; }
+        .hero-subtitle { font-size: 17px; font-weight: 400; line-height: 1.55; color: #cdd1d6; margin-bottom: 12px; }
         .hero-desc {
             font-size: 15px; font-weight: 400; line-height: 1.6;
-            color: var(--text-dim);
+            color: #cdd1d6;
             max-width: 520px; margin: 0 auto 28px;
         }
         .hero .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }

@@ -101,6 +101,8 @@ let pendingGroupUploadPoint = null;
 let mentionRange = null;
 let mentionAnchorEl = null;
 let mentionInsertMode = 'token';
+let mentionTargetEl = null; // 当前 @ 提及目标输入框：null = 主提示词框 promptInput，非 null = LLM 节点指令 textarea
+let mentionPickerFromTextarea = false; // 当前打开的候选弹层是否来自 LLM 指令 textarea（失焦时才自动关闭，避免误关手动加参考图弹层）
 let panState = null;
 let didPan = false;
 let portDragState = null;
@@ -8194,7 +8196,28 @@ function bindPromptNodeControls(el, node){
     const systemEl = el.querySelector('.prompt-llm-system');
     if(systemEl) { bindScrollableText(systemEl); systemEl.oninput = e => { node.llmSystemPrompt = e.target.value; scheduleSave(); }; }
     const instructionEl = el.querySelector('.prompt-llm-instruction');
-    if(instructionEl) { bindScrollableText(instructionEl); instructionEl.oninput = e => { node.llmInstruction = e.target.value; scheduleSave(); }; }
+    if(instructionEl) {
+        bindScrollableText(instructionEl);
+        instructionEl.oninput = e => { node.llmInstruction = e.target.value; scheduleSave(); };
+        // @ 提及支持（textarea 纯文本版）：聚焦时设为提及目标，输入 @ 弹出候选
+        instructionEl.addEventListener('input', maybeOpenMentionPicker);
+        instructionEl.addEventListener('keyup', maybeOpenMentionPicker);
+        instructionEl.addEventListener('mouseup', saveMentionRange);
+        instructionEl.addEventListener('focus', () => { mentionTargetEl = instructionEl; saveMentionRange(); });
+        instructionEl.addEventListener('focusout', () => {
+            // 点击 mention picker 内部（如素材库下拉）时焦点会短暂离开 textarea：延时后焦点仍不在 picker 内才重置
+            setTimeout(() => {
+                if(mentionTargetEl === instructionEl && !mentionPicker.contains(document.activeElement)){
+                    mentionTargetEl = null;
+                    // 只自动关闭「来自指令框 @」的弹层，避免误关手动加参考图弹层
+                    if(mentionPickerFromTextarea) closeMentionPicker();
+                }
+            }, 150);
+        });
+        instructionEl.addEventListener('keydown', event => {
+            if(event.key === 'Escape') closeMentionPicker();
+        });
+    }
     const instructionResizeEl = el.querySelector('[data-llm-instruction-resize]');
     if(instructionResizeEl) instructionResizeEl.addEventListener('mousedown', e => {
         if(e.button !== 0) return;
@@ -13027,6 +13050,10 @@ function visibleReferenceImagesFor(node){
     return uniqueReferenceImages([...base, ...collectMentionedImagesFromPrompt()]);
 }
 function inputMentionCandidateImages(node){
+    // LLM 节点指令框的 @ 候选：与提交给 LLM 的媒体保持一致（节点输入媒体）
+    if(mentionTargetEl && mentionTargetEl.classList?.contains('prompt-llm-instruction')){
+        return mentionCandidateMediaForLlmNode(node);
+    }
     const current = node ? [...lineImagesFor(node), ...manualReferenceImagesFor(node)] : [];
     const seen = new Set();
     return current.filter(img => {
@@ -13038,6 +13065,28 @@ function inputMentionCandidateImages(node){
         mentionId:`mention_${index}_${Math.random().toString(36).slice(2, 7)}`,
         alias:img.name || `图片${index + 1}`
     }));
+}
+// LLM 节点指令框的 @ 候选：复用提交给 LLM 的媒体（promptNodeInputMediaForLLM），结构对齐 inputMentionCandidateImages
+function mentionCandidateMediaForLlmNode(node){
+    if(!node) return [];
+    const mediaRefs = promptNodeInputMediaForLLM(node);
+    const seen = new Set();
+    return mediaRefs.filter(img => {
+        if(!img?.url || seen.has(img.url)) return false;
+        seen.add(img.url);
+        return true;
+    }).map((img, index) => {
+        const kind = img.kind || mediaKindForItem(img);
+        const fallback = kind === 'video' ? `视频${index + 1}` : kind === 'audio' ? `音频${index + 1}` : `图${index + 1}`;
+        const name = img.name || img.alias || fallback;
+        return {
+            ...img,
+            kind,
+            name,
+            alias:name,
+            mentionId:`llm_mention_${index}_${Math.random().toString(36).slice(2, 7)}`
+        };
+    });
 }
 // 一个素材可注册到多个平台：收集所有「已通过」的 asset:// 地址，按平台映射。
 function assetRegisteredUris(item){
@@ -13083,15 +13132,25 @@ function closeMentionPicker(){
     mentionPicker.style.maxHeight = '';
     mentionAnchorEl = null;
     mentionInsertMode = 'token';
+    mentionPickerFromTextarea = false;
     if(selectedNode()) renderInputThumbsRow(selectedNode());
 }
 function saveMentionRange(){
+    // textarea 无 DOM Range：光标位置实时读 selectionStart 即可，mentionRange 置空避免误用
+    if(mentionTargetEl && mentionTargetEl.tagName === 'TEXTAREA'){
+        mentionRange = null;
+        return;
+    }
     const sel = window.getSelection();
     if(sel && sel.rangeCount && promptInput.contains(sel.anchorNode)){
         mentionRange = sel.getRangeAt(0).cloneRange();
     }
 }
 function textBeforeCaret(){
+    // textarea：取 selectionStart 之前的文本，等价于 contenteditable 的 range.toString()
+    if(mentionTargetEl && mentionTargetEl.tagName === 'TEXTAREA'){
+        return String(mentionTargetEl.value || '').slice(0, mentionTargetEl.selectionStart);
+    }
     const sel = window.getSelection();
     if(!sel || !sel.rangeCount || !promptInput.contains(sel.anchorNode)) return '';
     const range = sel.getRangeAt(0).cloneRange();
@@ -13204,6 +13263,7 @@ function showMentionPicker(){
     const hasInput = inputMentionCandidateImages(node).length > 0;
     mentionInsertMode = 'token';
     mentionAnchorEl = null;
+    mentionPickerFromTextarea = Boolean(mentionTargetEl && mentionTargetEl.tagName === 'TEXTAREA');
     placeMentionPickerInBody();
     mentionSource = hasInput ? 'input' : 'asset';
     renderMentionPicker(mentionSource);
@@ -13228,6 +13288,7 @@ function toggleAssetMentionPickerFromThumbs(){
     mentionInsertMode = 'manual-ref';
     renderInputThumbsRow(selectedNode());
     mentionAnchorEl = inputThumbsRow?.querySelector('[data-input-add-reference]') || inputThumbsRow;
+    mentionPickerFromTextarea = false; // 手动加参考图弹层与指令框 @ 弹层无关，失焦逻辑不得关闭它
     renderMentionPicker('asset');
 }
 function addManualReferenceToSelectedNode(img){
@@ -13278,7 +13339,10 @@ function placeMentionPickerInBody(){
 function positionMentionPickerAtCaret(){
     // 锚点矩形（视口坐标）：手动加参考图模式用锚元素，@ 模式用光标位置。
     let anchorRect = null;
-    if(mentionAnchorEl){
+    if(mentionTargetEl && mentionTargetEl.tagName === 'TEXTAREA'){
+        // textarea 无 DOM Range：直接用指令框自身做锚点，弹层显示在其下方
+        anchorRect = mentionTargetEl.getBoundingClientRect();
+    } else if(mentionAnchorEl){
         anchorRect = mentionAnchorEl.getBoundingClientRect();
     } else {
         const sel = window.getSelection();
@@ -13324,8 +13388,45 @@ function maybeOpenMentionPicker(){
     if(/@$/.test(before)) showMentionPicker();
     else closeMentionPicker();
 }
+// 按选中节点找回当前渲染中的 LLM 指令 textarea（render() 重建后旧元素会脱离文档）
+function currentLlmInstructionTextarea(){
+    const node = selectedNode();
+    if(!node) return null;
+    return world.querySelector(`.image-node[data-id="${CSS.escape(node.id)}"] .prompt-llm-instruction`);
+}
+// textarea 模式：在光标处插入纯文本 @名称（替换已输入的 @），并触发 input 事件同步节点数据
+function insertMentionTokenIntoTextarea(ta, img){
+    if(!ta) return;
+    const name = img.alias || img.name || '图片';
+    const value = String(ta.value || '');
+    const start = ta.selectionStart ?? value.length;
+    // 向后找到光标前最近的 @（候选弹出时光标紧跟 @），找不到就在光标处原地插入
+    let atIndex = -1;
+    for(let i = start - 1; i >= 0; i--){
+        if(value[i] === '@'){ atIndex = i; break; }
+        if(/\s/.test(value[i])) break;
+    }
+    if(atIndex < 0) atIndex = start;
+    const next = value.slice(0, atIndex) + '@' + name + ' ' + value.slice(start);
+    ta.value = next;
+    const caret = atIndex + 1 + name.length + 1;
+    ta.selectionStart = ta.selectionEnd = caret;
+    ta.dispatchEvent(new Event('input', {bubbles:true}));
+    closeMentionPicker();
+    ta.focus();
+}
 function insertMentionToken(img){
     if(!img?.url) return;
+    // LLM 节点指令框（textarea）不支持富文本 span token：走纯文本插入
+    if(mentionTargetEl && mentionTargetEl.tagName === 'TEXTAREA'){
+        const ta = document.contains(mentionTargetEl) ? mentionTargetEl : currentLlmInstructionTextarea();
+        if(ta){
+            insertMentionTokenIntoTextarea(ta, img);
+            return;
+        }
+        closeMentionPicker();
+        return;
+    }
     promptInput.focus();
     const sel = window.getSelection();
     if(mentionRange){
@@ -15040,6 +15141,31 @@ async function runGeneration(){
         render();
     }
 }
+// 把指令文本里的 @资源名 解析为 [图N]/[视频N] 引用：按提交给 LLM 的媒体顺序编号
+// （图按 images 数组、视频按 videos 数组各自编号，媒体本身已全量传入，@ 仅让指令文字明确引用；未命中保留原文）
+function llmInstructionWithMentionRefs(text, mediaRefs){
+    const value = String(text || '');
+    if(!value || !value.includes('@')) return value;
+    const images = imageRefsOnly(mediaRefs).map((ref, i) => ({...ref, refLabel:`[图${i + 1}]`, refName:ref.name || ref.alias || `图${i + 1}`}));
+    const videos = videoRefsOnly(mediaRefs).map((ref, i) => ({...ref, refLabel:`[视频${i + 1}]`, refName:ref.name || ref.alias || `视频${i + 1}`}));
+    // 名字可能互相包含：最长名字优先匹配（与主提示词框 promptHtmlWithMentionTokens 同策略）
+    const sorted = [...images, ...videos].sort((a, b) => String(b.refName).length - String(a.refName).length);
+    let out = '';
+    let index = 0;
+    while(index < value.length){
+        if(value[index] === '@'){
+            const hit = sorted.find(ref => value.slice(index + 1, index + 1 + ref.refName.length) === ref.refName);
+            if(hit){
+                out += hit.refLabel;
+                index += 1 + hit.refName.length;
+                continue;
+            }
+        }
+        out += value[index];
+        index += 1;
+    }
+    return out;
+}
 async function runPromptLLMNode(nodeId){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || node.type !== 'smart-prompt') return;
@@ -15055,11 +15181,13 @@ async function runPromptLLMNode(nodeId){
         const mediaRefs = promptNodeInputMediaForLLM(node);
         const images = imageRefsOnly(mediaRefs).map(img => img.url).filter(Boolean);
         const videos = videoRefsOnly(mediaRefs).map(video => video.url).filter(Boolean);
+        // 指令里的 @资源名 → [图N]/[视频N] 引用（媒体已全量传入，@ 仅让指令文字明确引用）
+        const messageWithRefs = llmInstructionWithMentionRefs(message, mediaRefs);
         const result = await fetch('/api/canvas-llm', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
-                message,
+                message:messageWithRefs,
                 messages:[],
                 images,
                 videos,

@@ -1262,6 +1262,9 @@
 
         // ===== 模板中心 =====
         (function initTemplateCenter() {
+            // 模板中心默认隐藏（早退）：恢复时删除下面两行 + 移除 templateSection 的 hidden 属性
+            var sec = document.getElementById('templateSection');
+            if (!sec || sec.hidden) return;
             var TEMPLATES_BASE = 'https://invaders-2.github.io/NOVAI/templates/index.json';
             var FETCH_TIMEOUT = 8000;
             var section = document.getElementById('templateSection');

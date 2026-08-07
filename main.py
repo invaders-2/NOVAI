@@ -6535,6 +6535,36 @@ async def image_jpeg(url: str, w: int = 0):
     except Exception as exc:
         raise HTTPException(status_code=415, detail=f"无法转换图片：{exc}") from exc
 
+class VideoFirstFrameRequest(BaseModel):
+    url: str
+
+@app.post("/api/video-first-frame")
+async def video_first_frame(req: VideoFirstFrameRequest):
+    """抽取视频首帧保存为图片（assets/input/），返回图片 URL。给画布「截首帧」按钮用。"""
+    path = output_file_from_url(req.url)
+    if not path or not os.path.isfile(path):
+        raise HTTPException(status_code=404, detail="视频文件不存在")
+    filename = f"firstframe_{uuid.uuid4().hex[:10]}.jpg"
+    out_path = output_path_for(filename, "input")
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise HTTPException(status_code=502, detail="未找到 ffmpeg，无法截取首帧")
+    cmd = [
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+        "-ss", "0",
+        "-i", path,
+        "-frames:v", "1",
+        "-q:v", "2",
+        out_path,
+    ]
+    try:
+        proc = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=30)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"截取首帧超时或失败：{exc}") from exc
+    if proc.returncode != 0 or not os.path.exists(out_path) or os.path.getsize(out_path) <= 0:
+        raise HTTPException(status_code=502, detail=(proc.stderr or "截取首帧失败").strip()[:300])
+    return {"url": output_url_for(filename, "input")}
+
 def local_media_file_by_basename(name: str):
     safe = os.path.basename(urllib.parse.unquote(str(name or "")))
     if not safe:

@@ -8984,7 +8984,38 @@ function renderVideoBody(node){
     renderPromptPreview(wrap.querySelector('.prompt-list'), promptInputs);
     wrap.querySelector('.gen-btn').onclick = e => { e.stopPropagation(); runCanvasGenerate(node.id); };
     bindCascadeButtons(wrap, node.id);
+    // 「截首帧」事件委托：视频输入缩略图右下角按钮 → 后端抽帧 → 创建图片节点
+    wrap.addEventListener('mousedown', e => {
+        // 阻止 mousedown 冒泡，避免触发输入项拖拽
+        if(e.target.closest('.video-first-frame-btn')) e.stopPropagation();
+    });
+    wrap.addEventListener('click', e => {
+        const btn = e.target.closest('.video-first-frame-btn');
+        if(!btn) return;
+        e.stopPropagation();
+        captureVideoFirstFrame(node, btn.dataset.videoUrl);
+    });
     return wrap;
+}
+// 截取视频首帧：调后端 /api/video-first-frame 抽帧，成功后把首帧创建为图片节点
+// （放在视频节点右下偏移处，用户可编辑图片后拖回视频节点作为首帧）
+async function captureVideoFirstFrame(node, url){
+    if(!url){ showErrorModal('未找到视频地址', '截取首帧'); return; }
+    try {
+        const res = await fetch('/api/video-first-frame', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url})
+        });
+        const data = await res.json().catch(() => ({}));
+        if(!res.ok) throw new Error(apiErrorMessage(data, `截取首帧失败（HTTP ${res.status}）`));
+        const frameUrl = data?.url;
+        if(!frameUrl) throw new Error('接口未返回图片地址');
+        createImageCardFromUrl(frameUrl, {x:(Number(node.x)||0) + 40, y:(Number(node.y)||0) + 40}, '视频首帧');
+        setStatus(langIsEn() ? 'First frame extracted — edit it, then drag it back as the video first frame' : '已截取首帧图片节点，编辑后可拖回视频节点作为首帧');
+    } catch(err) {
+        showErrorModal(err.message || '截取首帧失败', '截取首帧');
+    }
 }
 function renderPromptPreview(container, promptInputs){
     if(!container) return;
@@ -9036,10 +9067,15 @@ function renderVideoImageInputs(list, node, imageInputs){
             ? canvasPreviewImgHtml(src.preview, 256)
             : (src.preview ? missingAssetHtml(src.preview, true) : '<i data-lucide="image" class="w-6 h-6 text-slate-400"></i>');
         const typeLabel = kind === 'audio' ? `音频${i + 1}` : kind === 'video' ? `视频${i + 1}` : `图${i + 1}`;
+        // 「截首帧」小按钮：仅视频输入项显示，叠加在缩略图右下角（内联样式，不改 CSS 文件）
+        const firstFrameBtn = kind === 'video'
+            ? `<button type="button" class="video-first-frame-btn" data-video-url="${escapeHtml(src.refs?.[0]?.url || src.preview || '')}" title="截取首帧为图片" style="position:absolute;right:2px;bottom:2px;z-index:2;height:16px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:8px;padding:0 6px;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;"><i data-lucide="camera" style="width:10px;height:10px;"></i></button>`
+            : '';
         item.innerHTML = `
             <div class="video-input-thumb">
                 <span class="input-index">${i + 1}</span>
                 ${previewHtml}
+                ${firstFrameBtn}
                 <span class="input-label">${escapeHtml(typeLabel)}</span>
             </div>
             ${frameLabel ? `<div class="video-frame-label">${frameLabel}</div>` : ''}

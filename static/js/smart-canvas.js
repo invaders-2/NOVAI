@@ -11928,7 +11928,7 @@ function renderInputThumbsRow(node){
         const key = inputRefKey(img);
         const removable = manualRefKeys.has(key);
         const removeBtn = removable ? `<button class="input-thumb-remove" type="button" data-input-remove-reference="${escapeHtml(inputRefKey(img))}" title="删除参考图" aria-label="删除参考图">×</button>` : '';
-        return `<div class="input-thumb ${isSelf ? 'input-self' : ''} ${removable ? 'input-manual-ref' : ''}" draggable="false" data-thumb-index="${i}" data-node-id="${escapeHtml(img.nodeId || '')}" data-image-index="${img.imageIndex ?? ''}" data-url="${escapeHtml(img.url || '')}" data-source-url="${escapeHtml(sourceUrl)}" title="${escapeHtml(`${img.name || tr('smart.inputNum').replace('{n}', String(i + 1))} · ${title}`)}">${inner}<span class="input-thumb-label">${escapeHtml(label)}</span>${removeBtn}</div>`;
+        return `<div class="input-thumb ${isSelf ? 'input-self' : ''} ${removable ? 'input-manual-ref' : ''}" draggable="false" data-thumb-index="${i}" data-node-id="${escapeHtml(img.nodeId || '')}" data-image-index="${img.imageIndex ?? ''}" data-url="${escapeHtml(img.url || '')}" data-source-url="${escapeHtml(sourceUrl)}" title="${escapeHtml(`${img.name || tr('smart.inputNum').replace('{n}', String(i + 1))} · ${title}`)}">${inner}${isVid ? smartVideoFirstFrameBtnHtml(sourceUrl, img.nodeId || '') : ''}<span class="input-thumb-label">${escapeHtml(label)}</span>${removeBtn}</div>`;
     }).join('');
     inputThumbsRow.innerHTML = `<div class="input-thumb-list">${thumbsHtml}${dedup.length > 1 ? `<span class="input-thumb-count">${escapeHtml(tr('smart.inputCount').replace('{n}', String(dedup.length)))}</span>` : ''}</div><div class="input-thumb-actions">${addButton}</div>`;
     bindSmartPreviewImageFallbacks(inputThumbsRow);
@@ -12085,6 +12085,59 @@ function bindInputThumbVideoActions(){
         };
     });
 }
+// 「截首帧」小按钮：仅视频参考输入项显示，叠加在缩略图右下角（内联样式，同 canvas.js 风格）
+function smartVideoFirstFrameBtnHtml(videoUrl, sourceNodeId=''){
+    if(!videoUrl) return '';
+    return `<button type="button" class="video-first-frame-btn" data-video-url="${escapeAttr(videoUrl)}" data-source-node-id="${escapeAttr(sourceNodeId)}" title="截取首帧为图片" aria-label="截取首帧为图片" style="position:absolute;right:2px;bottom:2px;z-index:5;height:16px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:8px;padding:0 6px;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;"><i data-lucide="camera" style="width:10px;height:10px;"></i></button>`;
+}
+// 「截首帧」事件委托：视频参考缩略图右下角按钮 → 后端抽帧 → 创建图片节点
+// 注意：.input-thumb 自身的 click 处理会 stopPropagation，因此用 document 捕获阶段监听，
+// 才能先于它收到按钮点击；mousedown 捕获阶段同样阻止冒泡，避免触发缩略图拖拽/画布操作。
+function bindSmartVideoFirstFrameDelegation(){
+    document.addEventListener('mousedown', e => {
+        if(e.target.closest('.video-first-frame-btn')) e.stopPropagation();
+    }, true);
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.video-first-frame-btn');
+        if(!btn) return;
+        e.stopPropagation();
+        smartCaptureVideoFirstFrame(btn.dataset.videoUrl || '', btn.dataset.sourceNodeId || '');
+    }, true);
+}
+// 截取视频首帧：调后端 /api/video-first-frame 抽帧，成功后把首帧创建为图片节点
+// （放在视频来源节点附近 +40,+40 偏移处；找不到来源节点则放画布中心）
+async function smartCaptureVideoFirstFrame(videoUrl, sourceNodeId=''){
+    if(!videoUrl){ toast('未找到视频地址'); return; }
+    try {
+        const res = await fetch('/api/video-first-frame', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url: videoUrl})
+        });
+        const data = await res.json().catch(() => ({}));
+        if(!res.ok) throw new Error(apiErrorMessage(data, `截取首帧失败（HTTP ${res.status}）`));
+        const frameUrl = data?.url;
+        if(!frameUrl) throw new Error('接口未返回图片地址');
+        const fromNode = sourceNodeId ? nodes.find(n => n.id === sourceNodeId) : null;
+        const point = fromNode
+            ? {x:(Number(fromNode.x) || 0) + 40, y:(Number(fromNode.y) || 0) + 40}
+            : viewportCenter();
+        const base = String(fileNameFromUrl(videoUrl)).replace(/\.[a-z0-9]{2,8}$/i, '') || 'video';
+        const frame = {type:'image', kind:'image', url: frameUrl, name:`视频首帧_${base}`};
+        pushUndo();
+        const newNode = createImageNodeAt(point, [frame], {select:true, skipUndo:true});
+        if(newNode){
+            selectedIds = [];
+            selectedImage = {nodeId:newNode.id, index:0};
+        }
+        render();
+        scheduleSave();
+        toast('已截取首帧图片节点');
+    } catch(err) {
+        toast((err.message || '截取首帧失败').slice(0, 180));
+    }
+}
+bindSmartVideoFirstFrameDelegation();
 function movedBeforeAfterIds(ids, movedId, targetId, placement='before'){
     const list = (ids || []).filter(Boolean);
     const from = list.indexOf(movedId);

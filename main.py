@@ -15033,9 +15033,17 @@ async def video_auto_prompt(payload: VideoAutoPromptRequest):
             continue
         if not provider_env_key_value(_p["id"]):
             continue
-        for _m in (_p.get("chat_models") or []):
-            if looks_like_vision_chat_model(_m):
-                vision_candidates.append((_p, _m))
+        chat_models = _p.get("chat_models") or []
+        if chat_models:
+            for _m in chat_models:
+                if looks_like_vision_chat_model(_m):
+                    vision_candidates.append((_p, _m))
+        else:
+            # chat_models 未配置（依赖默认模型）时，用 preferred_chat_model 判默认模型是否支持视觉
+            _default_model = preferred_chat_model(_p)
+            if _default_model and looks_like_vision_chat_model(_default_model):
+                vision_candidates.append((_p, _default_model))
+    print(f"[video-auto-prompt] providers={len(load_api_providers())} candidates={len(vision_candidates)}")
     if not vision_candidates:
         raise HTTPException(status_code=400, detail="未配置支持图片/视频的 LLM 模型，请先配置 Gemini/Qwen-VL 等视觉模型。")
     vision_candidates.sort(key=lambda item: 0 if effective_protocol(item[0], item[1]) == "gemini" else 1)

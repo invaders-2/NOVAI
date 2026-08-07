@@ -860,8 +860,6 @@
         (async function initLanNotice() {
             var notice = document.getElementById('lanNotice');
             if (!notice) return;
-            // 用户关闭过就不再显示
-            if (localStorage.getItem('lan_notice_closed') === '1') return;
 
             try {
                 var res = await fetch('/api/lan-info');
@@ -904,7 +902,6 @@
         // 关闭按钮
         document.getElementById('lanCloseBtn').addEventListener('click', function() {
             document.getElementById('lanNotice').classList.remove('visible');
-            localStorage.setItem('lan_notice_closed', '1');
         });
 
         // 最新画布

@@ -14508,15 +14508,19 @@ async def canvas_video(payload: CanvasVideoRequest):
                         text_url = str(url or "").strip()
                         if not text_url:
                             continue
-                        media_url = volcengine_media_reference_url(text_url, max_image_size=1536 if looks_like_image_media_url(text_url) else None)
-                        if not media_url:
+                        if looks_like_image_media_url(text_url):
+                            # 图片当作视频参考传入的兼容分支（沿用旧行为：图片路径先转可提交地址）
+                            media_url = volcengine_media_reference_url(text_url, max_image_size=1536)
+                            if not media_url:
+                                continue
+                            if media_url in image_like_urls or looks_like_image_media_url(media_url):
+                                append_volcengine_image(media_url, "reference_image" if payload.multimodal else "first_frame")
                             continue
-                        if media_url in image_like_urls or looks_like_image_media_url(media_url):
-                            append_volcengine_image(media_url, "reference_image" if payload.multimodal else "first_frame")
-                            continue
-                        video_items = await volcengine_video_reference_content_items(media_url)
+                        # 真视频：保留原始 URL（asset://、/assets/、/output/、http(s) 均可），由视频参考通道处理
+                        video_items = await volcengine_video_reference_content_items(text_url)
                         body["content"].extend(video_items)
-                        volc_video_count += 1
+                        if video_items:
+                            volc_video_count += 1
                     for url in (payload.audios or [])[:3]:
                         duration = probe_local_audio_duration_seconds(url)
                         if duration is not None and (duration < 1.8 or duration > 15.2):

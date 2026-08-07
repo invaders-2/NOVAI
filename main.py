@@ -10871,7 +10871,7 @@ async def lan_info():
     import os as _os
     import io as _io
     import base64 as _b64
-    port = 3000
+    port = globals().get("port", 3000)
     lan_ip = _os.environ.get("NOVAI_LAN_IP")
     lan_url = _os.environ.get("NOVAI_LAN_URL")
     # dev 模式（直接跑 main.py）下环境变量没设，自己算

@@ -11792,7 +11792,7 @@ async function runComfyNode(nodeId, opts={}){
     }
 }
 // 清洗 LLM 节点输出为纯提示词：去代码块围栏、段落级剥离（环境限制/任务总结/末尾引导段）、
-// 「提示词」标记行截断、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
+// 引导行截断、「提示词」标记行截断、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
 function cleanLlmPromptOutput(text){
     if(!text) return text;
     let t = String(text).trim();
@@ -11803,20 +11803,43 @@ function cleanLlmPromptOutput(text){
     //    文本无空行分段（整段一行）时跳过，防止误伤单段正文。
     if(/\n{2,}/.test(t)){
         let paras = t.split(/\n{2,}/).map(p => p.trim()).filter(p => p);
-        // 2a) 环境限制段：段内出现“没有可用工具/无法直接产出/没有文件系统/作为任务说明”等语义，整段删除
-        const envLimitRe = /(没有可用的|无法在这里直接|不能直接产出|没有[\s\S]*执行工具|没有文件系统|作为[\s\S]*任务说明|无法直接产出|没有工具)/;
+        // 2a) 环境限制段：段内出现“没有可用工具/无法直接产出/没有可调用/我这边没有/不具备能力/没有视频工具”等语义，整段删除
+        const envLimitRe = /(没有可用的|无法在这里直接|不能直接产出|没有[\s\S]*执行工具|没有文件系统|作为[\s\S]*任务说明|无法直接产出|没有工具|没有可调用|无法(直接|把|在这里|立即)|不能(直接|在这里|立即)|我这边[\s\S]*没有|当前没有可|不具备[\s\S]*(工具|能力)|缺少[\s\S]*(工具|能力)|没有[\s\S]*(视频编辑|视频生成)[\s\S]*(工具|能力))/;
         paras = paras.filter(p => !envLimitRe.test(p));
         // 2b) 任务总结段：剩余首段以“已理解任务/任务理解/好的，我/我理解/明白，/收到，/我已查看/目标是把/任务目标/我先看”等开头且总段数>1，删首段（最多循环 2 次）
         const summaryRe = /^(已理解任务|任务理解|好的，我|我理解|明白，|收到，|^我已查看|^我已经查看|^目标(是|为|把)|^任务目标|^我(先|已经)(看|分析))/;
         let summaryPeeled = 0;
         while(paras.length > 1 && summaryPeeled < 2 && summaryRe.test(paras[0])){ paras.shift(); summaryPeeled++; }
-        // 2c) 末尾引导段：最后一段以“你可以把这段/你可以将这段/请将以下”开头则删除（指示用户复制的废话）
-        if(paras.length > 1 && /^(你可以把这段|你可以将这段|请将以下)/.test(paras[paras.length - 1])) paras.pop();
+        // 2c) 末尾引导段：最后一段以“你可以把这段/你可以将这段/请将以下/如果你在/以下是指令”等开头则删除（指示用户复制的废话）
+        if(paras.length > 1 && /^(你可以把这段|你可以将这段|请将以下|如果你在|若你在|可以使用这段|用这段|以下(是|为).*(指令|提示词))/.test(paras[paras.length - 1])) paras.pop();
         // 2d) 用 \n\n 重拼剩余段落；剥离后为空则回退剥离前文本，避免清空输出
         const joined = paras.join('\n\n').trim();
         if(joined) t = joined;
     }
-    // 3) 「提示词」标记行截断（在剥前缀之前做）：找第一个含“提示词/prompt”且 ≤80 字的行，
+    // 3) 引导行截断（在「提示词」标记截断之前）：按行扫描找第一个“引导行”——以冒号（: 或 ：）结尾、
+    //    长度 ≤100 且含“指令/提示词/可以使用/如果你在”等关键词（三重条件避免误伤正文），
+    //    该行及其之前全部丢弃、从该行之后开始；引导行冒号后还有同段内容则保留冒号后部分。
+    //    截断后为空或太短（<20 字）说明可能是正文误命中，回退原文继续走后续规则；
+    //    与「提示词」标记截断（仅要求含“提示词”+短行）相比多了“冒号结尾”约束，两者不冲突、先后执行。
+    const guideLines = t.split('\n');
+    let guideIdx = -1;
+    for(let i = 0; i < guideLines.length; i++){
+        const line = guideLines[i].trim();
+        if(!line) continue;
+        if(line.length <= 100 && /[:：]$/.test(line) && /指令|提示词|任务说明|可以使用|可以用|请使用|如果你在|若你在|直接使用|复制到|粘贴到|用于.*工具/.test(line)){ guideIdx = i; break; }
+    }
+    if(guideIdx >= 0){
+        const guideLine = guideLines[guideIdx].trim();
+        let rest = guideLines.slice(guideIdx + 1).join('\n').trim();
+        const colonIdx = Math.max(guideLine.lastIndexOf(':'), guideLine.lastIndexOf('：'));
+        const afterColon = colonIdx >= 0 ? guideLine.slice(colonIdx + 1).trim() : '';
+        if(afterColon){
+            // 如“请使用以下指令：生成一只猫…”，保留冒号后的同段内容；纯冒号结尾则只取后续行
+            rest = afterColon + (rest ? '\n' + rest : '');
+        }
+        if(rest.length >= 20) t = rest;
+    }
+    // 4) 「提示词」标记行截断（在剥前缀之前做）：找第一个含“提示词/prompt”且 ≤80 字的行，
     //    该行及其之前全部丢弃、从该行之后开始；标记行以“：”结尾（如“提示词：”）则从冒号后内容开始。
     //    截断后为空或太短（<20 字）说明可能是正文误命中，回退原文继续走前缀剥离逻辑。
     const markerLines = t.split('\n');
@@ -11837,7 +11860,7 @@ function cleanLlmPromptOutput(text){
         }
         if(rest.length >= 20) t = rest;
     }
-    // 4) 剥离常见废话前缀行（最多剥 2 个非空行，行首匹配；匹配到才剥，空行不占配额）
+    // 5) 剥离常见废话前缀行（最多剥 2 个非空行，行首匹配；匹配到才剥，空行不占配额）
     const junkPrefix = /^(可以|好的|当然|以下是|下面是|基于|根据|我(为|将|来)|可直接|整体|总结|分析|先说|关于|针对|已为|为您|给你|已理解|明白|收到|了解|明白了|好的，我|我理解|我已查看|我已经查看|我先(看|分析)|目标(是|为|把)|任务目标|基于素材)/;
     const lines = t.split('\n');
     let peeled = 0;
@@ -11853,12 +11876,12 @@ function cleanLlmPromptOutput(text){
         // 剥空则不生效：整段只有一句废话行时保留原文，避免把输出清空
         if(rest) t = rest;
     }
-    // 5) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行；剥空不生效）
+    // 6) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行；剥空不生效）
     const tailLines = t.split('\n');
     const last = tailLines[tailLines.length - 1]?.trim() || '';
     if(/^(希望|如需|如有|有问题|欢迎|如果)/.test(last) && last.length < 60 && tailLines.length > 1) tailLines.pop();
     t = tailLines.join('\n').trim();
-    // 6) 兜底：结果为空则回退原始文本（避免把输出清空）
+    // 7) 兜底：结果为空则回退原始文本（避免把输出清空）
     if(!t) return String(text).trim();
     return t;
 }

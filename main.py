@@ -3875,6 +3875,8 @@ def looks_like_vision_chat_model(model):
         "vision", "vl-", "-vl-", "internvl", "qvq", "qwen-vl",
         "doubao-vision", "glm-4v", "minicpm-v",
         "gemini", "gpt-4o",
+        # 灵境中转 Claude（claude-fable-5 等）支持图片输入；豆包 Seed 1.6 多模态（doubao-seed-1-6-*）
+        "claude", "seed-1-6", "1-6",
     ]
     return any(key in lc for key in vision_keys)
 

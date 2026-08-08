@@ -7,16 +7,16 @@
     <title data-i18n="smart.title">智能画布</title>
     <!-- 关键渲染路径优化：CSS 先于 JS 加载，浏览器可并行下载 CSS 和 JS -->
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.96.1785603195.1786104794">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.96.1785603195.1785519958">
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.96.1785603195.1785519964">
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.96.1785603195.1785519966"></script>
-    <script src="/static/js/theme.js?v=1.0.96.1785603195.1785519963"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.96.1785603195.1785519963"></script>
-    <script src="/static/js/shared/media.js?v=1.0.96.1785603195.1786100829"></script>
-    <script src="/static/js/shared/viewport.js?v=1.0.96.1785603195.1785519963"></script>
-    <script defer src="/static/js/touch-mouse.js?v=1.0.96.1785603195.1785519964"></script>
-    <script src="/static/js/i18n.js?v=1.0.96.1785603195.1785519962"></script>
+    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.95.1785515348.1785519958">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.95.1785515348.1785519958">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.95.1785515348.1785519964">
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.95.1785515348.1785519966"></script>
+    <script src="/static/js/theme.js?v=1.0.95.1785515348.1785519963"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.95.1785515348.1785519963"></script>
+    <script src="/static/js/shared/media.js?v=1.0.95.1785515348.1785519963"></script>
+    <script src="/static/js/shared/viewport.js?v=1.0.95.1785515348.1785519963"></script>
+    <script defer src="/static/js/touch-mouse.js?v=1.0.95.1785515348.1785519964"></script>
+    <script src="/static/js/i18n.js?v=1.0.95.1785515348.1785519962"></script>
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
 /* ═══ 隐藏滚动条 & 防止双滚动条 ═══ */
@@ -180,9 +180,6 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
                     <div id="promptInput" class="prompt-input" contenteditable="true" data-i18n-placeholder="smart.promptPlaceholder" data-placeholder="描述你想生成或编辑的图片..."></div>
                     <button id="composerTemplateBtn" class="composer-template-btn" type="button" title="模板库" aria-label="模板库" data-i18n-title="smart.promptTemplateLibrary">
                         <i data-lucide="library"></i><span data-i18n="smart.promptTemplateLibrary">模板库</span>
-                    </button>
-                    <button id="composerAutoPromptBtn" class="auto-prompt-btn" type="button" title="✨ 自动生成提示词（视觉 LLM + Seedance 规则）" aria-label="自动生成提示词" style="position:absolute;right:44px;top:8px;z-index:4;width:28px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;background:var(--soft);border:1px solid var(--line);color:var(--muted);box-shadow:0 4px 10px var(--shadow-color);transition:background .14s ease,color .14s ease,border-color .14s ease,transform .14s ease;">
-                        <i data-lucide="sparkles" style="width:14px;height:14px;stroke-width:2.2;"></i><span style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">自动生成提示词</span>
                     </button>
                     <div id="mentionPicker" class="mention-picker"></div>
                     <div id="promptResize" class="prompt-resize" data-i18n-title="smart.promptResize" title="拖拽调整文本框高度"></div>
@@ -598,6 +595,6 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         <div id="chatContext" class="chat-context"></div>
         <div class="chat-resize"></div>
     </div>
-    <script defer src="/static/js/smart-canvas.js?v=1.0.96.1785603195.1786118620"></script>
+    <script defer src="/static/js/smart-canvas.js?v=1.0.95.1785515348.1785519964"></script>
 </body>
 </html>

@@ -169,12 +169,10 @@ body.smart-node-drag .image-wrap:hover .image-resolution-badge { opacity:0 !impo
 .theme-dark .prompt-node-llm select, .theme-dark .prompt-node-llm textarea { background:rgba(28, 28, 28, .42); border-color:rgba(132, 132, 132, .24); }
 .prompt-node-llm select { height:26px; padding:0 7px; }
 .prompt-node-llm textarea { grid-column:1 / -1; height:48px; resize:none; overflow:auto; padding:7px; line-height:1.4; scrollbar-width:thin; scrollbar-color:rgba(132, 132, 132, .45) transparent; }
-.prompt-node-llm .prompt-llm-instruction { grid-column:auto; width:100%; height:58px; min-width:0; border:1px solid rgba(132, 132, 132, .32); border-radius:9px; background:rgba(255,255,255,.62); color:var(--text); outline:none; font-size:10px; resize:none; overflow:auto; padding:7px; line-height:1.4; scrollbar-width:thin; scrollbar-color:rgba(132, 132, 132, .45) transparent; white-space:pre-wrap; overflow-wrap:anywhere; }
-.prompt-node-llm .prompt-llm-instruction:focus { border-color:var(--strong); }
-.prompt-llm-instruction:empty::before { content:attr(data-llm-instruction-placeholder); color:var(--faint); pointer-events:none; }
-.theme-dark .prompt-node-llm .prompt-llm-instruction { background:rgba(28, 28, 28, .42); border-color:rgba(132, 132, 132, .24); }
+.prompt-node-llm .prompt-llm-instruction { height:58px; }
 .prompt-node-llm .prompt-llm-system { height:52px; }
 .prompt-node-llm .prompt-llm-instruction-wrap { grid-column:1 / -1; display:flex; flex-direction:column; min-width:0; }
+.prompt-node-llm .prompt-llm-instruction-wrap .prompt-llm-instruction { grid-column:auto; width:100%; }
 .prompt-llm-instruction-resize,.prompt-split-preview-resize { height:9px; flex:0 0 auto; cursor:ns-resize; display:flex; align-items:center; justify-content:center; background:none; border:0; }
 .prompt-llm-instruction-resize span,.prompt-split-preview-resize span { width:18px; height:3px; border-radius:999px; background:rgba(132, 132, 132, .38); transition:background .14s ease, width .14s ease; }
 .prompt-llm-instruction-wrap:hover .prompt-llm-instruction-resize span,.prompt-split-preview-resize:hover span { width:22px; background:rgba(88, 88, 88, .6); }
@@ -185,7 +183,6 @@ body.smart-llm-instr-resize { cursor:ns-resize !important; }
 body.smart-llm-instr-resize, body.smart-llm-instr-resize * { user-select:none !important; -webkit-user-select:none !important; }
 body.smart-llm-instr-resize .prompt-node-text,
 body.smart-llm-instr-resize .prompt-node-llm textarea,
-body.smart-llm-instr-resize .prompt-node-llm .prompt-llm-instruction,
 body.smart-llm-instr-resize .prompt-node-llm select { pointer-events:none !important; }
 .theme-dark .prompt-llm-instruction-resize span,.theme-dark .prompt-split-preview-resize span { background:rgba(132, 132, 132, .3); }
 .theme-dark .prompt-llm-instruction-wrap:hover .prompt-llm-instruction-resize span,
@@ -196,7 +193,6 @@ body.smart-prompt-split-resize, body.smart-prompt-split-resize * { user-select:n
 body.smart-prompt-split-resize .prompt-node-text,
 body.smart-prompt-split-resize .prompt-node-segments,
 body.smart-prompt-split-resize .prompt-node-llm textarea,
-body.smart-prompt-split-resize .prompt-node-llm .prompt-llm-instruction,
 body.smart-prompt-split-resize .prompt-node-llm select { pointer-events:none !important; }
 .prompt-node-llm-actions { grid-column:1 / -1; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
 .prompt-node-run { height:26px; padding:0 9px; border-radius:9px; background:var(--strong); color:var(--strong-text); display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:750; white-space:nowrap; }
@@ -649,10 +645,6 @@ video.node-img { object-fit:cover; background:var(--accent); }
 .mention-audio-thumb i,.mention-audio-thumb svg { width:12px !important; height:12px !important; }
 .mention-image-token span { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 .mention-image-token:hover { border-color:var(--strong); }
-/* LLM 指令框内联小 token：跟正文同字号的内嵌缩略图 + 名称，整体不可编辑 */
-.mention-image-token.llm-inline-token { height:auto; max-width:170px; margin:0 1px; padding:0 3px; border-radius:4px; gap:2px; background:rgba(127,127,127,.12); border-color:rgba(127,127,127,.24); font-size:12px; font-weight:600; line-height:1.5; vertical-align:middle; }
-.mention-image-token.llm-inline-token:hover { border-color:rgba(127,127,127,.45); }
-.mention-image-token.llm-inline-token img { width:14px; height:14px; border-radius:2px; border:0; }
 .mention-preview { position:fixed; z-index:120; width:220px; max-height:220px; border-radius:14px; overflow:hidden; border:1px solid var(--line); background:var(--card); box-shadow:0 18px 46px var(--shadow); display:none; pointer-events:none; }
 .mention-preview img,.mention-preview video { width:100%; height:100%; max-height:220px; object-fit:contain; display:block; background:var(--soft); }
 /* mention 弹窗挂 body + fixed（left/top 由 positionMentionPickerAtCaret 内联计算），不被 composer overflow 裁切 */

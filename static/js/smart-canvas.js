@@ -101,8 +101,6 @@ let pendingGroupUploadPoint = null;
 let mentionRange = null;
 let mentionAnchorEl = null;
 let mentionInsertMode = 'token';
-let mentionTargetEl = null; // 当前 @ 提及目标输入框：null = 主提示词框 promptInput，非 null = LLM 节点指令框
-let mentionPickerFromInstruction = false; // 当前打开的候选弹层是否来自 LLM 指令框（失焦时才自动关闭，避免误关手动加参考图弹层）
 let panState = null;
 let didPan = false;
 let portDragState = null;
@@ -7425,7 +7423,7 @@ function promptNodeBodyHtml(node){
             <select class="prompt-node-control prompt-llm-provider">${chatProviderOptions(node.llmProvider)}</select>
             <select class="prompt-node-control prompt-llm-model">${chatModelOptions(node.llmModel, node.llmProvider)}</select>
             <div class="prompt-llm-instruction-wrap">
-                <div class="prompt-node-control prompt-llm-instruction" contenteditable="true" data-llm-instruction-placeholder="${escapeHtml(tr('smart.promptLlmInstructionPlaceholder'))}" style="height:${promptLlmInstructionHeight(node)}px;overflow-y:auto;white-space:pre-wrap">${escapeHtml(node.llmInstruction || '')}</div>
+                <textarea class="prompt-node-control prompt-llm-instruction" placeholder="${escapeHtml(tr('smart.promptLlmInstructionPlaceholder'))}" style="height:${promptLlmInstructionHeight(node)}px">${escapeHtml(node.llmInstruction || '')}</textarea>
                 <div class="prompt-llm-instruction-resize prompt-node-control" data-llm-instruction-resize="1" title="拖动调整高度"><span></span></div>
             </div>
             ${upstreamPromptHtml}
@@ -8196,35 +8194,7 @@ function bindPromptNodeControls(el, node){
     const systemEl = el.querySelector('.prompt-llm-system');
     if(systemEl) { bindScrollableText(systemEl); systemEl.oninput = e => { node.llmSystemPrompt = e.target.value; scheduleSave(); }; }
     const instructionEl = el.querySelector('.prompt-llm-instruction');
-    if(instructionEl) {
-        bindScrollableText(instructionEl);
-        // 输入时序列化回纯文本 @名称（token span → @名称，换行 → \n），与旧 textarea 存储格式一致
-        instructionEl.oninput = () => {
-            node.llmInstruction = llmInstructionRichText(instructionEl);
-            scheduleSave();
-        };
-        // @ 提及支持（contenteditable 富文本版）：聚焦时设为提及目标，输入 @ 弹出候选
-        instructionEl.addEventListener('input', maybeOpenMentionPicker);
-        instructionEl.addEventListener('keyup', maybeOpenMentionPicker);
-        instructionEl.addEventListener('mouseup', saveMentionRange);
-        instructionEl.addEventListener('focus', () => { mentionTargetEl = instructionEl; saveMentionRange(); });
-        instructionEl.addEventListener('focusout', () => {
-            // 点击 mention picker 内部（如素材库下拉）时焦点会短暂离开指令框：延时后焦点仍不在 picker 内才重置
-            setTimeout(() => {
-                if(mentionTargetEl === instructionEl && !mentionPicker.contains(document.activeElement)){
-                    mentionTargetEl = null;
-                    // 只自动关闭「来自指令框 @」的弹层，避免误关手动加参考图弹层
-                    if(mentionPickerFromInstruction) closeMentionPicker();
-                }
-            }, 150);
-        });
-        instructionEl.addEventListener('keydown', event => {
-            if(event.key === 'Escape') closeMentionPicker();
-        });
-        // 富文本渲染放最后：先绑事件再初始化渲染，渲染异常也不影响绑定与输入
-        // 富文本渲染：把 node.llmInstruction 里的 @名称 转成内联小 token（存储仍是纯文本，提交解析不动）
-        try { renderLlmInstructionRich(instructionEl); } catch(e) { console.warn('[llm-instruction] rich render failed', e); }
-    }
+    if(instructionEl) { bindScrollableText(instructionEl); instructionEl.oninput = e => { node.llmInstruction = e.target.value; scheduleSave(); }; }
     const instructionResizeEl = el.querySelector('[data-llm-instruction-resize]');
     if(instructionResizeEl) instructionResizeEl.addEventListener('mousedown', e => {
         if(e.button !== 0) return;
@@ -11928,7 +11898,7 @@ function renderInputThumbsRow(node){
         const key = inputRefKey(img);
         const removable = manualRefKeys.has(key);
         const removeBtn = removable ? `<button class="input-thumb-remove" type="button" data-input-remove-reference="${escapeHtml(inputRefKey(img))}" title="删除参考图" aria-label="删除参考图">×</button>` : '';
-        return `<div class="input-thumb ${isSelf ? 'input-self' : ''} ${removable ? 'input-manual-ref' : ''}" draggable="false" data-thumb-index="${i}" data-node-id="${escapeHtml(img.nodeId || '')}" data-image-index="${img.imageIndex ?? ''}" data-url="${escapeHtml(img.url || '')}" data-source-url="${escapeHtml(sourceUrl)}" title="${escapeHtml(`${img.name || tr('smart.inputNum').replace('{n}', String(i + 1))} · ${title}`)}">${inner}${isVid ? smartVideoFirstFrameBtnHtml(sourceUrl, img.nodeId || '') + smartVideoLastFrameBtnHtml(sourceUrl, img.nodeId || '') : ''}<span class="input-thumb-label">${escapeHtml(label)}</span>${removeBtn}</div>`;
+        return `<div class="input-thumb ${isSelf ? 'input-self' : ''} ${removable ? 'input-manual-ref' : ''}" draggable="false" data-thumb-index="${i}" data-node-id="${escapeHtml(img.nodeId || '')}" data-image-index="${img.imageIndex ?? ''}" data-url="${escapeHtml(img.url || '')}" data-source-url="${escapeHtml(sourceUrl)}" title="${escapeHtml(`${img.name || tr('smart.inputNum').replace('{n}', String(i + 1))} · ${title}`)}">${inner}<span class="input-thumb-label">${escapeHtml(label)}</span>${removeBtn}</div>`;
     }).join('');
     inputThumbsRow.innerHTML = `<div class="input-thumb-list">${thumbsHtml}${dedup.length > 1 ? `<span class="input-thumb-count">${escapeHtml(tr('smart.inputCount').replace('{n}', String(dedup.length)))}</span>` : ''}</div><div class="input-thumb-actions">${addButton}</div>`;
     bindSmartPreviewImageFallbacks(inputThumbsRow);
@@ -12085,110 +12055,6 @@ function bindInputThumbVideoActions(){
         };
     });
 }
-// 「截首帧」小按钮：仅视频参考输入项显示，叠加在缩略图右下角（内联样式，同 canvas.js 风格）
-function smartVideoFirstFrameBtnHtml(videoUrl, sourceNodeId=''){
-    if(!videoUrl) return '';
-    return `<button type="button" class="video-first-frame-btn" data-video-url="${escapeAttr(videoUrl)}" data-source-node-id="${escapeAttr(sourceNodeId)}" title="截取首帧为图片" aria-label="截取首帧为图片" style="position:absolute;right:2px;bottom:2px;z-index:5;height:16px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:8px;padding:0 6px;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;"><i data-lucide="camera" style="width:10px;height:10px;"></i></button>`;
-}
-// 「截尾帧」小按钮：仅视频参考输入项显示，叠加在缩略图右下角（首帧按钮左侧 right:22px，内联样式，同 canvas.js 风格）
-function smartVideoLastFrameBtnHtml(videoUrl, sourceNodeId=''){
-    if(!videoUrl) return '';
-    return `<button type="button" class="video-last-frame-btn" data-video-url="${escapeAttr(videoUrl)}" data-source-node-id="${escapeAttr(sourceNodeId)}" title="截取尾帧为图片" aria-label="截取尾帧为图片" style="position:absolute;right:22px;bottom:2px;z-index:5;height:16px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:8px;padding:0 6px;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;"><i data-lucide="flag" style="width:10px;height:10px;"></i></button>`;
-}
-// 「截首帧」事件委托：视频参考缩略图右下角按钮 → 后端抽帧 → 创建图片节点
-// 注意：.input-thumb 自身的 click 处理会 stopPropagation，因此用 document 捕获阶段监听，
-// 才能先于它收到按钮点击；mousedown 捕获阶段同样阻止冒泡，避免触发缩略图拖拽/画布操作。
-function bindSmartVideoFirstFrameDelegation(){
-    document.addEventListener('mousedown', e => {
-        if(e.target.closest('.video-first-frame-btn')) e.stopPropagation();
-    }, true);
-    document.addEventListener('click', e => {
-        const btn = e.target.closest('.video-first-frame-btn');
-        if(!btn) return;
-        e.stopPropagation();
-        smartCaptureVideoFirstFrame(btn.dataset.videoUrl || '', btn.dataset.sourceNodeId || '');
-    }, true);
-}
-// 「截尾帧」事件委托：与截首帧对称（.video-last-frame-btn），同样用 document 捕获阶段监听
-function bindSmartVideoLastFrameDelegation(){
-    document.addEventListener('mousedown', e => {
-        if(e.target.closest('.video-last-frame-btn')) e.stopPropagation();
-    }, true);
-    document.addEventListener('click', e => {
-        const btn = e.target.closest('.video-last-frame-btn');
-        if(!btn) return;
-        e.stopPropagation();
-        smartCaptureVideoLastFrame(btn.dataset.videoUrl || '', btn.dataset.sourceNodeId || '');
-    }, true);
-}
-// 截取视频首帧：调后端 /api/video-first-frame 抽帧，成功后把首帧创建为图片节点
-// （放在视频来源节点附近 +40,+40 偏移处；找不到来源节点则放画布中心）
-async function smartCaptureVideoFirstFrame(videoUrl, sourceNodeId=''){
-    if(!videoUrl){ toast('未找到视频地址'); return; }
-    try {
-        const res = await fetch('/api/video-first-frame', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({url: videoUrl})
-        });
-        const data = await res.json().catch(() => ({}));
-        if(!res.ok) throw new Error(apiErrorMessage(data, `截取首帧失败（HTTP ${res.status}）`));
-        const frameUrl = data?.url;
-        if(!frameUrl) throw new Error('接口未返回图片地址');
-        const fromNode = sourceNodeId ? nodes.find(n => n.id === sourceNodeId) : null;
-        const point = fromNode
-            ? {x:(Number(fromNode.x) || 0) + 40, y:(Number(fromNode.y) || 0) + 40}
-            : viewportCenter();
-        const base = String(fileNameFromUrl(videoUrl)).replace(/\.[a-z0-9]{2,8}$/i, '') || 'video';
-        const frame = {type:'image', kind:'image', url: frameUrl, name:`视频首帧_${base}`};
-        pushUndo();
-        const newNode = createImageNodeAt(point, [frame], {select:true, skipUndo:true});
-        if(newNode){
-            selectedIds = [];
-            selectedImage = {nodeId:newNode.id, index:0};
-        }
-        render();
-        scheduleSave();
-        toast('已截取首帧图片节点');
-    } catch(err) {
-        toast((err.message || '截取首帧失败').slice(0, 180));
-    }
-}
-// 截取视频尾帧：调后端 /api/video-last-frame 抽帧，成功后把尾帧创建为图片节点（与截首帧对称）
-// （放在视频来源节点附近 +40,+40 偏移处；找不到来源节点则放画布中心）
-async function smartCaptureVideoLastFrame(videoUrl, sourceNodeId=''){
-    if(!videoUrl){ toast('未找到视频地址'); return; }
-    try {
-        const res = await fetch('/api/video-last-frame', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({url: videoUrl})
-        });
-        const data = await res.json().catch(() => ({}));
-        if(!res.ok) throw new Error(apiErrorMessage(data, `截取尾帧失败（HTTP ${res.status}）`));
-        const frameUrl = data?.url;
-        if(!frameUrl) throw new Error('接口未返回图片地址');
-        const fromNode = sourceNodeId ? nodes.find(n => n.id === sourceNodeId) : null;
-        const point = fromNode
-            ? {x:(Number(fromNode.x) || 0) + 40, y:(Number(fromNode.y) || 0) + 40}
-            : viewportCenter();
-        const base = String(fileNameFromUrl(videoUrl)).replace(/\.[a-z0-9]{2,8}$/i, '') || 'video';
-        const frame = {type:'image', kind:'image', url: frameUrl, name:`视频尾帧_${base}`};
-        pushUndo();
-        const newNode = createImageNodeAt(point, [frame], {select:true, skipUndo:true});
-        if(newNode){
-            selectedIds = [];
-            selectedImage = {nodeId:newNode.id, index:0};
-        }
-        render();
-        scheduleSave();
-        toast('已截取尾帧图片节点');
-    } catch(err) {
-        toast((err.message || '截取尾帧失败').slice(0, 180));
-    }
-}
-bindSmartVideoLastFrameDelegation();
-bindSmartVideoFirstFrameDelegation();
 function movedBeforeAfterIds(ids, movedId, targetId, placement='before'){
     const list = (ids || []).filter(Boolean);
     const from = list.indexOf(movedId);
@@ -13161,10 +13027,6 @@ function visibleReferenceImagesFor(node){
     return uniqueReferenceImages([...base, ...collectMentionedImagesFromPrompt()]);
 }
 function inputMentionCandidateImages(node){
-    // LLM 节点指令框的 @ 候选：与提交给 LLM 的媒体保持一致（节点输入媒体）
-    if(mentionTargetEl && mentionTargetEl.classList?.contains('prompt-llm-instruction')){
-        return mentionCandidateMediaForLlmNode(node);
-    }
     const current = node ? [...lineImagesFor(node), ...manualReferenceImagesFor(node)] : [];
     const seen = new Set();
     return current.filter(img => {
@@ -13176,28 +13038,6 @@ function inputMentionCandidateImages(node){
         mentionId:`mention_${index}_${Math.random().toString(36).slice(2, 7)}`,
         alias:img.name || `图片${index + 1}`
     }));
-}
-// LLM 节点指令框的 @ 候选：复用提交给 LLM 的媒体（promptNodeInputMediaForLLM），结构对齐 inputMentionCandidateImages
-function mentionCandidateMediaForLlmNode(node){
-    if(!node) return [];
-    const mediaRefs = promptNodeInputMediaForLLM(node);
-    const seen = new Set();
-    return mediaRefs.filter(img => {
-        if(!img?.url || seen.has(img.url)) return false;
-        seen.add(img.url);
-        return true;
-    }).map((img, index) => {
-        const kind = img.kind || mediaKindForItem(img);
-        const fallback = kind === 'video' ? `视频${index + 1}` : kind === 'audio' ? `音频${index + 1}` : `图${index + 1}`;
-        const name = img.name || img.alias || fallback;
-        return {
-            ...img,
-            kind,
-            name,
-            alias:name,
-            mentionId:`llm_mention_${index}_${Math.random().toString(36).slice(2, 7)}`
-        };
-    });
 }
 // 一个素材可注册到多个平台：收集所有「已通过」的 asset:// 地址，按平台映射。
 function assetRegisteredUris(item){
@@ -13243,54 +13083,24 @@ function closeMentionPicker(){
     mentionPicker.style.maxHeight = '';
     mentionAnchorEl = null;
     mentionInsertMode = 'token';
-    mentionPickerFromInstruction = false;
     if(selectedNode()) renderInputThumbsRow(selectedNode());
 }
-// 失效找回：节点重渲染后旧指令框会脱离文档，换成当前渲染的指令框（优先用正在聚焦的 .prompt-llm-instruction）
-function recoverMentionTargetEl(){
-    if(!mentionTargetEl || document.contains(mentionTargetEl)) return;
-    const active = document.activeElement;
-    if(active && active.classList?.contains('prompt-llm-instruction')){
-        mentionTargetEl = active;
-        return;
-    }
-    const fresh = currentLlmInstructionBox();
-    if(fresh) mentionTargetEl = fresh;
-    else mentionTargetEl = null;
-}
 function saveMentionRange(){
-    recoverMentionTargetEl();
     const sel = window.getSelection();
-    if(!sel || !sel.rangeCount) return;
-    // 记录光标所在容器（主提示词框或 LLM 指令框，都是 contenteditable）的选区，插入 token 时还原光标
-    const inPrompt = promptInput.contains(sel.anchorNode);
-    const inInstruction = Boolean(mentionTargetEl && mentionTargetEl.classList?.contains('prompt-llm-instruction') && mentionTargetEl.contains(sel.anchorNode));
-    if(inPrompt || inInstruction) mentionRange = sel.getRangeAt(0).cloneRange();
+    if(sel && sel.rangeCount && promptInput.contains(sel.anchorNode)){
+        mentionRange = sel.getRangeAt(0).cloneRange();
+    }
 }
 function textBeforeCaret(){
-    recoverMentionTargetEl();
     const sel = window.getSelection();
-    if(!sel || !sel.rangeCount) return '';
-    const anchor = sel.anchorNode;
-    // 指令框与主提示词框都是 contenteditable：光标前文本 = range.toString()
-    const container = (mentionTargetEl && mentionTargetEl.classList?.contains('prompt-llm-instruction')) ? mentionTargetEl : promptInput;
-    if(!container || !container.contains(anchor)) return '';
+    if(!sel || !sel.rangeCount || !promptInput.contains(sel.anchorNode)) return '';
     const range = sel.getRangeAt(0).cloneRange();
-    range.selectNodeContents(container);
+    range.selectNodeContents(promptInput);
     range.setEnd(sel.anchorNode, sel.anchorOffset);
     return range.toString();
 }
 function renderMentionPicker(source){
-    // 指令框 @ 兜底：直接点击/输入 LLM 指令框时，该节点可能不在"选中"状态（selectedNode() 返回 null 或别的节点），
-    // 若当前提及目标是 .prompt-llm-instruction，用指令框所在节点覆盖，保证候选与提交给 LLM 的媒体一致
-    let node = selectedNode();
-    if(mentionTargetEl && mentionTargetEl.classList?.contains('prompt-llm-instruction')){
-        const nodeEl = mentionTargetEl.closest('.image-node');
-        if(nodeEl && nodeEl.dataset.id){
-            const fromEl = nodes.find(n => n.id === nodeEl.dataset.id);
-            if(fromEl) node = fromEl;
-        }
-    }
+    const node = selectedNode();
     const inputItems = inputMentionCandidateImages(node);
     const assetLibs = assetLibraries();
     if(!activeAssetLibraryId || !assetLibs.some(lib => lib.id === activeAssetLibraryId)) activeAssetLibraryId = assetLibrary.active_library_id || assetLibs[0]?.id || '';
@@ -13394,7 +13204,6 @@ function showMentionPicker(){
     const hasInput = inputMentionCandidateImages(node).length > 0;
     mentionInsertMode = 'token';
     mentionAnchorEl = null;
-    mentionPickerFromInstruction = Boolean(mentionTargetEl && mentionTargetEl.classList?.contains('prompt-llm-instruction'));
     placeMentionPickerInBody();
     mentionSource = hasInput ? 'input' : 'asset';
     renderMentionPicker(mentionSource);
@@ -13419,7 +13228,6 @@ function toggleAssetMentionPickerFromThumbs(){
     mentionInsertMode = 'manual-ref';
     renderInputThumbsRow(selectedNode());
     mentionAnchorEl = inputThumbsRow?.querySelector('[data-input-add-reference]') || inputThumbsRow;
-    mentionPickerFromInstruction = false; // 手动加参考图弹层与指令框 @ 弹层无关，失焦逻辑不得关闭它
     renderMentionPicker('asset');
 }
 function addManualReferenceToSelectedNode(img){
@@ -13468,7 +13276,7 @@ function placeMentionPickerInBody(){
     if(mentionPicker.parentElement !== document.body) document.body.appendChild(mentionPicker);
 }
 function positionMentionPickerAtCaret(){
-    // 锚点矩形（视口坐标）：手动加参考图模式用锚元素，@ 模式用光标位置（指令框与主提示词框都是 contenteditable，直接用选区矩形）。
+    // 锚点矩形（视口坐标）：手动加参考图模式用锚元素，@ 模式用光标位置。
     let anchorRect = null;
     if(mentionAnchorEl){
         anchorRect = mentionAnchorEl.getBoundingClientRect();
@@ -13478,7 +13286,7 @@ function positionMentionPickerAtCaret(){
             const range = sel.getRangeAt(0).cloneRange();
             anchorRect = range.getClientRects()[0] || range.getBoundingClientRect();
         }
-        if(!anchorRect) anchorRect = (mentionTargetEl || promptInput).getBoundingClientRect();
+        if(!anchorRect) anchorRect = promptInput.getBoundingClientRect();
     }
     // fixed 定位的 style 坐标与视口坐标之间可能隔着祖先缩放，用自身渲染尺寸反推换算比例和原点。
     const rendered = mentionPicker.getBoundingClientRect();
@@ -13511,169 +13319,13 @@ function positionMentionPickerAtCaret(){
     mentionPicker.style.top = `${(top - baseY) / ratio}px`;
 }
 function maybeOpenMentionPicker(){
-    // 最少防御：输入事件链上的任何异常都不得阻断后续输入；失败时关掉弹层避免残留
-    try{
-        recoverMentionTargetEl();
-        saveMentionRange();
-        const before = textBeforeCaret();
-        if(/@$/.test(before)) showMentionPicker();
-        else closeMentionPicker();
-    }catch(e){
-        console.warn('[mention] maybeOpenMentionPicker failed', e);
-        closeMentionPicker();
-    }
-}
-// 按选中节点找回当前渲染中的 LLM 指令框（render() 重建后旧元素会脱离文档）
-function currentLlmInstructionBox(){
-    const node = selectedNode();
-    if(!node) return null;
-    return world.querySelector(`.image-node[data-id="${CSS.escape(node.id)}"] .prompt-llm-instruction`);
-}
-// 指令框内联小缩略图：14px 高、圆角 2px，图片/视频共用 img（media-preview 小尺寸），音频用 ♪ 占位
-function inlineMediaThumbHtml(img, kind=mediaKindForItem(img)){
-    if(kind === 'audio'){
-        return `<span style="width:14px;height:14px;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;background:rgba(127,127,127,.15);color:var(--muted);font-size:8px;line-height:1">♪</span>`;
-    }
-    const original = smartOriginalMediaUrl(img);
-    const preview = smartMediaPreviewUrl(img, 64);
-    const extra = kind === 'video' ? ` data-url="${escapeAttr(original)}" data-preview-kind="video"` : '';
-    return `<img src="${escapeHtml(preview)}" data-preview-src="${escapeAttr(preview)}" data-original-src="${escapeAttr(original)}"${extra} alt="" style="width:14px;height:14px;border-radius:2px;object-fit:cover;flex:0 0 auto">`;
-}
-// 指令框内联小 token：和正文同字号的内嵌缩略图 + 名称，contenteditable=false 整体不可编辑
-function llmInlineTokenHtml(img){
-    const kind = img.kind || mediaKindForItem(img);
-    const name = img.alias || img.name || (kind === 'audio' ? '音频' : kind === 'video' ? '视频' : '图片');
-    return `<span class="mention-image-token llm-inline-token" contenteditable="false" data-url="${escapeHtml(img.url)}" data-kind="${escapeHtml(kind)}" data-name="${escapeHtml(name)}" data-node-id="${escapeHtml(img.nodeId || '')}" data-image-index="${escapeHtml(img.imageIndex ?? '')}">${inlineMediaThumbHtml(img, kind)}<span>${escapeHtml(name)}</span></span>`;
-}
-// 指令框富文本渲染：把 node.llmInstruction 里的 @名称（与 LLM 节点候选媒体名/别名匹配，最长名优先）转成内联小 token，其余保持纯文本
-function renderLlmInstructionRich(el){
-    if(!el) return;
-    const nodeEl = el.closest('.image-node');
-    const node = nodeEl ? nodes.find(n => n.id === nodeEl.dataset.id) : selectedNode();
-    const value = String(node?.llmInstruction ?? el.textContent ?? '');
-    el.innerHTML = '';
-    if(!value) return;
-    const items = (node ? mentionCandidateMediaForLlmNode(node) : []).slice().sort((a, b) => String(b.name || '').length - String(a.name || '').length);
-    let html = '';
-    let index = 0;
-    while(index < value.length){
-        if(value[index] === '@'){
-            const hit = items.find(ref => value.slice(index + 1, index + 1 + String(ref.name || '').length) === String(ref.name || ''));
-            if(hit){
-                html += llmInlineTokenHtml(hit);
-                index += 1 + String(hit.name || '').length;
-                continue;
-            }
-        }
-        html += escapeHtml(value[index]);
-        index += 1;
-    }
-    el.innerHTML = html;
-    bindSmartPreviewImageFallbacks(el);
-}
-// 指令框富文本 → 纯文本序列化：token span 转回 @名称，BR 转 \n，块级元素前后补 \n，其余取文本（存储格式与旧 textarea 一致，提交解析不动）
-function llmInstructionRichText(el){
-    const blockTags = new Set(['DIV','P','LI','SECTION','ARTICLE','HEADER','FOOTER','BLOCKQUOTE']);
-    const walk = node => {
-        if(node.nodeType === Node.TEXT_NODE) return node.nodeValue || '';
-        if(node.nodeType !== Node.ELEMENT_NODE) return '';
-        if(node.classList?.contains('llm-inline-token')) return '@' + (node.dataset.name || '');
-        if(node.tagName === 'BR') return '\n';
-        let out = '';
-        [...node.childNodes].forEach(child => {
-            const isBlock = child.nodeType === Node.ELEMENT_NODE && blockTags.has(child.tagName);
-            const piece = walk(child);
-            if(isBlock){
-                if(out && !out.endsWith('\n')) out += '\n';
-                out += piece;
-            } else {
-                out += piece;
-            }
-        });
-        return out;
-    };
-    if(!el) return '';
-    return walk(el).replace(/\u00a0/g, ' ');
-}
-// 指令框（contenteditable）插入：光标处删掉刚输入的 @，插入内联小 token + 空格，恢复光标，触发 input 同步节点数据
-function insertMentionTokenIntoInstruction(ta, img){
-    if(!ta) return;
-    // 失效找回：ta 已脱离文档（节点被重渲染替换）时换用当前渲染的指令框，保证写入与光标都落在活元素上
-    if(!document.contains(ta)){
-        const fresh = currentLlmInstructionBox();
-        if(!fresh){ closeMentionPicker(); return; }
-        ta = fresh;
-    }
-    ta.focus();
-    const sel = window.getSelection();
-    let range = null;
-    if(mentionRange && ta.contains(mentionRange.startContainer)){
-        sel.removeAllRanges();
-        sel.addRange(mentionRange);
-        range = sel.getRangeAt(0);
-    } else if(sel.rangeCount && ta.contains(sel.anchorNode)){
-        range = sel.getRangeAt(0);
-    }
-    if(!range){
-        range = document.createRange();
-        range.selectNodeContents(ta);
-        range.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(range);
-    }
-    // 删掉光标前刚输入的 @（候选弹出时光标紧跟 @），找不到则兜底删末尾 @
-    let removedAt = false;
-    if(range.startContainer?.nodeType === Node.TEXT_NODE && range.startOffset > 0){
-        const text = range.startContainer.textContent || '';
-        if(text[range.startOffset - 1] === '@'){
-            range.setStart(range.startContainer, range.startOffset - 1);
-            range.deleteContents();
-            removedAt = true;
-        }
-    }
-    if(!removedAt){
-        const walker = document.createTreeWalker(ta, NodeFilter.SHOW_TEXT);
-        let lastText = null;
-        while(walker.nextNode()) lastText = walker.currentNode;
-        if(lastText && /@$/.test(lastText.textContent || '')){
-            lastText.textContent = lastText.textContent.slice(0, -1);
-            range.selectNodeContents(ta);
-            range.collapse(false);
-        }
-    }
-    const token = document.createElement('span');
-    token.className = 'mention-image-token llm-inline-token';
-    token.contentEditable = 'false';
-    token.dataset.url = img.url;
-    token.dataset.kind = img.kind || mediaKindForItem(img);
-    token.dataset.name = img.alias || img.name || (token.dataset.kind === 'audio' ? '音频' : token.dataset.kind === 'video' ? '视频' : '图片');
-    token.dataset.nodeId = img.nodeId || '';
-    token.dataset.imageIndex = String(img.imageIndex ?? '');
-    token.innerHTML = `${inlineMediaThumbHtml(img, token.dataset.kind)}<span>${escapeHtml(token.dataset.name)}</span>`;
-    range.insertNode(token);
-    bindSmartPreviewImageFallbacks(token);
-    const spacer = document.createTextNode(' ');
-    token.after(spacer);
-    range.setStartAfter(spacer);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    ta.dispatchEvent(new Event('input', {bubbles:true}));
-    closeMentionPicker();
+    saveMentionRange();
+    const before = textBeforeCaret();
+    if(/@$/.test(before)) showMentionPicker();
+    else closeMentionPicker();
 }
 function insertMentionToken(img){
     if(!img?.url) return;
-    // LLM 节点指令框（contenteditable）：插入内联小 token
-    if(mentionTargetEl && mentionTargetEl.classList?.contains('prompt-llm-instruction')){
-        const ta = document.contains(mentionTargetEl) ? mentionTargetEl : currentLlmInstructionBox();
-        if(ta){
-            if(mentionTargetEl !== ta) mentionTargetEl = ta;  // 找回后同步引用，避免下次 @ 仍指向旧元素
-            insertMentionTokenIntoInstruction(ta, img);
-            return;
-        }
-        closeMentionPicker();
-        return;
-    }
     promptInput.focus();
     const sel = window.getSelection();
     if(mentionRange){
@@ -15388,125 +15040,6 @@ async function runGeneration(){
         render();
     }
 }
-// 把指令文本里的 @资源名 解析为 [图N]/[视频N] 引用：按提交给 LLM 的媒体顺序编号
-// （图按 images 数组、视频按 videos 数组各自编号，媒体本身已全量传入，@ 仅让指令文字明确引用；未命中保留原文）
-function llmInstructionWithMentionRefs(text, mediaRefs){
-    const value = String(text || '');
-    if(!value || !value.includes('@')) return value;
-    const images = imageRefsOnly(mediaRefs).map((ref, i) => ({...ref, refLabel:`[图${i + 1}]`, refName:ref.name || ref.alias || `图${i + 1}`}));
-    const videos = videoRefsOnly(mediaRefs).map((ref, i) => ({...ref, refLabel:`[视频${i + 1}]`, refName:ref.name || ref.alias || `视频${i + 1}`}));
-    // 名字可能互相包含：最长名字优先匹配（与主提示词框 promptHtmlWithMentionTokens 同策略）
-    const sorted = [...images, ...videos].sort((a, b) => String(b.refName).length - String(a.refName).length);
-    let out = '';
-    let index = 0;
-    while(index < value.length){
-        if(value[index] === '@'){
-            const hit = sorted.find(ref => value.slice(index + 1, index + 1 + ref.refName.length) === ref.refName);
-            if(hit){
-                out += hit.refLabel;
-                index += 1 + hit.refName.length;
-                continue;
-            }
-        }
-        out += value[index];
-        index += 1;
-    }
-    return out;
-}
-// 清洗 LLM 节点输出为纯提示词：去代码块围栏、段落级剥离（环境限制/任务总结/末尾引导段）、
-// 引导行截断、「提示词」标记行截断、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
-function cleanLlmPromptOutput(text){
-    if(!text) return text;
-    let t = String(text).trim();
-    // 1) 去 Markdown 代码块围栏
-    t = t.replace(/^```[a-zA-Z]*\s*/gm, '').replace(/\s*```\s*$/gm, '').trim();
-    // 2) 段落级剥离（先于标记截断/前缀剥离，避免废话段落干扰后续逐行规则）：
-    //    按空行分段（\n{2,}），删除环境限制段、任务总结段、末尾引导段，剩余段用 \n\n 重拼。
-    //    文本无空行分段（整段一行）时跳过，防止误伤单段正文。
-    if(/\n{2,}/.test(t)){
-        let paras = t.split(/\n{2,}/).map(p => p.trim()).filter(p => p);
-        // 2a) 环境限制段：段内出现“没有可用工具/无法直接产出/没有可调用/我这边没有/不具备能力/没有视频工具”等语义，整段删除
-        const envLimitRe = /(没有可用的|无法在这里直接|不能直接产出|没有[\s\S]*执行工具|没有文件系统|作为[\s\S]*任务说明|无法直接产出|没有工具|没有可调用|无法(直接|把|在这里|立即)|不能(直接|在这里|立即)|我这边[\s\S]*没有|当前没有可|不具备[\s\S]*(工具|能力)|缺少[\s\S]*(工具|能力)|没有[\s\S]*(视频编辑|视频生成)[\s\S]*(工具|能力))/;
-        paras = paras.filter(p => !envLimitRe.test(p));
-        // 2b) 任务总结段：剩余首段以“已理解任务/任务理解/好的，我/我理解/明白，/收到，/我已查看/目标是把/任务目标/我先看”等开头且总段数>1，删首段（最多循环 2 次）
-        const summaryRe = /^(已理解任务|任务理解|好的，我|我理解|明白，|收到，|^我已查看|^我已经查看|^目标(是|为|把)|^任务目标|^我(先|已经)(看|分析))/;
-        let summaryPeeled = 0;
-        while(paras.length > 1 && summaryPeeled < 2 && summaryRe.test(paras[0])){ paras.shift(); summaryPeeled++; }
-        // 2c) 末尾引导段：最后一段以“你可以把这段/你可以将这段/请将以下/如果你在/以下是指令”等开头则删除（指示用户复制的废话）
-        if(paras.length > 1 && /^(你可以把这段|你可以将这段|请将以下|如果你在|若你在|可以使用这段|用这段|以下(是|为).*(指令|提示词))/.test(paras[paras.length - 1])) paras.pop();
-        // 2d) 用 \n\n 重拼剩余段落；剥离后为空则回退剥离前文本，避免清空输出
-        const joined = paras.join('\n\n').trim();
-        if(joined) t = joined;
-    }
-    // 3) 引导行截断（在「提示词」标记截断之前）：按行扫描找第一个“引导行”——以冒号（: 或 ：）结尾、
-    //    长度 ≤100 且含“指令/提示词/可以使用/如果你在”等关键词（三重条件避免误伤正文），
-    //    该行及其之前全部丢弃、从该行之后开始；引导行冒号后还有同段内容则保留冒号后部分。
-    //    截断后为空或太短（<20 字）说明可能是正文误命中，回退原文继续走后续规则；
-    //    与「提示词」标记截断（仅要求含“提示词”+短行）相比多了“冒号结尾”约束，两者不冲突、先后执行。
-    const guideLines = t.split('\n');
-    let guideIdx = -1;
-    for(let i = 0; i < guideLines.length; i++){
-        const line = guideLines[i].trim();
-        if(!line) continue;
-        if(line.length <= 100 && /[:：]$/.test(line) && /指令|提示词|任务说明|可以使用|可以用|请使用|如果你在|若你在|直接使用|复制到|粘贴到|用于.*工具/.test(line)){ guideIdx = i; break; }
-    }
-    if(guideIdx >= 0){
-        const guideLine = guideLines[guideIdx].trim();
-        let rest = guideLines.slice(guideIdx + 1).join('\n').trim();
-        const colonIdx = Math.max(guideLine.lastIndexOf(':'), guideLine.lastIndexOf('：'));
-        const afterColon = colonIdx >= 0 ? guideLine.slice(colonIdx + 1).trim() : '';
-        if(afterColon){
-            // 如“请使用以下指令：生成一只猫…”，保留冒号后的同段内容；纯冒号结尾则只取后续行
-            rest = afterColon + (rest ? '\n' + rest : '');
-        }
-        if(rest.length >= 20) t = rest;
-    }
-    // 4) 「提示词」标记行截断（在剥前缀之前做）：找第一个含“提示词/prompt”且 ≤80 字的行，
-    //    该行及其之前全部丢弃、从该行之后开始；标记行以“：”结尾（如“提示词：”）则从冒号后内容开始。
-    //    截断后为空或太短（<20 字）说明可能是正文误命中，回退原文继续走前缀剥离逻辑。
-    const markerLines = t.split('\n');
-    let markerIdx = -1;
-    for(let i = 0; i < markerLines.length; i++){
-        const line = markerLines[i].trim();
-        if(!line) continue;
-        if(/提示词|prompt/i.test(line) && line.length <= 80){ markerIdx = i; break; }
-    }
-    if(markerIdx >= 0){
-        const markerLine = markerLines[markerIdx].trim();
-        let rest = markerLines.slice(markerIdx + 1).join('\n').trim();
-        const colonIdx = Math.max(markerLine.lastIndexOf(':'), markerLine.lastIndexOf('：'));
-        const afterColon = colonIdx >= 0 ? markerLine.slice(colonIdx + 1).trim() : '';
-        if(afterColon){
-            // 如“专业提示词：一双白鞋…”，保留冒号后的同段内容；纯“提示词：”结尾则只取后续行
-            rest = afterColon + (rest ? '\n' + rest : '');
-        }
-        if(rest.length >= 20) t = rest;
-    }
-    // 5) 剥离常见废话前缀行（最多剥 2 个非空行，行首匹配；匹配到才剥，空行不占配额）
-    const junkPrefix = /^(可以|好的|当然|以下是|下面是|基于|根据|我(为|将|来)|可直接|整体|总结|分析|先说|关于|针对|已为|为您|给你|已理解|明白|收到|了解|明白了|好的，我|我理解|我已查看|我已经查看|我先(看|分析)|目标(是|为|把)|任务目标|基于素材)/;
-    const lines = t.split('\n');
-    let peeled = 0;
-    let cut = 0;
-    while(cut < lines.length && peeled < 2){
-        const line = lines[cut].trim();
-        if(!line) { cut++; continue; }  // 空行跳过，不占剥离配额
-        if(junkPrefix.test(line) && line.length < 80) { peeled++; cut++; continue; }  // 短废话行
-        break;
-    }
-    if(cut){
-        const rest = lines.slice(cut).join('\n').trim();
-        // 剥空则不生效：整段只有一句废话行时保留原文，避免把输出清空
-        if(rest) t = rest;
-    }
-    // 6) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行；剥空不生效）
-    const tailLines = t.split('\n');
-    const last = tailLines[tailLines.length - 1]?.trim() || '';
-    if(/^(希望|如需|如有|有问题|欢迎|如果)/.test(last) && last.length < 60 && tailLines.length > 1) tailLines.pop();
-    t = tailLines.join('\n').trim();
-    // 7) 兜底：结果为空则回退原始文本（避免把输出清空）
-    if(!t) return String(text).trim();
-    return t;
-}
 async function runPromptLLMNode(nodeId){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || node.type !== 'smart-prompt') return;
@@ -15522,20 +15055,18 @@ async function runPromptLLMNode(nodeId){
         const mediaRefs = promptNodeInputMediaForLLM(node);
         const images = imageRefsOnly(mediaRefs).map(img => img.url).filter(Boolean);
         const videos = videoRefsOnly(mediaRefs).map(video => video.url).filter(Boolean);
-        // 指令里的 @资源名 → [图N]/[视频N] 引用（媒体已全量传入，@ 仅让指令文字明确引用）
-        const messageWithRefs = llmInstructionWithMentionRefs(message, mediaRefs);
         const result = await fetch('/api/canvas-llm', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
-                message:messageWithRefs,
+                message,
                 messages:[],
                 images,
                 videos,
                 model,
                 provider,
                 ms_model: provider === 'modelscope' ? model : '',
-                system_prompt:node.llmSystemEnabled ? (systemPrompt || '') : ''
+                system_prompt:node.llmSystemEnabled ? (systemPrompt || 'You are a helpful prompt assistant.') : ''
             })
         }).then(async r => {
             if(!r.ok) throw new Error(await r.text());
@@ -16699,8 +16230,8 @@ window.onmousemove = e => {
         node.w = Math.max(Number(node.w) || 0, 316);
         node.scale = 1;
         updateNodeElementDuringResize(node);
-        const instructionEl = world.querySelector(`.image-node[data-id="${CSS.escape(node.id)}"] .prompt-llm-instruction`);
-        if(instructionEl) instructionEl.style.height = `${promptLlmInstructionHeight(node)}px`;
+        const ta = world.querySelector(`.image-node[data-id="${CSS.escape(node.id)}"] .prompt-llm-instruction`);
+        if(ta) ta.style.height = `${promptLlmInstructionHeight(node)}px`;
         return;
     }
     if(promptSplitResizeState){
@@ -17449,63 +16980,6 @@ if(composerTemplateBtn) composerTemplateBtn.onclick = event => {
         return;
     }
     openPromptTemplatePanel(activeComposerNode()?.id || selectedNode()?.id || '', promptTemplateSelectedId, {target:'composer'});
-};
-// ✨ 自动生成提示词：收集当前设置面板的参考视频/参考图 → 视觉 LLM 生成 Seedance 提示词 → 填入主提示词框
-const composerAutoPromptBtn = document.getElementById('composerAutoPromptBtn');
-async function autoGenerateComposerPrompt(){
-    if(!composerAutoPromptBtn || composerAutoPromptBtn.disabled) return;
-    const subject = activeSettingsSubject();
-    const refs = currentUploadMediaRefs(subject);
-    const uploadedRefs = applyUploadedUrlsToSmartRefs(refs, settings);
-    const manualVideo = manualSmartVideoLink(settings)?.url || '';
-    const videos = manualVideo
-        ? manualSmartMediaLinks(settings).map(item => item.url).filter(Boolean)
-        : videoRefsOnly(uploadedRefs).map(ref => ref.url).filter(Boolean);
-    const images = imageRefsOnly(uploadedRefs).map(ref => ref.url).filter(Boolean);
-    // asset:// 认证地址后端无法消费（抽帧/直传都不支持），过滤掉
-    const usableVideos = videos.filter(url => !String(url || '').startsWith('asset://'));
-    const usableImages = images.filter(url => !String(url || '').startsWith('asset://'));
-    if(!usableVideos.length && !usableImages.length){
-        toast('请先添加参考视频或参考图，再自动生成提示词');
-        return;
-    }
-    const intent = (promptInput?.textContent || '').trim();
-    const prevHtml = composerAutoPromptBtn.innerHTML;
-    const prevWidth = composerAutoPromptBtn.style.width;
-    composerAutoPromptBtn.disabled = true;
-    composerAutoPromptBtn.style.width = 'auto';
-    composerAutoPromptBtn.style.padding = '0 8px';
-    composerAutoPromptBtn.innerHTML = '<span style="font-size:12px;white-space:nowrap;">生成中…</span>';
-    try {
-        const data = await fetch('/api/video-auto-prompt', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({videos:usableVideos, images:usableImages, prompt:intent})
-        }).then(async r => {
-            const json = await r.json().catch(() => ({}));
-            if(!r.ok) throw new Error(json.detail || ('生成失败：HTTP ' + r.status));
-            return json;
-        });
-        const promptText = String(data.prompt || '').trim();
-        if(!promptText) throw new Error('生成失败：返回为空');
-        setPromptText(promptText);
-        promptInput.dispatchEvent(new Event('input', {bubbles:true}));
-        savePromptDraftForCurrent();
-        scheduleSave();
-        toast('已生成提示词，可编辑后确认');
-    } catch(e) {
-        toast((e.message || '生成失败').slice(0, 160));
-    } finally {
-        composerAutoPromptBtn.disabled = false;
-        composerAutoPromptBtn.style.width = prevWidth;
-        composerAutoPromptBtn.style.padding = '';
-        composerAutoPromptBtn.innerHTML = prevHtml;
-    }
-}
-if(composerAutoPromptBtn) composerAutoPromptBtn.onclick = event => {
-    event.preventDefault();
-    event.stopPropagation();
-    autoGenerateComposerPrompt();
 };
 if(promptPresetSelect) promptPresetSelect.onchange = () => renderPromptPresetPanel(promptPresetSelect.value);
 [promptPresetName, promptPresetText].forEach(input => {

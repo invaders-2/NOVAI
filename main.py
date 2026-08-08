@@ -2855,11 +2855,6 @@ class CanvasLLMRequest(BaseModel):
     images: List[str] = []   # 可以是 /output/*.png、/assets/*.png 本地路径 或 http(s) URL 或 data URL
     videos: List[str] = []   # 可以是 /output/*.mp4、/assets/*.mp4 本地路径 或 http(s) URL 或 data URL
 
-class VideoAutoPromptRequest(BaseModel):
-    videos: List[str] = []   # 参考视频：/output|/assets 本地路径 或 http(s) URL 或 data URL
-    images: List[str] = []   # 参考图：/output|/assets 本地路径 或 http(s) URL 或 data URL
-    prompt: str = ""         # 简短用户意图，可为空
-
 class ConversationCreateRequest(BaseModel):
     title: str = "新对话"
 
@@ -3874,9 +3869,6 @@ def looks_like_vision_chat_model(model):
     vision_keys = [
         "vision", "vl-", "-vl-", "internvl", "qvq", "qwen-vl",
         "doubao-vision", "glm-4v", "minicpm-v",
-        "gemini", "gpt-4o", "gpt-5",
-        # 灵境中转 Claude（claude-fable-5 等）支持图片输入；豆包 Seed 1.6 多模态（doubao-seed-1-6-*）
-        "claude", "seed-1-6", "1-6",
     ]
     return any(key in lc for key in vision_keys)
 
@@ -6433,38 +6425,6 @@ def generate_video_preview_image(path: str, width: int) -> Image.Image:
         except OSError:
             pass
 
-def video_preview_placeholder_image(width: int) -> Image.Image:
-    """ffmpeg 抽帧失败时的占位封面：深灰底(#1b1e23) + 居中白色圆角播放按钮 + VIDEO 文字。"""
-    from PIL import ImageDraw, ImageFont
-    height = max(64, int(width * 0.75))
-    img = Image.new("RGB", (width, height), (27, 30, 35))  # #1b1e23
-    draw = ImageDraw.Draw(img)
-    icon_size = max(28, int(width * 0.18))
-    cx, cy = width // 2, height // 2
-    radius = max(6, int(icon_size * 0.28))
-    draw.rounded_rectangle(
-        [cx - icon_size // 2, cy - icon_size // 2, cx + icon_size // 2, cy + icon_size // 2],
-        radius=radius, fill=(255, 255, 255),
-    )
-    tri_w, tri_h = icon_size * 0.36, icon_size * 0.42
-    draw.polygon(
-        [(cx - tri_w * 0.35, cy - tri_h / 2), (cx - tri_w * 0.35, cy + tri_h / 2), (cx + tri_w * 0.55, cy)],
-        fill=(27, 30, 35),
-    )
-    if width >= 160:
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", max(12, int(width * 0.045)))
-        except Exception:
-            font = ImageFont.load_default()
-        text = "VIDEO"
-        bbox = draw.textbbox((0, 0), text, font=font)
-        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        draw.text(
-            (cx - tw / 2 - bbox[0], cy + icon_size * 0.95 - th / 2 - bbox[1]),
-            text, fill=(160, 165, 175), font=font,
-        )
-    return img
-
 @app.get("/api/media-preview")
 async def media_preview(url: str, w: int = 512):
     path = output_file_from_url(url)
@@ -6483,12 +6443,7 @@ async def media_preview(url: str, w: int = 512):
         # 同步 PIL 处理 + 落盘，放到线程里执行，避免阻塞事件循环（几十张首次生成会卡死整个 loop → 缩略图全空白）
         os.makedirs(MEDIA_PREVIEW_DIR, exist_ok=True)
         if is_video_preview_file(path):
-            try:
-                img = generate_video_preview_image(path, width)
-            except Exception as exc:
-                # ffmpeg 抽帧失败（缺 ffmpeg / 视频损坏 / 超时）→ 生成占位封面，保证前端封面不黑屏
-                print(f"[MEDIA-PREVIEW] 视频抽帧失败，生成占位封面：{exc}", flush=True)
-                img = video_preview_placeholder_image(width)
+            img = generate_video_preview_image(path, width)
         else:
             with Image.open(path) as source:
                 img = ImageOps.exif_transpose(source)
@@ -6542,66 +6497,6 @@ async def image_jpeg(url: str, w: int = 0):
         return FileResponse(out_path, media_type="image/jpeg")
     except Exception as exc:
         raise HTTPException(status_code=415, detail=f"无法转换图片：{exc}") from exc
-
-class VideoFirstFrameRequest(BaseModel):
-    url: str
-
-@app.post("/api/video-first-frame")
-async def video_first_frame(req: VideoFirstFrameRequest):
-    """抽取视频首帧保存为图片（assets/input/），返回图片 URL。给画布「截首帧」按钮用。"""
-    path = output_file_from_url(req.url)
-    if not path or not os.path.isfile(path):
-        raise HTTPException(status_code=404, detail="视频文件不存在")
-    filename = f"firstframe_{uuid.uuid4().hex[:10]}.jpg"
-    out_path = output_path_for(filename, "input")
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        raise HTTPException(status_code=502, detail="未找到 ffmpeg，无法截取首帧")
-    cmd = [
-        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-        "-ss", "0",
-        "-i", path,
-        "-frames:v", "1",
-        "-q:v", "2",
-        out_path,
-    ]
-    try:
-        proc = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=30)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"截取首帧超时或失败：{exc}") from exc
-    if proc.returncode != 0 or not os.path.exists(out_path) or os.path.getsize(out_path) <= 0:
-        raise HTTPException(status_code=502, detail=(proc.stderr or "截取首帧失败").strip()[:300])
-    return {"url": output_url_for(filename, "input")}
-
-class VideoLastFrameRequest(BaseModel):
-    url: str
-
-@app.post("/api/video-last-frame")
-async def video_last_frame(req: VideoLastFrameRequest):
-    """抽取视频尾帧保存为图片（assets/input/），返回图片 URL。给画布「截尾帧」按钮用。"""
-    path = output_file_from_url(req.url)
-    if not path or not os.path.isfile(path):
-        raise HTTPException(status_code=404, detail="视频文件不存在")
-    filename = f"lastframe_{uuid.uuid4().hex[:10]}.jpg"
-    out_path = output_path_for(filename, "input")
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        raise HTTPException(status_code=502, detail="未找到 ffmpeg，无法截取尾帧")
-    cmd = [
-        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-        "-sseof", "-0.2",  # 从视频末尾往前 0.2 秒抽帧，避免末尾黑场/不完整帧
-        "-i", path,
-        "-frames:v", "1",
-        "-q:v", "2",
-        out_path,
-    ]
-    try:
-        proc = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=30)
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"截取尾帧超时或失败：{exc}") from exc
-    if proc.returncode != 0 or not os.path.exists(out_path) or os.path.getsize(out_path) <= 0:
-        raise HTTPException(status_code=502, detail=(proc.stderr or "截取尾帧失败").strip()[:300])
-    return {"url": output_url_for(filename, "input")}
 
 def local_media_file_by_basename(name: str):
     safe = os.path.basename(urllib.parse.unquote(str(name or "")))
@@ -7970,77 +7865,6 @@ def probe_local_audio_duration_seconds(value: str) -> Optional[float]:
     except Exception:
         return None
 
-async def normalize_reference_video(path: str) -> str:
-    """把参考视频标准化为 1280x720@30fps H.264（libx264 veryfast / yuv420p / aac 48kHz 双声道 / faststart）。
-
-    参考视频过大或编码特殊（如 HEVC）会导致火山下载/抽帧失败，标准化后成功率更高。
-    成功返回新的临时 .mp4 路径；任何失败（ffmpeg 缺失/非零退出/超时）静默返回原 path，不抛错。
-    调用方负责在不再需要时删除返回的新路径。
-    """
-    if not path or not os.path.isfile(path):
-        return path
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        return path
-    ffprobe = shutil.which("ffprobe")
-    out_path = ""
-    try:
-        has_audio = False
-        if ffprobe:
-            try:
-                probe = subprocess.run(
-                    [
-                        ffprobe, "-v", "error",
-                        "-select_streams", "a:0",
-                        "-show_entries", "stream=codec_type",
-                        "-of", "csv=p=0",
-                        path,
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=20,
-                )
-                has_audio = probe.returncode == 0 and "audio" in str(probe.stdout or "")
-            except Exception:
-                has_audio = False
-        fd, out_path = tempfile.mkstemp(prefix="canvas_llm_video_norm_", suffix=".mp4")
-        os.close(fd)
-        cmd = [
-            ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
-            "-i", path,
-        ]
-        if not has_audio:
-            # 原视频无音轨：anullsrc 补静音轨（-shortest 保证随视频结束），避免部分场景无音轨报错。
-            # 注意：所有 -i 输入必须集中在输出选项之前，否则 -c:v/-vf 会被当作下一个输入的
-            # 解码/滤镜选项（"Unknown decoder 'libx264'"）。
-            cmd += ["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]
-        cmd += [
-            "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30",
-            "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
-        ]
-        if has_audio:
-            cmd += ["-map", "0:v:0", "-map", "0:a:0", "-c:a", "aac", "-ar", "48000", "-ac", "2"]
-        else:
-            cmd += ["-shortest", "-c:a", "aac", "-ar", "48000", "-ac", "2"]
-        cmd += ["-movflags", "+faststart", out_path]
-        proc = await asyncio.to_thread(subprocess.run, cmd, capture_output=True, text=True, timeout=120)
-        if proc.returncode != 0:
-            print(f"[canvas-llm] video normalize failed: {proc.stderr[:300]}")
-            try: os.remove(out_path)
-            except OSError: pass
-            return path
-        if not os.path.isfile(out_path) or os.path.getsize(out_path) == 0:
-            try: os.remove(out_path)
-            except OSError: pass
-            return path
-        return out_path
-    except Exception as e:
-        print(f"[canvas-llm] video normalize error: {e}")
-        if out_path and os.path.exists(out_path):
-            try: os.remove(out_path)
-            except OSError: pass
-        return path
-
 async def volcengine_video_reference_content_items(value, max_frames=4, max_size=768):
     text = str(value or "").strip()
     if not text:
@@ -8051,32 +7875,7 @@ async def volcengine_video_reference_content_items(value, max_frames=4, max_size
             "video_url": {"url": text},
             "role": "reference_video",
         }]
-    # 本地视频（/assets、/output 等）→ 优先用配置的公网隧道 URL 作真视频参考传给火山。
-    # 火山服务器在北京，temp.sh/litterbox 等国外图床下载不到会报 "resource download failed"，
-    # 所以不再上传国外图床：未配置 PUBLIC_BASE_URL 时直接落到下方抽帧兜底，保证不报错。
-    if not text.startswith(("http://", "https://")):
-        public_url = local_asset_public_url(text)
-        if public_url:
-            return [{
-                "type": "video_url",
-                "video_url": {"url": public_url},
-                "role": "reference_video",
-            }]
-    # 抽帧兜底前先标准化视频（1280x720@30fps H.264）：HEVC 等特殊编码/超大分辨率会导致
-    # ffmpeg 抽帧失败，先标准化再抽帧成功率更高。标准化失败时静默用原文件。
-    frame_input = text
-    norm_path = ""
-    local_path = output_file_from_url(text)
-    if local_path:
-        norm_path = await normalize_reference_video(local_path)
-        if norm_path and norm_path != local_path:
-            frame_input = norm_path
-    try:
-        frame_urls = await video_reference_to_frame_data_urls(frame_input, max_frames=max_frames, max_size=max_size)
-    finally:
-        if norm_path and norm_path != local_path and os.path.exists(norm_path):
-            try: os.remove(norm_path)
-            except OSError: pass
+    frame_urls = await video_reference_to_frame_data_urls(text, max_frames=max_frames, max_size=max_size)
     return [
         {
             "type": "image_url",
@@ -8091,9 +7890,6 @@ async def video_reference_to_frame_data_urls(value, max_frames=6, max_size=768):
     if not isinstance(value, str) or not value:
         return []
     path = output_file_from_url(value)
-    # 支持绝对路径（如 normalize_reference_video 输出的临时文件）：存在的文件路径直接用
-    if not path and os.path.exists(value):
-        path = value
     cleanup_path = ""
     if not path and value.startswith(("http://", "https://")):
         suffix = os.path.splitext(urllib.parse.urlparse(value).path)[1] or ".mp4"
@@ -11075,7 +10871,7 @@ async def lan_info():
     import os as _os
     import io as _io
     import base64 as _b64
-    port = globals().get("port", 3000)
+    port = 3001
     lan_ip = _os.environ.get("NOVAI_LAN_IP")
     lan_url = _os.environ.get("NOVAI_LAN_URL")
     # dev 模式（直接跑 main.py）下环境变量没设，自己算
@@ -14645,23 +14441,13 @@ async def canvas_video(payload: CanvasVideoRequest):
                         image_like_urls.add(url)
                         return True
 
-                    image_refs = list((payload.images or [])[:9])
-                    has_ref_media = bool([v for v in (payload.videos or []) if str(v or "").strip()]) or bool([a for a in (payload.audios or []) if str(a or "").strip()])
-                    has_first_frame = any(volcengine_content_role(ref.role, "image") == "first_frame" for ref in image_refs if ref and getattr(ref, "url", ""))
-                    has_last_frame = any(volcengine_content_role(ref.role, "image") == "last_frame" for ref in image_refs if ref and getattr(ref, "url", ""))
-                    for ref in image_refs:
+                    for ref in payload.images[:9]:
                         url = volcengine_media_reference_url(ref.url, max_image_size=1536)
                         if not url:
                             continue
                         role = volcengine_content_role(ref.role, "image")
-                        if (role in {"first_frame", "last_frame"}) and has_ref_media:
-                            # 火山规则：首尾帧不能与参考视频/音频混用 → 降级为参考图（保留参考媒体能力）
-                            append_volcengine_image(url, "reference_image")
-                        elif role in {"first_frame", "last_frame"}:
+                        if role in {"first_frame", "last_frame"}:
                             append_volcengine_image(url, role)
-                        elif has_last_frame:
-                            # 火山规则：last frame 不能与 reference_image 混用 → 非首尾帧图丢弃
-                            continue
                         elif payload.multimodal:
                             # 智能多帧/多参模式：多张图作为参考图提交，不能全部伪装成首帧。
                             append_volcengine_image(url, "reference_image")
@@ -14672,19 +14458,15 @@ async def canvas_video(payload: CanvasVideoRequest):
                         text_url = str(url or "").strip()
                         if not text_url:
                             continue
-                        if looks_like_image_media_url(text_url):
-                            # 图片当作视频参考传入的兼容分支（沿用旧行为：图片路径先转可提交地址）
-                            media_url = volcengine_media_reference_url(text_url, max_image_size=1536)
-                            if not media_url:
-                                continue
-                            if media_url in image_like_urls or looks_like_image_media_url(media_url):
-                                append_volcengine_image(media_url, "reference_image" if payload.multimodal else "first_frame")
+                        media_url = volcengine_media_reference_url(text_url, max_image_size=1536 if looks_like_image_media_url(text_url) else None)
+                        if not media_url:
                             continue
-                        # 真视频：保留原始 URL（asset://、/assets/、/output/、http(s) 均可），由视频参考通道处理
-                        video_items = await volcengine_video_reference_content_items(text_url)
+                        if media_url in image_like_urls or looks_like_image_media_url(media_url):
+                            append_volcengine_image(media_url, "reference_image" if payload.multimodal else "first_frame")
+                            continue
+                        video_items = await volcengine_video_reference_content_items(media_url)
                         body["content"].extend(video_items)
-                        if video_items:
-                            volc_video_count += 1
+                        volc_video_count += 1
                     for url in (payload.audios or [])[:3]:
                         duration = probe_local_audio_duration_seconds(url)
                         if duration is not None and (duration < 1.8 or duration > 15.2):
@@ -14908,8 +14690,6 @@ async def canvas_llm(payload: CanvasLLMRequest):
     # 判断协议：APIMart 异步 vs 标准 OpenAI
     _llm_provider = get_api_provider(payload.provider) if payload.provider not in ("modelscope",) else {}
     _is_apimart = is_apimart_provider(_llm_provider)
-    # Gemini 协议原生支持视频理解：视频直接传 video_url，不抽帧
-    _is_gemini = effective_protocol(_llm_provider, model) == "gemini"
     system_prompt = (payload.system_prompt or "").strip()
     upstream_messages = [{"role": "system", "content": system_prompt}] if system_prompt else []
     for item in payload.messages[-MAX_HISTORY_MESSAGES:]:
@@ -14923,8 +14703,6 @@ async def canvas_llm(payload: CanvasLLMRequest):
     if image_inputs or video_inputs:
         content_parts = [{"type": "text", "text": payload.message}]
         ok_imgs = 0
-        if image_inputs:
-            content_parts.append({"type": "text", "text": f"以下为输入参考图：{len(image_inputs)} 张（多角度产品图等），均已上传。"})
         for img in image_inputs[:8]:
             if not img or not isinstance(img, str):
                 continue
@@ -14937,18 +14715,10 @@ async def canvas_llm(payload: CanvasLLMRequest):
         for video in video_inputs[:3]:
             if not video or not isinstance(video, str):
                 continue
-            if _is_gemini:
-                # Gemini 协议原生支持视频理解：直接传 video_url，不抽帧
-                ref_url = media_reference_to_url(video)
-                if not ref_url:
-                    continue
-                content_parts.append({"type": "video_url", "video_url": {"url": ref_url}})
-                ok_videos += 1
-                continue
             frame_urls = await video_reference_to_frame_data_urls(video, max_frames=6, max_size=768)
             if frame_urls:
                 ok_videos += 1
-                content_parts.append({"type": "text", "text": f"以下是输入媒体清单：\n- 视频{ok_videos}：参考视频（完整视频已提供，以下 {len(frame_urls)} 张关键帧按时间顺序抽取自该视频，代表视频画面内容）\n所有视频与图片均已上传完毕，请直接基于以上素材执行任务，不要要求用户重新上传或提供任何文件。"})
+                content_parts.append({"type": "text", "text": f"以下是视频 {ok_videos} 按时间顺序抽取的关键帧，请结合这些画面理解视频内容。"})
                 for frame_url in frame_urls:
                     content_parts.append({"type": "image_url", "image_url": {"url": frame_url}})
             else:
@@ -14993,120 +14763,6 @@ async def canvas_llm(payload: CanvasLLMRequest):
         raise HTTPException(status_code=502, detail=f"解析回复内容失败：{exc}") from exc
     raw_data = unwrap_apimart_response(raw) if isinstance(raw, dict) else {}
     return {"text": text, "model": model, "raw_usage": raw_data.get("usage")}
-
-# --- 自动生成视频提示词（视觉 LLM + Seedance 规则） ---
-
-VIDEO_AUTO_PROMPT_SYSTEM_PROMPT = (
-    "你是火山即梦 Seedance 2.0 视频生成提示词专家。根据用户意图与输入素材（参考视频关键帧、参考图），"
-    "生成一条符合 Seedance 2.0 规范的中文视频生成提示词，规则：\n"
-    "1. 声明每个素材的用途：参考视频 → 镜头运动、动作编排、节奏；参考图 → 产品/人物/场景外观\n"
-    "2. 若用户意图是替换（产品/人物/静物/场景）：明确写「仅将视频中的X替换为参考图中的Y，其余画面（场景、人物、动作、运镜、节奏、光照）与参考视频保持一致」，并详细描述新对象的外观细节（材质、颜色、形状、特征），细节从参考图观察得来\n"
-    "3. 若用户意图是其他（如风格迁移、生成新场景）：按意图生成，参考视频仍提供动作骨架\n"
-    "4. 提示词需包含：画面内容、动作、运镜、场景、风格；时长控制在 4-15 秒\n"
-    "5. 只输出提示词本身，禁止前言、解释、分析、Markdown 代码块、编号列表\n"
-    "6. 用中文输出"
-)
-
-@app.post("/api/video-auto-prompt")
-async def video_auto_prompt(payload: VideoAutoPromptRequest):
-    # 1) 素材校验：视频取第一个抽 4 帧，图片取前 3 张
-    videos = [v for v in (payload.videos or []) if is_video_reference_value(v)]
-    images = [img for img in (payload.images or []) if is_image_reference_value(img)]
-    if not videos and not images:
-        raise HTTPException(status_code=400, detail="请至少提供一段参考视频或一张参考图，才能自动生成提示词。")
-    image_urls = []
-    for img in images[:3]:
-        ref_url = media_reference_to_url(img, max_image_size=1024)
-        if ref_url:
-            image_urls.append(ref_url)
-    video_frame_urls = []
-    if videos:
-        video_frame_urls = await video_reference_to_frame_data_urls(videos[0], max_frames=4, max_size=768)
-    if not image_urls and not video_frame_urls:
-        raise HTTPException(status_code=400, detail="无法读取参考素材（参考视频/参考图无效或不可访问），请检查素材后重试。")
-    # 2) 选一个支持图片/视频的视觉 LLM：过滤 codex/gemini-cli 协议，优先 Gemini 协议（原生视频理解）
-    vision_candidates = []
-    for _p in load_api_providers():
-        if not _p.get("enabled", True):
-            continue
-        if is_codex_provider(_p) or is_gemini_cli_provider(_p):
-            continue
-        if not provider_env_key_value(_p["id"]):
-            continue
-        chat_models = _p.get("chat_models") or []
-        if chat_models:
-            for _m in chat_models:
-                # 火山方舟直调仅接受推理接入点 ep-xxx 模型名，普通模型名（含用户自定义怪名）直调默认不可靠，不入候选
-                if is_volcengine_provider(_p) and not str(_m or "").strip().lower().startswith("ep-"):
-                    continue
-                if looks_like_vision_chat_model(_m):
-                    vision_candidates.append((_p, _m))
-        else:
-            # chat_models 未配置（依赖默认模型）时，用 preferred_chat_model 判默认模型是否支持视觉
-            _default_model = preferred_chat_model(_p)
-            if _default_model and looks_like_vision_chat_model(_default_model):
-                if not is_volcengine_provider(_p) or str(_default_model or "").strip().lower().startswith("ep-"):
-                    vision_candidates.append((_p, _default_model))
-    print(f"[video-auto-prompt] providers={len(load_api_providers())} candidates={len(vision_candidates)}")
-    if not vision_candidates:
-        raise HTTPException(status_code=400, detail="未配置支持图片/视频的 LLM 模型，请先配置 Gemini/Qwen-VL 等视觉模型。")
-    vision_candidates.sort(key=lambda item: (0 if effective_protocol(item[0], item[1]) == "gemini" else 1, 0 if not is_volcengine_provider(item[0]) else 1))
-    provider, model = vision_candidates[0]
-    # 3) 构造多模态消息（仿 canvas-llm）：Gemini 协议直传视频，非 Gemini 抽帧传图
-    user_intent = (payload.prompt or "").strip()
-    intent_text = f"用户意图：{user_intent}" if user_intent else "用户意图：（未填写，请基于参考素材生成一条合适的视频提示词）"
-    content_parts: List[Dict[str, Any]] = [{"type": "text", "text": intent_text}]
-    if image_urls:
-        content_parts.append({"type": "text", "text": f"以下为参考图：{len(image_urls)} 张（多角度产品图等），均已上传。"})
-        for ref_url in image_urls:
-            content_parts.append({"type": "image_url", "image_url": {"url": ref_url}})
-    _is_gemini = effective_protocol(provider, model) == "gemini"
-    if videos:
-        if _is_gemini:
-            video_url = media_reference_to_url(videos[0])
-            if video_url:
-                content_parts.append({"type": "text", "text": "以下为参考视频（完整视频已提供，观察其镜头运动、动作编排与节奏）。"})
-                content_parts.append({"type": "video_url", "video_url": {"url": video_url}})
-        if video_frame_urls:
-            content_parts.append({"type": "text", "text": f"以下为参考视频关键帧：{len(video_frame_urls)} 张（按时间顺序抽取，代表视频画面内容）。"})
-            for frame_url in video_frame_urls:
-                content_parts.append({"type": "image_url", "image_url": {"url": frame_url}})
-    upstream_messages = [
-        {"role": "system", "content": VIDEO_AUTO_PROMPT_SYSTEM_PROMPT},
-        {"role": "user", "content": content_parts},
-    ]
-    # 4) 调 LLM（复用 canvas-llm 的请求构造/发请求/解析方式，超时 90s）
-    chat_base, chat_hdrs, resolved_model = resolve_chat_provider(provider.get("id"), model, "")
-    print(f"[video-auto-prompt] model={resolved_model} provider={provider.get('id')} images={len(image_urls)} video_frames={len(video_frame_urls)}")
-    _is_apimart = is_apimart_provider(provider)
-    raw = None
-    try:
-        async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV, timeout=90) as client:
-            req_body = {"model": resolved_model, "messages": upstream_messages}
-            if _is_apimart:
-                req_body["stream"] = False
-            response = await client.post(f"{chat_base}/chat/completions", headers=chat_hdrs, json=req_body)
-            response.raise_for_status()
-            if not response.content:
-                raise HTTPException(status_code=502, detail="提示词生成失败：上游接口返回了空响应")
-            raw = response.json()
-    except httpx.HTTPStatusError as exc:
-        body = exc.response.text or ""
-        friendly = friendly_chat_error_detail(body, resolved_model, provider)
-        raise HTTPException(status_code=502, detail=f"提示词生成失败：{friendly or body[:300]}") from exc
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=f"提示词生成失败：请求上游接口失败：{exc}") from exc
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"提示词生成失败：{exc}") from exc
-    try:
-        text = text_from_chat_response(raw).strip() if isinstance(raw, dict) else ""
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"提示词生成失败：解析回复内容失败：{exc}") from exc
-    if not text:
-        raise HTTPException(status_code=502, detail="提示词生成失败：上游返回了空回复")
-    return {"prompt": text}
 
 # --- 对话管理 ---
 
@@ -18100,7 +17756,7 @@ async def set_storage_path(data: dict):
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3000))
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3001))
     # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
     # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。

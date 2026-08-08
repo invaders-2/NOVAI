@@ -5,766 +5,600 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NOVAI - 首页</title>
     <script>(function(){try{var t=localStorage.getItem('studio_theme')||localStorage.getItem('canvas_theme')||'light';if(t==='dark'){document.documentElement.classList.add('studio-theme-dark');document.documentElement.classList.add('theme-dark');}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.96.1785603195.1785519964">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.96.1785603195.1785519958">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.95.1785515348.1785519964">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.95.1785515348.1785519958">
     <style>
-        /* ═══ NOVAI 官网风格（双主题：:root 浅色 / .theme-dark 深色，仅配色变量化） ═══ */
+        /* ═══ V4 Apple-style Glassmorphism Design System ═══ */
         :root {
-            --bg: #f5f5f7;
-            --text: #1d1d1f;
-            --text-strong: #1d1d1f;
-            --text-soft: #656569;
-            --text-dim: #6e6e73;
-            --text-faint: #86868b;
-            --card: rgba(255,255,255,0.72);
-            --card-solid: #ffffff;
-            --card-border: rgba(0,0,0,0.06);
-            --card-border-hover: rgba(0,0,0,0.14);
-            --media-bg: #e8e8ed;
-            --btn-glass-bg: rgba(255,255,255,0.7);
-            --btn-glass-border: rgba(0,0,0,0.12);
-            --btn-glass-hover-bg: rgba(255,255,255,0.9);
-            --btn-glass-border-hover: rgba(0,0,0,0.22);
-            --btn-outline-border: #d2d2d7;
-            --btn-outline-text: #1d1d1f;
-            --btn-outline-border-hover: #a1a1a8;
-            --btn-primary-bg: #1d1d1f;
-            --btn-primary-text: #ffffff;
-            --btn-primary-hover-bg: #3a3a3c;
-            --chip-bg: rgba(0,0,0,0.05);
-            --chip-bg-hover: rgba(0,0,0,0.08);
-            --chip-border: rgba(0,0,0,0.1);
-            --mask-color: #f5f5f7;
-            --icon-filter: none;
-            --media-text: #ffffff;
-            --media-text-soft: rgba(255,255,255,0.85);
-            --focus-ring: rgba(0,0,0,0.35);
-            --selection: rgba(0,0,0,0.15);
-            --scrim: rgba(0,0,0,0.6);
-            --shadow-color: rgba(0,0,0,0.6);
-            --success: #34c759;
+            --v4-bg: #f5f5f7;
+            --v4-text: #1d1d1f;
+            --v4-muted: #656569;
+            --v4-card-bg: rgba(255, 255, 255, 0.72);
+            --v4-card-solid: rgba(255, 255, 255, 0.92);
+            --v4-card-shadow: rgba(0, 0, 0, 0.06);
+            --v4-card-shadow-hover: rgba(0, 0, 0, 0.1);
+            --v4-btn-bg: #1d1d1f;
+            --v4-btn-text: #ffffff;
+            --v4-focus-ring: #0071e3;
+            --v4-ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+            --v4-ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
         }
-        /* 深色主题变量（html.theme-dark 与 marvis-shared.css 同特异性，本文件在后 → 以官网深色值为准） */
-        html.theme-dark {
-            --bg: #000;
-            --text: rgba(255,255,255,0.85);
-            --text-strong: #fff;
-            --text-soft: #cdd1d6;
-            --text-dim: rgba(255,255,255,0.65);
-            --text-faint: #818a9d;
-            --card: #131416;
-            --card-solid: #131416;
-            --card-border: rgba(255,255,255,0.05);
-            --card-border-hover: rgba(255,255,255,0.12);
-            --media-bg: #1b1e23;
-            --btn-glass-bg: rgba(255,255,255,0.15);
-            --btn-glass-border: rgba(255,255,255,0.25);
-            --btn-glass-hover-bg: rgba(255,255,255,0.25);
-            --btn-glass-border-hover: rgba(255,255,255,0.4);
-            --btn-outline-border: #2c3037;
-            --btn-outline-text: #a1afc5;
-            --btn-outline-border-hover: #555;
-            --btn-primary-bg: #fff;
-            --btn-primary-text: #08090b;
-            --btn-primary-hover-bg: #e5e5e5;
-            --chip-bg: rgba(255,255,255,0.06);
-            --chip-bg-hover: rgba(255,255,255,0.12);
-            --chip-border: rgba(255,255,255,0.1);
-            --mask-color: #000;
-            --icon-filter: brightness(0) invert(1);
-            --media-text: #ffffff;
-            --media-text-soft: rgba(255,255,255,0.85);
-            --focus-ring: rgba(255,255,255,0.5);
-            --selection: rgba(255,255,255,0.2);
-            --scrim: rgba(0,0,0,0.6);
-            --shadow-color: rgba(0,0,0,0.6);
-            --success: #34c759;
+
+        .theme-dark, [data-theme="dark"] {
+            --v4-bg: #0c0c0c;
+            --v4-text: #f5f5f7;
+            --v4-muted: #96969a;
+            --v4-card-bg: rgba(30, 30, 30, 0.6);
+            --v4-card-solid: rgba(30, 30, 30, 0.88);
+            --v4-card-shadow: rgba(0, 0, 0, 0.3);
+            --v4-card-shadow-hover: rgba(0, 0, 0, 0.5);
+            --v4-btn-bg: #f5f5f7;
+            --v4-btn-text: #1d1d1f;
+            --v4-focus-ring: #0a84ff;
         }
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.5;
+            font-family: var(--font-sans);
+            background: var(--v4-bg);
+            color: var(--v4-text);
             min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 0 24px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            scrollbar-width: none;
             overflow-x: hidden;
+            max-width: 100vw;
         }
-        ::selection { background: var(--selection); }
-        button { font-family: inherit; }
+        body::-webkit-scrollbar { width: 6px; }
+        body::-webkit-scrollbar-track { background: transparent; }
+        body::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; transition: background 0.3s ease; }
+        body:hover::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); }
+        .theme-dark body::-webkit-scrollbar-thumb { background: transparent; }
+        .theme-dark body:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+        body { scrollbar-width: none; }
+        body:hover { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) transparent; }
+        .theme-dark body:hover { scrollbar-color: rgba(255,255,255,0.2) transparent; }
 
-        /* ===== 按钮体系 ===== */
-        .btn {
-            display: inline-flex; align-items: center; justify-content: center;
-            height: 40px; padding: 0 20px;
-            border-radius: 8px;
-            font-size: 15px; font-weight: 500;
-            text-decoration: none; border: none; cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .btn:active { transform: scale(0.96); }
-        .btn-white {
-            background: var(--btn-glass-bg);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            color: var(--text-strong);
-            border: 1px solid var(--btn-glass-border);
-            font-weight: 500;
-        }
-        .btn-white:hover { background: var(--btn-glass-hover-bg); border-color: var(--btn-glass-border-hover); transform: scale(1.02); }
-        .btn-outline {
-            background: transparent; color: var(--btn-outline-text); font-weight: 400;
-            font-size: 14px; padding: 4px 8px; height: auto;
-            border: 1px solid var(--btn-outline-border); border-radius: 8px;
-        }
-        .btn-outline:hover { border-color: var(--btn-outline-border-hover); color: var(--text-soft); }
-        .hero .btn-white {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,0.25);
-            font-weight: 500;
-        }
-        .hero .btn-white:hover { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.4); transform: scale(1.02); }
-        .hero .btn-outline {
-            background: transparent; color: #a1afc5; font-weight: 400;
-            font-size: 14px; padding: 4px 8px; height: auto;
-            border: 1px solid #2c3037; border-radius: 8px;
-        }
-        .hero .btn-outline:hover { border-color: #555; color: #a1afc5; }
-
-        /* ===== Hero（全屏视频背景） ===== */
-        .hero {
-            position: relative;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center;
-            min-height: 640px;
-            padding: 96px 24px;
-            overflow: hidden;
-        }
-        .hero video {
-            position: absolute; inset: 0;
-            width: 100%; height: 100%;
-            object-fit: cover;
-        }
-        .hero-content {
-            position: relative; z-index: 2;
-            max-width: min(574px, 100%);
-            animation: fadeUp 0.8s cubic-bezier(0.4,0,0.2,1);
-            /* 官网固定深色文字阴影，保证视频上可读（不随主题变化） */
-            text-shadow: 0 1px 12px rgba(0,0,0,0.6), 0 2px 24px rgba(0,0,0,0.4);
-        }
-        .hero-content .btn { text-shadow: none; } /* 毛玻璃按钮有底色，不受文字阴影影响 */
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .hero h1 { font-size: 55px; font-weight: 400; letter-spacing: -1.65px; line-height: 1.05; color: #fff; margin-bottom: 16px; }
-        .hero-subtitle { font-size: 17px; font-weight: 400; line-height: 1.55; color: #cdd1d6; margin-bottom: 12px; }
-        .hero-desc {
-            font-size: 15px; font-weight: 400; line-height: 1.6;
-            color: #cdd1d6;
-            max-width: 520px; margin: 0 auto 28px;
-        }
-        .hero .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-
-        /* ===== Section 标题排版 ===== */
-        .section-header { text-align: center; padding: 56px 24px 32px; max-width: 1200px; margin: 0 auto; }
-        .section-header h2 { font-size: 48px; font-weight: 400; letter-spacing: -1.2px; line-height: 1.1; color: var(--text-strong); }
-        .section-header p { font-size: 17px; font-weight: 400; color: var(--text-soft); margin-top: 12px; }
-        .section-label { font-size: 12px; font-weight: 400; letter-spacing: 0.72px; color: var(--text-faint); text-transform: uppercase; margin-bottom: 12px; }
-
-        /* ===== 模型 logo 滚动墙 ===== */
-        .client-row {
-            display: flex; overflow: hidden;
-            padding: 8px 0 64px;
+        .home-container {
             width: 100%;
-            mask-image: linear-gradient(to right, transparent 0, var(--mask-color) 60px, var(--mask-color) calc(100% - 60px), transparent 100%);
-            -webkit-mask-image: linear-gradient(to right, transparent 0, var(--mask-color) 60px, var(--mask-color) calc(100% - 60px), transparent 100%);
-        }
-        .client-track {
-            display: flex; align-items: center;
-            animation: marquee 30s linear infinite;
-            flex-shrink: 0;
-        }
-        .client-row:hover .client-track { animation-play-state: paused; }
-        .client-item {
-            display: flex; align-items: center; gap: 10px;
-            flex-shrink: 0; margin-right: 64px;
-        }
-        .client-item img { height: 24px; width: auto; filter: var(--icon-filter); }
-        .client-item span {
-            font-size: 15px; font-weight: 500; letter-spacing: -0.2px;
-            color: var(--text-faint);
-            white-space: nowrap;
-        }
-        @keyframes marquee {
-            0%   { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
+            max-width: 780px;
+            padding: 80px 0 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
         }
 
-        /* ===== 功能卡片（圆角卡，配色跟随主题） ===== */
+        /* ===== Hero 区 ===== */
+        .hero {
+            text-align: center;
+            animation: fadeUp 0.7s var(--v4-ease-out) both;
+        }
+
+        .hero-title {
+            font-size: 47px;
+            font-weight: 400;
+            letter-spacing: 0.02em;
+            line-height: 1.1;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--v4-text) 0%, var(--v4-muted) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 17px;
+            font-weight: 500;
+            color: var(--v4-muted);
+            margin-bottom: 12px;
+            letter-spacing: 0.01em;
+        }
+
+        .hero-desc {
+            font-size: 14px;
+            color: var(--v4-muted);
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== 功能卡片区 ===== */
         .cards-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            max-width: 1200px; margin: 0 auto; padding: 0 24px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.08s both;
         }
+
         .feature-card {
-            background: var(--card);
-            border-radius: 20px;
-            border: 1px solid var(--card-border);
-            padding: 28px 24px;
+            background: var(--v4-card-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid transparent;
+            border-radius: 16px;
+            padding: 24px 20px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--v4-card-shadow);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
             cursor: pointer;
-            display: flex; flex-direction: column; gap: 16px;
-            text-decoration: none; color: inherit;
-            transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s cubic-bezier(0.4,0,0.2,1);
-        }
-        .feature-card:hover { border-color: var(--card-border-hover); transform: translateY(-4px); }
-        .feature-card:active { transform: translateY(0) scale(0.98); }
-        .feature-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-        .feature-card-icon {
-            width: 44px; height: 44px; border-radius: 12px;
-            background: var(--chip-bg);
-            color: var(--text);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-        }
-        .feature-card:hover .feature-card-icon { transform: scale(1.06); }
-        .feature-card-icon svg { width: 20px; height: 20px; }
-        .feature-card-title {
-            font-size: 16px; font-weight: 400; color: var(--text-strong);
-            display: flex; align-items: center; gap: 6px;
-            margin-bottom: 6px;
-        }
-        .feature-card-arrow {
-            width: 14px; height: 14px; color: var(--text-faint);
-            opacity: 0; transform: translateX(-4px);
-            transition: opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1);
-        }
-        .feature-card:hover .feature-card-arrow { opacity: 1; transform: translateX(0); }
-        .feature-card-desc { font-size: 14px; font-weight: 400; color: var(--text-faint); line-height: 1.6; }
-
-        /* ===== CTA ===== */
-        .cta-section { text-align: center; padding: 120px 24px 80px; }
-        .cta-section h2 { font-size: 38px; font-weight: 400; letter-spacing: -0.95px; line-height: 1.1; color: var(--text-strong); margin-bottom: 12px; }
-        .cta-section p { font-size: 20px; font-weight: 400; color: var(--text-soft); margin-bottom: 32px; }
-        .cta-section .btns { display: flex; gap: 10px; justify-content: center; }
-
-        /* ===== 灵感画廊（官网 model-card 横向轮播） ===== */
-        .gallery-grid {
             display: flex;
-            gap: 24px;
-            max-width: 1200px; margin: 0 auto; padding: 0 24px 4px;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            -webkit-overflow-scrolling: touch;
-        }
-        .gallery-grid::-webkit-scrollbar { display: none; }
-        .gallery-grid { -ms-overflow-style: none; scrollbar-width: none; }
-        .gallery-card {
-            flex: 0 0 340px;
-            scroll-snap-align: start;
-            display: flex; flex-direction: column;
-            border-radius: 8px;
+            align-items: flex-start;
+            gap: 16px;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
             overflow: hidden;
         }
-        .gallery-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-        .gallery-card .mc-media { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; }
-        .gallery-card video {
-            width: 100%; height: 100%; object-fit: cover; display: block;
-            transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
-        }
-        .gallery-card:hover video { transform: scale(1.03); }
-        .gallery-card .mc-overlay {
-            position: absolute; bottom: 20px; left: 20px; right: 20px;
-            display: flex; flex-direction: column; gap: 4px;
-            pointer-events: none;
-        }
-        .gallery-card .mc-name { font-size: 22px; font-weight: 400; letter-spacing: -0.22px; line-height: 1.1; color: #fff; }
-        .gallery-card .mc-tagline { font-size: 14px; font-weight: 400; line-height: 1.3; color: rgba(255,255,255,0.85); }
-        .gallery-card .mc-specs { margin-top: 0; }
-        .mc-spec-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 0; gap: 16px;
-            border-bottom: 1px solid rgba(0,0,0,0.08);
-        }
-        html.theme-dark .mc-spec-row { border-bottom-color: rgba(255,255,255,0.08); }
-        .mc-spec-row:last-child { border-bottom: none; }
-        .mc-spec-label { font-size: 12px; font-weight: 500; line-height: 1.3; color: var(--text-faint); white-space: nowrap; }
-        .mc-spec-value { font-size: 13px; font-weight: 400; line-height: 1.3; color: var(--text-strong); text-align: right; }
 
-        /* ===== 最近画布 ===== */
-        .recent-section { max-width: 1200px; margin: 0 auto; padding: 72px 24px 0; }
-        .section-header-row {
-            display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 20px;
+        .feature-card:nth-child(2) { animation-delay: 0.14s; }
+        .feature-card:nth-child(3) { animation-delay: 0.2s; }
+        .feature-card:nth-child(4) { animation-delay: 0.26s; }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--v4-card-shadow-hover);
+            border-color: rgba(0,0,0,0.12);
         }
-        .section-title { font-size: 12px; font-weight: 400; letter-spacing: 0.72px; color: var(--text-faint); text-transform: uppercase; }
+
+        .feature-card:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .feature-card:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 2px;
+        }
+
+        .feature-card-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            background: var(--v4-bg);
+            color: var(--v4-muted);
+            flex-shrink: 0;
+        }
+
+        .feature-card-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .feature-card-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .feature-card-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--v4-text);
+            letter-spacing: 0.01em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .feature-card-arrow {
+            width: 14px;
+            height: 14px;
+            opacity: 0;
+            transform: translateX(-4px);
+            transition: opacity 0.25s var(--v4-ease-out), transform 0.25s var(--v4-ease-out);
+            color: var(--v4-muted);
+        }
+
+        .feature-card:hover .feature-card-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .feature-card-desc {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--v4-muted);
+            line-height: 1.5;
+        }
+
+        /* ===== CTA 区 ===== */
+        .cta-section {
+            text-align: center;
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.32s both;
+        }
+
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--v4-btn-bg);
+            color: var(--v4-btn-text);
+            border: none;
+            border-radius: 12px;
+            padding: 14px 32px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+            text-decoration: none;
+            letter-spacing: 0.01em;
+        }
+
+        .cta-button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px -6px var(--v4-card-shadow-hover);
+            background: linear-gradient(135deg, var(--v4-btn-bg) 0%, #444 100%);
+        }
+
+        .cta-button:active {
+            transform: scale(0.97);
+        }
+
+        .cta-button:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 3px;
+        }
+
+        .cta-button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ===== 最近项目 ===== */
+        .recent-section {
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.38s both;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--v4-muted);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            padding-left: 4px;
+        }
+
         .view-all-btn {
-            display: inline-flex; align-items: center; gap: 4px;
-            background: none; border: none; padding: 4px 6px;
-            font-size: 13px; font-weight: 400; color: var(--text-faint);
-            cursor: pointer; border-radius: 6px;
-            transition: color 0.25s cubic-bezier(0.4,0,0.2,1);
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            background: none;
+            border: none;
+            padding: 2px 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--v4-muted);
+            cursor: pointer;
+            border-radius: 6px;
+            transition: color 0.2s ease-out;
             font-family: inherit;
         }
-        .view-all-btn:hover { color: var(--text-strong); }
-        .view-all-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-        .view-all-btn svg { width: 12px; height: 12px; }
-        .view-all-btn[hidden] { display: none; }
-        .recent-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+        .view-all-btn:hover {
+            color: var(--v4-text);
+        }
+
+        .view-all-btn:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 2px;
+        }
+
+        .view-all-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .view-all-btn[hidden] {
+            display: none;
+        }
+
+        .recent-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
         .recent-card {
-            background: var(--card-solid);
-            border: 1px solid var(--card-border);
+            background: var(--v4-card-bg);
+            backdrop-filter: blur(40px) saturate(200%);
+            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            border: 1px solid transparent;
             border-radius: 12px;
-            padding: 14px 16px;
+            padding: 12px 14px;
             cursor: pointer;
-            display: flex; align-items: center; gap: 12px;
-            text-decoration: none; color: var(--text-strong);
-            transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s cubic-bezier(0.4,0,0.2,1);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 2px 8px -2px var(--v4-card-shadow);
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: var(--v4-text);
         }
-        .recent-card:hover { border-color: var(--card-border-hover); transform: translateY(-2px); }
-        .recent-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+        .recent-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -6px var(--v4-card-shadow-hover);
+            border-color: rgba(0,0,0,0.08);
+        }
+        .theme-dark .recent-card:hover { border-color: rgba(255,255,255,0.08); }
+
+        .recent-card:focus-visible {
+            outline: 2px solid var(--v4-focus-ring);
+            outline-offset: 2px;
+        }
+
         .recent-card-icon {
-            width: 36px; height: 36px; border-radius: 10px;
-            background: var(--chip-bg);
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0; overflow: hidden; position: relative;
-            color: var(--text-dim);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--v4-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
         }
-        .recent-card-icon svg { width: 16px; height: 16px; }
+
+        .recent-card-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+
         .recent-card-thumb {
-            position: absolute; inset: 0;
-            width: 100%; height: 100%;
-            object-fit: cover; border-radius: 10px;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
         }
-        .recent-card-info { min-width: 0; }
+
+        .recent-card-info {
+            min-width: 0;
+        }
+
         .recent-card-name {
-            font-size: 13px; font-weight: 500; color: var(--text-strong);
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        .recent-card-time { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
-        .recent-empty { font-size: 13px; color: var(--text-faint); padding: 24px 0; text-align: center; grid-column: 1 / -1; }
+
+        .recent-card-time {
+            font-size: 10px;
+            color: var(--v4-muted);
+            margin-top: 2px;
+        }
+
+        .recent-empty {
+            font-size: 13px;
+            color: var(--v4-muted);
+            padding: 24px 0;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
 
         /* ===== 底部状态 ===== */
-        .status-bar { text-align: center; padding: 48px 24px 64px; }
-        .status-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-faint); }
+        .status-bar {
+            text-align: center;
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.44s both;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--v4-muted);
+        }
+
         .status-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: var(--success);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #34c759;
             animation: nano-pulse 2s ease-in-out infinite;
         }
+
         @keyframes nano-pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.35; }
         }
 
-        /* ===== 局域网访问（手机/iPad 扫码，官网风格正式区块） ===== */
-        .lan-section { max-width: 1200px; margin: 0 auto; padding: 72px 24px 0; }
-        .lan-card {
-            background: var(--card);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 24px;
-            display: flex;
+        /* ===== 响应式 ===== */
+        @media (max-width: 640px) {
+            .home-container {
+                padding: 48px 0 32px;
+                gap: 32px;
+            }
+            .hero-title { font-size: 40px; }
+            .hero-subtitle { font-size: 15px; }
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+            .recent-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-title { font-size: 34px; }
+            .feature-card { padding: 18px 16px; }
+        }
+
+        /* ===== 局域网访问通知条 ===== */
+        .lan-notice {
+            display: none;
             align-items: center;
             justify-content: space-between;
             gap: 16px;
-            flex-wrap: wrap;
+            padding: 14px 18px;
+            margin-bottom: 8px;
+            background: var(--v4-card-solid);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 14px;
+            box-shadow: 0 2px 12px var(--v4-card-shadow);
+            animation: fadeUp 0.5s var(--v4-ease-out) both;
             position: relative;
         }
-        .lan-notice { display: none; }
+        .theme-dark .lan-notice,
+        [data-theme="dark"] .lan-notice {
+            border-color: rgba(255, 255, 255, 0.08);
+        }
         .lan-notice.visible { display: flex; }
-        .lan-icon {
-            width: 44px; height: 44px; border-radius: 12px;
-            background: var(--media-bg);
-            display: flex; align-items: center; justify-content: center;
-            color: var(--text-soft);
+        .lan-notice-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+            flex: 1;
+        }
+        .lan-notice-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--v4-text);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .lan-notice-title svg {
+            width: 14px;
+            height: 14px;
+            color: var(--v4-focus-ring);
             flex-shrink: 0;
         }
-        .lan-icon svg { width: 20px; height: 20px; }
-        .lan-notice-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
-        .lan-notice-title { font-size: 16px; font-weight: 500; color: var(--text-strong); display: flex; align-items: center; gap: 6px; }
-        .lan-notice-desc { font-size: 13px; color: var(--text-faint); }
-        .lan-notice-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .lan-notice-url {
-            font-size: 12px; color: var(--text-soft);
+            font-size: 12px;
+            color: var(--v4-muted);
             font-family: ui-monospace, "SF Mono", Menlo, monospace;
             word-break: break-all;
         }
+        .lan-notice-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
         .lan-qr-btn {
-            width: 38px; height: 38px; border-radius: 10px;
-            border: 1px solid var(--card-border);
-            background: var(--card-border); color: var(--text-soft);
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            background: transparent;
+            color: var(--v4-text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s var(--v4-ease-hover);
             position: relative;
         }
-        .lan-qr-btn:hover { background: var(--chip-bg-hover); color: var(--text-strong); border-color: var(--btn-glass-border); }
-        .lan-qr-btn svg { width: 14px; height: 14px; }
+        .lan-qr-btn:hover {
+            background: var(--v4-focus-ring);
+            color: #fff;
+            border-color: var(--v4-focus-ring);
+        }
+        .lan-qr-btn svg { width: 16px; height: 16px; }
         .lan-qr-popup {
             display: none;
-            position: absolute; top: calc(100% + 8px); right: 0;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
             padding: 12px;
-            background: var(--card-solid);
-            border: 1px solid var(--card-border);
+            background: var(--v4-card-solid);
+            border: 1px solid rgba(0, 0, 0, 0.08);
             border-radius: 12px;
-            box-shadow: 0 8px 32px var(--shadow-color);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
             z-index: 100;
             white-space: nowrap;
         }
-        .lan-qr-popup.show { display: block; }
-        .lan-qr-popup img { display: block; width: 140px; height: 140px; border-radius: 6px; }
-        .lan-qr-popup-label { font-size: 11px; color: var(--text-faint); text-align: center; margin-top: 6px; }
-        .lan-close-btn {
-            width: 28px; height: 28px; border-radius: 8px;
-            border: none; background: transparent; color: var(--text-faint);
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+        .theme-dark .lan-qr-popup,
+        [data-theme="dark"] .lan-qr-popup {
+            border-color: rgba(255, 255, 255, 0.08);
         }
-        .lan-close-btn:hover { background: var(--chip-bg-hover); color: var(--text-strong); }
+        .lan-qr-popup.show { display: block; }
+        .lan-qr-popup img {
+            display: block;
+            width: 140px;
+            height: 140px;
+            border-radius: 6px;
+        }
+        .lan-qr-popup-label {
+            font-size: 11px;
+            color: var(--v4-muted);
+            text-align: center;
+            margin-top: 6px;
+        }
+        .lan-close-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            color: var(--v4-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s var(--v4-ease-hover);
+        }
+        .lan-close-btn:hover {
+            background: rgba(0, 0, 0, 0.06);
+            color: var(--v4-text);
+        }
+        .theme-dark .lan-close-btn:hover,
+        [data-theme="dark"] .lan-close-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
         .lan-close-btn svg { width: 14px; height: 14px; }
 
-        /* ===== 模板中心（默认隐藏，保留完整功能） ===== */
-        .template-subtitle { font-size: 12px; color: var(--text-faint); padding-left: 4px; margin-bottom: 10px; }
-        .template-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .template-card {
-            background: var(--card-solid);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 10px;
-            cursor: pointer; position: relative; overflow: hidden;
-            transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), border-color 0.25s cubic-bezier(0.4,0,0.2,1);
-        }
-        .template-card:hover { transform: translateY(-4px); border-color: var(--card-border-hover); }
-        .template-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-        .template-cover { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; display: block; background: var(--media-bg); }
-        .template-card-body { padding: 10px 6px 4px; }
-        .template-card-name { font-size: 14px; font-weight: 600; color: var(--text-strong); margin-bottom: 4px; letter-spacing: 0.01em; }
-        .template-card-desc {
-            font-size: 12px; color: var(--text-faint); line-height: 1.5;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-        }
-        .template-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .template-tag {
-            background: var(--chip-bg);
-            border: 1px solid var(--chip-border);
-            border-radius: 999px;
-            padding: 2px 10px;
-            font-size: 10px; color: var(--text-faint); white-space: nowrap;
-        }
-        .template-empty { font-size: 13px; color: var(--text-faint); padding: 24px 0; text-align: center; grid-column: 1 / -1; }
-        .template-modal-mask {
-            position: fixed; inset: 0;
-            background: var(--scrim);
-            display: none; align-items: center; justify-content: center;
-            z-index: 999; padding: 24px;
-        }
-        .template-modal-mask.show { display: flex; }
-        .template-modal {
-            width: 100%; max-width: 560px; max-height: 80vh; overflow-y: auto;
-            background: var(--card-solid);
-            border: 1px solid var(--chip-border);
-            border-radius: 16px;
-            box-shadow: 0 16px 48px var(--shadow-color);
-            padding: 16px;
-            animation: fadeUp 0.35s cubic-bezier(0.4,0,0.2,1) both;
-        }
-        .template-modal-cover { width: 100%; height: 200px; object-fit: cover; border-radius: 12px; display: block; background: var(--media-bg); }
-        .template-modal-body { padding: 14px 4px 0; }
-        .template-modal-name { font-size: 18px; font-weight: 600; color: var(--text-strong); }
-        .template-modal-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-        .template-modal-desc { font-size: 12px; color: var(--text-faint); line-height: 1.6; margin-top: 10px; }
-        .template-preview-label { font-size: 11px; font-weight: 500; color: var(--text-faint); letter-spacing: 0.08em; text-transform: uppercase; margin: 16px 0 8px; padding-left: 2px; }
-        .template-topo {
-            height: 260px; border-radius: 12px;
-            background: var(--media-bg);
-            border: 1px solid var(--chip-border);
-            overflow: hidden; position: relative;
-        }
-        .template-topo svg { display: block; width: 100%; height: 100%; }
-        .template-topo-loading, .template-topo-error {
-            position: absolute; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 12px; color: var(--text-faint);
-        }
-        .template-topo-loading.hidden, .template-topo-error.hidden { display: none; }
-        .template-modal-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
-        .template-apply-btn {
-            flex: 1;
-            background: var(--btn-primary-bg); color: var(--btn-primary-text); border: none;
-            border-radius: 12px; padding: 12px 20px;
-            font-size: 14px; font-weight: 500; cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-            font-family: inherit; letter-spacing: 0.01em;
-        }
-        .template-apply-btn:hover { transform: scale(1.02); background: var(--btn-primary-hover-bg); }
-        .template-apply-btn:active { transform: scale(0.98); }
-        .template-apply-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-        .template-close-btn {
-            background: transparent; border: 1px solid var(--chip-border);
-            color: var(--text-faint); border-radius: 12px; padding: 12px 20px;
-            font-size: 14px; font-weight: 500; cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-            font-family: inherit;
-        }
-        .template-close-btn:hover { background: var(--chip-bg); color: var(--text-strong); }
-        .template-close-btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-
-        /* ===== 响应式 ===== */
-        @media (max-width: 1024px) {
-            .cards-grid { grid-template-columns: repeat(2, 1fr); }
-        }
         @media (max-width: 640px) {
-            .hero { min-height: 520px; padding: 72px 20px; }
-            .hero h1 { font-size: 36px; letter-spacing: -0.8px; }
-            .section-header h2 { font-size: 32px; letter-spacing: -0.8px; }
-            .cards-grid { grid-template-columns: 1fr; }
-            .gallery-card { flex: 0 0 280px; }
-            .recent-grid { grid-template-columns: 1fr; }
-            .cta-section { padding: 80px 20px 56px; }
-            .cta-section h2 { font-size: 30px; letter-spacing: -0.75px; }
-            .template-grid { grid-template-columns: 1fr; }
-            .lan-card { flex-direction: column; align-items: stretch; }
-            .lan-notice-actions { justify-content: flex-end; flex-wrap: wrap; }
+            .lan-notice { flex-direction: column; align-items: stretch; }
+            .lan-notice-actions { justify-content: flex-end; }
         }
-
     </style>
 </head>
 <body>
-    <!-- Hero 区（官网同款：全屏视频背景 + 毛玻璃按钮） -->
-    <section class="hero">
-        <video autoplay muted loop playsinline poster="">
-            <source src="https://d3phaj0sisr2ct.cloudfront.net/devportal/banners/devportal-landing-hero-robin-30s.mp4" type="video/mp4">
-            <source src="https://d3phaj0sisr2ct.cloudfront.net/devportal/banners/devportal-landing-hero-robin-30s.webm" type="video/webm">
-        </video>
-        <div class="hero-content">
-            <h1>给创作者的 AI 画布</h1>
-            <p class="hero-desc">
-                连线 AI 节点，构建自动化创作流水线。图像、视频、语言模型 —— 一个无限画布自由调用。
-            </p>
-            <div class="btns">
-                <button class="btn btn-white" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">开始使用</button>
-                <button class="btn btn-outline" onclick="window.open('https://github.com/invaders-2/NOVAI','_blank')">GitHub 查看</button>
-            </div>
-        </div>
-    </section>
-
-    <!-- 模型 logo 滚动墙 -->
-    <section id="engines">
-        <div class="section-header">
-            <p class="section-label">ENGINES</p>
-            <h2>一个应用，接入主流 AI 引擎</h2>
-            <p>图像、视频、语言模型 —— 统一 API 接入，开箱即用。</p>
-        </div>
-        <div class="client-row">
-            <div class="client-track">
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg" alt="" loading="lazy"><span>OpenAI</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/deepseek.svg" alt="" loading="lazy"><span>DeepSeek</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg" alt="" loading="lazy"><span>Google / Gemini</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/anthropic.svg" alt="" loading="lazy"><span>Anthropic</span></div>
-                <div class="client-item"><span>ModelScope</span></div>
-                <div class="client-item"><span>火山引擎</span></div>
-                <div class="client-item"><span>ComfyUI</span></div>
-                <div class="client-item"><span>RunningHub</span></div>
-                <div class="client-item"><span>即梦</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/meta.svg" alt="" loading="lazy"><span>Meta</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/stability.svg" alt="" loading="lazy"><span>Stability</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg" alt="" loading="lazy"><span>xAI</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/openai.svg" alt="" loading="lazy"><span>OpenAI</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/deepseek.svg" alt="" loading="lazy"><span>DeepSeek</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/google.svg" alt="" loading="lazy"><span>Google / Gemini</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/anthropic.svg" alt="" loading="lazy"><span>Anthropic</span></div>
-                <div class="client-item"><span>ModelScope</span></div>
-                <div class="client-item"><span>火山引擎</span></div>
-                <div class="client-item"><span>ComfyUI</span></div>
-                <div class="client-item"><span>RunningHub</span></div>
-                <div class="client-item"><span>即梦</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/meta.svg" alt="" loading="lazy"><span>Meta</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/stability.svg" alt="" loading="lazy"><span>Stability</span></div>
-                <div class="client-item"><img src="https://unpkg.com/@lobehub/icons-static-svg@latest/icons/xai.svg" alt="" loading="lazy"><span>xAI</span></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 功能卡片区（深色圆角卡，点击跳转） -->
-    <div class="section-header">
-        <p class="section-label">平台能力</p>
-        <h2>NOVAI · 创作一切</h2>
-        <p>从创意到产出，一站式 AI 创作工作台。</p>
-    </div>
-    <section class="cards-grid">
-        <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'online'},'*')">
-            <div class="feature-card-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
-                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                </svg>
-            </div>
-            <div class="feature-card-content">
-                <div class="feature-card-title">
-                    在线生图
-                    <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                </div>
-                <div class="feature-card-desc">AI 驱动的图像生成引擎，支持文生图、图生图等多种模式</div>
-            </div>
-        </div>
-
-        <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'gpt-chat'},'*')">
-            <div class="feature-card-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-            </div>
-            <div class="feature-card-content">
-                <div class="feature-card-title">
-                    GPT 对话
-                    <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                </div>
-                <div class="feature-card-desc">智能 AI 助手，辅助创意构思与提示词优化</div>
-            </div>
-        </div>
-
-        <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
-            <div class="feature-card-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="7" height="7"/>
-                    <rect x="14" y="3" width="7" height="7"/>
-                    <rect x="14" y="14" width="7" height="7"/>
-                    <rect x="3" y="14" width="7" height="7"/>
-                </svg>
-            </div>
-            <div class="feature-card-content">
-                <div class="feature-card-title">
-                    无限画布
-                    <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                </div>
-                <div class="feature-card-desc">自由布局的创作空间，支持多图拼接与图层编辑</div>
-            </div>
-        </div>
-
-        <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'asset-manager'},'*')">
-            <div class="feature-card-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 19.5V6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v12.7"/>
-                    <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5V8.8A2.8 2.8 0 0 0 17.2 6H6.8A2.8 2.8 0 0 0 4 8.8v10.7z"/>
-                </svg>
-            </div>
-            <div class="feature-card-content">
-                <div class="feature-card-title">
-                    素材库
-                    <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                    </svg>
-                </div>
-                <div class="feature-card-desc">集中管理生成作品与上传素材，快速检索与复用</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 模板中心（默认隐藏） -->
-    <section class="template-section" id="templateSection" hidden>
-        <div class="section-header" style="padding: 56px 24px 12px;">
-            <div class="section-title">模板中心</div>
-        </div>
-        <div class="template-subtitle" style="max-width:1200px;margin:0 auto 10px;">精选云端工作流模板，点击卡片预览拓扑，一键套用到无限画布</div>
-        <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
-            <div class="template-grid" id="templateGrid"></div>
-        </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="cta-section">
-        <h2>AI into Your Workflow</h2>
-        <p>开始你的创作之旅</p>
-        <p>免费使用，无需注册。多引擎 AI 创作，开箱即用。</p>
-        <div class="btns">
-            <button class="btn btn-white" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">开始创作</button>
-        </div>
-    </section>
-
-    <!-- 灵感画廊：AI 生成示例视频（官网 model-card 视觉） -->
-    <div class="section-header">
-        <p class="section-label">GALLERY</p>
-        <h2>看看 AI 能做什么</h2>
-        <p>用 NOVAI 接主流模型，视频皆由 AI 生成。由不同引擎实时生成的示例作品，探索 NOVAI 的创作上限。</p>
-    </div>
-    <section class="gallery-grid">
-        <div class="gallery-card" tabindex="0">
-            <div class="mc-media">
-                <video src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedream5-pro.mp4" autoplay muted loop playsinline preload="metadata"></video>
-                <div class="mc-overlay">
-                    <span class="mc-name">Seedream 图像生成</span>
-                    <span class="mc-tagline">高保真 · 多风格图像</span>
-                </div>
-            </div>
-            <div class="mc-specs">
-                <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">Seedream 5.0</span></div>
-                <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">文生图 · 图生图</span></div>
-            </div>
-        </div>
-        <div class="gallery-card" tabindex="0">
-            <div class="mc-media">
-                <video src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-seedance2.mp4" autoplay muted loop playsinline preload="metadata"></video>
-                <div class="mc-overlay">
-                    <span class="mc-name">Seedance 视频生成</span>
-                    <span class="mc-tagline">图生视频 · 动态一致</span>
-                </div>
-            </div>
-            <div class="mc-specs">
-                <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">Seedance 2.0</span></div>
-                <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">文生视频</span></div>
-            </div>
-        </div>
-        <div class="gallery-card" tabindex="0">
-            <div class="mc-media">
-                <video src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gpt-image-2.mp4" autoplay muted loop playsinline preload="metadata"></video>
-                <div class="mc-overlay">
-                    <span class="mc-name">GPT Image 图像创作</span>
-                    <span class="mc-tagline">对话式图像生成</span>
-                </div>
-            </div>
-            <div class="mc-specs">
-                <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">GPT Image 2</span></div>
-                <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">对话式生图</span></div>
-            </div>
-        </div>
-        <div class="gallery-card" tabindex="0">
-            <div class="mc-media">
-                <video src="https://d3phaj0sisr2ct.cloudfront.net/devportal/playground-examples/landing-rwdev-creative-gen4-5.mp4" autoplay muted loop playsinline preload="metadata"></video>
-                <div class="mc-overlay">
-                    <span class="mc-name">GEN-4.5 前沿视频</span>
-                    <span class="mc-tagline">新一代视频生成模型</span>
-                </div>
-            </div>
-            <div class="mc-specs">
-                <div class="mc-spec-row"><span class="mc-spec-label">模型</span><span class="mc-spec-value">Gen-4.5</span></div>
-                <div class="mc-spec-row"><span class="mc-spec-label">用途</span><span class="mc-spec-value">视频生成</span></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 局域网访问（手机/iPad 扫码） -->
-    <section class="lan-section">
-        <div class="lan-card lan-notice" id="lanNotice">
-            <div class="lan-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
-                    <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
-                    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
-                    <line x1="12" y1="20" x2="12.01" y2="20"/>
-                </svg>
-            </div>
+    <div class="home-container">
+        <!-- 局域网访问通知条（手机/iPad 扫码访问） -->
+        <div class="lan-notice" id="lanNotice">
             <div class="lan-notice-text">
-                <div class="lan-notice-title">手机 / iPad 访问</div>
-                <div class="lan-notice-desc">同一 Wi-Fi 下扫码，手机/平板继续创作</div>
+                <div class="lan-notice-title">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+                        <path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                        <line x1="12" y1="20" x2="12.01" y2="20"/>
+                    </svg>
+                    <span>手机 / iPad 访问</span>
+                </div>
+                <div class="lan-notice-url" id="lanNoticeUrl"></div>
             </div>
             <div class="lan-notice-actions">
-                <div class="lan-notice-url" id="lanNoticeUrl"></div>
                 <button class="lan-qr-btn" id="lanQrBtn" title="显示二维码">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="3" width="7" height="7"/>
@@ -789,55 +623,126 @@
                 </button>
             </div>
         </div>
-    </section>
 
-    <!-- 最近画布 -->
-    <section class="recent-section">
-        <div class="section-header-row">
-            <div class="section-title">最新画布</div>
-            <button type="button" class="view-all-btn" id="viewAllBtn" hidden onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
-                查看全部
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 18l6-6-6-6"/>
-                </svg>
-            </button>
-        </div>
-        <div class="recent-grid" id="recentProjects">
-            <div class="recent-empty">暂无最近画布，开始创作后这里将显示你最近访问的画布</div>
-        </div>
-    </section>
+        <!-- Hero 区 -->
+        <section class="hero">
+            <h1 class="hero-title">NOVAI</h1>
+            <p class="hero-subtitle">AI 图像与视频生成平台</p>
+            <p class="hero-desc">
+                一站式 AI 创作工作台，集在线生图、智能对话、无限画布与素材管理于一体，让你的创意即刻落地。
+            </p>
+        </section>
 
-    <!-- 底部状态 -->
-    <section class="status-bar">
-        <div class="status-indicator">
-            <span class="status-dot"></span>
-            系统就绪
-        </div>
-    </section>
-
-    <!-- 模板预览弹窗 -->
-    <div class="template-modal-mask" id="templateModal">
-        <div class="template-modal" role="dialog" aria-modal="true" aria-label="模板预览">
-            <img class="template-modal-cover" id="templateModalCover" alt="模板封面">
-            <div class="template-modal-body">
-                <div class="template-modal-name" id="templateModalName"></div>
-                <div class="template-modal-meta">
-                    <div class="template-tags" id="templateModalTags"></div>
-                    <span class="template-tag" id="templateModalNodeCount"></span>
+        <!-- 功能卡片区 -->
+        <section class="cards-grid">
+            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'online'},'*')">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
                 </div>
-                <div class="template-modal-desc" id="templateModalDesc"></div>
-                <div class="template-preview-label">工作流拓扑</div>
-                <div class="template-topo">
-                    <svg id="templateTopoSvg"></svg>
-                    <div class="template-topo-loading" id="templateTopoLoading">拓扑加载中…</div>
-                    <div class="template-topo-error hidden" id="templateTopoError">模板加载失败</div>
-                </div>
-                <div class="template-modal-actions">
-                    <button type="button" class="template-apply-btn" id="templateApplyBtn">套用此模板</button>
-                    <button type="button" class="template-close-btn" id="templateModalCloseBtn">关闭</button>
+                <div class="feature-card-content">
+                    <div class="feature-card-title">
+                        在线生图
+                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    <div class="feature-card-desc">AI 驱动的图像生成引擎，支持文生图、图生图等多种模式</div>
                 </div>
             </div>
-        </div>
+
+            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'gpt-chat'},'*')">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <div class="feature-card-content">
+                    <div class="feature-card-title">
+                        GPT 对话
+                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    <div class="feature-card-desc">智能 AI 助手，辅助创意构思与提示词优化</div>
+                </div>
+            </div>
+
+            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                </div>
+                <div class="feature-card-content">
+                    <div class="feature-card-title">
+                        无限画布
+                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    <div class="feature-card-desc">自由布局的创作空间，支持多图拼接与图层编辑</div>
+                </div>
+            </div>
+
+            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'asset-manager'},'*')">
+                <div class="feature-card-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5V6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v12.7"/>
+                        <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5V8.8A2.8 2.8 0 0 0 17.2 6H6.8A2.8 2.8 0 0 0 4 8.8v10.7z"/>
+                    </svg>
+                </div>
+                <div class="feature-card-content">
+                    <div class="feature-card-title">
+                        素材库
+                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                    <div class="feature-card-desc">集中管理生成作品与上传素材，快速检索与复用</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 快捷入口区 -->
+        <section class="cta-section">
+            <button class="cta-button" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                开始创作
+            </button>
+        </section>
+
+        <!-- 最新画布 -->
+        <section class="recent-section">
+            <div class="section-header">
+                <div class="section-title">最新画布</div>
+                <button type="button" class="view-all-btn" id="viewAllBtn" hidden onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
+                    查看全部
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="recent-grid" id="recentProjects">
+                <div class="recent-empty">暂无最近画布，开始创作后这里将显示你最近访问的画布</div>
+            </div>
+        </section>
+
+        <!-- 底部状态 -->
+        <section class="status-bar">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                系统就绪
+            </div>
+        </section>
     </div>
 
     <script>
@@ -846,11 +751,9 @@
             if (e.data && e.data.type === 'studio-theme') {
                 if (e.data.theme === 'dark') {
                     document.documentElement.classList.add('theme-dark');
-                    document.documentElement.classList.add('studio-theme-dark');
                     document.documentElement.setAttribute('data-theme', 'dark');
                 } else {
                     document.documentElement.classList.remove('theme-dark');
-                    document.documentElement.classList.remove('studio-theme-dark');
                     document.documentElement.setAttribute('data-theme', 'light');
                 }
             }
@@ -860,6 +763,8 @@
         (async function initLanNotice() {
             var notice = document.getElementById('lanNotice');
             if (!notice) return;
+            // 用户关闭过就不再显示
+            if (localStorage.getItem('lan_notice_closed') === '1') return;
 
             try {
                 var res = await fetch('/api/lan-info');
@@ -902,6 +807,7 @@
         // 关闭按钮
         document.getElementById('lanCloseBtn').addEventListener('click', function() {
             document.getElementById('lanNotice').classList.remove('visible');
+            localStorage.setItem('lan_notice_closed', '1');
         });
 
         // 最新画布
@@ -984,317 +890,6 @@
             div.textContent = str;
             return div.innerHTML;
         }
-
-        // ===== 模板中心 =====
-        (function initTemplateCenter() {
-            // 模板中心默认隐藏（早退）：恢复时删除下面两行 + 移除 templateSection 的 hidden 属性
-            var sec = document.getElementById('templateSection');
-            if (!sec || sec.hidden) return;
-            var TEMPLATES_BASE = 'https://invaders-2.github.io/NOVAI/templates/index.json';
-            var FETCH_TIMEOUT = 8000;
-            var section = document.getElementById('templateSection');
-            var grid = document.getElementById('templateGrid');
-            var modal = document.getElementById('templateModal');
-            var templatesById = {};
-            var currentTemplate = null;
-
-            if (!section || !grid || !modal) return;
-
-            function fetchWithTimeout(url, timeout, asJson) {
-                return new Promise(function(resolve, reject) {
-                    var timer = setTimeout(function() { reject(new Error('fetch timeout')); }, timeout);
-                    fetch(url, { cache: 'no-store' }).then(function(r) {
-                        clearTimeout(timer);
-                        if (!r.ok) throw new Error('HTTP ' + r.status);
-                        return asJson === false ? r.blob() : r.json();
-                    }).then(resolve, function(err) {
-                        clearTimeout(timer);
-                        reject(err);
-                    });
-                });
-            }
-
-            function closestCard(el) {
-                while (el && el !== grid && !(el.classList && el.classList.contains('template-card'))) {
-                    el = el.parentNode;
-                }
-                return (el && el !== grid) ? el : null;
-            }
-
-            function renderTemplates(templates) {
-                if (!templates || !templates.length) {
-                    grid.innerHTML = '<div class="template-empty">暂无模板</div>';
-                    section.hidden = false;
-                    return;
-                }
-                var html = '';
-                templates.forEach(function(t) {
-                    var id = escapeHtml(t.id || '');
-                    var name = escapeHtml(t.name || '未命名模板');
-                    var desc = escapeHtml(t.desc || '');
-                    var cover = t.cover ? ' src="' + escapeHtml(t.cover) + '"' : '';
-                    var tagsHtml = '';
-                    if (Array.isArray(t.tags) && t.tags.length) {
-                        tagsHtml = '<div class="template-tags">' +
-                            t.tags.slice(0, 2).map(function(tag) {
-                                return '<span class="template-tag">' + escapeHtml(String(tag)) + '</span>';
-                            }).join('') +
-                            '</div>';
-                    }
-                    html += '<div class="template-card" role="button" tabindex="0" data-id="' + id + '">' +
-                        '<img class="template-cover" loading="lazy"' + cover + ' alt="' + name + '">' +
-                        '<div class="template-card-body">' +
-                        '<div class="template-card-name">' + name + '</div>' +
-                        '<div class="template-card-desc">' + desc + '</div>' +
-                        tagsHtml +
-                        '</div></div>';
-                });
-                grid.innerHTML = html;
-                section.hidden = false;
-            }
-
-            function openTemplate(t) {
-                currentTemplate = t;
-                document.getElementById('templateModalCover').src = t.cover || '';
-                document.getElementById('templateModalCover').alt = t.name || '模板封面';
-                document.getElementById('templateModalName').textContent = t.name || '未命名模板';
-                document.getElementById('templateModalDesc').textContent = t.desc || '';
-                var tagsEl = document.getElementById('templateModalTags');
-                tagsEl.innerHTML = '';
-                if (Array.isArray(t.tags)) {
-                    t.tags.slice(0, 2).forEach(function(tag) {
-                        var span = document.createElement('span');
-                        span.className = 'template-tag';
-                        span.textContent = tag;
-                        tagsEl.appendChild(span);
-                    });
-                }
-                document.getElementById('templateModalNodeCount').textContent =
-                    (t.nodeCount ? t.nodeCount + ' 个节点' : '');
-                loadTopology(t);
-                modal.classList.add('show');
-            }
-
-            function closeModal() {
-                modal.classList.remove('show');
-                currentTemplate = null;
-            }
-
-            function applyTemplate() {
-                if (!currentTemplate) return;
-                var t = currentTemplate;
-                closeModal();
-                window.parent.postMessage({
-                    type: 'navigate',
-                    route: 'canvas',
-                    workflowUrl: t.workflow || '',
-                    workflowName: t.name || ''
-                }, '*');
-            }
-
-            function loadTopology(t) {
-                var svg = document.getElementById('templateTopoSvg');
-                var loading = document.getElementById('templateTopoLoading');
-                var error = document.getElementById('templateTopoError');
-                svg.innerHTML = '';
-                loading.classList.remove('hidden');
-                error.classList.add('hidden');
-                if (!t.workflow) {
-                    loading.classList.add('hidden');
-                    error.classList.remove('hidden');
-                    return;
-                }
-                fetchWithTimeout(t.workflow, 20000, false)
-                    .then(function(blob) {
-                        var form = new FormData();
-                        form.append('file', blob, 'workflow.zip');
-                        return fetch('/api/canvas-workflows/import', { method: 'POST', body: form });
-                    })
-                    .then(function(r) {
-                        if (!r.ok) throw new Error('HTTP ' + r.status);
-                        return r.json();
-                    })
-                    .then(function(data) {
-                        loading.classList.add('hidden');
-                        if (data && Array.isArray(data.nodes) && data.nodes.length) {
-                            renderTopology(svg, data.nodes, data.connections || []);
-                            document.getElementById('templateModalNodeCount').textContent =
-                                data.nodes.length + ' 个节点';
-                        } else {
-                            error.classList.remove('hidden');
-                        }
-                    })
-                    .catch(function() {
-                        loading.classList.add('hidden');
-                        error.classList.remove('hidden');
-                    });
-            }
-
-            // 拓扑 SVG 渲染：节点按 x/y 归一化缩放，连线贝塞尔
-            var NODE_COLORS = {
-                image:     { fill: 'rgba(10, 132, 255, 0.12)',  stroke: '#0a84ff' },
-                llm:       { fill: 'rgba(175, 82, 222, 0.12)',  stroke: '#af52de' },
-                generator: { fill: 'rgba(52, 199, 89, 0.12)',   stroke: '#34c759' },
-                output:    { fill: 'rgba(142, 142, 147, 0.16)', stroke: '#8e8e93' }
-            };
-            var NODE_W = 110;
-            var NODE_H = 44;
-            var TOPO_H = 260;
-            var TOPO_PAD = 30;
-            var SVG_NS = 'http://www.w3.org/2000/svg';
-
-            function nodeColor(type) {
-                return NODE_COLORS[type] || NODE_COLORS.output;
-            }
-
-            function findNodeById(nodes, id) {
-                if (id === undefined || id === null) return null;
-                for (var i = 0; i < nodes.length; i++) {
-                    if (nodes[i].id === id || String(nodes[i].id) === String(id)) return nodes[i];
-                }
-                return null;
-            }
-
-            function connectionEndpoints(nodes, c) {
-                if (!c) return { a: null, b: null };
-                var from = c.from !== undefined ? c.from : (c.source && (c.source.node !== undefined ? c.source.node : c.source.id));
-                var to = c.to !== undefined ? c.to : (c.target && (c.target.node !== undefined ? c.target.node : c.target.id));
-                return { a: findNodeById(nodes, from), b: findNodeById(nodes, to) };
-            }
-
-            function renderTopology(svg, nodes, connections) {
-                var w = svg.clientWidth || 520;
-                svg.setAttribute('viewBox', '0 0 ' + w + ' ' + TOPO_H);
-                svg.setAttribute('width', w);
-                svg.setAttribute('height', TOPO_H);
-                svg.innerHTML = '';
-
-                var xs = nodes.map(function(n) { return Number(n.x) || 0; });
-                var ys = nodes.map(function(n) { return Number(n.y) || 0; });
-                var minX = Math.min.apply(null, xs);
-                var maxX = Math.max.apply(null, xs);
-                var minY = Math.min.apply(null, ys);
-                var maxY = Math.max.apply(null, ys);
-                var spanX = Math.max(maxX - minX, 1);
-                var spanY = Math.max(maxY - minY, 1);
-                var scale = Math.min((w - TOPO_PAD * 2 - NODE_W) / spanX, (TOPO_H - TOPO_PAD * 2 - NODE_H) / spanY);
-                if (!isFinite(scale) || scale < 0) scale = 1;
-
-                function px(x) { return TOPO_PAD + (x - minX) * scale; }
-                function py(y) { return TOPO_PAD + (y - minY) * scale; }
-
-                // 连线（先画，位于节点下层）
-                connections.forEach(function(c) {
-                    var ends = connectionEndpoints(nodes, c);
-                    if (!ends.a || !ends.b) return;
-                    var x1 = px(Number(ends.a.x) || 0) + NODE_W / 2;
-                    var y1 = py(Number(ends.a.y) || 0) + NODE_H / 2;
-                    var x2 = px(Number(ends.b.x) || 0) + NODE_W / 2;
-                    var y2 = py(Number(ends.b.y) || 0) + NODE_H / 2;
-                    var dx = Math.abs(x2 - x1) / 2;
-                    var d = 'M ' + x1 + ' ' + y1 +
-                        ' C ' + (x1 + dx) + ' ' + y1 +
-                        ', ' + (x2 - dx) + ' ' + y2 +
-                        ', ' + x2 + ' ' + y2;
-                    var path = document.createElementNS(SVG_NS, 'path');
-                    path.setAttribute('d', d);
-                    path.setAttribute('fill', 'none');
-                    path.setAttribute('stroke', '#818a9d');
-                    path.setAttribute('stroke-opacity', '0.45');
-                    path.setAttribute('stroke-width', '1.5');
-                    svg.appendChild(path);
-                });
-
-                // 节点
-                nodes.forEach(function(n) {
-                    var x = px(Number(n.x) || 0);
-                    var y = py(Number(n.y) || 0);
-                    var type = n.type || 'output';
-                    var col = nodeColor(type);
-                    var g = document.createElementNS(SVG_NS, 'g');
-                    var rect = document.createElementNS(SVG_NS, 'rect');
-                    rect.setAttribute('x', x);
-                    rect.setAttribute('y', y);
-                    rect.setAttribute('width', NODE_W);
-                    rect.setAttribute('height', NODE_H);
-                    rect.setAttribute('rx', 10);
-                    rect.setAttribute('fill', col.fill);
-                    rect.setAttribute('stroke', col.stroke);
-                    rect.setAttribute('stroke-width', '1');
-                    g.appendChild(rect);
-                    var text = document.createElementNS(SVG_NS, 'text');
-                    text.setAttribute('x', x + NODE_W / 2);
-                    text.setAttribute('y', y + NODE_H / 2);
-                    text.setAttribute('text-anchor', 'middle');
-                    text.setAttribute('dominant-baseline', 'central');
-                    text.setAttribute('font-size', '10');
-                    text.setAttribute('style', 'fill:#818a9d;font-weight:600');
-                    text.textContent = type;
-                    g.appendChild(text);
-                    svg.appendChild(g);
-                });
-            }
-
-            // 事件绑定
-            grid.addEventListener('click', function(e) {
-                var card = closestCard(e.target);
-                if (!card) return;
-                var t = templatesById[card.getAttribute('data-id')];
-                if (t) openTemplate(t);
-            });
-            grid.addEventListener('keydown', function(e) {
-                if (e.key !== 'Enter' && e.key !== ' ') return;
-                var card = closestCard(e.target);
-                if (!card) return;
-                e.preventDefault();
-                var t = templatesById[card.getAttribute('data-id')];
-                if (t) openTemplate(t);
-            });
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) closeModal();
-            });
-            document.getElementById('templateModalCloseBtn').addEventListener('click', closeModal);
-            document.getElementById('templateApplyBtn').addEventListener('click', applyTemplate);
-            window.addEventListener('keydown', function(e) {
-                if ((e.key === 'Escape' || e.keyCode === 27) && modal.classList.contains('show')) {
-                    closeModal();
-                }
-            });
-
-            // 拉取云端模板列表；失败或超时则静默隐藏整个区块
-            fetchWithTimeout(TEMPLATES_BASE, FETCH_TIMEOUT)
-                .then(function(data) {
-                    var templates = (data && Array.isArray(data.templates)) ? data.templates : [];
-                    templates.forEach(function(t) { templatesById[t.id] = t; });
-                    renderTemplates(templates);
-                })
-                .catch(function() {
-                    section.hidden = true;
-                });
-        })();
-
-        // ===== 灵感画廊视频播放保障（muted autoplay 策略兜底） =====
-        (function initGalleryVideos() {
-            var videos = document.querySelectorAll('.gallery-card video');
-            if (!videos.length) return;
-            videos.forEach(function(v) {
-                try {
-                    var p = v.play();
-                    if (p && typeof p.catch === 'function') p.catch(function() {});
-                } catch (e) { /* 自动播放策略拒绝时静默 */ }
-            });
-        })();
-        // ===== 灵感画廊横向轮播（滚轮横滚） =====
-        (function initGalleryWheel() {
-            var scroller = document.querySelector('.gallery-grid');
-            if (!scroller) return;
-            scroller.addEventListener('wheel', function(e) {
-                if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && scroller.scrollWidth > scroller.clientWidth) {
-                    e.preventDefault();
-                    scroller.scrollLeft += e.deltaY;
-                }
-            }, { passive: false });
-        })();
     </script>
 </body>
 </html>

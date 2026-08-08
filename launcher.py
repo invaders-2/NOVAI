@@ -214,7 +214,7 @@ def main():
                      f"无法加载 main.py\n\n请确认 {app_dir}\\main.py 存在且完整。\n\n错误: {e}")
         sys.exit(1)
 
-    PORT = 3000
+    PORT = 3001
     URL = f"http://127.0.0.1:{PORT}"  # 桌面窗口仍用 127.0.0.1 本地访问
 
     # 获取局域网 IP，供 main.py 的 /api/lan-info 接口使用
@@ -238,7 +238,7 @@ def main():
         # 运行时确保防火墙规则存在（安装包已添加，此处兜底）
         try:
             import subprocess as sp
-            rule_name = "NOVAI Server (port 3000)"
+            rule_name = "NOVAI Server (port 3001)"
             result = sp.run(
                 f'netsh advfirewall firewall show rule name="{rule_name}"',
                 capture_output=True, text=True, shell=True, timeout=5

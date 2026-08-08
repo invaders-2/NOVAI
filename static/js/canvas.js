@@ -88,8 +88,7 @@ function canvasVideoFallbackHtml(url, attrs=''){ return window.NovaMedia ? NovaM
 function _localVideoFallbackHtml(url, attrs=''){
     const original = canvasOriginalMediaUrl(url);
     const src = canvasDisplayMediaUrl(original);
-    const poster = canvasMediaPreviewUrl(original, 512);
-    return `<video src="${escapeAttr(src)}" poster="${escapeAttr(poster)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+    return `<video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
 }
 function canvasVideoPlayerHtml(url, attrs=''){ return window.NovaMedia ? NovaMedia.videoPlayerHtml(url, attrs) : _localVideoPlayerHtml(url, attrs); }
 function _localVideoPlayerHtml(url, attrs=''){
@@ -238,59 +237,7 @@ window.addEventListener('message', event => {
         refreshCanvasConfigFromSettings();
         if(canvas) syncRemoteCanvasNow();
     }
-    if(event.data?.type === 'import-workflow' && event.data.url){
-        // 模板套用：接收主页面（index.html）透传的导入消息
-        handleImportWorkflowMessage(event.data.url, event.data.name || '模板');
-    }
 });
-
-/* —— 模板套用：导入工作流模板（画布未就绪时暂存，就绪后自动执行） —— */
-let lastWorkflowImportUrl = '';
-let lastWorkflowImportAt = 0;
-function flushPendingWorkflowImport(){
-    if(!canvas) return;
-    // 1) 内存暂存路径：画布未就绪时收到的 import-workflow 消息
-    const pending = window.__pendingWorkflowImport;
-    if(pending){
-        window.__pendingWorkflowImport = null;
-        importWorkflowAssetUrl(pending.url, pending.name || '模板');
-    }
-    // 2) sessionStorage 兜底路径：index.html 轮询超时写入，画布就绪后补导入
-    let ssPending = null;
-    try{ ssPending = JSON.parse(sessionStorage.getItem('novai_pending_workflow') || 'null'); }catch(e){}
-    if(ssPending && ssPending.url){
-        sessionStorage.removeItem('novai_pending_workflow'); // 先移除，防止重复导入
-        // 复用 5 秒内同一 url 去重，避免与刚导入的消息重复执行
-        const now = Date.now();
-        if(ssPending.url === lastWorkflowImportUrl && now - lastWorkflowImportAt < 5000) return;
-        lastWorkflowImportUrl = ssPending.url;
-        lastWorkflowImportAt = now;
-        importWorkflowAssetUrl(ssPending.url, ssPending.name || '模板');
-    }
-}
-function handleImportWorkflowMessage(url, name){
-    // 5 秒内同一 url 去重，防止短时间内重复触发导入
-    const now = Date.now();
-    if(url === lastWorkflowImportUrl && now - lastWorkflowImportAt < 5000) return;
-    lastWorkflowImportUrl = url;
-    lastWorkflowImportAt = now;
-    if(canvas){
-        importWorkflowAssetUrl(url, name || '模板');
-        return;
-    }
-    // 画布尚未初始化：暂存消息，等待画布打开后自动导入
-    window.__pendingWorkflowImport = { url, name: name || '模板' };
-    // 轮询等待画布就绪（每 200ms 一次，最多 5 次）
-    let retries = 0;
-    const poll = () => {
-        retries++;
-        if(canvas){ flushPendingWorkflowImport(); return; }
-        if(retries < 5) setTimeout(poll, 200);
-    };
-    setTimeout(poll, 200);
-    // 兜底：1.5 秒后仍尝试一次（画布未就绪时导入函数内部会直接返回）
-    setTimeout(flushPendingWorkflowImport, 1500);
-}
 window.addEventListener('studio-lang-change', () => {
     document.title = tr('canvas.title');
     refreshGateViewControls();
@@ -2109,8 +2056,6 @@ async function createCanvas(){
         setCreateMode(false);
         await loadCanvasList(false);
         renderCanvasList();
-        // 画布初始化完成：若存在模板套用的待导入消息，立即执行
-        flushPendingWorkflowImport();
     } catch(e) {
         setStatus(tr('canvas.createFailed'));
         console.error(e);
@@ -2262,8 +2207,6 @@ async function openCanvas(id){
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
         setStatus('Ready');
-        // 画布初始化完成：若存在模板套用的待导入消息，立即执行
-        flushPendingWorkflowImport();
     } catch(e) {
         setStatus(tr('canvas.openFailed'));
         console.error(e);
@@ -8831,7 +8774,6 @@ function renderVideoBody(node){
         <div class="video-input-head">
             <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Media</div>
             <div class="video-input-actions">
-                <button type="button" class="tool-btn" data-video-auto-prompt title="✨ 自动生成提示词（视觉 LLM + Seedance 规则）"><i data-lucide="sparkles" class="w-4 h-4"></i><span>自动提示词</span></button>
                 <button type="button" class="tool-btn" data-video-manual-url title="手动输入视频 URL"><i data-lucide="link" class="w-4 h-4"></i><span>输入网址</span></button>
                 <button type="button" class="tool-btn" data-video-temp-sh ${node.tempShUploading ? 'disabled' : ''} title="上传当前输入视频到云端直链"><i data-lucide="upload-cloud" class="w-4 h-4"></i><span>${node.tempShUploading ? '上传中...' : '上传云端'}</span></button>
             </div>
@@ -8980,117 +8922,12 @@ function renderVideoBody(node){
             }
         };
     });
-    // ✨ 自动生成提示词：收集该视频节点的参考图/参考视频 → 视觉 LLM 生成 Seedance 提示词 → 复制到剪贴板
-    wrap.querySelectorAll('[data-video-auto-prompt]').forEach(btn => {
-        btn.onmousedown = e => e.stopPropagation();
-        btn.onclick = async e => {
-            e.stopPropagation();
-            if(btn.disabled) return;
-            const sources = orderedSources(node, generatorSources(node));
-            const allRefs = sources.flatMap(s => s.refs || []);
-            const mediaRefs = applyUploadedUrlToRefs((allRefs || []).filter(ref => ['image','video','audio'].includes(mediaKindForRef(ref))), node);
-            const images = imageRefsOnly(mediaRefs).map(ref => ref.url).filter(Boolean);
-            const manualVideo = manualVideoUrlForNode(node);
-            const videos = manualVideo ? [manualVideo] : videoRefsOnly(mediaRefs).map(ref => tempShUploadedUrlForNode(node, ref.url));
-            // asset:// 认证地址后端无法消费（抽帧/直传都不支持），过滤掉
-            const usableVideos = videos.filter(url => !String(url || '').startsWith('asset://'));
-            const usableImages = images.filter(url => !String(url || '').startsWith('asset://'));
-            if(!usableVideos.length && !usableImages.length){
-                alert('请先为视频节点添加参考视频或参考图，再自动生成提示词');
-                return;
-            }
-            const intent = sources.map(s => s.prompt).filter(Boolean).join('\n\n');
-            const label = btn.querySelector('span');
-            const prevLabel = label ? label.textContent : '';
-            btn.disabled = true;
-            if(label) label.textContent = '生成中…';
-            try {
-                const res = await fetch('/api/video-auto-prompt', {
-                    method:'POST',
-                    headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({videos:usableVideos, images:usableImages, prompt:intent})
-                });
-                const data = await res.json().catch(() => ({}));
-                if(!res.ok) throw new Error(data.detail || ('生成失败：HTTP ' + res.status));
-                const promptText = String(data.prompt || '').trim();
-                if(!promptText) throw new Error('生成失败：返回为空');
-                try { await navigator.clipboard.writeText(promptText); } catch(err) {}
-                alert(`已生成提示词并复制到剪贴板，请粘贴到上游提示词节点使用：\n\n${promptText}`);
-            } catch(err) {
-                showErrorModal(err.message || '自动生成提示词失败', '自动生成提示词');
-            } finally {
-                btn.disabled = false;
-                if(label) label.textContent = prevLabel;
-            }
-        };
-    });
     const list = wrap.querySelector('.video-img-list');
     renderVideoImageInputs(list, node, mediaInputs);
     renderPromptPreview(wrap.querySelector('.prompt-list'), promptInputs);
     wrap.querySelector('.gen-btn').onclick = e => { e.stopPropagation(); runCanvasGenerate(node.id); };
     bindCascadeButtons(wrap, node.id);
-    // 「截首帧」事件委托：视频输入缩略图右下角按钮 → 后端抽帧 → 创建图片节点
-    wrap.addEventListener('mousedown', e => {
-        // 阻止 mousedown 冒泡，避免触发输入项拖拽
-        if(e.target.closest('.video-first-frame-btn')) e.stopPropagation();
-    });
-    wrap.addEventListener('click', e => {
-        const btn = e.target.closest('.video-first-frame-btn');
-        if(!btn) return;
-        e.stopPropagation();
-        captureVideoFirstFrame(node, btn.dataset.videoUrl);
-    });
-    // 「截尾帧」事件委托：与截首帧对称
-    wrap.addEventListener('mousedown', e => {
-        // 阻止 mousedown 冒泡，避免触发输入项拖拽
-        if(e.target.closest('.video-last-frame-btn')) e.stopPropagation();
-    });
-    wrap.addEventListener('click', e => {
-        const btn = e.target.closest('.video-last-frame-btn');
-        if(!btn) return;
-        e.stopPropagation();
-        captureVideoLastFrame(node, btn.dataset.videoUrl);
-    });
     return wrap;
-}
-// 截取视频首帧：调后端 /api/video-first-frame 抽帧，成功后把首帧创建为图片节点
-// （放在视频节点右下偏移处，用户可编辑图片后拖回视频节点作为首帧）
-async function captureVideoFirstFrame(node, url){
-    if(!url){ showErrorModal('未找到视频地址', '截取首帧'); return; }
-    try {
-        const res = await fetch('/api/video-first-frame', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({url})
-        });
-        const data = await res.json().catch(() => ({}));
-        if(!res.ok) throw new Error(apiErrorMessage(data, `截取首帧失败（HTTP ${res.status}）`));
-        const frameUrl = data?.url;
-        if(!frameUrl) throw new Error('接口未返回图片地址');
-        createImageCardFromUrl(frameUrl, {x:(Number(node.x)||0) + 40, y:(Number(node.y)||0) + 40}, '视频首帧');
-        setStatus(langIsEn() ? 'First frame extracted — edit it, then drag it back as the video first frame' : '已截取首帧图片节点，编辑后可拖回视频节点作为首帧');
-    } catch(err) {
-        showErrorModal(err.message || '截取首帧失败', '截取首帧');
-    }
-}
-// 截取视频尾帧：调后端 /api/video-last-frame 抽帧，成功后把尾帧创建为图片节点（与截首帧对称）
-async function captureVideoLastFrame(node, url){
-    if(!url){ showErrorModal('未找到视频地址', '截取尾帧'); return; }
-    try {
-        const res = await fetch('/api/video-last-frame', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({url})
-        });
-        const data = await res.json().catch(() => ({}));
-        if(!res.ok) throw new Error(apiErrorMessage(data, `截取尾帧失败（HTTP ${res.status}）`));
-        const frameUrl = data?.url;
-        if(!frameUrl) throw new Error('接口未返回图片地址');
-        createImageCardFromUrl(frameUrl, {x:(Number(node.x)||0) + 40, y:(Number(node.y)||0) + 40}, '视频尾帧');
-        setStatus(langIsEn() ? 'Last frame extracted — edit it, then drag it back as the video last frame' : '已截取尾帧图片节点，编辑后可拖回视频节点作为尾帧');
-    } catch(err) {
-        showErrorModal(err.message || '截取尾帧失败', '截取尾帧');
-    }
 }
 function renderPromptPreview(container, promptInputs){
     if(!container) return;
@@ -9142,20 +8979,10 @@ function renderVideoImageInputs(list, node, imageInputs){
             ? canvasPreviewImgHtml(src.preview, 256)
             : (src.preview ? missingAssetHtml(src.preview, true) : '<i data-lucide="image" class="w-6 h-6 text-slate-400"></i>');
         const typeLabel = kind === 'audio' ? `音频${i + 1}` : kind === 'video' ? `视频${i + 1}` : `图${i + 1}`;
-        // 「截首帧」小按钮：仅视频输入项显示，叠加在缩略图右下角（内联样式，不改 CSS 文件）
-        const firstFrameBtn = kind === 'video'
-            ? `<button type="button" class="video-first-frame-btn" data-video-url="${escapeHtml(src.refs?.[0]?.url || src.preview || '')}" title="截取首帧为图片" style="position:absolute;right:2px;bottom:2px;z-index:2;height:16px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:8px;padding:0 6px;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;"><i data-lucide="camera" style="width:10px;height:10px;"></i></button>`
-            : '';
-        // 「截尾帧」小按钮：与截首帧对称，仅视频输入项显示，放在首帧按钮左侧（right:22px）避免重叠
-        const lastFrameBtn = kind === 'video'
-            ? `<button type="button" class="video-last-frame-btn" data-video-url="${escapeHtml(src.refs?.[0]?.url || src.preview || '')}" title="截取尾帧为图片" style="position:absolute;right:22px;bottom:2px;z-index:2;height:16px;background:rgba(0,0,0,0.55);color:#fff;border:none;border-radius:8px;padding:0 6px;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;"><i data-lucide="flag" style="width:10px;height:10px;"></i></button>`
-            : '';
         item.innerHTML = `
             <div class="video-input-thumb">
                 <span class="input-index">${i + 1}</span>
                 ${previewHtml}
-                ${firstFrameBtn}
-                ${lastFrameBtn}
                 <span class="input-label">${escapeHtml(typeLabel)}</span>
             </div>
             ${frameLabel ? `<div class="video-frame-label">${frameLabel}</div>` : ''}
@@ -11907,100 +11734,6 @@ async function runComfyNode(nodeId, opts={}){
         if(!opts.cascade){ node.running = false; refreshRunNodes(node, out); }
     }
 }
-// 清洗 LLM 节点输出为纯提示词：去代码块围栏、段落级剥离（环境限制/任务总结/末尾引导段）、
-// 引导行截断、「提示词」标记行截断、剥离废话前缀行、去结尾客套（规则保守，避免误伤正文）
-function cleanLlmPromptOutput(text){
-    if(!text) return text;
-    let t = String(text).trim();
-    // 1) 去 Markdown 代码块围栏
-    t = t.replace(/^```[a-zA-Z]*\s*/gm, '').replace(/\s*```\s*$/gm, '').trim();
-    // 2) 段落级剥离（先于标记截断/前缀剥离，避免废话段落干扰后续逐行规则）：
-    //    按空行分段（\n{2,}），删除环境限制段、任务总结段、末尾引导段，剩余段用 \n\n 重拼。
-    //    文本无空行分段（整段一行）时跳过，防止误伤单段正文。
-    if(/\n{2,}/.test(t)){
-        let paras = t.split(/\n{2,}/).map(p => p.trim()).filter(p => p);
-        // 2a) 环境限制段：段内出现“没有可用工具/无法直接产出/没有可调用/我这边没有/不具备能力/没有视频工具”等语义，整段删除
-        const envLimitRe = /(没有可用的|无法在这里直接|不能直接产出|没有[\s\S]*执行工具|没有文件系统|作为[\s\S]*任务说明|无法直接产出|没有工具|没有可调用|无法(直接|把|在这里|立即)|不能(直接|在这里|立即)|我这边[\s\S]*没有|当前没有可|不具备[\s\S]*(工具|能力)|缺少[\s\S]*(工具|能力)|没有[\s\S]*(视频编辑|视频生成)[\s\S]*(工具|能力))/;
-        paras = paras.filter(p => !envLimitRe.test(p));
-        // 2b) 任务总结段：剩余首段以“已理解任务/任务理解/好的，我/我理解/明白，/收到，/我已查看/目标是把/任务目标/我先看”等开头且总段数>1，删首段（最多循环 2 次）
-        const summaryRe = /^(已理解任务|任务理解|好的，我|我理解|明白，|收到，|^我已查看|^我已经查看|^目标(是|为|把)|^任务目标|^我(先|已经)(看|分析))/;
-        let summaryPeeled = 0;
-        while(paras.length > 1 && summaryPeeled < 2 && summaryRe.test(paras[0])){ paras.shift(); summaryPeeled++; }
-        // 2c) 末尾引导段：最后一段以“你可以把这段/你可以将这段/请将以下/如果你在/以下是指令”等开头则删除（指示用户复制的废话）
-        if(paras.length > 1 && /^(你可以把这段|你可以将这段|请将以下|如果你在|若你在|可以使用这段|用这段|以下(是|为).*(指令|提示词))/.test(paras[paras.length - 1])) paras.pop();
-        // 2d) 用 \n\n 重拼剩余段落；剥离后为空则回退剥离前文本，避免清空输出
-        const joined = paras.join('\n\n').trim();
-        if(joined) t = joined;
-    }
-    // 3) 引导行截断（在「提示词」标记截断之前）：按行扫描找第一个“引导行”——以冒号（: 或 ：）结尾、
-    //    长度 ≤100 且含“指令/提示词/可以使用/如果你在”等关键词（三重条件避免误伤正文），
-    //    该行及其之前全部丢弃、从该行之后开始；引导行冒号后还有同段内容则保留冒号后部分。
-    //    截断后为空或太短（<20 字）说明可能是正文误命中，回退原文继续走后续规则；
-    //    与「提示词」标记截断（仅要求含“提示词”+短行）相比多了“冒号结尾”约束，两者不冲突、先后执行。
-    const guideLines = t.split('\n');
-    let guideIdx = -1;
-    for(let i = 0; i < guideLines.length; i++){
-        const line = guideLines[i].trim();
-        if(!line) continue;
-        if(line.length <= 100 && /[:：]$/.test(line) && /指令|提示词|任务说明|可以使用|可以用|请使用|如果你在|若你在|直接使用|复制到|粘贴到|用于.*工具/.test(line)){ guideIdx = i; break; }
-    }
-    if(guideIdx >= 0){
-        const guideLine = guideLines[guideIdx].trim();
-        let rest = guideLines.slice(guideIdx + 1).join('\n').trim();
-        const colonIdx = Math.max(guideLine.lastIndexOf(':'), guideLine.lastIndexOf('：'));
-        const afterColon = colonIdx >= 0 ? guideLine.slice(colonIdx + 1).trim() : '';
-        if(afterColon){
-            // 如“请使用以下指令：生成一只猫…”，保留冒号后的同段内容；纯冒号结尾则只取后续行
-            rest = afterColon + (rest ? '\n' + rest : '');
-        }
-        if(rest.length >= 20) t = rest;
-    }
-    // 4) 「提示词」标记行截断（在剥前缀之前做）：找第一个含“提示词/prompt”且 ≤80 字的行，
-    //    该行及其之前全部丢弃、从该行之后开始；标记行以“：”结尾（如“提示词：”）则从冒号后内容开始。
-    //    截断后为空或太短（<20 字）说明可能是正文误命中，回退原文继续走前缀剥离逻辑。
-    const markerLines = t.split('\n');
-    let markerIdx = -1;
-    for(let i = 0; i < markerLines.length; i++){
-        const line = markerLines[i].trim();
-        if(!line) continue;
-        if(/提示词|prompt/i.test(line) && line.length <= 80){ markerIdx = i; break; }
-    }
-    if(markerIdx >= 0){
-        const markerLine = markerLines[markerIdx].trim();
-        let rest = markerLines.slice(markerIdx + 1).join('\n').trim();
-        const colonIdx = Math.max(markerLine.lastIndexOf(':'), markerLine.lastIndexOf('：'));
-        const afterColon = colonIdx >= 0 ? markerLine.slice(colonIdx + 1).trim() : '';
-        if(afterColon){
-            // 如“专业提示词：一双白鞋…”，保留冒号后的同段内容；纯“提示词：”结尾则只取后续行
-            rest = afterColon + (rest ? '\n' + rest : '');
-        }
-        if(rest.length >= 20) t = rest;
-    }
-    // 5) 剥离常见废话前缀行（最多剥 2 个非空行，行首匹配；匹配到才剥，空行不占配额）
-    const junkPrefix = /^(可以|好的|当然|以下是|下面是|基于|根据|我(为|将|来)|可直接|整体|总结|分析|先说|关于|针对|已为|为您|给你|已理解|明白|收到|了解|明白了|好的，我|我理解|我已查看|我已经查看|我先(看|分析)|目标(是|为|把)|任务目标|基于素材)/;
-    const lines = t.split('\n');
-    let peeled = 0;
-    let cut = 0;
-    while(cut < lines.length && peeled < 2){
-        const line = lines[cut].trim();
-        if(!line) { cut++; continue; }  // 空行跳过，不占剥离配额
-        if(junkPrefix.test(line) && line.length < 80) { peeled++; cut++; continue; }  // 短废话行
-        break;
-    }
-    if(cut){
-        const rest = lines.slice(cut).join('\n').trim();
-        // 剥空则不生效：整段只有一句废话行时保留原文，避免把输出清空
-        if(rest) t = rest;
-    }
-    // 6) 去掉结尾客套（匹配"希望|如需|如有|有问题|欢迎"开头的最后一行，剥 1 行；剥空不生效）
-    const tailLines = t.split('\n');
-    const last = tailLines[tailLines.length - 1]?.trim() || '';
-    if(/^(希望|如需|如有|有问题|欢迎|如果)/.test(last) && last.length < 60 && tailLines.length > 1) tailLines.pop();
-    t = tailLines.join('\n').trim();
-    // 7) 兜底：结果为空则回退原始文本（避免把输出清空）
-    if(!t) return String(text).trim();
-    return t;
-}
 async function callCanvasLLM(node, message, messages=[], options={}){
     const llmProv = resolveChatProviderId(node.llmProvider || 'comfly');
     const model = resolveChatModel(node.model || node.llmMsModel, llmProv);
@@ -12014,7 +11747,7 @@ async function callCanvasLLM(node, message, messages=[], options={}){
             model,
             ms_model: llmProv === 'modelscope' ? model : '',
             provider: llmProv,
-            system_prompt:node.systemPrompt || '',
+            system_prompt:node.systemPrompt || 'You are a helpful assistant.',
             messages,
             images,
             videos,

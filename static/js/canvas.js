@@ -117,8 +117,11 @@ function canvasActivateVideoPreview(img){
     if(!target) {
         const fallback = img.matches?.('video[data-url]') ? img : img.querySelector?.('video[data-url]');
         if(fallback){
-            fallback.controls = true;
+            // 封面加载失败时的 fallback 视频：同样用自绘控制条（WKWebView 无原生 controls）
+            const playerEl = fallback.closest('.smart-video-player') || fallback.parentElement;
+            fallback.controls = false;
             fallback.muted = false;
+            if(typeof window.initSmartVideoControls === 'function') window.initSmartVideoControls(playerEl, fallback);
             fallback.play?.().catch(() => {});
             return true;
         }
@@ -132,8 +135,8 @@ function canvasActivateVideoPreview(img){
     if(!video) return false;
     target.replaceWith(tpl.content.firstElementChild);
     const playerEl = video.closest('.smart-video-player') || video.parentElement;
-    // 隐藏节点上原有的播放按钮（video 已包在 .smart-video-player 内，向上找媒体卡片）
-    video.closest('.media-video-card,.video-thumb,.thumb-item')?.querySelector?.('.canvas-video-play,.smart-video-play')?.style?.setProperty('display', 'none');
+    // 隐藏节点上原有的播放按钮（video 已包在 .smart-video-player 内，向上找媒体卡片；普通画布容器是 .video-card）
+    video.closest('.media-video-card,.video-thumb,.thumb-item,.video-card')?.querySelector?.('.canvas-video-play,.smart-video-play')?.style?.setProperty('display', 'none');
     if(typeof initSmartVideoControls === 'function') initSmartVideoControls(playerEl || video.parentElement, video);
     video.addEventListener('ended', () => {
         const playBtn = playerEl?.querySelector?.('.svc-play i');

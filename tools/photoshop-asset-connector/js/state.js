@@ -1,13 +1,13 @@
-/* 共享状态 + 本地持久化键。挂到全局 NV 命名空间（多 script 共享作用域）。 */
-window.NV = window.NV || {};
+/* 共享状态 + 本地持久化键。挂到全局 DX 命名空间（多 script 共享作用域）。 */
+window.DX = window.DX || {};
 
-NV.LS = {
-  host: 'novai.assets.host',
-  source: 'novai.assets.source',
-  exportLayer: 'novai.assets.exportLayer',
+DX.LS = {
+  host: 'daxiong.assets.host',
+  source: 'daxiong.assets.source',
+  exportLayer: 'daxiong.assets.exportLayer',
 };
 
-NV.state = {
+DX.state = {
   host: '',
   connected: false,
   tab: 'assets',                 // assets | generate | settings

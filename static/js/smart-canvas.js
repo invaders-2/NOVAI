@@ -470,7 +470,9 @@ function _localSmartMediaPreviewUrl(itemOrUrl, size=512){
     const displayItem = typeof itemOrUrl === 'object' && itemOrUrl ? {...itemOrUrl, url:raw} : raw;
     const displayUrl = displayMediaUrl(displayItem);
     if(!raw || raw.startsWith('data:') || raw.startsWith('blob:')) return displayUrl;
-    if(!raw.startsWith('/output/') && !raw.startsWith('/assets/')) return displayUrl;
+    let pathname = raw;
+    try { pathname = new URL(raw, window.location.origin).pathname; } catch(e) {}
+    if(!pathname.startsWith('/output/') && !pathname.startsWith('/assets/')) return displayUrl;
     if(!/\.(png|jpe?g|webp|gif|bmp|avif|tiff?|mp4|webm|mov|m4v|avi|mkv)(\?|#|$)/i.test(raw)) return displayUrl;
     const width = Math.max(64, Math.min(2048, Math.round(Number(size) || 512)));
     return `/api/media-preview?w=${width}&url=${encodeURIComponent(raw)}`;
@@ -490,6 +492,27 @@ function _localLoadSmartImageDimensions(url){
         img.onload = () => resolve(img.naturalWidth && img.naturalHeight ? {w:img.naturalWidth, h:img.naturalHeight} : null);
         img.onerror = () => resolve(null);
         img.src = src;
+    });
+}
+function _probeVideoDimensions(url){
+    const src = smartOriginalMediaUrl(url);
+    if(!src || /^data:/i.test(src) || /^blob:/i.test(src)) return Promise.resolve(null);
+    return new Promise(resolve => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.muted = true;
+        let done = false;
+        const finish = (w, h) => {
+            if(done) return;
+            done = true;
+            video.removeAttribute('src');
+            video.load();
+            resolve(w > 0 && h > 0 ? {w, h} : null);
+        };
+        video.onloadedmetadata = () => finish(video.videoWidth, video.videoHeight);
+        video.onerror = () => finish(0, 0);
+        setTimeout(() => finish(0, 0), 5000);
+        video.src = src;
     });
 }
 function smartVideoPreviewHtml(itemOrUrl, size=512, attrs=''){ return window.NovaMedia ? NovaMedia.videoPreviewHtmlFromItem(itemOrUrl, size, attrs) : _localSmartVideoPreviewHtml(itemOrUrl, size, attrs); }
@@ -8010,7 +8033,8 @@ function measureSmartNodeImages(){
         if(!node || !image || image.natural_w || image.natural_h) return;
         const isPreview = isSmartPreviewImage(imgEl);
         const originalSrc = imgEl.dataset?.originalSrc || image.url || '';
-        if(isPreview && imgEl.dataset?.previewKind !== 'video' && originalSrc && !image._naturalSizeLoading){
+        const isVideoPreview = imgEl.dataset?.previewKind === 'video';
+        if(isPreview && !isVideoPreview && originalSrc && !image._naturalSizeLoading){
             image._naturalSizeLoading = true;
             loadSmartOriginalImageDimensions(originalSrc).then(size => {
                 image._naturalSizeLoading = false;
@@ -8031,6 +8055,29 @@ function measureSmartNodeImages(){
                 if(isNodeSelected(node.id)) updateComposer();
                 scheduleSave();
             });
+        }
+        if(isVideoPreview && originalSrc && !image._naturalSizeLoading){
+            image._naturalSizeLoading = true;
+            _probeVideoDimensions(originalSrc).then(dims => {
+                image._naturalSizeLoading = false;
+                if(!dims || image.natural_w || image.natural_h) return;
+                image.natural_w = dims.w;
+                image.natural_h = dims.h;
+                delete image.layout_w;
+                delete image.layout_h;
+                applyThumbDisplaySizeToElement(itemEl, image, Math.max(itemEl?.clientWidth || 0, itemEl?.clientHeight || 0));
+                updateImageResolutionBadgeElement(itemEl, image);
+                if(!isSmartGroupNode(node) && (node.images || []).length === 1 && !node.w && !node.h){
+                    const layout = singleImageLayout(image, node, mediaNodeDefaultScale(node));
+                    node.w = layout.width;
+                    node.h = layout.height;
+                }
+                updateNodeElementDuringResize(node);
+                if(containerNode && containerNode.id !== node.id) updateNodeElementDuringResize(containerNode);
+                if(isNodeSelected(node.id)) updateComposer();
+                scheduleSave();
+            });
+            return;
         }
         if(isPreview && image.layout_w && image.layout_h) return;
         const apply = () => {
@@ -12393,6 +12440,28 @@ function appendImagesToSmartNode(uploaded, targetId='', opts={}){
     if(targetGroup) addNodeToSmartGroup(targetGroup, node);
     selectedId = node.id;
     render();
+    // 拖入视频后立即探测真实尺寸并修正节点比例（不等 measureSmartNodeImages 被动触发）
+    node.images.forEach((img, idx) => {
+        if(isVideoMediaItem(img) && !img.natural_w && !img.natural_h && !img._naturalSizeLoading){
+            img._naturalSizeLoading = true;
+            _probeVideoDimensions(img.url || '').then(dims => {
+                img._naturalSizeLoading = false;
+                if(!dims || img.natural_w || img.natural_h) return;
+                img.natural_w = dims.w;
+                img.natural_h = dims.h;
+                delete img.layout_w;
+                delete img.layout_h;
+                if(node.images.length === 1 && !node.w && !node.h){
+                    const layout = singleImageLayout(img, node, mediaNodeDefaultScale(node));
+                    node.w = layout.width;
+                    node.h = layout.height;
+                }
+                updateNodeElementDuringResize(node);
+                if(isNodeSelected(node.id)) updateComposer();
+                scheduleSave();
+            });
+        }
+    });
     scheduleSave();
     return node;
 }
@@ -15168,7 +15237,12 @@ async function runApiVideoGeneration(prompt, refs, runSettings=settings){
             return item;
         });
         const manualVideo = manualSmartVideoLink(runSettings)?.url || '';
-        const refVideos = manualVideo ? manualSmartMediaLinks(runSettings).map(item => item.url).filter(Boolean) : videoRefsOnly(uploadedRefs).map(ref => effUrl(ref)).filter(Boolean);
+        // 视频编辑/局部替换意图（如"替换鞋子"）：火山要求参考媒体模式下视频 role 必须是
+        // reference_video（role="video" 实测报 InvalidParameter）。编辑意图靠 prompt 关键词
+        // 传达（后端 is_volcengine_edit_prompt），这里标记 role 仅为显式声明，值仍用 reference_video。
+        const isVideoEditPrompt = /(编辑|修改|替换|更换|删除|移除|延长|局部|替换成|换成|改为|edit|replace|change|modify|remove|delete|extend|swap|alter)/i.test(prompt || '');
+        const toVideoPayloadItem = url => isVideoEditPrompt ? {url, role: 'reference_video'} : url;
+        const refVideos = (manualVideo ? manualSmartMediaLinks(runSettings).map(item => item.url) : videoRefsOnly(uploadedRefs).map(ref => effUrl(ref))).filter(Boolean).map(toVideoPayloadItem);
         const refAudios = audioRefsOnly(uploadedRefs).map(ref => effUrl(ref)).filter(Boolean).slice(0, 3);
         if(mismatchedAsset) toast('部分认证素材属于其它平台，已回退为普通素材。切换到对应平台的视频接口才能用 asset:// 认证地址。');
         const payload = {
@@ -16213,8 +16287,26 @@ window.onmousemove = e => {
             updateNodeElementDuringResize(node);
             return;
         }
-        node.w = Math.max(minW, Math.round(resizeState.startW + dx));
-        node.h = Math.max(minH, Math.round(resizeState.startH + dy));
+        const singleVideoItem = (node.images || []).length === 1 && isVideoMediaItem((node.images || [])[0]);
+        if(singleVideoItem){
+            // 视频节点：按视频原始宽高比等比缩放，避免 object-fit:cover 把视频裁剪放大。
+            const videoItem = node.images[0];
+            const nW = Number(videoItem?.natural_w) || 0;
+            const nH = Number(videoItem?.natural_h) || 0;
+            const aspect = (nW > 0 && nH > 0) ? (nW / nH) : (resizeState.startH > 0 ? (resizeState.startW / resizeState.startH) : 16 / 9);
+            if(Math.abs(dy) > Math.abs(dx)){
+                const newH = Math.max(minH, Math.round(resizeState.startH + dy));
+                node.w = Math.max(minW, Math.round(newH * aspect));
+                node.h = newH;
+            } else {
+                const newW = Math.max(minW, Math.round(resizeState.startW + dx));
+                node.w = newW;
+                node.h = Math.max(minH, Math.round(newW / aspect));
+            }
+        } else {
+            node.w = Math.max(minW, Math.round(resizeState.startW + dx));
+            node.h = Math.max(minH, Math.round(resizeState.startH + dy));
+        }
         node.scale = 1;
         updateNodeElementDuringResize(node);
         return;

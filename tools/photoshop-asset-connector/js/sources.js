@@ -1,8 +1,8 @@
 /* 三个数据源适配器：把 资产库 / 画布资产 / 本地素材 统一成 {id,name,url,kind,search}。
  * 每个适配器暴露：load / optionsA / optionsB / items / exportTarget / doExport。 */
 (function () {
-  const state = NV.state;
-  const net = NV.net;
+  const state = DX.state;
+  const net = DX.net;
 
   function itemIsImage(item) {
     if (!item) return false;
@@ -128,7 +128,7 @@
     },
   };
 
-  NV.sources = {
+  DX.sources = {
     adapters,
     adapter() { return adapters[state.source]; },
     itemIsImage,

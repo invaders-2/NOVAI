@@ -1,15 +1,13 @@
 {
   "manifestVersion": 5,
-  "id": "com.novai.canvas.assets",
-  "name": "NOVAI画布工具",
-  "version": "0.3.1",
+  "id": "com.daxiong.canvas.assets",
+  "name": "大雄画布工具",
+  "version": "0.3.0",
   "main": "index.html",
-  "host": [
-    {
-      "app": "PS",
-      "minVersion": "24.0.0"
-    }
-  ],
+  "host": {
+    "app": "PS",
+    "minVersion": "24.0.0"
+  },
   "requiredPermissions": {
     "network": {
       "domains": "all"
@@ -23,9 +21,7 @@
     {
       "type": "panel",
       "id": "assetPanel",
-      "label": {
-        "default": "NOVAI画布工具"
-      },
+      "label": "大雄画布工具",
       "minimumSize": {
         "width": 280,
         "height": 360

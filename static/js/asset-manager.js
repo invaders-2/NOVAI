@@ -2,6 +2,7 @@
 const root = document.getElementById('assetManagerRoot');
 const statusEl = document.getElementById('assetStatus');
 const refreshBtn = document.getElementById('refreshBtn');
+const storageSettingsBtn = document.getElementById('storageSettingsBtn');
 const uploadInput = document.getElementById('assetUploadInput');
 
 const LOCAL_CAPTION_SETTINGS_KEY = 'asset_manager_local_caption_settings_v1';
@@ -110,6 +111,9 @@ let canvasAssetManageMode = false;
 let searchCompositionActive = false;
 let searchRenderTimer = null;
 let lastSearchCompositionEndAt = 0;
+
+const STORAGE_KIND_LABELS = {upload:'上传素材', generated:'生成素材', local:'本地素材'};
+let storageSettingsState = {open:false, tab:'prefs', editor:'', dirs:{}, defaults:{}, kind:'generated', items:[], selected:new Set(), loading:false, loadingMore:false, offset:0, total:0, hasMore:false, pageSize:80, restoreScrollTop:null, classificationPrompt:'', defaultClassificationPrompt:''};
 
 const LOCAL_MEDIA_EXTS = /\.(png|jpe?g|webp|gif|bmp|avif|svg|mp4|webm|mov|m4v|mp3|wav|flac|ogg|m4a|aac)(\?|#|$)/i;
 const SEARCH_INPUT_IDS = new Set(['assetSearch','workflowSearch','promptSearch','localSearch','localUploadSearch','canvasAssetSearch']);
@@ -2858,6 +2862,68 @@ async function saveLocalUploadCaption(id){
 }
 async function handleClick(event){
     const target = event.target;
+    if(target.closest?.('[data-storage-close]')){ closeStorageSettings(); return; }
+    const prefTabBtn = target.closest?.('[data-pref-tab]');
+    if(prefTabBtn){
+        syncStorageSettingsInputsToState();
+        storageSettingsState.tab = prefTabBtn.dataset.prefTab || 'prefs';
+        storageSettingsState.editor = '';
+        renderStorageSettingsModal();
+        return;
+    }
+    const prefEditorSaveBtn = target.closest?.('[data-pref-editor-save]');
+    if(prefEditorSaveBtn){
+        try {
+            const editor = prefEditorSaveBtn.dataset.prefEditorSave || '';
+            await saveStorageSettings({saveDirs:false, saveClassification:editor === 'classify'});
+            storageSettingsState.editor = '';
+            renderStorageSettingsModal();
+        } catch(err){
+            setStatus(err.message || '保存偏好设置失败');
+        }
+        return;
+    }
+    const prefEditorBtn = target.closest?.('[data-pref-editor]');
+    if(prefEditorBtn){
+        syncStorageSettingsInputsToState();
+        const editor = prefEditorBtn.dataset.prefEditor || '';
+        storageSettingsState.editor = storageSettingsState.editor === editor ? '' : editor;
+        renderStorageSettingsModal();
+        return;
+    }
+    if(target.closest?.('[data-storage-save]')){
+        try { await saveStorageSettings({saveDirs:true, saveClassification:false}); }
+        catch(err){ setStatus(err.message || '保存存储设置失败'); }
+        return;
+    }
+    const storageKindBtn = target.closest?.('[data-storage-kind]');
+    if(storageKindBtn){
+        await loadStorageFiles(storageKindBtn.dataset.storageKind || 'generated');
+        return;
+    }
+    const storageFileInput = target.closest?.('[data-storage-file]');
+    if(storageFileInput){
+        const id = storageFileInput.dataset.storageFile || '';
+        if(storageFileInput.checked) storageSettingsState.selected.add(id);
+        else storageSettingsState.selected.delete(id);
+        renderStorageSettingsModal();
+        return;
+    }
+    if(target.closest?.('[data-storage-select-all]')){
+        storageSettingsState.items.forEach(item => storageSettingsState.selected.add(item.id));
+        renderStorageSettingsModal();
+        return;
+    }
+    if(target.closest?.('[data-storage-delete]')){
+        try { await deleteSelectedStorageFiles(); }
+        catch(err){ setStatus(err.message || '删除文件失败'); }
+        return;
+    }
+    if(target.closest?.('[data-class-rule-reset]')){
+        const ta = document.getElementById('prefClassificationRulePrompt');
+        if(ta) ta.value = storageSettingsState.defaultClassificationPrompt || '';
+        return;
+    }
     if(guardMatchesManagedSelection(target)){
         event.preventDefault();
         event.stopPropagation();
@@ -3442,6 +3508,281 @@ async function handleClick(event){
         render();
         return;
     }
+}
+async function openStorageSettings(){
+    storageSettingsState.open = true;
+    storageSettingsState.selected = new Set();
+    renderStorageSettingsModal();
+    try {
+        const [data, promptData] = await Promise.all([
+            apiJson('/api/storage-settings'),
+            apiJson('/api/asset-classification-prompt')
+        ]);
+        storageSettingsState.dirs = data.dirs || {};
+        storageSettingsState.defaults = data.defaults || {};
+        storageSettingsState.classificationPrompt = promptData.prompt || '';
+        storageSettingsState.defaultClassificationPrompt = promptData.default_prompt || '';
+        await loadStorageFiles(storageSettingsState.kind || 'generated');
+    } catch(err){
+        setStatus(err.message || '加载存储设置失败');
+        renderStorageSettingsModal();
+    }
+}
+function closeStorageSettings(){
+    storageSettingsState.open = false;
+    document.getElementById('storageSettingsOverlay')?.remove();
+}
+function syncStorageSettingsInputsToState(){
+    storageSettingsState.dirs = storageSettingsState.dirs || {};
+    ['upload','generated','local'].forEach(kind => {
+        const el = document.getElementById(`storageDir_${kind}`);
+        if(el) storageSettingsState.dirs[kind] = el.value.trim();
+    });
+    const providerEl = document.getElementById('prefCaptionProvider');
+    const modelEl = document.getElementById('prefCaptionModel');
+    const captionEl = document.getElementById('prefCaptionPrompt');
+    const classifyEl = document.getElementById('prefClassifyPrompt');
+    const ruleEl = document.getElementById('prefClassificationRulePrompt');
+    if(providerEl) localCaptionProvider = providerEl.value || '';
+    if(modelEl) localCaptionModel = modelEl.value || '';
+    if(captionEl) localCaptionPrompt = captionEl.value || '描述图片';
+    if(classifyEl) localClassifyPrompt = classifyEl.value || '';
+    if(ruleEl) storageSettingsState.classificationPrompt = ruleEl.value || '';
+}
+async function saveStorageSettings(options={}){
+    syncStorageSettingsInputsToState();
+    normalizeLocalCaptionSettings();
+    writeLocalCaptionSettings();
+    const hasDirInputs = ['upload','generated','local'].some(kind => document.getElementById(`storageDir_${kind}`));
+    const hasClassificationInput = Boolean(document.getElementById('prefClassificationRulePrompt'));
+    const shouldSaveDirs = options.saveDirs ?? hasDirInputs;
+    const shouldSaveClassification = options.saveClassification ?? hasClassificationInput;
+    const tasks = {};
+    if(shouldSaveDirs){
+        const payload = {};
+        ['upload','generated','local'].forEach(kind => {
+            payload[kind] = (storageSettingsState.dirs || {})[kind] || '';
+        });
+        tasks.dirs = apiJson('/api/storage-settings', {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+        });
+    }
+    if(shouldSaveClassification){
+        tasks.classification = apiJson('/api/asset-classification-prompt', {
+            method:'PATCH',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({prompt:storageSettingsState.classificationPrompt || ''})
+        });
+    }
+    const [data, promptData] = await Promise.all([
+        tasks.dirs || Promise.resolve(null),
+        tasks.classification || Promise.resolve(null)
+    ]);
+    if(data) storageSettingsState.dirs = data.dirs || storageSettingsState.dirs || {};
+    if(promptData) storageSettingsState.classificationPrompt = promptData.prompt || storageSettingsState.classificationPrompt || '';
+    storageSettingsState.selected = new Set();
+    if(data) await loadStorageFiles(storageSettingsState.kind);
+    setStatus('偏好设置已保存');
+}
+async function loadStorageFiles(kind, options={}){
+    const append = Boolean(options.append);
+    const nextKind = kind || 'generated';
+    if(storageSettingsState.loading || storageSettingsState.loadingMore) return;
+    const currentGrid = document.querySelector('[data-storage-file-grid]');
+    const keepScrollTop = append && currentGrid ? currentGrid.scrollTop : null;
+    storageSettingsState.kind = nextKind;
+    if(append){
+        if(!storageSettingsState.hasMore) return;
+        storageSettingsState.loadingMore = true;
+    } else {
+        storageSettingsState.items = [];
+        storageSettingsState.offset = 0;
+        storageSettingsState.total = 0;
+        storageSettingsState.hasMore = false;
+        storageSettingsState.selected = new Set();
+        storageSettingsState.loading = true;
+    }
+    if(!append) renderStorageSettingsModal();
+    try {
+        const offset = append ? storageSettingsState.offset : 0;
+        const limit = storageSettingsState.pageSize || 80;
+        const data = await apiJson(`/api/storage-files?kind=${encodeURIComponent(storageSettingsState.kind)}&offset=${encodeURIComponent(offset)}&limit=${encodeURIComponent(limit)}`);
+        const items = data.items || [];
+        storageSettingsState.items = append ? [...storageSettingsState.items, ...items] : items;
+        storageSettingsState.offset = offset + items.length;
+        storageSettingsState.total = Number(data.total || storageSettingsState.items.length || 0);
+        storageSettingsState.hasMore = Boolean(data.has_more);
+        storageSettingsState.selected = new Set([...storageSettingsState.selected].filter(id => storageSettingsState.items.some(item => item.id === id)));
+    } finally {
+        storageSettingsState.loading = false;
+        storageSettingsState.loadingMore = false;
+        storageSettingsState.restoreScrollTop = keepScrollTop;
+        renderStorageSettingsModal();
+    }
+}
+function handleStorageFileGridScroll(event){
+    const grid = event.currentTarget;
+    if(!grid || storageSettingsState.loading || storageSettingsState.loadingMore || !storageSettingsState.hasMore) return;
+    if(grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 260){
+        loadStorageFiles(storageSettingsState.kind, {append:true}).catch(err => setStatus(err.message || '加载更多图片失败'));
+    }
+}
+function renderStorageSettingsModal(){
+    if(!storageSettingsState.open) return;
+    normalizeLocalCaptionSettings();
+    const providers = localCaptionProviders();
+    const models = localCaptionModels();
+    let overlay = document.getElementById('storageSettingsOverlay');
+    if(!overlay){
+        overlay = document.createElement('div');
+        overlay.id = 'storageSettingsOverlay';
+        overlay.className = 'storage-settings-overlay';
+        document.body.appendChild(overlay);
+    }
+    const dirs = storageSettingsState.dirs || {};
+    const kind = storageSettingsState.kind || 'generated';
+    const selectedCount = storageSettingsState.selected.size;
+    const rows = ['upload','generated','local'].map(key => `
+        <label class="storage-dir-row">
+            <span>${STORAGE_KIND_LABELS[key]}</span>
+            <input id="storageDir_${key}" value="${escapeAttr(dirs[key] || '')}" placeholder="${escapeAttr(storageSettingsState.defaults?.[key] || '')}">
+        </label>
+    `).join('');
+    const tabs = ['generated','upload','local'].map(key => `
+        <button class="${kind === key ? 'active' : ''}" type="button" data-storage-kind="${key}">
+            <span>${STORAGE_KIND_LABELS[key]}</span>
+        </button>
+    `).join('');
+    const loadedCount = storageSettingsState.items.length;
+    const cards = storageSettingsState.loading
+        ? `<div class="storage-empty">正在读取目录...</div>`
+        : storageSettingsState.items.length
+        ? storageSettingsState.items.map(item => `
+            <label class="storage-file-card ${storageSettingsState.selected.has(item.id) ? 'selected' : ''}">
+                <input type="checkbox" data-storage-file="${escapeAttr(item.id)}" data-storage-rel="${escapeAttr(item.rel)}" ${storageSettingsState.selected.has(item.id) ? 'checked' : ''}>
+                <img src="${escapeAttr(item.url)}" alt="">
+                <span title="${escapeAttr(item.name)}">${escapeHtml(item.name)}</span>
+                <em>${formatFileSize(item.size)}${item.width ? ` · ${item.width}×${item.height}` : ''}</em>
+            </label>
+        `).join('') + (storageSettingsState.hasMore || storageSettingsState.loadingMore
+            ? `<div class="storage-load-more">${storageSettingsState.loadingMore ? '继续加载中...' : `已加载 ${loadedCount} / ${storageSettingsState.total || loadedCount}，向下滚动继续`}</div>`
+            : `<div class="storage-load-more done">已加载全部 ${loadedCount} 张</div>`)
+        : `<div class="storage-empty">这个目录里暂时没有图片</div>`;
+    const activePrefTab = storageSettingsState.tab || 'prefs';
+    const captionOpen = storageSettingsState.editor === 'caption';
+    const classifyOpen = storageSettingsState.editor === 'classify';
+    const prefsBody = `
+        <div class="asset-pref-section">
+            <div class="asset-pref-title"><i data-lucide="wand-sparkles"></i><span>基础偏好</span></div>
+            <div class="asset-pref-grid">
+                <label class="storage-dir-row">
+                    <span>平台</span>
+                    <select id="prefCaptionProvider">
+                        ${providers.length ? providers.map(p => `<option value="${escapeAttr(p.id)}" ${p.id === localCaptionProvider ? 'selected' : ''}>${escapeHtml(p.name || p.id)}</option>`).join('') : '<option value="">暂无聊天平台</option>'}
+                    </select>
+                </label>
+                <label class="storage-dir-row">
+                    <span>模型</span>
+                    <select id="prefCaptionModel">
+                        ${models.length ? models.map(m => `<option value="${escapeAttr(m)}" ${m === localCaptionModel ? 'selected' : ''}>${escapeHtml(m)}</option>`).join('') : '<option value="">暂无模型</option>'}
+                    </select>
+                </label>
+            </div>
+        </div>
+        <div class="asset-pref-section">
+            <button class="asset-pref-fold ${captionOpen ? 'open' : ''}" type="button" data-pref-editor="caption">
+                <span><i data-lucide="message-square-text"></i><b>反推提示词</b></span>
+                <em>${escapeHtml(localCaptionPrompt || '描述图片')}</em>
+                <i data-lucide="${captionOpen ? 'chevron-up' : 'chevron-down'}"></i>
+            </button>
+            ${captionOpen ? `
+                <div class="asset-pref-editor">
+                    <label class="storage-dir-row">
+                        <span>反推提示词</span>
+                        <textarea id="prefCaptionPrompt" placeholder="描述图片">${escapeHtml(localCaptionPrompt || '描述图片')}</textarea>
+                    </label>
+                    <div class="asset-pref-editor-actions">
+                        <button class="asset-btn primary" type="button" data-pref-editor-save="caption"><i data-lucide="save"></i><span>保存</span></button>
+                    </div>
+                </div>
+            ` : ''}
+            <button class="asset-pref-fold ${classifyOpen ? 'open' : ''}" type="button" data-pref-editor="classify">
+                <span><i data-lucide="tags"></i><b>智能分类提示词</b></span>
+                <em>编辑分类规则和追加要求</em>
+                <i data-lucide="${classifyOpen ? 'chevron-up' : 'chevron-down'}"></i>
+            </button>
+            ${classifyOpen ? `
+                <div class="asset-pref-editor">
+                    <label class="storage-dir-row">
+                        <span>智能分类追加要求</span>
+                        <textarea id="prefClassifyPrompt" placeholder="可追加分类要求，例如：增加家装风格、镜头焦段、商业用途、人物年龄段、产品材质。">${escapeHtml(localClassifyPrompt || '')}</textarea>
+                    </label>
+                    <label class="storage-dir-row">
+                        <span>智能分类规则 <button class="asset-inline-link" type="button" data-class-rule-reset>恢复内置规则</button></span>
+                        <textarea id="prefClassificationRulePrompt" class="asset-pref-rule-textarea" placeholder="这里显示内置分类提示词，可按你的素材体系编辑后保存。">${escapeHtml(storageSettingsState.classificationPrompt || storageSettingsState.defaultClassificationPrompt || '')}</textarea>
+                    </label>
+                    <div class="asset-pref-editor-actions">
+                        <button class="asset-btn primary" type="button" data-pref-editor-save="classify"><i data-lucide="save"></i><span>保存</span></button>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    const manageBody = `
+        <div class="asset-pref-section">
+            <div class="asset-pref-title"><i data-lucide="folder-cog"></i><span>保存目录</span></div>
+            <div class="storage-dir-grid">${rows}</div>
+            <div class="storage-settings-actions inline">
+                <button class="asset-btn primary" type="button" data-storage-save><i data-lucide="save"></i><span>保存目录</span></button>
+            </div>
+        </div>
+        <div class="storage-file-head">
+            <div class="storage-tabs">${tabs}</div>
+            <div class="storage-file-actions">
+                <button class="asset-btn" type="button" data-storage-select-all ${storageSettingsState.items.length ? '' : 'disabled'}><i data-lucide="check-square"></i><span>全选</span></button>
+                <button class="asset-btn danger" type="button" data-storage-delete ${selectedCount ? '' : 'disabled'}><i data-lucide="trash-2"></i><span>删除 ${selectedCount || ''}</span></button>
+            </div>
+        </div>
+        <div class="storage-file-grid" data-storage-file-grid>${cards}</div>
+    `;
+    overlay.innerHTML = `
+        <div class="storage-settings-modal">
+            <div class="storage-settings-head">
+                <div>
+                    <strong>偏好设置</strong>
+                    <span>分开管理默认反推设置和素材目录文件。</span>
+                </div>
+                <button type="button" data-storage-close><i data-lucide="x"></i></button>
+            </div>
+            <div class="asset-pref-tabs">
+                <button class="${activePrefTab === 'prefs' ? 'active' : ''}" type="button" data-pref-tab="prefs"><i data-lucide="sliders-horizontal"></i><span>偏好设置</span></button>
+                <button class="${activePrefTab === 'manage' ? 'active' : ''}" type="button" data-pref-tab="manage"><i data-lucide="images"></i><span>素材管理</span></button>
+            </div>
+            <div class="asset-pref-body">${activePrefTab === 'manage' ? manageBody : prefsBody}</div>
+        </div>
+    `;
+    const fileGrid = overlay.querySelector('[data-storage-file-grid]');
+    fileGrid?.addEventListener('scroll', handleStorageFileGridScroll, {passive:true});
+    if(fileGrid && storageSettingsState.restoreScrollTop !== null){
+        fileGrid.scrollTop = storageSettingsState.restoreScrollTop;
+        storageSettingsState.restoreScrollTop = null;
+    }
+    refreshIcons();
+}
+async function deleteSelectedStorageFiles(){
+    const selected = storageSettingsState.items.filter(item => storageSettingsState.selected.has(item.id));
+    if(!selected.length) return;
+    if(!confirm(`确认删除 ${selected.length} 张图片？此操作会删除磁盘文件。`)) return;
+    const data = await apiJson('/api/storage-files/delete', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({kind:storageSettingsState.kind, items:selected.map(item => item.rel)})
+    });
+    storageSettingsState.selected.clear();
+    await loadStorageFiles(storageSettingsState.kind);
+    setStatus(`已删除 ${data.removed || 0} 个文件`);
 }
 function openAssetItem(id){
     const item = findAssetItem(id);
@@ -4252,6 +4593,10 @@ root.addEventListener('click', event => {
     handleClick(event).catch(err => setStatus(err.message || '操作失败'));
 });
 document.addEventListener('click', event => {
+    if(event.target.closest?.('#storageSettingsOverlay')){
+        handleClick(event).catch(err => setStatus(err.message || '操作失败'));
+        return;
+    }
     if(event.target.closest?.('.asset-lightbox') && !event.target.closest?.('.asset-lightbox-image,.asset-lightbox-video')) closeDetailPreview();
 });
 document.addEventListener('keydown', event => {
@@ -4361,6 +4706,18 @@ root.addEventListener('change', event => {
         render();
     }
 });
+document.addEventListener('change', event => {
+    if(!event.target?.closest?.('#storageSettingsOverlay')) return;
+    if(event.target?.id === 'prefCaptionProvider'){
+        localCaptionProvider = event.target.value || '';
+        localCaptionModel = '';
+        normalizeLocalCaptionSettings();
+        renderStorageSettingsModal();
+    }
+    if(event.target?.id === 'prefCaptionModel'){
+        localCaptionModel = event.target.value || '';
+    }
+});
 root.addEventListener('dragover', event => {
     const drop = event.target.closest?.('#assetDrop, #localUploadDrop, #workflowDrop');
     if(!drop) return;
@@ -4401,6 +4758,7 @@ document.querySelectorAll('[data-tab]').forEach(btn => {
     });
 });
 refreshBtn?.addEventListener('click', () => loadAll().catch(err => setStatus(err.message || '加载失败')));
+storageSettingsBtn?.addEventListener('click', () => openStorageSettings().catch(err => setStatus(err.message || '打开偏好设置失败')));
 window.addEventListener('message', event => {
     if(event.data?.type === 'studio-theme') window.StudioTheme?.apply?.(event.data.theme);
 });

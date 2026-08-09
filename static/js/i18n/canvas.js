@@ -300,6 +300,7 @@
         "canvas.comfyLoadingWorkflow": { zh: "正在读取工作流参数...", en: "Loading workflow parameters..." },
         "canvas.comfyNoExtraParams": { zh: "这个工作流只有图片/提示词输入，没有额外参数。", en: "This workflow only has image/prompt inputs and no extra parameters." },
         "canvas.ltxDirector": { zh: "LTX Director", en: "LTX Director" },
+        "canvas.minimaxGenerate": { zh: "MiniMax H3", en: "MiniMax H3" },
         "canvas.ltxDurationSec": { zh: "秒数", en: "Seconds" },
         "canvas.ltxDurationFrames": { zh: "帧数", en: "Frames" },
         "canvas.ltxFps": { zh: "帧率", en: "FPS" },

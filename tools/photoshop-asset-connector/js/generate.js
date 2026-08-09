@@ -4,9 +4,9 @@
  *  - ComfyUI：选工作流 → config.fields → /api/canvas-comfy-tasks 提交后台任务并轮询。
  * 结果自动置入图层。参数全部从后端拉，不写死。 */
 (function () {
-  const net = NV.net;
-  const ps = NV.ps;
-  const state = NV.state;
+  const net = DX.net;
+  const ps = DX.ps;
+  const state = DX.state;
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -90,7 +90,7 @@
       fields: g.fields, values: g.values, imgPreview: g.imgPreview, randomActive: g.randomActive,
       refs: g.refs.slice(), results: g.results.slice(),
       rhWorkflowId: g.rhWorkflowId, comfyName: g.comfyName, comfyConfig: g.comfyConfig,
-      providerVal: NV.ui.pickerValue(els.provider), modelVal: NV.ui.pickerValue(els.model),
+      providerVal: DX.ui.pickerValue(els.provider), modelVal: DX.ui.pickerValue(els.model),
     };
   }
   function setMode(mode) {
@@ -136,9 +136,9 @@
     try {
       await ensureProviders();
       if (!g.apiProviders.length) { setMsg('没有可用的 API 平台，请先在网页端配置。', 'err'); return; }
-      NV.ui.fillPicker(els.provider, g.apiProviders.map((p) => ({ value: p.id, label: p.name || p.id })), mem && mem.providerVal);
+      DX.ui.fillPicker(els.provider, g.apiProviders.map((p) => ({ value: p.id, label: p.name || p.id })), mem && mem.providerVal);
       const p = currentProvider();
-      NV.ui.fillPicker(els.model, ((p && p.image_models) || []).map((m) => ({ value: m, label: m })), mem && mem.modelVal);
+      DX.ui.fillPicker(els.model, ((p && p.image_models) || []).map((m) => ({ value: m, label: m })), mem && mem.modelVal);
       if (mem && mem.fields && mem.fields.length) {
         g.fields = mem.fields; g.values = mem.values; g.imgPreview = mem.imgPreview || {};
         renderParams();
@@ -152,7 +152,7 @@
     try {
       await ensureProviders();
       if (!g.msProvider) { setMsg('未配置 ModelScope 平台，请先在网页端配置。', 'err'); els.params.innerHTML = ''; return; }
-      NV.ui.fillPicker(els.model, (g.msProvider.image_models || []).map((m) => ({ value: m, label: m })), mem && mem.modelVal);
+      DX.ui.fillPicker(els.model, (g.msProvider.image_models || []).map((m) => ({ value: m, label: m })), mem && mem.modelVal);
       if (mem && mem.fields && mem.fields.length) {
         g.fields = mem.fields; g.values = mem.values; g.imgPreview = mem.imgPreview || {};
         renderParams();
@@ -163,22 +163,22 @@
   }
   function currentProvider() {
     if (g.mode === 'ms') return g.msProvider;
-    const v = NV.ui.pickerValue(els.provider);
+    const v = DX.ui.pickerValue(els.provider);
     return g.apiProviders.find((p) => p.id === v) || g.apiProviders[0] || null;
   }
   function renderModels() {
     const p = currentProvider();
-    NV.ui.fillPicker(els.model, ((p && p.image_models) || []).map((m) => ({ value: m, label: m })));
+    DX.ui.fillPicker(els.model, ((p && p.image_models) || []).map((m) => ({ value: m, label: m })));
   }
   async function loadSchema() {
     const p = currentProvider();
     if (!p) return;
     try {
-      const schema = await net.apiGet(`/api/image-params?provider_id=${encodeURIComponent(p.id)}&model=${encodeURIComponent(NV.ui.pickerValue(els.model) || '')}`);
+      const schema = await net.apiGet(`/api/image-params?provider_id=${encodeURIComponent(p.id)}&model=${encodeURIComponent(DX.ui.pickerValue(els.model) || '')}`);
       g.fields = (Array.isArray(schema.fields) ? schema.fields : []).filter((f) => !isHiddenField(f));
       if (!g.fields.length) throw new Error('empty');
     } catch (err) {
-      g.fields = defaultFields(String(NV.ui.pickerValue(els.model) || '').toLowerCase().includes('gpt-image-2'));
+      g.fields = defaultFields(String(DX.ui.pickerValue(els.model) || '').toLowerCase().includes('gpt-image-2'));
     }
     initValues();
     renderParams();
@@ -233,7 +233,7 @@
     try {
       const data = await net.apiGet('/api/runninghub/workflows');
       g.rhWorkflows = data.workflows || [];
-      NV.ui.fillPicker(els.rhWorkflow, [{ value: '', label: '请选择工作流' }].concat(g.rhWorkflows.map((w) => ({ value: w.workflowId, label: w.title || w.workflowId }))), mem && mem.rhWorkflowId);
+      DX.ui.fillPicker(els.rhWorkflow, [{ value: '', label: '请选择工作流' }].concat(g.rhWorkflows.map((w) => ({ value: w.workflowId, label: w.title || w.workflowId }))), mem && mem.rhWorkflowId);
       if (mem && mem.rhWorkflowId && mem.fields) {
         g.rhWorkflowId = mem.rhWorkflowId; g.fields = mem.fields; g.values = mem.values; g.imgPreview = mem.imgPreview || {};
         renderParams(); setMsg('');
@@ -245,7 +245,7 @@
     updateRun();
   }
   async function loadRhFields() {
-    const wid = NV.ui.pickerValue(els.rhWorkflow);
+    const wid = DX.ui.pickerValue(els.rhWorkflow);
     g.rhWorkflowId = wid;
     g.fields = []; g.values = {}; g.imgPreview = {}; g.randomActive = {};
     if (!wid) { els.params.innerHTML = ''; updateRun(); return; }
@@ -276,7 +276,7 @@
     try {
       const data = await net.apiGet('/api/workflows');
       g.comfyWorkflows = data.workflows || [];
-      NV.ui.fillPicker(els.comfyWorkflow, [{ value: '', label: '请选择工作流' }].concat(g.comfyWorkflows.map((w) => ({ value: w.name, label: w.title || w.name }))), mem && mem.comfyName);
+      DX.ui.fillPicker(els.comfyWorkflow, [{ value: '', label: '请选择工作流' }].concat(g.comfyWorkflows.map((w) => ({ value: w.name, label: w.title || w.name }))), mem && mem.comfyName);
       if (mem && mem.comfyName && mem.fields) {
         g.comfyName = mem.comfyName; g.comfyConfig = mem.comfyConfig; g.fields = mem.fields; g.values = mem.values; g.imgPreview = mem.imgPreview || {};
         renderParams(); setMsg('');
@@ -288,7 +288,7 @@
     updateRun();
   }
   async function loadComfyFields() {
-    const name = NV.ui.pickerValue(els.comfyWorkflow);
+    const name = DX.ui.pickerValue(els.comfyWorkflow);
     g.comfyName = name; g.comfyConfig = null;
     g.fields = []; g.values = {}; g.imgPreview = {}; g.randomActive = {};
     if (!name) { els.params.innerHTML = ''; updateRun(); return; }
@@ -428,22 +428,22 @@
       if (f.type === 'size') {
         const v = g.values[f.key] || {};
         if (role === 'size-ratio') {
-          NV.ui.fillPicker(picker, f.ratios || [], v.ratio);
-          NV.ui.onPick(picker, () => { g.values[f.key].ratio = NV.ui.pickerValue(picker); });
+          DX.ui.fillPicker(picker, f.ratios || [], v.ratio);
+          DX.ui.onPick(picker, () => { g.values[f.key].ratio = DX.ui.pickerValue(picker); });
           return;
         }
         if (role === 'size-res') {
-          NV.ui.fillPicker(picker, sizeResolutionOptions(f), v.res);
-          NV.ui.onPick(picker, () => {
-            g.values[f.key].res = NV.ui.pickerValue(picker);
+          DX.ui.fillPicker(picker, sizeResolutionOptions(f), v.res);
+          DX.ui.onPick(picker, () => {
+            g.values[f.key].res = DX.ui.pickerValue(picker);
             renderParams();
           });
           return;
         }
       }
-      NV.ui.fillPicker(picker, choiceOptions(f), g.values[f.key]);
-      NV.ui.onPick(picker, () => {
-        const raw = NV.ui.pickerValue(picker);
+      DX.ui.fillPicker(picker, choiceOptions(f), g.values[f.key]);
+      DX.ui.onPick(picker, () => {
+        const raw = DX.ui.pickerValue(picker);
         g.values[f.key] = f.type === 'int' ? Number(raw) : raw;
       });
     });
@@ -567,7 +567,7 @@
   /* ---------- 生成（非阻塞 + 队列：提交后台轮询，UI 仍可操作/再次生成） ---------- */
   function updateRun() {
     let ok = state.connected;
-    if (g.mode === 'api' || g.mode === 'ms') ok = ok && currentProvider() && NV.ui.pickerValue(els.model) && els.prompt.value.trim();
+    if (g.mode === 'api' || g.mode === 'ms') ok = ok && currentProvider() && DX.ui.pickerValue(els.model) && els.prompt.value.trim();
     else if (g.mode === 'rh') ok = ok && g.rhWorkflowId;
     else if (g.mode === 'comfy') ok = ok && g.comfyName;
     els.run.disabled = !ok;
@@ -583,7 +583,7 @@
     const p = currentProvider();
     const prompt = els.prompt.value.trim();
     if (!prompt) { setMsg('请输入提示词。', 'err'); return; }
-    const payload = Object.assign({ prompt, provider_id: p.id, model: NV.ui.pickerValue(els.model) }, collectApiParams(),
+    const payload = Object.assign({ prompt, provider_id: p.id, model: DX.ui.pickerValue(els.model) }, collectApiParams(),
       { reference_images: g.refs.map((r) => ({ url: r.url, name: r.name, kind: 'image' })) });
     setMsg('正在提交生成任务 …');
     const res = await net.apiSend('POST', '/api/canvas-image-tasks', payload);
@@ -686,14 +686,14 @@
 
   /* ---------- 事件 ---------- */
   els.modes.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => { if (state.connected) setMode(b.getAttribute('data-mode')); }));
-  NV.ui.onPick(els.provider, () => { renderModels(); loadSchema(); });
-  NV.ui.onPick(els.model, () => loadSchema());
-  NV.ui.onPick(els.rhWorkflow, loadRhFields);
-  NV.ui.onPick(els.comfyWorkflow, loadComfyFields);
+  DX.ui.onPick(els.provider, () => { renderModels(); loadSchema(); });
+  DX.ui.onPick(els.model, () => loadSchema());
+  DX.ui.onPick(els.rhWorkflow, loadRhFields);
+  DX.ui.onPick(els.comfyWorkflow, loadComfyFields);
   els.prompt.addEventListener('input', updateRun);
   els.run.addEventListener('click', run);
 
-  NV.generate = {
+  DX.generate = {
     ensureLoaded() { if (state.connected) setMode(g.mode); },
     reset() {
       g.providersLoaded = false; g.apiProviders = []; g.msProvider = null;
@@ -701,8 +701,8 @@
       g.rhWorkflows = []; g.rhWorkflowId = ''; g.comfyWorkflows = []; g.comfyName = ''; g.comfyConfig = null;
       g.refs = []; g.results = []; g.jobs = 0;
       for (const k in modeMem) delete modeMem[k];   // 换后端清空模式记忆，避免串台
-      NV.ui.fillPicker(els.provider, []); NV.ui.fillPicker(els.model, []);
-      NV.ui.fillPicker(els.rhWorkflow, []); NV.ui.fillPicker(els.comfyWorkflow, []);
+      DX.ui.fillPicker(els.provider, []); DX.ui.fillPicker(els.model, []);
+      DX.ui.fillPicker(els.rhWorkflow, []); DX.ui.fillPicker(els.comfyWorkflow, []);
       els.params.innerHTML = '';
       updateRun();
     },

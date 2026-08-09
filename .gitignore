@@ -71,3 +71,5 @@ Thumbs.db
 NOVAI.exe
 novai_startup.log
 data/*.bak
+output/
+*.bak_minimax

@@ -1,10 +1,10 @@
-/* 启动 + Tab 路由 + 资产视图渲染 + 事件绑定。依赖 NV.state/net/sources/ps/socket。 */
+/* 启动 + Tab 路由 + 资产视图渲染 + 事件绑定。依赖 DX.state/net/sources/ps/socket。 */
 (function () {
-  const state = NV.state;
-  const net = NV.net;
-  const ps = NV.ps;
-  const sources = NV.sources;
-  const socket = NV.socket;
+  const state = DX.state;
+  const net = DX.net;
+  const ps = DX.ps;
+  const sources = DX.sources;
+  const socket = DX.socket;
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -57,8 +57,8 @@
     els.tabs.forEach((b) => b.classList.toggle('active', b.getAttribute('data-tab') === tab));
     els.views.forEach((v) => v.classList.toggle('active', v.getAttribute('data-view') === tab));
     if (tab === 'settings') setTimeout(() => { try { els.server.focus(); } catch (e) {} }, 30);
-    if (tab === 'generate' && NV.generate) NV.generate.ensureLoaded();   // 首次进入生成页时拉平台列表
-    if (tab === 'agent' && NV.agent) NV.agent.ensureLoaded();
+    if (tab === 'generate' && DX.generate) DX.generate.ensureLoaded();   // 首次进入生成页时拉平台列表
+    if (tab === 'agent' && DX.agent) DX.agent.ensureLoaded();
     // 进资产页自动补齐空白缩略图（只重试没加载出来的，不重拉整页，无闪烁）
     if (tab === 'assets' && state.connected) setTimeout(() => { if (!loading) retryBlanks(true); }, 60);
   }
@@ -87,13 +87,13 @@
     const optsA = ad.optionsA();
     if (optsA) {
       els.selA.classList.remove('hidden');
-      NV.ui.fillPicker(els.selA, optsA.map((o) => ({ value: o.id, label: o.name })), state.aId);
+      DX.ui.fillPicker(els.selA, optsA.map((o) => ({ value: o.id, label: o.name })), state.aId);
     } else {
       els.selA.classList.add('hidden');
-      NV.ui.fillPicker(els.selA, [], '');
+      DX.ui.fillPicker(els.selA, [], '');
     }
     const optsB = ad.optionsB(state.aId) || [];
-    NV.ui.fillPicker(els.selB, optsB.map((o) => ({ value: o.id, label: o.name })), state.bId);
+    DX.ui.fillPicker(els.selB, optsB.map((o) => ({ value: o.id, label: o.name })), state.bId);
   }
 
   // 已加载网格 DOM 缓存：key=源|分库|分组。切回时直接复原这批已解码的 <img>，不再重新请求。
@@ -285,7 +285,7 @@
   /* ---------- 连接 ---------- */
   const socketHandlers = { isLive: () => els.live.checked, onUpdate: (src) => scheduleReload(src) };
 
-  async function connect(auto) {
+  async function connect() {
     const host = net.parseHost(els.server.value);
     if (!host) { setConnMsg('请输入地址，例如 192.168.1.10:3000', 'err'); return; }
     state.host = host;
@@ -298,21 +298,19 @@
     try {
       await loadSource(state.source, { keepSelection: false, force: true });
       state.connected = true;
-      localStorage.setItem(NV.LS.host, host);
+      localStorage.setItem(DX.LS.host, host);
       setDot('on');
       setConnMsg(`已连接 ${host}`, 'ok');
       state.wsWasOpen = false;
       state.wsBackoff = 1000;
       socket.openSocket(socketHandlers);
-      if (NV.generate) NV.generate.reset();    // 换了后端，生成页平台列表需重新加载
-      if (NV.agent) NV.agent.reset();
+      if (DX.generate) DX.generate.reset();    // 换了后端，生成页平台列表需重新加载
+      if (DX.agent) DX.agent.reset();
       switchTab('assets');
     } catch (err) {
       state.connected = false;
       setDot('err');
-      if (auto) setConnMsg(`自动连接 ${host} 失败，请检查地址。`, 'err');
-      else setConnMsg(`连接失败：${err.message || err}`, 'err');
-      switchTab('settings');
+      setConnMsg(`连接失败：${err.message || err}`, 'err');
     } finally {
       els.connect.disabled = false;
     }
@@ -357,21 +355,21 @@
     if (!src) return;
     if (!state.connected) { state.source = src; renderSources(); return; }
     if (src === state.source || loading) return;     // 加载中忽略，防止快速点击叠加请求
-    localStorage.setItem(NV.LS.source, src);
+    localStorage.setItem(DX.LS.source, src);
     setPushMsg(`正在加载${b.textContent} …`);
     loadSource(src, { keepSelection: false }).then(() => setPushMsg('')).catch((err) => setPushMsg(`加载失败：${err.message || err}`, 'err'));
   }));
 
-  NV.ui.onPick(els.selA, () => {
-    state.aId = NV.ui.pickerValue(els.selA);
+  DX.ui.onPick(els.selA, () => {
+    state.aId = DX.ui.pickerValue(els.selA);
     const optsB = sources.adapter().optionsB(state.aId) || [];
     state.bId = optsB[0] ? optsB[0].id : '';
     state.selectedId = '';
     page = 1;                                         // 本地重新筛选，无网络请求
     renderSelectors(); renderGrid();
   });
-  NV.ui.onPick(els.selB, () => {
-    state.bId = NV.ui.pickerValue(els.selB);
+  DX.ui.onPick(els.selB, () => {
+    state.bId = DX.ui.pickerValue(els.selB);
     state.selectedId = '';
     page = 1;
     renderGrid();
@@ -395,10 +393,10 @@
   });
   els.exportLayer.addEventListener('change', () => {
     state.exportLayer = !!els.exportLayer.checked;
-    localStorage.setItem(NV.LS.exportLayer, state.exportLayer ? '1' : '0');
+    localStorage.setItem(DX.LS.exportLayer, state.exportLayer ? '1' : '0');
   });
   els.github.addEventListener('click', () => {
-    ps.openUrl('https://github.com/invaders-2/NOVAI').catch((err) => setConnMsg(`打开 GitHub 失败：${err.message || err}`, 'err'));
+    ps.openUrl('https://github.com/hero8152/Infinite-Canvas').catch((err) => setConnMsg(`打开 GitHub 失败：${err.message || err}`, 'err'));
   });
 
   els.place.addEventListener('click', doPlace);
@@ -408,44 +406,19 @@
 
   /* ---------- 初始化 ---------- */
   (function init() {
-    try {
-      const bootMsg = document.getElementById('bootMsg');
-      if (bootMsg) bootMsg.style.display = 'none';
-    } catch(e) {}
-
-    try {
-      state.exportLayer = localStorage.getItem(NV.LS.exportLayer) === '1';
-      els.exportLayer.checked = state.exportLayer;
-    } catch (e) {}
-
-    try {
-      const savedSource = localStorage.getItem(NV.LS.source);
-      if (savedSource && sources.adapters[savedSource]) state.source = savedSource;
-    } catch (e) {}
-
+    els.server.value = localStorage.getItem(DX.LS.host) || '127.0.0.1:8767';
+    state.exportLayer = localStorage.getItem(DX.LS.exportLayer) === '1';
+    els.exportLayer.checked = state.exportLayer;
+    const savedSource = localStorage.getItem(DX.LS.source);
+    if (savedSource && sources.adapters[savedSource]) state.source = savedSource;
     setDot('off');
     renderSources();
     renderActions();
-
-    const savedHost = localStorage.getItem(NV.LS.host);
-    if (savedHost) {
-      els.server.value = savedHost;
-      setConnMsg(`正在自动连接 ${savedHost} …`);
-      switchTab('assets');
-      connect(true).catch(() => {});
+    if (localStorage.getItem(DX.LS.host)) {
+      setConnMsg('点「连接」恢复上次的连接。');
+      switchTab('settings');
     } else {
-      setConnMsg('正在自动探测本机 NOVAI 服务 …');
-      switchTab('assets');
-      net.probeHost().then((found) => {
-        if (found) {
-          els.server.value = found;
-          setConnMsg(`发现本机服务 ${found}，正在连接 …`);
-          connect(true).catch(() => {});
-        } else {
-          setConnMsg('未发现本机 NOVAI 服务。请先启动后端，或手动输入局域网地址。');
-          switchTab('settings');
-        }
-      }).catch(() => {});
+      switchTab('settings');
     }
   })();
 })();

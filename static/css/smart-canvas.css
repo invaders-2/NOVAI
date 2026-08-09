@@ -380,8 +380,10 @@ body.smart-node-resize .smart-node-floating-menu,
 .node-img { display:block; width:var(--node-img-w, 260px); height:var(--node-img-h, 180px); object-fit:cover; border-radius:12px; background:transparent; }
 video.node-img { object-fit:cover; background:var(--accent); }
 .media-video-card { position:relative; align-items:stretch; justify-content:stretch; overflow:hidden; border:0; border-radius:12px; background:transparent; box-sizing:border-box; }
-/* 视频按自身宽高比完整显示（contain），避免节点比例与视频比例不一致时被 cover 裁剪放大 */
-.media-video-card video,.media-video-card img[data-preview-kind="video"] { width:100%; height:100%; object-fit:contain; display:block; border-radius:11px; }
+/* 播放中的视频按自身宽高比完整显示（contain），避免比例不匹配时被裁剪放大；
+   封面图保持 cover 填满节点框，避免露出深色背景显得"封面是黑的"。 */
+.media-video-card video { width:100%; height:100%; object-fit:contain; display:block; border-radius:11px; }
+.media-video-card img[data-preview-kind="video"] { width:100%; height:100%; object-fit:cover; display:block; border-radius:11px; }
 .media-video-card video { background:var(--accent); }
 .media-video-card img[data-preview-kind="video"] { background:var(--soft); }
 .smart-video-play { position:absolute; left:50%; top:50%; z-index:5; width:52px; height:52px; transform:translate(-50%, -50%); border-radius:999px; border:1px solid rgba(255,255,255,.72); background:rgba(255,255,255,.88); color:var(--text); display:inline-flex; align-items:center; justify-content:center; box-shadow:0 12px 30px var(--shadow-color), inset 0 1px 0 rgba(255,255,255,.78); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); cursor:pointer; transition:transform .14s ease, background .14s ease, border-color .14s ease, box-shadow .14s ease; }

@@ -386,6 +386,25 @@ video.node-img { object-fit:cover; background:var(--accent); }
 .media-video-card img[data-preview-kind="video"] { width:100%; height:100%; object-fit:cover; display:block; border-radius:11px; }
 .media-video-card video { background:var(--accent); }
 .media-video-card img[data-preview-kind="video"] { background:var(--soft); }
+/* 自绘视频控制条：WKWebView（桌面端 pywebview）不渲染 video 原生 controls，
+   这里提供播放/暂停、进度、全屏，浏览器与桌面端统一。 */
+.smart-video-player { position:relative; width:100%; height:100%; display:block; border-radius:11px; overflow:hidden; }
+.smart-video-player > video { width:100%; height:100%; display:block; border-radius:11px; }
+.smart-video-controls { position:absolute; left:0; right:0; bottom:0; z-index:6; display:flex; align-items:center; gap:8px;
+  padding:10px 10px 8px; box-sizing:border-box; border-radius:0 0 11px 11px;
+  background:linear-gradient(to top, rgba(0,0,0,.62), rgba(0,0,0,0));
+  opacity:0; transition:opacity .18s ease; pointer-events:none; }
+.smart-video-player:hover .smart-video-controls { opacity:1; pointer-events:auto; }
+.smart-video-controls.svc-active { opacity:1; pointer-events:auto; }
+.svc-btn { width:30px; height:30px; min-width:30px; border-radius:999px; border:0; background:rgba(255,255,255,.18);
+  color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0;
+  backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); transition:background .14s ease; }
+.svc-btn:hover { background:rgba(255,255,255,.32); }
+.svc-btn i { width:15px; height:15px; }
+.svc-progress { flex:1; display:flex; align-items:center; gap:8px; min-width:0; }
+.svc-progress-bg { flex:1; height:4px; border-radius:999px; background:rgba(255,255,255,.28); cursor:pointer; position:relative; }
+.svc-progress-fill { position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:999px; background:#fff; }
+.svc-time { color:rgba(255,255,255,.9); font-size:10px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; white-space:nowrap; }
 .smart-video-play { position:absolute; left:50%; top:50%; z-index:5; width:52px; height:52px; transform:translate(-50%, -50%); border-radius:999px; border:1px solid rgba(255,255,255,.72); background:rgba(255,255,255,.88); color:var(--text); display:inline-flex; align-items:center; justify-content:center; box-shadow:0 12px 30px var(--shadow-color), inset 0 1px 0 rgba(255,255,255,.78); backdrop-filter:blur(22px); -webkit-backdrop-filter:blur(22px); cursor:pointer; transition:transform .14s ease, background .14s ease, border-color .14s ease, box-shadow .14s ease; }
 .theme-dark .smart-video-play { background:rgba(250, 250, 250, .9); color:var(--text); border-color:rgba(255,255,255,.68); }
 .smart-video-play::before { content:""; display:block; width:0; height:0; margin-left:3px; border-top:8px solid transparent; border-bottom:8px solid transparent; border-left:13px solid currentColor; }

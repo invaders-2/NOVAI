@@ -531,7 +531,86 @@ function smartVideoPlayerHtml(url, attrs=''){ return window.NovaMedia ? NovaMedi
 function _localSmartVideoPlayerHtml(url, attrs=''){
     const original = smartOriginalMediaUrl(url);
     const safe = escapeHtml(displayMediaUrl({url:original}));
-    return `<video src="${safe}" data-url="${escapeAttr(original)}" data-inline-video-active="1" controls autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+    // 自绘控制条：WKWebView（桌面端 pywebview）不渲染 video 原生 controls（无暂停/全屏按钮），
+    // 用自定义控件保证浏览器与桌面端行为一致。视频元素本身不挂 controls，避免双控件。
+    return `<div class="smart-video-player" data-url="${escapeAttr(original)}">
+      <video src="${safe}" data-url="${escapeAttr(original)}" data-inline-video-active="1" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>
+      <div class="smart-video-controls">
+        <button class="svc-btn svc-play" type="button" title="播放/暂停"><i data-lucide="pause"></i></button>
+        <div class="svc-progress"><div class="svc-progress-bg"><div class="svc-progress-fill"></div></div><div class="svc-time">0:00 / 0:00</div></div>
+        <button class="svc-btn svc-fullscreen" type="button" title="全屏"><i data-lucide="maximize"></i></button>
+      </div>
+    </div>`;
+}
+function initSmartVideoControls(playerEl, video){
+    // 由 shared/media.js 提供统一实现（WKWebView 不渲染原生 controls，自绘控制条）
+    if(window.initSmartVideoControls !== initSmartVideoControls) return window.initSmartVideoControls(playerEl, video);
+    if(!playerEl || !video || playerEl.dataset.svcBound) return;
+    playerEl.dataset.svcBound = '1';
+    const playBtn = playerEl.querySelector('.svc-play');
+    const fullBtn = playerEl.querySelector('.svc-fullscreen');
+    const fillEl = playerEl.querySelector('.svc-progress-fill');
+    const timeEl = playerEl.querySelector('.svc-time');
+    const fmt = s => {
+        if(!Number.isFinite(s) || s < 0) s = 0;
+        const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+        return `${m}:${String(sec).padStart(2, '0')}`;
+    };
+    const refreshIcon = () => {
+        if(!playBtn) return;
+        const icon = playBtn.querySelector('i');
+        if(!icon) return;
+        const name = video.paused ? 'play' : 'pause';
+        if(icon.getAttribute('data-lucide') !== name){
+            icon.setAttribute('data-lucide', name);
+            try { if(window.lucide) lucide.createIcons({attrs:{'data-lucide':name}}); } catch(_) {}
+        }
+    };
+    const updateProgress = () => {
+        const d = video.duration || 0;
+        const c = video.currentTime || 0;
+        if(fillEl) fillEl.style.width = d > 0 ? `${Math.min(100, (c / d) * 100)}%` : '0%';
+        if(timeEl) timeEl.textContent = `${fmt(c)} / ${fmt(d)}`;
+    };
+    const toggle = () => {
+        if(video.paused){ video.play?.().catch(() => {}); }
+        else { video.pause(); }
+        refreshIcon();
+    };
+    if(playBtn) playBtn.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+    if(video){
+        video.addEventListener('play', refreshIcon);
+        video.addEventListener('pause', refreshIcon);
+        video.addEventListener('timeupdate', updateProgress);
+        video.addEventListener('loadedmetadata', updateProgress);
+        video.addEventListener('ended', refreshIcon);
+    }
+    const seek = (e) => {
+        const bar = e.currentTarget;
+        const rect = bar.getBoundingClientRect();
+        const ratio = rect.width > 0 ? Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) : 0;
+        const d = video.duration || 0;
+        if(d > 0){ try { video.currentTime = ratio * d; } catch(_) {} }
+        updateProgress();
+    };
+    playerEl.querySelectorAll('.svc-progress-bg').forEach(bar => {
+        bar.addEventListener('click', seek);
+    });
+    if(fullBtn) fullBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const requestFS = () => {
+            try {
+                if(document.fullscreenElement) document.exitFullscreen?.();
+                else if(playerEl.requestFullscreen) playerEl.requestFullscreen();
+                else if(playerEl.webkitRequestFullscreen) playerEl.webkitRequestFullscreen();
+                else if(video.requestFullscreen) video.requestFullscreen();
+                else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+            } catch(_) {}
+        };
+        requestFS();
+    });
+    refreshIcon();
+    updateProgress();
 }
 function smartActivateVideoPreview(target){
     const root = target?.closest?.('.media-video-card,.video-thumb,.image-wrap,.thumb-item') || target?.parentElement || null;
@@ -556,13 +635,18 @@ function smartActivateVideoPreview(target){
     if(image) image._inlineVideoActive = true;
     const tpl = document.createElement('template');
     tpl.innerHTML = smartVideoPlayerHtml(original);
-    const video = tpl.content.firstElementChild;
+    const video = tpl.content.firstElementChild?.querySelector?.('video') || tpl.content.firstElementChild;
     if(!video) return false;
-    img.replaceWith(video);
-    video.parentElement?.querySelector?.('.smart-video-play')?.style?.setProperty('display', 'none');
+    img.replaceWith(tpl.content.firstElementChild);
+    const playerEl = video.closest('.smart-video-player') || video.parentElement;
+    // 隐藏节点上原有的播放按钮（video 已包在 .smart-video-player 内，向上找媒体卡片）
+    video.closest('.media-video-card,.video-thumb,.thumb-item')?.querySelector?.('.smart-video-play')?.style?.setProperty('display', 'none');
+    initSmartVideoControls(playerEl || video.parentElement, video);
     video.addEventListener('ended', () => {
         if(image) image._inlineVideoActive = true;
         video.dataset.inlineVideoActive = '1';
+        const playBtn = playerEl?.querySelector?.('.svc-play i');
+        if(playBtn) playBtn.setAttribute('data-lucide', 'play');
     });
     video.play?.().catch(() => {});
     return true;

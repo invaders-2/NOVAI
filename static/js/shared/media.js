@@ -143,16 +143,102 @@
     function videoPlayerHtml(url, attrs=''){
         const original = originalMediaUrl(url);
         const src = displayMediaUrl(original);
-        return `<video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" controls autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+        // 自绘控制条：WKWebView（桌面端 pywebview）不渲染 video 原生 controls（无暂停/全屏按钮），
+        // 用自定义控件保证浏览器与桌面端行为一致。视频元素本身不挂 controls，避免双控件。
+        return `<div class="smart-video-player" data-url="${escapeAttr(original)}">
+      <video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>
+      <div class="smart-video-controls">
+        <button class="svc-btn svc-play" type="button" title="播放/暂停"><i data-lucide="pause"></i></button>
+        <div class="svc-progress"><div class="svc-progress-bg"><div class="svc-progress-fill"></div></div><div class="svc-time">0:00 / 0:00</div></div>
+        <button class="svc-btn svc-fullscreen" type="button" title="全屏"><i data-lucide="maximize"></i></button>
+      </div>
+    </div>`;
     }
 
     function videoPlayerHtmlFromItem(url, attrs=''){
         const original = originalMediaUrlFromItem(url);
         const src = displayMediaUrlFromItem({ url: original });
-        return `<video src="${escapeHtml(src)}" data-url="${escapeAttr(original)}" data-inline-video-active="1" controls autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+        return `<div class="smart-video-player" data-url="${escapeAttr(original)}">
+      <video src="${escapeHtml(src)}" data-url="${escapeAttr(original)}" data-inline-video-active="1" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>
+      <div class="smart-video-controls">
+        <button class="svc-btn svc-play" type="button" title="播放/暂停"><i data-lucide="pause"></i></button>
+        <div class="svc-progress"><div class="svc-progress-bg"><div class="svc-progress-fill"></div></div><div class="svc-time">0:00 / 0:00</div></div>
+        <button class="svc-btn svc-fullscreen" type="button" title="全屏"><i data-lucide="maximize"></i></button>
+      </div>
+    </div>`;
     }
 
     /* ── RunningHub field helpers ── */
+
+    // 自绘视频控制条初始化：WKWebView（桌面端 pywebview）不渲染 video 原生 controls，
+    // 由 HTML 结构 .smart-video-player 提供播放/暂停、进度、全屏控件，这里绑定事件。
+    // 供 smart-canvas.js / canvas.js 共用（挂 window，页面内重复定义以先加载者为准）。
+    function initSmartVideoControls(playerEl, video){
+        if(!playerEl || !video || playerEl.dataset.svcBound) return;
+        playerEl.dataset.svcBound = '1';
+        const playBtn = playerEl.querySelector('.svc-play');
+        const fullBtn = playerEl.querySelector('.svc-fullscreen');
+        const fillEl = playerEl.querySelector('.svc-progress-fill');
+        const timeEl = playerEl.querySelector('.svc-time');
+        const fmt = s => {
+            if(!Number.isFinite(s) || s < 0) s = 0;
+            const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+            return `${m}:${String(sec).padStart(2, '0')}`;
+        };
+        const refreshIcon = () => {
+            if(!playBtn) return;
+            const icon = playBtn.querySelector('i');
+            if(!icon) return;
+            const name = video.paused ? 'play' : 'pause';
+            if(icon.getAttribute('data-lucide') !== name){
+                icon.setAttribute('data-lucide', name);
+                try { if(window.lucide) lucide.createIcons({attrs:{'data-lucide':name}}); } catch(_) {}
+            }
+        };
+        const updateProgress = () => {
+            const d = video.duration || 0;
+            const c = video.currentTime || 0;
+            if(fillEl) fillEl.style.width = d > 0 ? `${Math.min(100, (c / d) * 100)}%` : '0%';
+            if(timeEl) timeEl.textContent = `${fmt(c)} / ${fmt(d)}`;
+        };
+        const toggle = () => {
+            if(video.paused){ video.play?.().catch(() => {}); }
+            else { video.pause(); }
+            refreshIcon();
+        };
+        if(playBtn) playBtn.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+        if(video){
+            video.addEventListener('play', refreshIcon);
+            video.addEventListener('pause', refreshIcon);
+            video.addEventListener('timeupdate', updateProgress);
+            video.addEventListener('loadedmetadata', updateProgress);
+            video.addEventListener('ended', refreshIcon);
+        }
+        const seek = (e) => {
+            const bar = e.currentTarget;
+            const rect = bar.getBoundingClientRect();
+            const ratio = rect.width > 0 ? Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) : 0;
+            const d = video.duration || 0;
+            if(d > 0){ try { video.currentTime = ratio * d; } catch(_) {} }
+            updateProgress();
+        };
+        playerEl.querySelectorAll('.svc-progress-bg').forEach(bar => {
+            bar.addEventListener('click', seek);
+        });
+        if(fullBtn) fullBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            try {
+                if(document.fullscreenElement) document.exitFullscreen?.();
+                else if(playerEl.requestFullscreen) playerEl.requestFullscreen();
+                else if(playerEl.webkitRequestFullscreen) playerEl.webkitRequestFullscreen();
+                else if(video.requestFullscreen) video.requestFullscreen();
+                else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+            } catch(_) {}
+        });
+        refreshIcon();
+        updateProgress();
+    }
+    if(typeof window !== 'undefined') window.initSmartVideoControls = initSmartVideoControls;
 
     // Determine the logical kind of a RunningHub field (image, video, audio, slider, number, boolean, text).
     function rhFieldKind(field){

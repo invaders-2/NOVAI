@@ -100,7 +100,16 @@ function canvasVideoPlayerHtml(url, attrs=''){ return window.NovaMedia ? NovaMed
 function _localVideoPlayerHtml(url, attrs=''){
     const original = canvasOriginalMediaUrl(url);
     const src = canvasDisplayMediaUrl(original);
-    return `<video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" controls autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+    // 自绘控制条：WKWebView（桌面端 pywebview）不渲染 video 原生 controls（无暂停/全屏按钮），
+    // 用自定义控件保证浏览器与桌面端行为一致。视频元素本身不挂 controls，避免双控件。
+    return `<div class="smart-video-player" data-url="${escapeAttr(original)}">
+      <video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>
+      <div class="smart-video-controls">
+        <button class="svc-btn svc-play" type="button" title="播放/暂停"><i data-lucide="pause"></i></button>
+        <div class="svc-progress"><div class="svc-progress-bg"><div class="svc-progress-fill"></div></div><div class="svc-time">0:00 / 0:00</div></div>
+        <button class="svc-btn svc-fullscreen" type="button" title="全屏"><i data-lucide="maximize"></i></button>
+      </div>
+    </div>`;
 }
 function canvasActivateVideoPreview(img){
     if(!img) return false;
@@ -119,10 +128,17 @@ function canvasActivateVideoPreview(img){
     if(!original) return false;
     const tpl = document.createElement('template');
     tpl.innerHTML = canvasVideoPlayerHtml(original, target.dataset.videoPlayerAttrs || '');
-    const video = tpl.content.firstElementChild;
+    const video = tpl.content.firstElementChild?.querySelector?.('video') || tpl.content.firstElementChild;
     if(!video) return false;
-    target.replaceWith(video);
-    video.parentElement?.querySelector?.('.canvas-video-play')?.style?.setProperty('display', 'none');
+    target.replaceWith(tpl.content.firstElementChild);
+    const playerEl = video.closest('.smart-video-player') || video.parentElement;
+    // 隐藏节点上原有的播放按钮（video 已包在 .smart-video-player 内，向上找媒体卡片）
+    video.closest('.media-video-card,.video-thumb,.thumb-item')?.querySelector?.('.canvas-video-play,.smart-video-play')?.style?.setProperty('display', 'none');
+    if(typeof initSmartVideoControls === 'function') initSmartVideoControls(playerEl || video.parentElement, video);
+    video.addEventListener('ended', () => {
+        const playBtn = playerEl?.querySelector?.('.svc-play i');
+        if(playBtn) playBtn.setAttribute('data-lucide', 'play');
+    });
     video.play?.().catch(() => {});
     return true;
 }

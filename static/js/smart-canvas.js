@@ -8811,7 +8811,8 @@ function bindNodeEvents(){
         });
         el.querySelectorAll('.smart-video-play').forEach(btn => {
             btn.addEventListener('mousedown', e => {
-                e.preventDefault();
+                // 不能 preventDefault：会取消用户手势激活，随后 click 里 video.play() 被 WKWebView 拒绝。
+                // 只拦冒泡（stopImmediatePropagation 防止节点拖拽），播放动作留给 click 手势。
                 e.stopPropagation();
                 e.stopImmediatePropagation();
             }, true);

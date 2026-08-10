@@ -272,35 +272,66 @@
             bar.addEventListener('click', seek);
         });
         if(fullBtn){
+            const exitCssFullscreen = () => {
+                try {
+                    playerEl.classList.remove('svc-css-fullscreen');
+                    document.body.classList.remove('svc-fullscreen-active');
+                    // 归还节点：画布 world 带 transform，fixed 定位相对 transform 容器而非视口，
+                    // 全屏时播放器挂到 body（真正铺满视口），退出后放回原位，否则节点布局丢失。
+                    const parent = playerEl._svcFsParent;
+                    if(parent){
+                        const next = playerEl._svcFsNextSibling;
+                        playerEl._svcFsParent = null;
+                        playerEl._svcFsNextSibling = null;
+                        try { if(next) next.before(playerEl); else parent.appendChild(playerEl); }
+                        catch(_) { try { parent.appendChild(playerEl); } catch(_) {} }
+                    }
+                } catch(_) {}
+            };
+            const cssFullscreen = () => {
+                try {
+                    if(playerEl.parentElement !== document.body){
+                        playerEl._svcFsParent = playerEl.parentElement;
+                        playerEl._svcFsNextSibling = playerEl.nextSibling;
+                        document.body.appendChild(playerEl);
+                    }
+                    playerEl.classList.add('svc-css-fullscreen');
+                    document.body.classList.add('svc-fullscreen-active');
+                } catch(_) {}
+            };
             const requestFS = () => {
                 try {
                     if(playerEl.classList.contains('svc-css-fullscreen')){
                         // 退出 CSS 全屏
-                        playerEl.classList.remove('svc-css-fullscreen');
-                        document.body.classList.remove('svc-fullscreen-active');
+                        exitCssFullscreen();
                         return;
                     }
-                    // 优先原生全屏；WKWebView 无 requestFullscreen 时降级 CSS 全屏
+                    // 优先原生全屏；但 WKWebView（桌面端 pywebview）的 requestFullscreen 可能静默失败——
+                    // API 存在但不生效、promise 不 reject 也不触发 fullscreenchange，导致"点全屏无反应"。
+                    // 对策：发起请求后 350ms 内未进入原生全屏（无 fullscreenchange）即判定失败 → CSS 降级铺满视口。
                     if(document.fullscreenElement){
                         document.exitFullscreen?.();
                         return;
                     }
-                    if(playerEl.requestFullscreen){
-                        playerEl.requestFullscreen().catch(() => cssFullscreen());
-                    } else if(playerEl.webkitRequestFullscreen){
-                        playerEl.webkitRequestFullscreen();
-                    } else if(video.webkitEnterFullscreen){
-                        video.webkitEnterFullscreen();
-                    } else {
-                        cssFullscreen();
-                    }
-                } catch(_) { cssFullscreen(); }
-                function cssFullscreen(){
+                    let fsTimer = setTimeout(cssFullscreen, 350);
+                    const cancelTimer = () => { clearTimeout(fsTimer); };
+                    const onFsChange = () => cancelTimer();
+                    document.addEventListener('fullscreenchange', onFsChange, {once:true});
+                    document.addEventListener('webkitfullscreenchange', onFsChange, {once:true});
                     try {
-                        playerEl.classList.add('svc-css-fullscreen');
-                        document.body.classList.add('svc-fullscreen-active');
-                    } catch(_) {}
-                }
+                        if(playerEl.requestFullscreen){
+                            const p = playerEl.requestFullscreen();
+                            if(p && typeof p.catch === 'function') p.catch(() => { cancelTimer(); cssFullscreen(); });
+                        } else if(playerEl.webkitRequestFullscreen){
+                            playerEl.webkitRequestFullscreen();
+                        } else if(video.webkitEnterFullscreen){
+                            video.webkitEnterFullscreen();
+                        } else {
+                            cancelTimer();
+                            cssFullscreen();
+                        }
+                    } catch(_) { cancelTimer(); cssFullscreen(); }
+                } catch(_) { cssFullscreen(); }
             };
             const fire = e => { e.preventDefault(); e.stopPropagation(); requestFS(); };
             fullBtn.addEventListener('mousedown', e => e.stopPropagation());

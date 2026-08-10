@@ -6416,7 +6416,7 @@ function renderNode(node){
             if(loadedImg && mediaKind === 'video'){
                 loadedImg.addEventListener('mousedown', e => {
                     if(e.button !== 0) return;
-                    e.preventDefault();
+                    // 不能 preventDefault：会取消用户手势激活，click 里 video.play() 被 WKWebView 拒绝
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                 }, true);
@@ -6429,7 +6429,7 @@ function renderNode(node){
             }
             if(videoPlayBtn && loadedImg && mediaKind === 'video'){
                 videoPlayBtn.addEventListener('mousedown', e => {
-                    e.preventDefault();
+                    // 不能 preventDefault：会取消用户手势激活，click 里 video.play() 被 WKWebView 拒绝
                     e.stopPropagation();
                     e.stopImmediatePropagation();
                 }, true);
@@ -6624,7 +6624,7 @@ function bindOutputWrap(wrap, node){
     }
     if(playBtn && img){
         playBtn.onmousedown = e => {
-            e.preventDefault();
+            // 不能 preventDefault：会取消用户手势激活，click 里 video.play() 被 WKWebView 拒绝
             e.stopPropagation();
         };
         playBtn.onclick = e => {

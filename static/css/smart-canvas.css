@@ -393,7 +393,8 @@ video.node-img { object-fit:cover; background:var(--accent); }
 .smart-video-controls { position:absolute; left:0; right:0; bottom:0; z-index:6; display:flex; align-items:center; gap:8px;
   padding:10px 10px 8px; box-sizing:border-box; border-radius:0 0 11px 11px;
   background:linear-gradient(to top, rgba(0,0,0,.62), rgba(0,0,0,0));
-  opacity:0; transition:opacity .18s ease; pointer-events:none; }
+  /* 常显可点：WKWebView hover 不可靠，pointer-events:none 会导致点击穿透到 video 无反应 */
+  opacity:1; pointer-events:auto; transition:opacity .18s ease; }
 .smart-video-player:hover .smart-video-controls { opacity:1; pointer-events:auto; }
 /* 播放中控制条常显（不依赖 hover）：WKWebView/触屏下 hover 不可靠，保证按钮始终可点 */
 .smart-video-player.playing .smart-video-controls,

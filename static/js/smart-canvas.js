@@ -636,7 +636,10 @@ function smartActivateVideoPreview(target){
                         const playBtn = playerEl?.querySelector?.('.svc-play i');
                         if(playBtn) playBtn.setAttribute('data-lucide', 'play');
                     });
-                    video.play?.().catch(() => {});
+                    // WKWebView 可能拦截新建 video 的 play()（非用户手势上下文），失败自动静音降级
+                    video.play?.().catch(() => {
+                        try { video.muted = true; video.play?.().catch(() => {}); } catch(_) {}
+                    });
                     return true;
                 }
             }

@@ -214,9 +214,11 @@
             refreshIcon();
         };
         // 用 mousedown + click 双绑定：WKWebView 里 click 有时被吞（触摸模拟/拖动拦截），
-        // mousedown 先触发一次，click 兜底防漏；200ms 内去重防止双触发。
+        // 但 mousedown 里 preventDefault 会取消用户手势激活状态，导致 video.play() 被拒，
+        // 所以 mousedown 只 stopPropagation（防节点拖动），实际播放动作留给 click 手势。
         if(playBtn){
             let lastFire = 0;
+            const guard = e => { e.stopPropagation(); };
             const fire = e => {
                 e.preventDefault(); e.stopPropagation();
                 const now = Date.now();
@@ -224,7 +226,7 @@
                 lastFire = now;
                 toggle();
             };
-            playBtn.addEventListener('mousedown', fire);
+            playBtn.addEventListener('mousedown', guard);
             playBtn.addEventListener('click', fire);
         }
         if(video){
@@ -234,6 +236,19 @@
             video.addEventListener('timeupdate', updateProgress);
             video.addEventListener('loadedmetadata', updateProgress);
             video.addEventListener('ended', () => { refreshIcon(); syncPlayingClass(); });
+            // video 本体点击也切换播放/暂停（WKWebView 下原生点击无反应，需自处理）
+            let lastVideoTap = 0;
+            video.addEventListener('mousedown', e => {
+                // 只拦冒泡防节点拖动；不能 preventDefault（会取消用户手势激活，play() 被拒）
+                e.stopPropagation();
+            });
+            video.addEventListener('click', e => {
+                e.preventDefault(); e.stopPropagation();
+                const now = Date.now();
+                if(now - lastVideoTap < 250) return;
+                lastVideoTap = now;
+                toggle();
+            });
             syncPlayingClass();
         }
         const seek = (e) => {
@@ -245,7 +260,7 @@
             updateProgress();
         };
         playerEl.querySelectorAll('.svc-progress-bg').forEach(bar => {
-            const fire = e => {
+            const seek = e => {
                 e.preventDefault(); e.stopPropagation();
                 const rect = bar.getBoundingClientRect();
                 const ratio = rect.width > 0 ? Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) : 0;
@@ -253,8 +268,8 @@
                 if(d > 0){ try { video.currentTime = ratio * d; } catch(_) {} }
                 updateProgress();
             };
-            bar.addEventListener('mousedown', fire);
-            bar.addEventListener('click', fire);
+            bar.addEventListener('mousedown', e => e.stopPropagation());
+            bar.addEventListener('click', seek);
         });
         if(fullBtn){
             const requestFS = () => {
@@ -267,7 +282,7 @@
                 } catch(_) {}
             };
             const fire = e => { e.preventDefault(); e.stopPropagation(); requestFS(); };
-            fullBtn.addEventListener('mousedown', fire);
+            fullBtn.addEventListener('mousedown', e => e.stopPropagation());
             fullBtn.addEventListener('click', fire);
         }
         refreshIcon();

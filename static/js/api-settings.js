@@ -376,6 +376,34 @@ function trf(key, vars={}){
     return text;
 }
 function setStatus(text){ statusEl.textContent = text || ''; }
+// 轻量 toast 提示（复用 shared/utils.js 的样式）：保存成功/失败等瞬时反馈
+let _apiToastEl = null, _apiToastTimer = null;
+function apiToast(text, kind = 'ok'){
+    if(!document.body) return;
+    if(!_apiToastEl){
+        _apiToastEl = document.createElement('div');
+        _apiToastEl.style.cssText = [
+            'position:fixed', 'left:50%', 'bottom:48px', 'transform:translateX(-50%)',
+            'padding:9px 18px', 'border-radius:12px', 'font-size:13px',
+            'line-height:1.4', 'max-width:80vw', 'text-align:center',
+            'z-index:99999', 'pointer-events:none',
+            'opacity:0', 'transition:opacity .18s ease, transform .18s ease',
+            'box-shadow:0 12px 32px rgba(0,0,0,.22)',
+            'color:#fff', 'background:rgba(34, 197, 94, .94)'
+        ].join(';');
+        if(kind === 'error') _apiToastEl.style.background = 'rgba(239, 68, 68, .94)';
+        document.body.appendChild(_apiToastEl);
+    } else if(kind === 'error'){
+        _apiToastEl.style.background = 'rgba(239, 68, 68, .94)';
+    } else {
+        _apiToastEl.style.background = 'rgba(34, 197, 94, .94)';
+    }
+    _apiToastEl.textContent = text;
+    void _apiToastEl.offsetWidth;
+    _apiToastEl.style.opacity = '1';
+    if(_apiToastTimer) clearTimeout(_apiToastTimer);
+    _apiToastTimer = setTimeout(() => { _apiToastEl.style.opacity = '0'; }, 2400);
+}
 function broadcastStudioApiChange(type='providers-changed'){
     const message = { type, updated_at:Date.now() };
     try { new BroadcastChannel('studio-api').postMessage(message); } catch(e) {}
@@ -3323,6 +3351,12 @@ function openModelPicker(){
     renderModelPicker();
 }
 function closeModelPicker(){ document.getElementById('modelPickerOverlay').style.display = 'none'; }
+// 窗口式弹窗：点击遮罩（非窗口内部）关闭
+(function(){
+    const overlay = document.getElementById('modelPickerOverlay');
+    if(!overlay) return;
+    overlay.addEventListener('mousedown', e => { if(e.target === overlay) closeModelPicker(); });
+})();
 function renderModelPicker(){
     const item = provider();
     const filter = (document.getElementById('pickerFilter')?.value || '').toLowerCase();
@@ -3908,11 +3942,13 @@ async function saveProviders(){
         selectedId = provider()?.id || providers[0]?.id || '';
         renderEditor();
         setStatus(tr('api.saved'));
+        apiToast(tr('api.saved') || '保存成功', 'ok');
         // 广播变更，画布等其他 iframe 立即重新拉取最新平台/模型列表
         broadcastStudioApiChange('providers-changed');
         return true;
     } catch(err) {
         setStatus(err.message || tr('api.saveFailed'));
+        apiToast(err.message || tr('api.saveFailed') || '保存失败', 'error');
         return false;
     }
 }

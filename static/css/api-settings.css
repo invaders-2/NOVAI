@@ -263,12 +263,12 @@ body.theme-dark .api-page-delete-btn:hover {
     box-shadow:0 10px 22px rgba(127,29,29,.3) !important;
 }
 /* MS 使用提示（按 provider 显示） */
-/* 模型选择器浮层 */
-.picker-overlay { display:none; position:fixed; inset:0; background:rgba(28, 28, 28, .45); z-index:99; align-items:center; justify-content:center; padding:32px; }
-body.studio-theme-dark .picker-overlay { background:rgba(0,0,0,.62); }
-.picker-modal { width:100%; max-width:90vw; max-height:90vh; background:var(--panel); border:1px solid var(--line-strong); border-radius:24px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.3); }
-.picker-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:1; background:var(--panel); }
-.picker-foot { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:12px 20px; border-top:1px solid var(--line); position:sticky; bottom:0; z-index:1; background:var(--panel); }
+/* 模型选择器窗口弹窗（窗口式：深遮罩 + 固定宽度 + 明确标题栏 + 圆角窗口） */
+.picker-overlay { display:none; position:fixed; inset:0; background:rgba(15, 15, 18, .55); z-index:99; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); }
+body.studio-theme-dark .picker-overlay { background:rgba(0,0,0,.68); }
+.picker-modal { width:100%; max-width:680px; max-height:82vh; background:var(--panel); border:1px solid var(--line-strong); border-radius:16px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.35), 0 2px 10px rgba(0,0,0,.18); }
+.picker-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:1; background:var(--panel); }
+.picker-foot { display:flex; align-items:center; justify-content:flex-end; gap:10px; padding:12px 18px; border-top:1px solid var(--line); position:sticky; bottom:0; z-index:1; background:var(--panel); }
 .picker-title { font-size:15px; font-weight:900; color:var(--text); }
 .picker-count { font-size:11px; color:var(--muted); font-weight:700; margin-top:2px; }
 .picker-close { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:var(--muted); cursor:pointer; transition:all .15s ease; }
@@ -1008,14 +1008,14 @@ html.studio-theme-dark body .field-frame {
 }
 
 .picker-overlay {
-    background:rgba(28, 28, 28, .32);
-    backdrop-filter:blur(22px);
+    background:rgba(15, 15, 18, .55);
+    backdrop-filter:blur(4px);
 }
 
 .picker-modal {
-    max-width:960px;
-    border-radius:24px;
-    box-shadow:var(--api-shadow);
+    max-width:680px;
+    border-radius:16px;
+    box-shadow:0 24px 70px rgba(0,0,0,.35), 0 2px 10px rgba(0,0,0,.18);
 }
 
 .picker-head,
@@ -1177,6 +1177,11 @@ body {
     background:var(--api-panel-bg);
     box-shadow:none;
     backdrop-filter:none;
+}
+/* 模型选择器是独立窗口弹窗：恢复窗口边框/阴影，不受上面透明浮层风格影响 */
+.picker-modal {
+    border-color:var(--line-strong);
+    box-shadow:0 24px 70px rgba(0,0,0,.35), 0 2px 10px rgba(0,0,0,.18);
 }
 
 .sidebar {
@@ -1406,15 +1411,15 @@ body.theme-dark .api-page-delete-btn:hover {
 }
 
 .picker-overlay {
-    background:rgba(28, 28, 28, .28);
-    backdrop-filter:blur(15px);
+    background:rgba(15, 15, 18, .55);
+    backdrop-filter:blur(4px);
 }
 
 .picker-modal {
-    max-width:780px;
-    border-color:transparent;
-    border-radius:24px;
-    box-shadow:none;
+    max-width:680px;
+    border-color:var(--line-strong);
+    border-radius:16px;
+    box-shadow:0 24px 70px rgba(0,0,0,.35), 0 2px 10px rgba(0,0,0,.18);
 }
 
 .rh-workflow-editor-modal,
@@ -2827,6 +2832,12 @@ html:not(.studio-theme-dark) body:not(.theme-dark) .block,
 html:not(.studio-theme-dark) body:not(.theme-dark) .picker-modal {
     background:var(--api-light-panel) !important;
     color:var(--api-light-text);
+}
+/* 模型选择器窗口弹窗保持窗口面板背景（不被上面的 !important 浅色面板覆盖） */
+body:not(.studio-theme-dark) .picker-modal,
+html:not(.studio-theme-dark) body:not(.theme-dark) .picker-modal {
+    background:var(--panel) !important;
+    box-shadow:0 24px 70px rgba(0,0,0,.35), 0 2px 10px rgba(0,0,0,.18) !important;
 }
 
 body:not(.studio-theme-dark) .page-head .sub,

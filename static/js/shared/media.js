@@ -202,17 +202,39 @@
             if(timeEl) timeEl.textContent = `${fmt(c)} / ${fmt(d)}`;
         };
         const toggle = () => {
-            if(video.paused){ video.play?.().catch(() => {}); }
-            else { video.pause(); }
+            if(video.paused){
+                // 桌面端 WKWebView 对带声音视频的 play() 可能拒绝（autoplay 策略），
+                // 失败后自动降级为静音播放，保证画面能动（用户可再点全屏/进度）。
+                video.play?.().catch(() => {
+                    try { video.muted = true; video.play?.().catch(() => {}); } catch(_) {}
+                });
+            } else {
+                video.pause();
+            }
             refreshIcon();
         };
-        if(playBtn) playBtn.addEventListener('click', e => { e.stopPropagation(); toggle(); });
+        // 用 mousedown + click 双绑定：WKWebView 里 click 有时被吞（触摸模拟/拖动拦截），
+        // mousedown 先触发一次，click 兜底防漏；200ms 内去重防止双触发。
+        if(playBtn){
+            let lastFire = 0;
+            const fire = e => {
+                e.preventDefault(); e.stopPropagation();
+                const now = Date.now();
+                if(now - lastFire < 200) return;
+                lastFire = now;
+                toggle();
+            };
+            playBtn.addEventListener('mousedown', fire);
+            playBtn.addEventListener('click', fire);
+        }
         if(video){
-            video.addEventListener('play', refreshIcon);
-            video.addEventListener('pause', refreshIcon);
+            const syncPlayingClass = () => { try { playerEl.classList.toggle('playing', !video.paused); } catch(_) {} };
+            video.addEventListener('play', () => { refreshIcon(); syncPlayingClass(); });
+            video.addEventListener('pause', () => { refreshIcon(); syncPlayingClass(); });
             video.addEventListener('timeupdate', updateProgress);
             video.addEventListener('loadedmetadata', updateProgress);
-            video.addEventListener('ended', refreshIcon);
+            video.addEventListener('ended', () => { refreshIcon(); syncPlayingClass(); });
+            syncPlayingClass();
         }
         const seek = (e) => {
             const bar = e.currentTarget;
@@ -223,18 +245,31 @@
             updateProgress();
         };
         playerEl.querySelectorAll('.svc-progress-bg').forEach(bar => {
-            bar.addEventListener('click', seek);
+            const fire = e => {
+                e.preventDefault(); e.stopPropagation();
+                const rect = bar.getBoundingClientRect();
+                const ratio = rect.width > 0 ? Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) : 0;
+                const d = video.duration || 0;
+                if(d > 0){ try { video.currentTime = ratio * d; } catch(_) {} }
+                updateProgress();
+            };
+            bar.addEventListener('mousedown', fire);
+            bar.addEventListener('click', fire);
         });
-        if(fullBtn) fullBtn.addEventListener('click', e => {
-            e.stopPropagation();
-            try {
-                if(document.fullscreenElement) document.exitFullscreen?.();
-                else if(playerEl.requestFullscreen) playerEl.requestFullscreen();
-                else if(playerEl.webkitRequestFullscreen) playerEl.webkitRequestFullscreen();
-                else if(video.requestFullscreen) video.requestFullscreen();
-                else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
-            } catch(_) {}
-        });
+        if(fullBtn){
+            const requestFS = () => {
+                try {
+                    if(document.fullscreenElement) document.exitFullscreen?.();
+                    else if(playerEl.requestFullscreen) playerEl.requestFullscreen();
+                    else if(playerEl.webkitRequestFullscreen) playerEl.webkitRequestFullscreen();
+                    else if(video.requestFullscreen) video.requestFullscreen();
+                    else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+                } catch(_) {}
+            };
+            const fire = e => { e.preventDefault(); e.stopPropagation(); requestFS(); };
+            fullBtn.addEventListener('mousedown', fire);
+            fullBtn.addEventListener('click', fire);
+        }
         refreshIcon();
         updateProgress();
     }

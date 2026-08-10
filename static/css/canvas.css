@@ -328,6 +328,9 @@ body.canvas-selecting .node .llm-bubble { pointer-events:none !important; }
   background:linear-gradient(to top, rgba(0,0,0,.62), rgba(0,0,0,0));
   opacity:0; transition:opacity .18s ease; pointer-events:none; }
 .smart-video-player:hover .smart-video-controls { opacity:1; pointer-events:auto; }
+/* 播放中控制条常显（不依赖 hover）：WKWebView/触屏下 hover 不可靠，保证按钮始终可点 */
+.smart-video-player.playing .smart-video-controls,
+.smart-video-player:active .smart-video-controls { opacity:1; pointer-events:auto; }
 .smart-video-controls.svc-active { opacity:1; pointer-events:auto; }
 .svc-btn { width:30px; height:30px; min-width:30px; border-radius:999px; border:0; background:rgba(255,255,255,.18);
   color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0;

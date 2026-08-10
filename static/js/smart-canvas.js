@@ -618,8 +618,11 @@ function smartActivateVideoPreview(target){
     if(!img){
         const fallback = target?.matches?.('video[data-url]') ? target : root?.querySelector?.('video[data-url]');
         if(fallback){
-            fallback.controls = true;
+            // 封面加载失败时的 fallback 视频：同样用自绘控制条（WKWebView 无原生 controls）
+            const playerEl = fallback.closest('.smart-video-player') || fallback.parentElement;
+            fallback.controls = false;
             fallback.muted = false;
+            if(typeof window.initSmartVideoControls === 'function') window.initSmartVideoControls(playerEl, fallback);
             fallback.play?.().catch(() => {});
             return true;
         }

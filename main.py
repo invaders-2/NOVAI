@@ -1507,6 +1507,23 @@ os.makedirs(CANVAS_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
 
+# 桌面端（Chromium 系 WebView/Electron）会启发式缓存 HTML/JS/CSS：更新版本号后若页面本身被缓存，
+# 页面里的 ?v= 还是旧值 → 加载旧资源。这里对代码类静态资源强制 no-cache（媒体/输出文件不处理）。
+@app.middleware("http")
+async def no_cache_static_middleware(request, call_next):
+    response = await call_next(request)
+    try:
+        path = request.url.path
+        if path.startswith(("/static/", "/output/", "/assets/")):
+            low = path.lower()
+            if low.endswith((".html", ".htm", ".js", ".mjs", ".css", ".json")) or low.endswith((".map",)):
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+    except Exception:
+        pass
+    return response
+
 CHANGELOG_PATH = os.path.join(STATIC_DIR, "update-notes.json")
 
 @app.get("/api/changelog")

@@ -399,6 +399,11 @@ video.node-img { object-fit:cover; background:var(--accent); }
 /* 播放中控制条常显（不依赖 hover）：WKWebView/触屏下 hover 不可靠，保证按钮始终可点 */
 .smart-video-player.playing .smart-video-controls,
 .smart-video-player:active .smart-video-controls { opacity:1; pointer-events:auto; }
+/* CSS 全屏降级：WKWebView 无 requestFullscreen API 时铺满视口 */
+.smart-video-player.svc-css-fullscreen { position:fixed; left:0; top:0; width:100vw; height:100vh; z-index:9999;
+  border-radius:0; background:#000; }
+.smart-video-player.svc-css-fullscreen > video { width:100%; height:100%; object-fit:contain; border-radius:0; }
+body.svc-fullscreen-active { overflow:hidden; }
 .smart-video-controls.svc-active { opacity:1; pointer-events:auto; }
 .svc-btn { width:30px; height:30px; min-width:30px; border-radius:999px; border:0; background:rgba(255,255,255,.18);
   color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0;

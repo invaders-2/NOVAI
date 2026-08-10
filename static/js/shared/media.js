@@ -274,12 +274,33 @@
         if(fullBtn){
             const requestFS = () => {
                 try {
-                    if(document.fullscreenElement) document.exitFullscreen?.();
-                    else if(playerEl.requestFullscreen) playerEl.requestFullscreen();
-                    else if(playerEl.webkitRequestFullscreen) playerEl.webkitRequestFullscreen();
-                    else if(video.requestFullscreen) video.requestFullscreen();
-                    else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
-                } catch(_) {}
+                    if(playerEl.classList.contains('svc-css-fullscreen')){
+                        // 退出 CSS 全屏
+                        playerEl.classList.remove('svc-css-fullscreen');
+                        document.body.classList.remove('svc-fullscreen-active');
+                        return;
+                    }
+                    // 优先原生全屏；WKWebView 无 requestFullscreen 时降级 CSS 全屏
+                    if(document.fullscreenElement){
+                        document.exitFullscreen?.();
+                        return;
+                    }
+                    if(playerEl.requestFullscreen){
+                        playerEl.requestFullscreen().catch(() => cssFullscreen());
+                    } else if(playerEl.webkitRequestFullscreen){
+                        playerEl.webkitRequestFullscreen();
+                    } else if(video.webkitEnterFullscreen){
+                        video.webkitEnterFullscreen();
+                    } else {
+                        cssFullscreen();
+                    }
+                } catch(_) { cssFullscreen(); }
+                function cssFullscreen(){
+                    try {
+                        playerEl.classList.add('svc-css-fullscreen');
+                        document.body.classList.add('svc-fullscreen-active');
+                    } catch(_) {}
+                }
             };
             const fire = e => { e.preventDefault(); e.stopPropagation(); requestFS(); };
             fullBtn.addEventListener('mousedown', e => e.stopPropagation());

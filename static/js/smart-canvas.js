@@ -615,6 +615,14 @@ function initSmartVideoControls(playerEl, video){
 }
 function smartActivateVideoPreview(target){
     const root = target?.closest?.('.media-video-card,.video-thumb,.image-wrap,.thumb-item') || target?.parentElement || null;
+    // 播放激活时选中所属节点，保证节点工具栏（编辑器）保持显示
+    const selNodeEl = target?.closest?.('.image-node') || root?.closest?.('.image-node');
+    if(selNodeEl?.dataset?.id){
+        selectedId = selNodeEl.dataset.id;
+        selectedIds = [];
+        selectedImage = {nodeId:selNodeEl.dataset.id, index:-1};
+        syncChatContext?.();
+    }
     const img = target?.matches?.('img[data-preview-kind="video"]') ? target : root?.querySelector?.('img[data-preview-kind="video"]');
     if(!img){
         const fallback = target?.matches?.('video[data-url]') ? target : root?.querySelector?.('video[data-url]');
@@ -640,6 +648,7 @@ function smartActivateVideoPreview(target){
                     video.play?.().catch(() => {
                         try { video.muted = true; video.play?.().catch(() => {}); } catch(_) {}
                     });
+                    if(typeof syncSelectionUi === 'function') syncSelectionUi();
                     return true;
                 }
             }
@@ -647,6 +656,7 @@ function smartActivateVideoPreview(target){
             fallback.controls = false;
             fallback.muted = false;
             fallback.play?.().catch(() => {});
+            if(typeof syncSelectionUi === 'function') syncSelectionUi();
             return true;
         }
         return false;
@@ -675,6 +685,7 @@ function smartActivateVideoPreview(target){
         if(playBtn) playBtn.setAttribute('data-lucide', 'play');
     });
     video.play?.().catch(() => {});
+    if(typeof syncSelectionUi === 'function') syncSelectionUi();
     return true;
 }
 function isSmartPreviewImage(img){

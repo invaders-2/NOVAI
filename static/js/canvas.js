@@ -113,6 +113,13 @@ function _localVideoPlayerHtml(url, attrs=''){
 }
 function canvasActivateVideoPreview(img){
     if(!img) return false;
+    // 播放激活时选中所属节点，保证节点工具栏（编辑器）保持显示
+    const selNodeEl = img.closest?.('.node') || img.querySelector?.('.node');
+    if(selNodeEl?.dataset?.id && typeof selected !== 'undefined' && selected instanceof Set){
+        selected.clear();
+        selected.add(selNodeEl.dataset.id);
+        if(typeof refreshSelectionVisuals === 'function') refreshSelectionVisuals();
+    }
     const target = img.matches?.('img[data-preview-kind="video"]') ? img : img.querySelector?.('img[data-preview-kind="video"]');
     if(!target) {
         const fallback = img.matches?.('video[data-url]') ? img : img.querySelector?.('video[data-url]');

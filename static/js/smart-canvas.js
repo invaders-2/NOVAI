@@ -525,7 +525,8 @@ function smartVideoFallbackHtml(url, attrs=''){ return window.NovaMedia ? NovaMe
 function _localSmartVideoFallbackHtml(url, attrs=''){
     const original = smartOriginalMediaUrl(url);
     const src = displayMediaUrl({url:original});
-    return `<video src="${escapeHtml(src)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+    // #t=0.5：封面图生成失败（如桌面端无 ffmpeg）时，video 直接渲染 0.5s 处画面作为首帧，避免黑屏
+    return `<video src="${escapeHtml(src)}#t=0.5" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
 }
 function smartVideoPlayerHtml(url, attrs=''){ return window.NovaMedia ? NovaMedia.videoPlayerHtmlFromItem(url, attrs) : _localSmartVideoPlayerHtml(url, attrs); }
 function _localSmartVideoPlayerHtml(url, attrs=''){
@@ -618,11 +619,30 @@ function smartActivateVideoPreview(target){
     if(!img){
         const fallback = target?.matches?.('video[data-url]') ? target : root?.querySelector?.('video[data-url]');
         if(fallback){
-            // 封面加载失败时的 fallback 视频：同样用自绘控制条（WKWebView 无原生 controls）
-            const playerEl = fallback.closest('.smart-video-player') || fallback.parentElement;
+            // 封面加载失败时的 fallback 视频：直接替换成自绘播放器结构（含控制条 DOM）。
+            // 注意不能只调 initSmartVideoControls——它只绑定事件，不创建 .svc-* 控件，
+            // 裸 video 没有控制条 DOM，会导致无进度条/暂停/全屏（桌面端 WKWebView 复现）。
+            const original = smartOriginalMediaUrl(fallback.dataset.url || fallback.getAttribute('src') || '');
+            if(original){
+                const tpl = document.createElement('template');
+                tpl.innerHTML = smartVideoPlayerHtml(original);
+                const video = tpl.content.firstElementChild?.querySelector?.('video') || tpl.content.firstElementChild;
+                if(video){
+                    fallback.replaceWith(tpl.content.firstElementChild);
+                    const playerEl = video.closest('.smart-video-player') || video.parentElement;
+                    video.closest('.media-video-card,.video-thumb,.thumb-item')?.querySelector?.('.smart-video-play')?.style?.setProperty('display', 'none');
+                    initSmartVideoControls(playerEl || video.parentElement, video);
+                    video.addEventListener('ended', () => {
+                        const playBtn = playerEl?.querySelector?.('.svc-play i');
+                        if(playBtn) playBtn.setAttribute('data-lucide', 'play');
+                    });
+                    video.play?.().catch(() => {});
+                    return true;
+                }
+            }
+            // 兜底：无法构造播放器时至少尝试播放原 video
             fallback.controls = false;
             fallback.muted = false;
-            if(typeof window.initSmartVideoControls === 'function') window.initSmartVideoControls(playerEl, fallback);
             fallback.play?.().catch(() => {});
             return true;
         }

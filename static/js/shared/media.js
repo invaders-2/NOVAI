@@ -131,13 +131,13 @@
     function videoFallbackHtml(url, attrs=''){
         const original = originalMediaUrl(url);
         const src = displayMediaUrl(original);
-        return `<video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+        return `<video src="${escapeAttr(src)}#t=0.5" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
     }
 
     function videoFallbackHtmlFromItem(url, attrs=''){
         const original = originalMediaUrlFromItem(url);
         const src = displayMediaUrlFromItem({ url: original });
-        return `<video src="${escapeHtml(src)}" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+        return `<video src="${escapeHtml(src)}#t=0.5" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
     }
 
     function videoPlayerHtml(url, attrs=''){

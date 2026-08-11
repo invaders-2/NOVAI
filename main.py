@@ -341,6 +341,11 @@ CONVERSATION_DIR = os.path.join(DATA_DIR, "conversations")
 CANVAS_DIR = os.path.join(DATA_DIR, "canvases")
 MEDIA_PREVIEW_DIR = os.path.join(DATA_DIR, "media_previews")
 ASSET_LIBRARY_PATH = os.path.join(DATA_DIR, "asset_library.json")
+# V2 Phase 2：画布版本快照目录 + 画布资产注册表（Asset 对象化，JSON 文件，无数据库）
+CANVAS_VERSIONS_DIR = os.path.join(DATA_DIR, "canvas_versions")
+CANVAS_ASSETS_REGISTRY_PATH = os.path.join(DATA_DIR, "assets_registry.json")
+# 每画布保留最近 N 个版本快照（环境变量可调，默认 20）
+CANVAS_VERSION_LIMIT = max(1, int(os.getenv("NOVAI_CANVAS_VERSION_LIMIT", "20")))
 PROMPT_LIBRARY_PATH = os.path.join(DATA_DIR, "prompt_libraries.json")
 API_PROVIDERS_FILE = os.path.join(DATA_DIR, "api_providers.json")
 RUNNINGHUB_WORKFLOW_STORE_FILE = os.path.join(DATA_DIR, "runninghub_workflows.json")
@@ -4056,6 +4061,11 @@ def load_canvas(canvas_id):
         canvas = json.load(f)
     if canvas.get("deleted_at"):
         raise HTTPException(status_code=404, detail="画布已在回收站")
+    # V2 Phase 2：旧画布自动补 asset_id（只改内存，落盘由下一次保存完成）
+    try:
+        migrate_canvas_asset_ids(canvas)
+    except Exception as exc:
+        print(f"画布资产迁移失败（不影响加载）: {exc}")
     return canvas
 
 def load_canvas_any(canvas_id):
@@ -4064,6 +4074,277 @@ def load_canvas_any(canvas_id):
         raise HTTPException(status_code=404, detail="画布不存在")
     with open(path, 'r', encoding='utf-8') as f:
         return json.load(f)
+
+# ===== V2 Phase 2: 画布版本快照（旁路存 data/canvas_versions/{id}/v{N}.json，保留最近 N 个） =====
+
+def canvas_versions_dir(canvas_id):
+    cleaned = re.sub(r"[^a-zA-Z0-9_-]", "", canvas_id or "")
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="无效的画布 ID")
+    return os.path.join(CANVAS_VERSIONS_DIR, cleaned)
+
+def list_canvas_versions(canvas_id):
+    """版本列表（元信息：版本号/时间/大小/备注/节点与图片计数，不含快照本体）。"""
+    vdir = canvas_versions_dir(canvas_id)
+    versions = []
+    if os.path.isdir(vdir):
+        for filename in sorted(os.listdir(vdir)):
+            m = re.match(r"^v(\d+)\.json$", filename)
+            if not m:
+                continue
+            path = os.path.join(vdir, filename)
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    rec = json.load(f)
+                snap = rec.get("canvas_snapshot")
+                snap = snap if isinstance(snap, dict) else {}
+                node_count = len(snap.get("nodes") or []) if isinstance(snap.get("nodes"), list) else 0
+                image_count = 0
+                for n in snap.get("nodes") or []:
+                    if isinstance(n, dict) and isinstance(n.get("images"), list):
+                        image_count += len(n["images"])
+                versions.append({
+                    "version": int(m.group(1)),
+                    "saved_at": int(rec.get("saved_at") or 0),
+                    "size": os.path.getsize(path),
+                    "note": rec.get("note") or "",
+                    "nodes": node_count,
+                    "images": image_count,
+                })
+            except Exception:
+                continue
+    versions.sort(key=lambda v: v["version"])
+    return versions
+
+def read_canvas_version(canvas_id, version):
+    path = os.path.join(canvas_versions_dir(canvas_id), f"v{int(version)}.json")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="版本不存在")
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+def snapshot_canvas_version(canvas, note=""):
+    """把完整画布状态存为版本快照（深拷贝落盘），并裁剪到最近 N 个版本。
+    返回新版本号；失败不抛异常（版本快照是旁路，不能影响主保存流程）。"""
+    canvas_id = (canvas or {}).get("id")
+    if not canvas_id:
+        return None
+    vdir = canvas_versions_dir(canvas_id)
+    try:
+        os.makedirs(vdir, exist_ok=True)
+        with CANVAS_LOCK:
+            versions = list_canvas_versions(canvas_id)
+            next_version = (versions[-1]["version"] + 1) if versions else 1
+            try:
+                snapshot = json.loads(json.dumps(canvas, ensure_ascii=False))
+            except Exception:
+                snapshot = dict(canvas)
+            record = {
+                "version": next_version,
+                "saved_at": now_ms(),
+                "canvas_snapshot": snapshot,
+                "note": note or "",
+            }
+            with open(os.path.join(vdir, f"v{next_version}.json"), "w", encoding="utf-8") as f:
+                json.dump(record, f, ensure_ascii=False, indent=2)
+            # 保留最近 N 个版本（含刚写入的这版）：version <= next - N 的旧版本删除
+            for v in versions:
+                if v["version"] <= next_version - CANVAS_VERSION_LIMIT:
+                    try:
+                        os.remove(os.path.join(vdir, f"v{v['version']}.json"))
+                    except Exception:
+                        pass
+        return next_version
+    except Exception as exc:
+        print(f"画布版本快照失败（不影响保存）: {exc}")
+        return None
+
+# ===== V2 Phase 2: Asset 对象化（画布资产注册表 data/assets_registry.json） =====
+
+ASSET_REGISTRY_LOCK = Lock()
+
+def load_assets_registry():
+    try:
+        with open(CANVAS_ASSETS_REGISTRY_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) and isinstance(data.get("assets"), list) else {"assets": []}
+    except Exception:
+        return {"assets": []}
+
+def save_assets_registry(registry):
+    with ASSET_REGISTRY_LOCK:
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+            with open(CANVAS_ASSETS_REGISTRY_PATH, "w", encoding="utf-8") as f:
+                json.dump(registry, f, ensure_ascii=False, indent=2)
+        except Exception as exc:
+            print(f"资产注册表保存失败: {exc}")
+
+def find_asset_registry_record(registry, url="", asset_id=""):
+    url = str(url or "").strip()
+    for a in registry.get("assets", []):
+        if not isinstance(a, dict):
+            continue
+        if asset_id and a.get("asset_id") == asset_id:
+            return a
+        if url and a.get("url") == url:
+            return a
+    return None
+
+def asset_library_id_for_url(url):
+    """在 asset_library.json 中按 URL 找已有条目的 id（引用复用：素材库已有条目时复用其 id）。"""
+    try:
+        lib = load_asset_library()
+        for cat in lib.get("categories", []):
+            for item in (cat.get("items") or []):
+                if isinstance(item, dict) and item.get("url") == url and item.get("id"):
+                    return item["id"]
+        for library in lib.get("libraries", []) if isinstance(lib.get("libraries"), list) else []:
+            for cat in library.get("categories", []):
+                for item in (cat.get("items") or []):
+                    if isinstance(item, dict) and item.get("url") == url and item.get("id"):
+                        return item["id"]
+    except Exception:
+        pass
+    return ""
+
+def register_canvas_asset(url, name="", kind="", mime="", natural_w=0, natural_h=0,
+                          canvas_id="", source="", asset_id_hint="", created_at=0):
+    """把画布内 URL 注册为资产对象（幂等：同 URL 复用同一 asset_id，不重复建条目）。
+    asset_id 优先顺序：调用方 hint → asset_library 已有条目 id → 新分配 uuid。
+    canvas_ids 维护该资产出现过的画布集合（跨画布共享同一 asset_id）。
+    返回资产记录 dict；URL 为空返回 None。"""
+    url = str(url or "").strip()
+    if not url:
+        return None
+    registry = load_assets_registry()
+    existing = find_asset_registry_record(registry, url=url)
+    if existing:
+        if canvas_id:
+            canvas_ids = existing.setdefault("canvas_ids", [])
+            if isinstance(canvas_ids, list) and canvas_id not in canvas_ids:
+                canvas_ids.append(canvas_id)
+                existing["updated_at"] = now_ms()
+                save_assets_registry(registry)
+        return existing
+    asset_id = str(asset_id_hint or "").strip() or asset_library_id_for_url(url) or f"asset_{uuid.uuid4().hex[:16]}"
+    record = {
+        "asset_id": asset_id,
+        "url": url,
+        "name": (str(name or "").strip() or filename_from_media_url(url, "asset"))[:200],
+        "kind": str(kind or "").strip() or canvas_asset_kind(url),
+        "mime": str(mime or "").strip(),
+        "natural_w": int(natural_w or 0),
+        "natural_h": int(natural_h or 0),
+        "source": str(source or "").strip() or "canvas",
+        "canvas_id": str(canvas_id or ""),
+        "canvas_ids": [str(canvas_id)] if canvas_id else [],
+        "created_at": int(created_at or now_ms()),
+        "updated_at": now_ms(),
+    }
+    registry.setdefault("assets", []).append(record)
+    save_assets_registry(registry)
+    return record
+
+def migrate_canvas_asset_ids(canvas):
+    """旧画布兼容迁移：为 nodes[].images[] 里没有 asset_id 的元素补 asset_id 并注册到资产注册表。
+    只改内存中的 canvas 对象（不写画布文件、不刷新 updated_at），落盘由下一次保存完成；
+    返回是否发生了变更。缺字段（asset_id/created_at/source）不报错，向后兼容。"""
+    if not isinstance(canvas, dict):
+        return False
+    canvas_id = canvas.get("id") or ""
+    nodes = canvas.get("nodes")
+    if not isinstance(nodes, list):
+        return False
+    changed = False
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        images = node.get("images")
+        if not isinstance(images, list):
+            continue
+        for img in images:
+            if not isinstance(img, dict):
+                continue
+            url = str(img.get("url") or "").strip()
+            if not url:
+                continue
+            if not img.get("asset_id"):
+                rec = register_canvas_asset(
+                    url=url,
+                    name=img.get("name") or "",
+                    kind=img.get("kind") or "",
+                    mime=img.get("mime") or "",
+                    natural_w=img.get("natural_w") or img.get("naturalWidth") or 0,
+                    natural_h=img.get("natural_h") or img.get("naturalHeight") or 0,
+                    canvas_id=canvas_id,
+                    source=img.get("source") or "canvas",
+                    created_at=img.get("created_at") or 0,
+                )
+                if rec and rec.get("asset_id"):
+                    img["asset_id"] = rec["asset_id"]
+                    changed = True
+    return changed
+
+def collect_canvas_assets(canvas):
+    """聚合某画布的全部资产：
+    ① 画布节点 images[] 实际引用的资产（有 asset_id 的按注册表解析，无注册记录的旧条目合成记录）；
+    ② 注册表里 canvas_id 指向该画布的资产（register API 注册的，即使暂未入节点也归属该画布）。
+    按 asset_id/url 去重，不回写。"""
+    if not isinstance(canvas, dict):
+        return []
+    registry = load_assets_registry()
+    assets = []
+    seen = set()
+    canvas_id = canvas.get("id") or ""
+    for node in canvas.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        for img in (node.get("images") or []):
+            if not isinstance(img, dict):
+                continue
+            url = str(img.get("url") or "").strip()
+            if not url:
+                continue
+            rec = find_asset_registry_record(registry, url=url, asset_id=img.get("asset_id") or "")
+            if rec:
+                if rec.get("asset_id") in seen:
+                    continue
+                seen.add(rec["asset_id"])
+                assets.append(rec)
+            else:
+                if url in seen:
+                    continue
+                seen.add(url)
+                assets.append({
+                    "asset_id": img.get("asset_id") or "",
+                    "url": url,
+                    "name": img.get("name") or filename_from_media_url(url, "asset"),
+                    "kind": img.get("kind") or canvas_asset_kind(url),
+                    "mime": img.get("mime") or "",
+                    "natural_w": int(img.get("natural_w") or img.get("naturalWidth") or 0),
+                    "natural_h": int(img.get("natural_h") or img.get("naturalHeight") or 0),
+                    "source": img.get("source") or "canvas",
+                    "canvas_id": canvas_id,
+                    "created_at": int(img.get("created_at") or 0),
+                })
+    # ② 注册表归属该画布的资产（canvas_ids 集合匹配，兼容旧的单 canvas_id 字段；按 asset_id/url 去重）
+    for rec in registry.get("assets", []):
+        if not isinstance(rec, dict):
+            continue
+        rec_canvas_ids = rec.get("canvas_ids")
+        belongs = False
+        if isinstance(rec_canvas_ids, list):
+            belongs = canvas_id in rec_canvas_ids
+        else:
+            belongs = rec.get("canvas_id") == canvas_id
+        if not belongs:
+            continue
+        if rec.get("asset_id") in seen or rec.get("url") in seen:
+            continue
+        seen.add(rec.get("asset_id") or rec.get("url"))
+        assets.append(rec)
+    return assets
 
 CANVAS_COLORS = {"", "red", "orange", "amber", "green", "teal", "blue", "violet", "pink", "slate"}
 
@@ -17113,6 +17394,8 @@ async def update_canvas(canvas_id: str, payload: CanvasSaveRequest):
     canvas["logs"] = payload.logs[-500:]
     canvas["settings"] = payload.settings or {}
     save_canvas(canvas)
+    # V2 Phase 2：旁路保存完整画布状态为版本快照（保留最近 N 个，失败不影响主流程）
+    snapshot_canvas_version(canvas)
     await manager.broadcast_canvas_updated(canvas_id, int(canvas.get("updated_at") or now_ms()), payload.client_id)
     return {"canvas": canvas}
 
@@ -17138,6 +17421,103 @@ async def purge_canvas(canvas_id: str):
     if os.path.exists(path):
         os.remove(path)
     return {"ok": True}
+
+# --- V2 Phase 2: 画布版本化 API ---
+
+@app.get("/api/canvases/{canvas_id}/versions")
+async def list_canvas_versions_api(canvas_id: str):
+    load_canvas(canvas_id)  # 404 校验（含软删除）
+    return {"versions": list_canvas_versions(canvas_id), "limit": CANVAS_VERSION_LIMIT}
+
+@app.get("/api/canvases/{canvas_id}/versions/{version}")
+async def get_canvas_version_api(canvas_id: str, version: int):
+    load_canvas(canvas_id)
+    return read_canvas_version(canvas_id, version)
+
+@app.post("/api/canvases/{canvas_id}/versions/{version}/restore")
+async def restore_canvas_version_api(canvas_id: str, version: int, request: Request):
+    canvas = load_canvas(canvas_id)
+    rec = read_canvas_version(canvas_id, version)
+    snapshot = rec.get("canvas_snapshot")
+    if not isinstance(snapshot, dict):
+        raise HTTPException(status_code=400, detail="版本快照损坏")
+    # 用快照覆盖画布内容；保留当前画布的身份/归属字段（id/创建时间/项目/负责人/颜色/置顶/位置）
+    restored = dict(snapshot)
+    for key in ("id", "created_at", "project", "owner", "color", "pinned", "board_x", "board_y", "deleted_at"):
+        if key in canvas:
+            restored[key] = canvas[key]
+    restored["kind"] = canvas.get("kind") or restored.get("kind") or "classic"
+    save_canvas(restored)
+    note = f"restored from v{version}"
+    new_version = snapshot_canvas_version(restored, note=note)
+    client_id = ""
+    try:
+        body = await request.json()
+        client_id = str((body or {}).get("client_id") or "")
+    except Exception:
+        pass
+    await manager.broadcast_canvas_updated(canvas_id, int(restored.get("updated_at") or now_ms()), client_id)
+    return {"canvas": restored, "version": new_version, "note": note}
+
+@app.delete("/api/canvases/{canvas_id}/versions/{version}")
+async def delete_canvas_version_api(canvas_id: str, version: int):
+    load_canvas(canvas_id)
+    path = os.path.join(canvas_versions_dir(canvas_id), f"v{int(version)}.json")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="版本不存在")
+    with CANVAS_LOCK:
+        os.remove(path)
+    return {"ok": True}
+
+# --- V2 Phase 2: Asset 对象化 API（画布资产注册/查询） ---
+
+class AssetRegisterRequest(BaseModel):
+    url: str = ""
+    name: str = ""
+    kind: str = ""
+    mime: str = ""
+    natural_w: int = 0
+    natural_h: int = 0
+    canvas_id: str = ""
+    source: str = ""
+    asset_id: str = ""
+    created_at: int = 0
+
+@app.post("/api/assets/register")
+async def register_asset_api(payload: AssetRegisterRequest):
+    if not str(payload.url or "").strip():
+        raise HTTPException(status_code=400, detail="url 不能为空")
+    record = register_canvas_asset(
+        url=payload.url,
+        name=payload.name,
+        kind=payload.kind,
+        mime=payload.mime,
+        natural_w=payload.natural_w,
+        natural_h=payload.natural_h,
+        canvas_id=payload.canvas_id,
+        source=payload.source,
+        asset_id_hint=payload.asset_id,
+        created_at=payload.created_at,
+    )
+    return {"asset": record}
+
+@app.get("/api/assets")
+async def list_assets_api(canvas_id: str = ""):
+    if canvas_id:
+        canvas = load_canvas(canvas_id)
+        assets = collect_canvas_assets(canvas)
+        return {"assets": assets, "canvas_id": canvas_id, "total": len(assets)}
+    registry = load_assets_registry()
+    assets = registry.get("assets", [])
+    return {"assets": assets, "total": len(assets)}
+
+@app.get("/api/assets/{asset_id}")
+async def get_asset_api(asset_id: str):
+    registry = load_assets_registry()
+    rec = find_asset_registry_record(registry, asset_id=str(asset_id or ""))
+    if not rec:
+        raise HTTPException(status_code=404, detail="资产不存在")
+    return {"asset": rec}
 
 # --- GPT 对话 ---
 

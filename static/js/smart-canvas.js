@@ -898,6 +898,30 @@ function mediaItemForStorage(item){
     delete clean._inlineVideoActive;
     return clean;
 }
+// ── V2 Phase 2: Asset 对象化 ──
+// 素材首次进入画布时分配 asset_id（uuid）；引用素材库条目时复用其 id（asset_xxx）。
+function smartAssetId(){
+    try {
+        if(window.crypto && typeof crypto.randomUUID === 'function') return 'asset_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+    } catch(e) {}
+    return 'asset_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+}
+function ensureSmartImageAssetId(img, opts={}){
+    if(!img || typeof img !== 'object') return img;
+    if(!String(img.url || '').trim()) return img;
+    if(!img.asset_id){
+        const libId = opts.libraryItemId || img.libraryItemId || (String(img.id || '').indexOf('asset_') === 0 ? img.id : '');
+        img.asset_id = libId || smartAssetId();
+    }
+    if(!img.created_at) img.created_at = Date.now();
+    if(!img.source) img.source = opts.source || (img.libraryItemId ? 'library' : 'canvas');
+    return img;
+}
+function ensureAllSmartNodeAssetIds(){
+    (nodes || []).forEach(n => {
+        if(Array.isArray(n.images)) n.images.forEach(img => ensureSmartImageAssetId(img));
+    });
+}
 function canvasForStorage(){
     const clean = JSON.parse(JSON.stringify(canvas || {}));
     clean.settings = settingsForStorage(canvasDefaultSmartSettings || initialSmartSettings);
@@ -5953,6 +5977,8 @@ function assetNodeImageFromItem(item, fallbackName='asset'){
     };
     copyMediaSizeFields(item, image);
     if(item?.asset_uris && typeof item.asset_uris === 'object') image.asset_uris = {...item.asset_uris};
+    // V2 Phase 2: 引用素材库已有条目时复用其 id 作为 asset_id
+    ensureSmartImageAssetId(image, {libraryItemId:(item?.id && String(item.id).indexOf('asset_') === 0) ? item.id : '', source:'library'});
     return image;
 }
 function assetThumbHtml(item){
@@ -6388,6 +6414,8 @@ async function loadCanvas(){
         document.title = canvas.title || tr('canvas.smartCanvas');
         document.getElementById('smartTitle').textContent = canvas.title || tr('canvas.smartCanvas');
         nodes = (Array.isArray(canvas.nodes) ? canvas.nodes : []).map(normalizeLegacySmartNode).filter(Boolean);
+        // V2 Phase 2: 兼容旧画布——加载时自动补 asset_id（服务端已迁移，客户端兜底）
+        ensureAllSmartNodeAssetIds();
         migrateSmartGroupImageMembers();
         canvas.connections = Array.isArray(canvas.connections) ? canvas.connections : [];
         nodes.forEach(n => {
@@ -6496,7 +6524,8 @@ function inheritNodeMetaFromImage(node){
 }
 function createNode(x, y, images=[], options={}){
     if(!options.skipUndo) pushUndo();
-    const nodeImages = (images || []).map(img => ({...img}));
+    // V2 Phase 2: 素材首次进入画布时分配 asset_id
+    const nodeImages = (images || []).map(img => ensureSmartImageAssetId({...img}));
     const node = {id:uid('smart'), type:'smart-image', x, y, title:nodeImages.length > 1 ? 'Group' : nodeImages.length ? 'Image' : tr('smart.createImportNode'), images:nodeImages, created_at:Date.now()};
     node.scale = nodeImages.length > 1 ? MEDIA_GROUP_DEFAULT_SCALE : mediaNodeDefaultScale(node);
     inheritNodeMetaFromImage(node);
@@ -12647,7 +12676,8 @@ function appendImagesToSmartNode(uploaded, targetId='', opts={}){
         undoSuppressed = false;
     }
     const previousCount = (node.images || []).length;
-    node.images = [...(node.images || []), ...images.map(file => ({...file, kind:file.kind || mediaKindForItem(file)}))];
+    // V2 Phase 2: 素材首次进入画布时分配 asset_id
+    node.images = [...(node.images || []), ...images.map(file => ensureSmartImageAssetId({...file, kind:file.kind || mediaKindForItem(file)}))];
     if(node.images.length > 1){
         node.title = uploadTitleForItems(node.images, 'Group');
         if(previousCount <= 1 && (!Number.isFinite(Number(node.scale)) || Number(node.scale) === MEDIA_NODE_DEFAULT_SCALE || Number(node.scale) === MEDIA_GROUP_PREVIOUS_DEFAULT_SCALE)){
@@ -18035,6 +18065,144 @@ window.addEventListener('studio-lang-change', () => {
     if(promptTemplatePanel?.classList?.contains('open')) renderPromptTemplatePanel();
     render();
 });
+// ── V2 Phase 2: 版本历史面板 ──
+function formatVersionTime(ms){
+    if(!ms) return '—';
+    try {
+        const d = new Date(ms);
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    } catch(e) { return String(ms); }
+}
+function formatVersionSize(size){
+    if(!size && size !== 0) return '—';
+    if(size < 1024) return size + ' B';
+    if(size < 1024*1024) return (size/1024).toFixed(1) + ' KB';
+    return (size/1024/1024).toFixed(2) + ' MB';
+}
+function countCanvasNodes(c){
+    return Array.isArray(c?.nodes) ? c.nodes.length : 0;
+}
+function countCanvasImages(c){
+    let total = 0;
+    (Array.isArray(c?.nodes) ? c.nodes : []).forEach(n => {
+        if(Array.isArray(n.images)) total += n.images.length;
+    });
+    return total;
+}
+async function openCanvasVersionsPanel(){
+    const panel = document.getElementById('versionPanel');
+    if(!panel || !canvasId) return;
+    if(panel.classList.contains('open')){ closeCanvasVersionsPanel(); return; }
+    panel.classList.add('open');
+    const listEl = document.getElementById('versionList');
+    listEl.innerHTML = '<div class="version-empty">加载中…</div>';
+    try {
+        const res = await fetch(`/api/canvases/${encodeURIComponent(canvasId)}/versions`);
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        renderCanvasVersions(data.versions || []);
+    } catch(e) {
+        listEl.innerHTML = '<div class="version-empty">版本列表加载失败</div>';
+    }
+}
+function closeCanvasVersionsPanel(){
+    const panel = document.getElementById('versionPanel');
+    if(panel) panel.classList.remove('open');
+}
+function renderCanvasVersions(versions){
+    const listEl = document.getElementById('versionList');
+    if(!listEl) return;
+    if(!versions.length){
+        listEl.innerHTML = '<div class="version-empty">暂无版本记录（保存画布后自动生成）</div>';
+        return;
+    }
+    listEl.innerHTML = versions.map(v => {
+        const time = formatVersionTime(v.saved_at);
+        const size = formatVersionSize(v.size);
+        const note = v.note ? `<div class="version-item-meta">${escapeHtml(v.note)}</div>` : '';
+        const countLine = `节点 ${v.nodes ?? '—'} · 图片 ${v.images ?? '—'}`;
+        return `<div class="version-item" data-version="${v.version}">
+            <div class="version-item-head">
+                <span class="version-item-title"><i data-lucide="history" class="w-3.5 h-3.5"></i> v${v.version} · ${escapeHtml(time)}</span>
+                <span style="font-size:10.5px;color:var(--muted)">${escapeHtml(size)}</span>
+            </div>
+            <div class="version-item-meta">${escapeHtml(countLine)}</div>
+            ${note}
+            <div class="version-item-actions">
+                <button class="version-btn primary" type="button" onclick="restoreCanvasVersion(${v.version})">还原</button>
+                <button class="version-btn" type="button" onclick="viewCanvasVersion(${v.version})">查看</button>
+                <button class="version-btn danger" type="button" onclick="deleteCanvasVersion(${v.version})">删除</button>
+            </div>
+            <div class="version-diff" id="versionDiff${v.version}" style="display:none"></div>
+        </div>`;
+    }).join('');
+    if(window.lucide) lucide.createIcons();
+}
+async function viewCanvasVersion(version){
+    const diffEl = document.getElementById('versionDiff' + version);
+    if(!diffEl) return;
+    if(diffEl.style.display !== 'none'){ diffEl.style.display = 'none'; return; }
+    diffEl.style.display = 'block';
+    diffEl.textContent = '加载中…';
+    try {
+        const res = await fetch(`/api/canvases/${encodeURIComponent(canvasId)}/versions/${version}`);
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const snap = data.canvas_snapshot || {};
+        const vNodes = countCanvasNodes(snap);
+        const vImages = countCanvasImages(snap);
+        const cNodes = countCanvasNodes(canvas);
+        const cImages = countCanvasImages(canvas);
+        const deltaText = (d) => d === 0 ? '相同' : (d > 0 ? `+${d}` : `${d}`);
+        diffEl.textContent = `版本 v${version}（${formatVersionTime(data.saved_at)}）\n` +
+            `节点数：${vNodes}（当前 ${cNodes}，变化 ${deltaText(vNodes - cNodes)}）\n` +
+            `图片数：${vImages}（当前 ${cImages}，变化 ${deltaText(vImages - cImages)}）\n` +
+            `内容：${snap.title || '（未命名画布）'} · ${vNodes} 节点 · ${vImages} 个媒体`;
+    } catch(e) {
+        diffEl.textContent = '版本详情加载失败';
+    }
+}
+async function restoreCanvasVersion(version){
+    if(!window.confirm(`确定还原到 v${version}？\n当前画布内容会被该版本快照覆盖；还原前会自动保存一个新版本，可随时再还原回来。`)) return;
+    try {
+        const res = await fetch(`/api/canvases/${encodeURIComponent(canvasId)}/versions/${version}/restore`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({client_id:smartClientId || ''})
+        });
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        toast(`已还原到 v${version}`);
+        canvas = data.canvas;
+        nodes = (Array.isArray(canvas.nodes) ? canvas.nodes : []).map(normalizeLegacySmartNode).filter(Boolean);
+        ensureAllSmartNodeAssetIds();
+        canvas.connections = Array.isArray(canvas.connections) ? canvas.connections : [];
+        viewport = {...viewport, ...(canvas.viewport || {})};
+        viewport.scale = safeScale(viewport.scale);
+        document.title = canvas.title || tr('canvas.smartCanvas');
+        const titleEl = document.getElementById('smartTitle');
+        if(titleEl) titleEl.textContent = canvas.title || tr('canvas.smartCanvas');
+        render();
+        applyViewport();
+        scheduleSave();
+        closeCanvasVersionsPanel();
+    } catch(e) {
+        toast('还原失败');
+    }
+}
+async function deleteCanvasVersion(version){
+    if(!window.confirm(`确定删除版本 v${version}？该操作不可恢复。`)) return;
+    try {
+        const res = await fetch(`/api/canvases/${encodeURIComponent(canvasId)}/versions/${version}`, {method:'DELETE'});
+        if(!res.ok) throw new Error('HTTP ' + res.status);
+        const itemEl = document.querySelector(`#versionList .version-item[data-version="${version}"]`);
+        if(itemEl) itemEl.remove();
+        toast(`已删除版本 v${version}`);
+    } catch(e) {
+        toast('删除失败');
+    }
+}
 window.onload = async () => {
     shell.style.touchAction = 'none';
     applyTheme(localStorage.getItem('studio_theme') || localStorage.getItem('canvas_theme') || 'light');
@@ -18059,20 +18227,24 @@ window.applyImageEdit = applyImageEdit;
 window.backToCanvasList = backToCanvasList;
 window.clearEditDrawing = clearEditDrawing;
 window.clearGridCustomLines = clearGridCustomLines;
+window.closeCanvasVersionsPanel = closeCanvasVersionsPanel;
 window.closeImageEditor = closeImageEditor;
 window.closeSmartCanvasLog = closeSmartCanvasLog;
 window.closeSmartCanvasShortcuts = closeSmartCanvasShortcuts;
 window.closeSmartWorkflowTransferModal = closeSmartWorkflowTransferModal;
+window.deleteCanvasVersion = deleteCanvasVersion;
 window.downloadPreviewGroup = downloadPreviewGroup;
 window.downloadPreviewImage = downloadPreviewImage;
 window.exportPanoramaFrame = exportPanoramaFrame;
 window.exportSelectedSmartWorkflow = exportSelectedSmartWorkflow;
 window.exportVideoFrame = exportVideoFrame;
 window.navigatePreviewImage = navigatePreviewImage;
+window.openCanvasVersionsPanel = openCanvasVersionsPanel;
 window.openSmartCanvasLog = openSmartCanvasLog;
 window.openSmartCanvasShortcuts = openSmartCanvasShortcuts;
 window.redoEditDrawing = redoEditDrawing;
 window.resetGridJoinLayout = resetGridJoinLayout;
+window.restoreCanvasVersion = restoreCanvasVersion;
 window.sendChatMessage = sendChatMessage;
 window.setBrushTool = setBrushTool;
 window.setGridCustomOrientation = setGridCustomOrientation;
@@ -18084,6 +18256,7 @@ window.togglePanoramaPreview = togglePanoramaPreview;
 window.togglePreviewCompare = togglePreviewCompare;
 window.undoEditDrawing = undoEditDrawing;
 window.undoGridCustomLine = undoGridCustomLine;
+window.viewCanvasVersion = viewCanvasVersion;
 window.zoomBarCenter = zoomBarCenter;
 window.zoomBarFitAll = zoomBarFitAll;
 window.zoomBarReset = zoomBarReset;

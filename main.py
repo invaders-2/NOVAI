@@ -243,6 +243,11 @@ async def startup_event():
         matrix_load_all()
     except Exception as exc:
         print(f"Matrix 启动失败: {exc}")
+    # Storyboard（V2 Phase 3）：载入持久化分镜
+    try:
+        storyboard_load_all()
+    except Exception as exc:
+        print(f"Storyboard 启动失败: {exc}")
     sync_static_html_versions()
     # 启动时整理资产库：给所有图片分组（含默认角色/场景）建好文件夹，并把根目录里的旧素材归整进去。
     try:
@@ -21636,6 +21641,418 @@ async def delete_matrix(matrix_id: str):
         MATRIX_STORE.pop(matrix_id, None)
         matrix_save_store()
     return {"success": True, "matrix_id": matrix_id}
+
+# ============================================================================
+# Storyboard 视频分镜生产系统（V2 Phase 3）
+# 说明：
+#   * Storyboard = 一条视频分镜脚本：scenes[] 按 order 排序，每个 scene 包含
+#     参考图/参考视频(visual)/提示词(prompt)/运镜(camera)/动作(motion)/时长
+#     (duration)/转场(transition)/音频(audio)。拖拽排序由前端维护，后端按
+#     order 存储并在渲染时按 order 顺序生成连续片段。
+#   * 渲染：每个 scene 转成真实视频生成任务进 Task Engine——复用 task_create +
+#     TASK_RUNNERS["run_canvas_video_task"]，payload 组装参考图/参考视频/提示词
+#     （scene.prompt + 运镜 + 动作）/duration，scene 关联 task_id。
+#   * 状态真实：scene.status 跟随对应 Task 状态（queued/running/success/failed），
+#     读取详情时从 TASK_STORE 实时推导，禁止假状态。
+#   * 持久化：data/storyboards/<storyboard_id>.json（一板一文件，进程内锁保护）。
+# ============================================================================
+
+STORYBOARD_DIR = os.path.join(DATA_DIR, "storyboards")
+STORYBOARD_STORE: Dict[str, Any] = {}
+STORYBOARD_STORE_LOCK = Lock()
+STORYBOARD_RUNNER = "run_canvas_video_task"    # scene 复用视频生成 runner
+STORYBOARD_KIND = "video"
+STORYBOARD_MAX_SCENES = 60                     # 单分镜场景数上限
+STORYBOARD_DEFAULT_DURATION = 5                # 默认时长（秒）
+
+# scene 状态归一化：Task 状态机 → 分镜展示状态（queued/running/success/failed）
+_STORYBOARD_SCENE_STATUS_MAP = {
+    "queued": "queued",
+    "retry": "queued",
+    "running": "running",
+    "provider_processing": "running",
+    "downloading": "running",
+    "saving": "running",
+    "jimeng_pending": "running",
+    "cancel_requested": "failed",   # 已受理取消 → 展示为失败（可重新渲染）
+    "succeeded": "success",
+    "failed": "failed",
+    "cancelled": "failed",
+}
+
+_VIDEO_EXT_HINTS = (".mp4", ".webm", ".mov", ".m4v", ".avi", ".mkv", ".flv", ".wmv", ".mpeg", ".mpg")
+
+
+class StoryboardScenePayload(BaseModel):
+    scene_id: str = ""              # 更新时带原 scene_id 则保留（维持 task 关联），空则新建
+    order: int = 0
+    visual: str = ""                # 参考图/参考视频 URL（可为空）
+    prompt: str = ""
+    camera: str = ""                # 运镜
+    motion: str = ""                # 动作
+    duration: int = 0               # 秒（0 = 用分镜默认时长）
+    transition: str = ""            # 转场
+    audio: str = ""                 # 音频 URL（可为空）
+
+
+class StoryboardVideoConfigPayload(BaseModel):
+    provider_id: str = "comfly"
+    model: str = "veo3-fast"
+    duration: int = STORYBOARD_DEFAULT_DURATION
+    aspect_ratio: str = "16:9"
+
+
+class StoryboardCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    project_id: str = ""
+    scenes: List[StoryboardScenePayload] = Field(default_factory=list)
+    video_config: StoryboardVideoConfigPayload = Field(default_factory=StoryboardVideoConfigPayload)
+
+
+class StoryboardUpdateRequest(BaseModel):
+    name: str = ""
+    project_id: str = ""
+    scenes: List[StoryboardScenePayload] = Field(default_factory=list)
+    video_config: Optional[StoryboardVideoConfigPayload] = None
+
+
+def storyboard_load_all():
+    """启动时把所有分镜文件载入内存（STORYBOARD_STORE）。"""
+    global STORYBOARD_STORE
+    with STORYBOARD_STORE_LOCK:
+        loaded: Dict[str, Any] = {}
+        try:
+            if os.path.isdir(STORYBOARD_DIR):
+                for fn in sorted(glob.glob(os.path.join(STORYBOARD_DIR, "sb_*.json"))):
+                    try:
+                        with open(fn, "r", encoding="utf-8") as f:
+                            sb = json.load(f)
+                        if isinstance(sb, dict) and sb.get("storyboard_id"):
+                            loaded[sb["storyboard_id"]] = sb
+                    except Exception as e:
+                        print(f"[Storyboard] 读取分镜文件 {fn} 失败: {e}")
+        except Exception as e:
+            print(f"[Storyboard] 载入分镜存储失败: {e}")
+        STORYBOARD_STORE = loaded
+        print(f"[Storyboard] 已载入 {len(loaded)} 个分镜")
+
+
+def storyboard_save(sb: dict):
+    """把单个分镜原子写回其文件（调用方需持有 STORYBOARD_STORE_LOCK）。"""
+    try:
+        os.makedirs(STORYBOARD_DIR, exist_ok=True)
+        path = os.path.join(STORYBOARD_DIR, f"{sb['storyboard_id']}.json")
+        tmp = path + f".tmp{os.getpid()}"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(sb, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception as e:
+        print(f"[Storyboard] 分镜持久化失败 {sb.get('storyboard_id')}: {e}")
+
+
+def storyboard_get(storyboard_id: str) -> Optional[dict]:
+    """深拷贝读（安全给外部使用）。"""
+    with STORYBOARD_STORE_LOCK:
+        sb = STORYBOARD_STORE.get(storyboard_id)
+        return json.loads(json.dumps(sb, ensure_ascii=False, default=str)) if sb else None
+
+
+def _storyboard_refresh_scenes(sb: dict) -> bool:
+    """scene 状态跟随真实 Task 状态（实时推导），有变化则持久化。返回是否有变化。"""
+    changed = False
+    for scene in sb.get("scenes") or []:
+        tid = scene.get("task_id") or ""
+        if not tid:
+            continue
+        task = task_get(tid)
+        if not task:
+            continue
+        new_status = _STORYBOARD_SCENE_STATUS_MAP.get(task.get("status") or "", scene.get("status") or "queued")
+        if new_status != scene.get("status"):
+            scene["status"] = new_status
+            changed = True
+    return changed
+
+
+def _storyboard_normalize_scenes(scenes: List[dict], existing: dict = None) -> List[dict]:
+    """归一化 scenes 数组：保留已有 scene_id（维持 task 关联）、补默认字段、按 order 排序。"""
+    existing = existing or {}
+    out = []
+    for i, raw in enumerate(scenes or []):
+        if not isinstance(raw, dict):
+            continue
+        sid = str(raw.get("scene_id") or "").strip()
+        if sid and sid in existing:
+            keep = dict(existing[sid])   # 保留 task_id/status（scene 关联的任务不丢）
+        else:
+            sid = f"sc_{uuid.uuid4().hex}"
+            keep = {"task_id": "", "status": "queued"}
+        keep.update({
+            "scene_id": sid,
+            "order": int(raw.get("order") if raw.get("order") is not None else i),
+            "visual": str(raw.get("visual") or ""),
+            "prompt": str(raw.get("prompt") or ""),
+            "camera": str(raw.get("camera") or ""),
+            "motion": str(raw.get("motion") or ""),
+            "duration": int(raw.get("duration") or 0),
+            "transition": str(raw.get("transition") or ""),
+            "audio": str(raw.get("audio") or ""),
+        })
+        out.append(keep)
+    out.sort(key=lambda s: (s.get("order") or 0, s.get("scene_id") or ""))
+    return out
+
+
+def _storyboard_public(sb: dict, with_scenes: bool = False) -> dict:
+    """对外响应（列表 slim：不带 scenes，附场景数）。"""
+    out = {
+        "storyboard_id": sb.get("storyboard_id"),
+        "name": sb.get("name"),
+        "project_id": sb.get("project_id") or "",
+        "video_config": sb.get("video_config") or {},
+        "scene_count": len(sb.get("scenes") or []),
+        "created_at": sb.get("created_at"),
+        "updated_at": sb.get("updated_at"),
+    }
+    if with_scenes:
+        out["scenes"] = sb.get("scenes") or []
+    return out
+
+
+def _storyboard_render_payload(scene: dict, video_config: dict) -> dict:
+    """组装真实视频任务 payload：参考图/参考视频/提示词（prompt+运镜+动作）/duration/音频。"""
+    prompt_parts = [str(scene.get("prompt") or "").strip()]
+    camera = str(scene.get("camera") or "").strip()
+    motion = str(scene.get("motion") or "").strip()
+    if camera:
+        prompt_parts.append(f"运镜：{camera}")
+    if motion:
+        prompt_parts.append(f"动作：{motion}")
+    prompt = "。".join([p for p in prompt_parts if p])
+    cfg = video_config or {}
+    images: List[dict] = []
+    videos: List[dict] = []
+    visual = str(scene.get("visual") or "").strip()
+    if visual:
+        ext = os.path.splitext(urllib.parse.urlparse(visual).path)[1].lower()
+        if ext in _VIDEO_EXT_HINTS:
+            videos.append({"url": visual, "role": "reference_video"})
+        else:
+            images.append({"url": visual})
+    duration = int(scene.get("duration") or 0) or int(cfg.get("duration") or 0) or STORYBOARD_DEFAULT_DURATION
+    duration = max(1, min(duration, 60))
+    payload = {
+        "prompt": prompt or "视频生成",
+        "provider_id": str(cfg.get("provider_id") or "comfly"),
+        "model": str(cfg.get("model") or "veo3-fast"),
+        "duration": duration,
+        "aspect_ratio": str(cfg.get("aspect_ratio") or "16:9"),
+        "images": images,
+        "videos": videos,
+        "audios": [str(scene.get("audio") or "").strip()] if str(scene.get("audio") or "").strip() else [],
+    }
+    return payload
+
+
+# --- Storyboard API（V2 Phase 3） ---
+
+@app.post("/api/storyboards")
+async def create_storyboard(req: StoryboardCreateRequest):
+    """创建分镜：name + scenes 数组（每 scene 可带 visual/prompt/camera/motion/duration/transition/audio）。"""
+    name = req.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="分镜名称不能为空")
+    scenes = _storyboard_normalize_scenes([s.dict() for s in (req.scenes or [])])
+    if len(scenes) > STORYBOARD_MAX_SCENES:
+        raise HTTPException(status_code=400, detail=f"场景数量超过上限（{STORYBOARD_MAX_SCENES}）")
+    video_config = (req.video_config or StoryboardVideoConfigPayload()).dict()
+    sb_id = f"sb_{uuid.uuid4().hex}"
+    now = time.time()
+    sb = {
+        "storyboard_id": sb_id,
+        "name": name,
+        "project_id": req.project_id or "",
+        "video_config": video_config,
+        "scenes": scenes,
+        "created_at": now,
+        "updated_at": now,
+    }
+    with STORYBOARD_STORE_LOCK:
+        STORYBOARD_STORE[sb_id] = sb
+        storyboard_save(sb)
+    return _storyboard_public(storyboard_get(sb_id), with_scenes=True)
+
+
+@app.get("/api/storyboards")
+async def list_storyboards():
+    """分镜列表（slim：不含 scenes，附场景数）。按创建时间倒序。"""
+    with STORYBOARD_STORE_LOCK:
+        items = [json.loads(json.dumps(m, ensure_ascii=False, default=str)) for m in STORYBOARD_STORE.values()]
+    items.sort(key=lambda m: m.get("created_at") or 0, reverse=True)
+    return {"total": len(items), "items": [_storyboard_public(m) for m in items]}
+
+
+@app.get("/api/storyboards/{storyboard_id}")
+async def get_storyboard(storyboard_id: str):
+    """分镜详情：scenes 状态实时跟随对应 Task 状态。"""
+    sb = storyboard_get(storyboard_id)
+    if not sb:
+        raise HTTPException(status_code=404, detail="分镜不存在")
+    changed = _storyboard_refresh_scenes(sb)
+    if changed:
+        with STORYBOARD_STORE_LOCK:
+            store_sb = STORYBOARD_STORE.get(storyboard_id)
+            if store_sb is not None:
+                store_sb["scenes"] = sb["scenes"]
+                store_sb["updated_at"] = time.time()
+                storyboard_save(store_sb)
+    return _storyboard_public(sb, with_scenes=True)
+
+
+@app.put("/api/storyboards/{storyboard_id}")
+async def update_storyboard(storyboard_id: str, req: StoryboardUpdateRequest):
+    """更新分镜：scenes 数组整体替换（增删改）；带原 scene_id 的场景保留任务关联。"""
+    sb = storyboard_get(storyboard_id)
+    if not sb:
+        raise HTTPException(status_code=404, detail="分镜不存在")
+    existing = {s.get("scene_id"): s for s in (sb.get("scenes") or []) if s.get("scene_id")}
+    new_scenes = _storyboard_normalize_scenes([s.dict() for s in (req.scenes or [])], existing)
+    if len(new_scenes) > STORYBOARD_MAX_SCENES:
+        raise HTTPException(status_code=400, detail=f"场景数量超过上限（{STORYBOARD_MAX_SCENES}）")
+    name = req.name.strip() if req.name and req.name.strip() else sb.get("name")
+    video_config = req.video_config.dict() if req.video_config else (sb.get("video_config") or {})
+    with STORYBOARD_STORE_LOCK:
+        store_sb = STORYBOARD_STORE.get(storyboard_id)
+        if store_sb is None:
+            raise HTTPException(status_code=404, detail="分镜不存在")
+        store_sb["name"] = name
+        store_sb["project_id"] = req.project_id or store_sb.get("project_id") or ""
+        store_sb["video_config"] = video_config
+        store_sb["scenes"] = new_scenes
+        store_sb["updated_at"] = time.time()
+        storyboard_save(store_sb)
+    return _storyboard_public(storyboard_get(storyboard_id), with_scenes=True)
+
+
+@app.delete("/api/storyboards/{storyboard_id}")
+async def delete_storyboard(storyboard_id: str):
+    """删除分镜记录（不影响已生成的产物与 Task 历史记录）。"""
+    with STORYBOARD_STORE_LOCK:
+        if storyboard_id not in STORYBOARD_STORE:
+            raise HTTPException(status_code=404, detail="分镜不存在")
+        STORYBOARD_STORE.pop(storyboard_id, None)
+        try:
+            path = os.path.join(STORYBOARD_DIR, f"{storyboard_id}.json")
+            if os.path.isfile(path):
+                os.remove(path)
+        except Exception as e:
+            print(f"[Storyboard] 删除分镜文件失败 {storyboard_id}: {e}")
+    return {"success": True, "storyboard_id": storyboard_id}
+
+
+@app.post("/api/storyboards/{storyboard_id}/render")
+async def render_storyboard_scene(storyboard_id: str, scene_id: str = Query(""),
+                                  provider_id: str = Query(""), model: str = Query("")):
+    """渲染单个 scene：转成真实视频生成任务进 Task Engine（task_create + run_canvas_video_task）。
+    平台/模型优先取 URL 参数 > 分镜 video_config > 默认值；scene 关联 task_id，状态跟随任务。"""
+    sb = storyboard_get(storyboard_id)
+    if not sb:
+        raise HTTPException(status_code=404, detail="分镜不存在")
+    scene = next((s for s in (sb.get("scenes") or []) if s.get("scene_id") == scene_id), None)
+    if not scene:
+        raise HTTPException(status_code=404, detail=f"场景 {scene_id} 不存在")
+    video_config = dict(sb.get("video_config") or {})
+    if provider_id:
+        video_config["provider_id"] = provider_id
+    if model:
+        video_config["model"] = model
+    payload = _storyboard_render_payload(scene, video_config)
+    task = task_create(
+        kind=STORYBOARD_KIND,
+        payload=payload,
+        runner_name=STORYBOARD_RUNNER,
+        provider_id=str(payload.get("provider_id") or ""),
+        model_id=str(payload.get("model") or ""),
+        extra={
+            "storyboard_id": storyboard_id,
+            "storyboard_name": sb.get("name"),
+            "scene_id": scene["scene_id"],
+            "scene_order": scene.get("order") or 0,
+        },
+    )
+    scene["task_id"] = task["id"]
+    scene["status"] = "queued"
+    with STORYBOARD_STORE_LOCK:
+        store_sb = STORYBOARD_STORE.get(storyboard_id)
+        if store_sb is not None:
+            for s in store_sb.get("scenes") or []:
+                if s.get("scene_id") == scene["scene_id"]:
+                    s["task_id"] = task["id"]
+                    s["status"] = "queued"
+            store_sb["updated_at"] = time.time()
+            storyboard_save(store_sb)
+    await task_enqueue(task["id"])
+    return {"storyboard_id": storyboard_id, "scene_id": scene["scene_id"], "task_id": task["id"], "status": "queued"}
+
+
+@app.post("/api/storyboards/{storyboard_id}/render-all")
+async def render_storyboard_all(storyboard_id: str, provider_id: str = Query(""), model: str = Query("")):
+    """一键渲染全部 scenes：按 order 顺序生成连续片段，每个 scene 创建真实任务进 Task Engine。
+    已有关联且未结束的任务跳过；已结束（成功/失败）的 scene 重新创建任务。"""
+    sb = storyboard_get(storyboard_id)
+    if not sb:
+        raise HTTPException(status_code=404, detail="分镜不存在")
+    scenes = sorted((sb.get("scenes") or []), key=lambda s: (s.get("order") or 0, s.get("scene_id") or ""))
+    if not scenes:
+        raise HTTPException(status_code=400, detail="分镜没有场景")
+    video_config = dict(sb.get("video_config") or {})
+    if provider_id:
+        video_config["provider_id"] = provider_id
+    if model:
+        video_config["model"] = model
+    launched: List[str] = []
+    skipped: List[str] = []
+    updated: List[dict] = []
+    for scene in scenes:
+        tid = scene.get("task_id") or ""
+        if tid:
+            t = task_get(tid)
+            if t and t.get("status") not in TASK_TERMINAL_STATUSES:
+                skipped.append(tid)
+                updated.append(scene)
+                continue
+        payload = _storyboard_render_payload(scene, video_config)
+        task = task_create(
+            kind=STORYBOARD_KIND,
+            payload=payload,
+            runner_name=STORYBOARD_RUNNER,
+            provider_id=str(payload.get("provider_id") or ""),
+            model_id=str(payload.get("model") or ""),
+            extra={
+                "storyboard_id": storyboard_id,
+                "storyboard_name": sb.get("name"),
+                "scene_id": scene["scene_id"],
+                "scene_order": scene.get("order") or 0,
+            },
+        )
+        scene["task_id"] = task["id"]
+        scene["status"] = "queued"
+        launched.append(task["id"])
+        updated.append(scene)
+        await task_enqueue(task["id"])
+    with STORYBOARD_STORE_LOCK:
+        store_sb = STORYBOARD_STORE.get(storyboard_id)
+        if store_sb is not None:
+            store_sb["scenes"] = updated
+            store_sb["updated_at"] = time.time()
+            storyboard_save(store_sb)
+    return {
+        "storyboard_id": storyboard_id,
+        "launched": len(launched),
+        "skipped": len(skipped),
+        "tasks": launched,
+        "message": f"已创建 {len(launched)} 个视频任务进入 Task Engine 队列" + (f"（{len(skipped)} 个任务仍在执行，跳过）" if skipped else ""),
+    }
 
 if __name__ == "__main__":
     import uvicorn

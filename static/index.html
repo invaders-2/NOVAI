@@ -3216,6 +3216,15 @@
                     </svg>
                     <span class="nav-text">输出</span>
                 </div>
+                <div class="nav-item" onclick="switchUI(this, 'matrix')">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                    <span class="nav-text">批量</span>
+                </div>
             </nav>
 
             <div class="side-actions">
@@ -3284,7 +3293,8 @@
             <iframe id="frame-online" data-src="/static/online.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
             <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
             <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
-            <iframe id="frame-outputs" data-src="/static/outputs.html?v=1.0.108.1786428400.1786440216" scrolling="yes"></iframe>
+            <iframe id="frame-outputs" data-src="/static/outputs.html?v=1.0.108.1786428400.1786440247" scrolling="yes"></iframe>
+            <iframe id="frame-matrix" data-src="/static/matrix.html?v=1.0.108.1786428400.1786440723" scrolling="yes"></iframe>
             <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
             <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
             <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
@@ -3839,7 +3849,7 @@
         const SIDEBAR_SETTINGS_COLLAPSED_KEY = 'studio_sidebar_settings_collapsed';
         const SIDEBAR_PINNED_KEY = 'studio_sidebar_pinned';
         const DEFAULT_PAGE_ID = 'zimage';
-        const PAGE_IDS = ['home','zimage','enhance','klein','angle','online','gpt-chat','canvas','asset-manager','outputs','api-settings','comfyui-settings'];
+        const PAGE_IDS = ['home','zimage','enhance','klein','angle','online','gpt-chat','canvas','asset-manager','outputs','matrix','api-settings','comfyui-settings'];
         const PROJECT_URL = 'https://github.com/invaders-2/NOVAI';
         let appInfo = { version:'', repo_url:PROJECT_URL, version_url:'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION' };
         let updateConnectivityResult = null;

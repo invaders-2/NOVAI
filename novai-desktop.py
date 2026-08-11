@@ -6,7 +6,7 @@ import sys
 import time
 import os
 
-PORT = 3001
+PORT = 3000
 URL = f"http://127.0.0.1:{PORT}"
 
 # 启动后端服务

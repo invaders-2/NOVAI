@@ -11098,7 +11098,7 @@ async def lan_info():
     import os as _os
     import io as _io
     import base64 as _b64
-    port = 3001
+    port = 3000
     lan_ip = _os.environ.get("NOVAI_LAN_IP")
     lan_url = _os.environ.get("NOVAI_LAN_URL")
     # dev 模式（直接跑 main.py）下环境变量没设，自己算
@@ -19862,7 +19862,7 @@ def prune_runninghub_workflow_store_for_provider(provider):
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3001))
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3000))
     # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
     # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。

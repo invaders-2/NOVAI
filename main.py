@@ -2049,6 +2049,7 @@ def update_allowed_file(path: str) -> bool:
         path in {"main.py", "VERSION", "安装即梦CLI.bat", "安装即梦CLI.command", "登录即梦CLI.bat", "登录即梦CLI.command", "launcher.py", "novai-desktop.py", "app.py", "build.py", "build-all.py", "build-desktop.py", "build-mac.py", "installer.py"}
         or path.startswith("static/")
         or path.startswith("tools/")
+        or path.startswith("assets/models/")
     )
 
 # 缓存 GitHub Tree API 响应（含 ETag），减少 60 次/h 限流压力

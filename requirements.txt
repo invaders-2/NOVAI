@@ -8,3 +8,4 @@ httpx>=0.24
 pillow>=9.0
 pystray>=0.19
 qrcode>=7.4
+opencv-python-headless>=4.9

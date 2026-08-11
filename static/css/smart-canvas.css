@@ -399,6 +399,9 @@ video.node-img { object-fit:cover; background:var(--accent); }
 /* 播放中控制条常显（不依赖 hover）：WKWebView/触屏下 hover 不可靠，保证按钮始终可点 */
 .smart-video-player.playing .smart-video-controls,
 .smart-video-player:active .smart-video-controls { opacity:1; pointer-events:auto; }
+/* 复刻上游：video 挂原生 controls 时隐藏自绘控制条（避免双条重叠）。
+   原生 controls 不可用的环境（罕见）自绘条兜底——通过 JS 移除 has-native-controls 类启用。 */
+.smart-video-player.has-native-controls .smart-video-controls { display:none !important; }
 /* CSS 全屏降级：WKWebView 无 requestFullscreen API 时铺满视口 */
 .smart-video-player.svc-css-fullscreen { position:fixed; left:0; top:0; width:100vw; height:100vh; z-index:9999;
   border-radius:0; background:#000; }
@@ -1491,3 +1494,9 @@ input[type=range].smart-range::-webkit-slider-thumb { -webkit-appearance:none; w
     position: absolute; right: 0; bottom: 0; width: 16px; height: 16px;
     cursor: se-resize; opacity: 0;
 }
+/* M2: 生成后快捷操作建议条（底部浮出，半透明暗色胶囊） */
+.smart-suggest-bar { position:fixed; left:50%; bottom:28px; transform:translateX(-50%); z-index:88;
+  display:flex; align-items:center; gap:10px; padding:10px 14px; border-radius:16px;
+  background:rgba(22, 22, 26, .88); border:1px solid rgba(255,255,255,.12); color:#f5f5f7;
+  box-shadow:0 16px 44px rgba(0,0,0,.4); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  max-width:min(760px, 92vw); flex-wrap:wrap; }

@@ -532,10 +532,10 @@ function smartVideoPlayerHtml(url, attrs=''){ return window.NovaMedia ? NovaMedi
 function _localSmartVideoPlayerHtml(url, attrs=''){
     const original = smartOriginalMediaUrl(url);
     const safe = escapeHtml(displayMediaUrl({url:original}));
-    // 自绘控制条：WKWebView（桌面端 pywebview）不渲染 video 原生 controls（无暂停/全屏按钮），
-    // 用自定义控件保证浏览器与桌面端行为一致。视频元素本身不挂 controls，避免双控件。
-    return `<div class="smart-video-player" data-url="${escapeAttr(original)}">
-      <video src="${safe}" data-url="${escapeAttr(original)}" data-inline-video-active="1" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>
+    // 复刻上游：video 挂原生 controls（WebKit/WKWebView 渲染原生控制条），
+    // 自绘控制条保留为 CSS 兜底（has-native-controls 时隐藏）。
+    return `<div class="smart-video-player has-native-controls" data-url="${escapeAttr(original)}">
+      <video src="${safe}" data-url="${escapeAttr(original)}" data-inline-video-active="1" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" controls${attrs ? ` ${attrs}` : ''}></video>
       <div class="smart-video-controls">
         <button class="svc-btn svc-play" type="button" title="播放/暂停"><i data-lucide="pause"></i></button>
         <div class="svc-progress"><div class="svc-progress-bg"><div class="svc-progress-fill"></div></div><div class="svc-time">0:00 / 0:00</div></div>
@@ -599,14 +599,58 @@ function initSmartVideoControls(playerEl, video){
     });
     if(fullBtn) fullBtn.addEventListener('click', e => {
         e.stopPropagation();
+        const exitCssFullscreen = () => {
+            try {
+                playerEl.classList.remove('svc-css-fullscreen');
+                document.body.classList.remove('svc-fullscreen-active');
+                const parent = playerEl._svcFsParent;
+                if(parent){
+                    const next = playerEl._svcFsNextSibling;
+                    playerEl._svcFsParent = null;
+                    playerEl._svcFsNextSibling = null;
+                    try { if(next) next.before(playerEl); else parent.appendChild(playerEl); }
+                    catch(_) { try { parent.appendChild(playerEl); } catch(_) {} }
+                }
+            } catch(_) {}
+        };
+        const cssFullscreen = () => {
+            try {
+                // 画布 world 带 transform：fixed 相对 transform 容器，需挂到 body 才真正铺满视口
+                if(playerEl.parentElement !== document.body){
+                    playerEl._svcFsParent = playerEl.parentElement;
+                    playerEl._svcFsNextSibling = playerEl.nextSibling;
+                    document.body.appendChild(playerEl);
+                }
+                playerEl.classList.add('svc-css-fullscreen');
+                document.body.classList.add('svc-fullscreen-active');
+            } catch(_) {}
+        };
         const requestFS = () => {
             try {
-                if(document.fullscreenElement) document.exitFullscreen?.();
-                else if(playerEl.requestFullscreen) playerEl.requestFullscreen();
-                else if(playerEl.webkitRequestFullscreen) playerEl.webkitRequestFullscreen();
-                else if(video.requestFullscreen) video.requestFullscreen();
-                else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
-            } catch(_) {}
+                if(playerEl.classList.contains('svc-css-fullscreen')){
+                    exitCssFullscreen();
+                    return;
+                }
+                // 与 shared/media.js 一致：350ms 内无 fullscreenchange 判定原生全屏静默失败 → CSS 降级
+                if(document.fullscreenElement){ document.exitFullscreen?.(); return; }
+                let fsTimer = setTimeout(cssFullscreen, 350);
+                const cancelTimer = () => { clearTimeout(fsTimer); };
+                const onFsChange = () => cancelTimer();
+                document.addEventListener('fullscreenchange', onFsChange, {once:true});
+                document.addEventListener('webkitfullscreenchange', onFsChange, {once:true});
+                try {
+                    if(playerEl.requestFullscreen){
+                        const p = playerEl.requestFullscreen();
+                        if(p && typeof p.catch === 'function') p.catch(() => { cancelTimer(); cssFullscreen(); });
+                    } else if(playerEl.webkitRequestFullscreen){
+                        playerEl.webkitRequestFullscreen();
+                    } else if(video.requestFullscreen){
+                        video.requestFullscreen();
+                    } else if(video.webkitEnterFullscreen){
+                        video.webkitEnterFullscreen();
+                    } else { cancelTimer(); cssFullscreen(); }
+                } catch(_) { cancelTimer(); cssFullscreen(); }
+            } catch(_) { cssFullscreen(); }
         };
         requestFS();
     });
@@ -622,6 +666,8 @@ function smartActivateVideoPreview(target){
         selectedIds = [];
         selectedImage = {nodeId:selNodeEl.dataset.id, index:-1};
         syncChatContext?.();
+        // 选中节点后同步打开编辑器（Composer），与图片单击路径对齐，修复播放后编辑器不显示
+        if(typeof scheduleComposerUpdate === 'function') scheduleComposerUpdate(180);
     }
     const img = target?.matches?.('img[data-preview-kind="video"]') ? target : root?.querySelector?.('img[data-preview-kind="video"]');
     if(!img){
@@ -7862,6 +7908,7 @@ function smartNodeToolbarHtml(node){
         {key:'mask', icon:'brush', label:'遮罩', enabled:canEditImage},
         {key:'brush', icon:'paintbrush', label:'画笔', enabled:canEditImage},
         {key:'grid', icon:'grid-3x3', label:gridLabel, enabled:canEditImage},
+        {key:'blurfaces', icon:'user-round', label:'人脸模糊', enabled:kind === 'video'},
         {key:'download', icon:'download', label:'下载', enabled:true}
     ];
     return `<div class="smart-node-floating-menu" data-smart-node-menu="1">${actions.map(action => `
@@ -7898,6 +7945,10 @@ function runSmartNodeToolbarAction(nodeId, action){
         downloadPreviewFile(node.images?.[index] || item);
         return;
     }
+    if(action === 'blurfaces'){
+        blurFacesForSmartNode(node, index);
+        return;
+    }
     if(action === 'canvas'){
         duplicateSmartNodeMediaToCanvas(node, index);
         return;
@@ -7915,6 +7966,38 @@ function runSmartNodeToolbarAction(nodeId, action){
     setImageEditMode(modeMap[action] || 'preview', true);
     if(action === 'grid' && canGridJoinCurrentNode()){
         setGridOperationMode('join');
+    }
+}
+async function blurFacesForSmartNode(node, index){
+    const item = imageForDisplay(node?.images?.[index]);
+    if(!item?.url){
+        toast('没有可处理的视频');
+        return;
+    }
+    toast('人脸模糊处理中…');
+    try{
+        const resp = await fetch('/api/video/blur-faces', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url: item.url, strength: 60}),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if(!resp.ok){
+            toast(data.detail || '人脸模糊失败');
+            return;
+        }
+        const newItem = {url: data.url, name: data.name || '模糊人脸.mp4', kind: 'video'};
+        const images = Array.isArray(node.images) ? node.images.slice() : [];
+        images.push(newItem);
+        node.images = images;
+        selectedId = node.id;
+        selectedIds = [];
+        selectedImage = {nodeId: node.id, index: images.length - 1};
+        render();
+        scheduleSave();
+        toast(data.faces_detected > 0 ? `已模糊 ${data.faces_detected} 处人脸` : '处理完成（未检测到人脸）');
+    }catch(err){
+        toast('人脸模糊失败：' + (err?.message || err));
     }
 }
 // 智能分组顶部小菜单：整理排列 / 预览（整组左右切换）/ 宫格拼接 / 批量下载 / 解散分组。
@@ -8701,7 +8784,7 @@ function bindNodeEvents(){
         }
         el.onclick = e => {
             e.stopPropagation();
-            if(Date.now() < suppressNodeClickUntil) return;
+            if(Date.now() < suppressNodeClickUntil && !e.target.closest('video,audio,.smart-video-player')) return;
             const node = nodes.find(n => n.id === id);
             hideRunTimerForNode(node);
             const alreadySelected = selectedId === id && selectedIds.length === 0 && selectedImage.nodeId === '';
@@ -8717,6 +8800,21 @@ function bindNodeEvents(){
             }
             render();
         };
+        // 视频画面点击：捕获阶段先选中节点并打开编辑器（media.js 的 video click handler 会 stopPropagation 吞掉冒泡事件）
+        el.addEventListener('click', e => {
+            if(!e.target.closest('video,audio')) return;
+            if(Date.now() < suppressNodeClickUntil) return;
+            const node = nodes.find(n => n.id === id);
+            if(!node) return;
+            hideRunTimerForNode(node);
+            selectedId = id;
+            selectedIds = [];
+            selectedImage = {nodeId:'', index:-1};
+            if(smartCascadeAnyRunning()) smartCascadeSilentSelection = false;
+            syncChatContext();
+            syncSelectionUi();
+            scheduleComposerUpdate(180);
+        }, true);
         if(nodeForControls?.type !== 'smart-group') el.ondblclick = e => e.stopPropagation();
         const nodeDrop = el.querySelector('.node-drop');
         nodeDrop?.addEventListener('mousedown', e => {
@@ -8964,7 +9062,7 @@ function bindNodeEvents(){
             capturePendingUndo();
         });
         const beginNodeDrag = e => {
-            if(e.button !== 0 || e.target.closest('.mini-x, .smart-node-floating-menu, .node-resize-handle, .thumb-item, .node-port, .prompt-node-control, select, input, textarea, button')) return;
+            if(e.button !== 0 || e.target.closest('.mini-x, .smart-node-floating-menu, .node-resize-handle, .thumb-item, .node-port, .prompt-node-control, select, input, textarea, button, .smart-video-player')) return;
             if(e.target.closest('.prompt-node-pill, textarea:not(.prompt-node-text)')) return;
             e.preventDefault(); e.stopPropagation();
             window.getSelection?.()?.removeAllRanges?.();
@@ -13882,6 +13980,169 @@ function finalizePendingNode(pendingNode, urls, meta, kind='image'){
     if(activeComposerSubject?.id && selectedId === activeComposerSubject.id) lastComposerNodeId = `${selectedId}:node`;
     selectedImage = {nodeId:'', index:-1};
 }
+// M2: 生成后快捷操作建议——拉取 3 条建议并显示底部建议条
+let smartSuggestCtx = null;
+function showSmartSuggestions(suggestions, ctx){
+    const bar = document.getElementById('smartSuggestBar');
+    const box = document.getElementById('smartSuggestBtns');
+    if(!bar || !box) return;
+    if(!suggestions?.length){ return; }
+    smartSuggestCtx = ctx || null;
+    box.innerHTML = '';
+    suggestions.forEach(s => {
+        const btn = document.createElement('button');
+        btn.className = 'smart-suggest-btn';
+        btn.type = 'button';
+        btn.innerHTML = `<i data-lucide="sparkles" class="w-3 h-3"></i><span>${escapeHtml(s.label)}</span>`;
+        btn.addEventListener('click', () => runSuggestionAction(s));
+        box.appendChild(btn);
+    });
+    if(window.lucide) lucide.createIcons();
+    bar.style.display = 'flex';
+}
+function closeSmartSuggestions(){
+    const bar = document.getElementById('smartSuggestBar');
+    if(bar) bar.style.display = 'none';
+    smartSuggestCtx = null;
+}
+async function fetchSmartSuggestions(node, urls, canvasMeta, lastPrompt){
+    try{
+        const promptText = lastPrompt || '';
+        if(!promptText) return;
+        const ctx = {node, urls, canvasMeta};
+        const refs = smartSuggestionRefsFromNode(node);
+        const providerId = settings?.chatProvider || '';
+        const model = settings?.chatModel || '';
+        const res = await fetch('/api/suggestions', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+                node_type: canvasMeta?.node_type || 'video',
+                last_prompt: promptText.slice(0, 2000),
+                media_url: canvasMeta?.media_url || (urls && urls[0]) || '',
+                reference_nodes: refs,
+                provider_id: providerId,
+                model,
+            })
+        });
+        if(!res.ok) return;
+        const data = await res.json();
+        showSmartSuggestions(data?.suggestions || [], ctx);
+    }catch(e){
+        // 建议拉取失败静默降级，不影响画布
+    }
+}
+function smartSuggestionRefsFromNode(node){
+    const refs = [];
+    const imgs = (node?.images || []).slice(0, 6);
+    imgs.forEach(img => {
+        if(!img?.url) return;
+        const kind = img.kind || mediaKindForItem(img);
+        if(kind === 'image' || kind === 'video') refs.push({type:kind, url:img.url});
+    });
+    return refs;
+}
+async function runSuggestionAction(s){
+    if(!smartSuggestCtx) return;
+    const ctx = smartSuggestCtx;
+    const prompt = s.prompt || '';
+    if(!prompt) return;
+    const btn = [...document.querySelectorAll('.smart-suggest-btn')].find(b => b.textContent.includes(s.label));
+    if(btn) btn.disabled = true;
+    try{
+        // 组装生成请求：参考素材 = 建议上下文节点中的媒体 + 新 prompt
+        const refs = smartSuggestionRefsFromNode(ctx.node);
+        const prevSettings = settings;
+        settings = {...settings, prompt:''};
+        await runApiVideoGeneration(prompt, refs);
+        settings = prevSettings;
+        toast('已开始生成：' + s.label);
+        closeSmartSuggestions();
+    }catch(e){
+        toast(e.message || '生成失败');
+        if(btn) btn.disabled = false;
+    }
+}
+// M1: 生成结果自动落画布——上游 canvas_meta 处理
+// 结果节点已存在（正常生成流）时：平移视口到节点 + toast 提示。
+function afterVideoAutoPlace(node, urls, canvasMeta){
+    if(!canvasMeta || canvasMeta.auto_place !== true || !urls?.length) return;
+    const live = liveSmartNode(node);
+    if(!live) return;
+    const rect = nodeRect(live);
+    if(rect && Number.isFinite(rect.x) && Number.isFinite(rect.y)){
+        centerViewportOnWorldPoint({x:rect.x + rect.width / 2, y:rect.y + rect.height / 2});
+    }
+    toast('已生成到画布');
+}
+// 无节点上下文（如对话入口触发生成）时：兜底创建新节点并选中、平移视口。
+// meta: {node_type, title, media_url, auto_place}；urls: 产物 URL 列表。
+function autoPlaceGeneratedNode(meta, urls){
+    if(!meta || meta.auto_place !== true) return null;
+    const mediaUrls = (urls && urls.length ? urls : (meta.media_url ? [meta.media_url] : []))
+        .map(u => typeof u === 'string' ? u : (u?.url || ''))
+        .filter(Boolean);
+    if(!mediaUrls.length) return null;
+    const kind = meta.node_type === 'video' ? 'video' : meta.node_type === 'audio' ? 'audio' : 'image';
+    const ext = kind === 'video' ? 'mp4' : kind === 'audio' ? 'mp3' : 'png';
+    const center = viewportCenter();
+    // 放置位置：视口中心附近随机偏移，偏移量按节点尺寸放大，避免与已有节点重叠
+    const baseW = kind === 'video' ? 320 : 260;
+    const baseH = kind === 'video' ? 400 : 260;
+    let point = {x:center.x, y:center.y};
+    const existingRects = nodes.map(nodeRect).filter(r => r && Number.isFinite(r.x));
+    const rectsOverlap = (r1, r2) => !(r1.x + r1.width < r2.x || r2.x + r2.width < r1.x || r1.y + r1.height < r2.y || r2.y + r2.height < r1.y);
+    for(let attempt = 0; attempt < 8; attempt++){
+        const offset = 120 + attempt * 90;
+        const angle = Math.random() * Math.PI * 2;
+        const cand = {
+            x:center.x + Math.cos(angle) * offset,
+            y:center.y + Math.sin(angle) * offset
+        };
+        const candRect = {x:cand.x, y:cand.y, width:baseW, height:baseH};
+        if(!existingRects.some(r => rectsOverlap(candRect, r))){
+            point = cand;
+            break;
+        }
+    }
+    undoSuppressed = true;
+    const node = createImageNodeAt(point, []);
+    undoSuppressed = false;
+    node.images = mediaUrls.map((url, i) => ({url, name:meta.title || `output-${i + 1}.${ext}`, kind, generatedResult:true}));
+    node.title = meta.title || (kind === 'video' ? 'Video' : kind === 'audio' ? 'Audio' : 'Image');
+    delete node.w;
+    delete node.h;
+    node.scale = mediaNodeDefaultScale(node);
+    selectedId = node.id;
+    selectedIds = selectedId ? [selectedId] : [];
+    selectedImage = {nodeId:node.id, index:-1};
+    render();
+    centerViewportOnWorldPoint({x:point.x, y:point.y});
+    scheduleSave();
+    // 视频节点立即探测真实尺寸并修正比例（与 appendImagesToSmartNode 同源逻辑）
+    node.images.forEach((img, idx) => {
+        if(isVideoMediaItem(img) && !img.natural_w && !img.natural_h && !img._naturalSizeLoading){
+            img._naturalSizeLoading = true;
+            _probeVideoDimensions(img.url || '').then(dims => {
+                img._naturalSizeLoading = false;
+                if(!dims || img.natural_w || img.natural_h) return;
+                img.natural_w = dims.w;
+                img.natural_h = dims.h;
+                delete img.layout_w;
+                delete img.layout_h;
+                if(node.images.length === 1 && !node.w && !node.h){
+                    const layout = singleImageLayout(img, node, mediaNodeDefaultScale(node));
+                    node.w = layout.width;
+                    node.h = layout.height;
+                }
+                updateNodeElementDuringResize(node);
+                scheduleSave();
+            }).catch(() => { img._naturalSizeLoading = false; });
+        }
+    });
+    toast('已生成到画布');
+    return node;
+}
 function restoreFromExtraction(node, extracted){
     if(!node || !extracted) return;
     node.images = extracted.images.slice();
@@ -13892,6 +14153,14 @@ function restoreFromExtraction(node, extracted){
     if(Array.isArray(node.inputNodeIds)){
         node.inputNodeIds = node.inputNodeIds.filter(id => id !== extracted.id);
     }
+}
+// IIFE 隔离：M1/M2 新增函数挂 window 供对话面板等外部入口调用
+if(typeof window !== 'undefined'){
+    window.afterVideoAutoPlace = afterVideoAutoPlace;
+    window.autoPlaceGeneratedNode = autoPlaceGeneratedNode;
+    window.closeSmartSuggestions = closeSmartSuggestions;
+    window.showSmartSuggestions = showSmartSuggestions;
+    window.fetchSmartSuggestions = fetchSmartSuggestions;
 }
 function restoreSourceVisualState(node, state){
     if(!node || !state) return;
@@ -14477,7 +14746,8 @@ async function generateUrlsForCurrentSettings(node, prompt, refs, runSettings=se
         return {urls, kind:mediaKindForUrls(urls, 'image')};
     }
     if(isApiLikeEngine(activeSettings.engine) && activeSettings.apiKind === 'video'){
-        return {urls:await runApiVideoGeneration(prompt, refs, activeSettings), kind:'video'};
+        const vRes = await runApiVideoGeneration(prompt, refs, activeSettings);
+        return {urls:Array.isArray(vRes) ? vRes : (vRes?.urls || []), kind:'video', canvas_meta:(!Array.isArray(vRes) && vRes?.canvas_meta) || {}};
     }
     if(isApiLikeEngine(activeSettings.engine)){
         const taskResult = await runApiGeneration(prompt, refs, activeSettings);
@@ -15144,9 +15414,16 @@ async function runGeneration(){
             return;
         }
         if(isApiLikeEngine(settings.engine) && settings.apiKind === 'video'){
-            const outVideos = await runApiVideoGeneration(prompt, refs);
+            const outResult = await runApiVideoGeneration(prompt, refs);
+            const outVideos = Array.isArray(outResult) ? outResult : (outResult?.urls || []);
+            const canvasMeta = (!Array.isArray(outResult) && outResult?.canvas_meta) || {};
             if(!outVideos.length) throw new Error(tr('smart.errNoOutVideos'));
             finalizePendingNode(pendingNode, outVideos, pendingMeta, 'video');
+            // M1: 生成结果自动落画布——若上游返回 canvas_meta 且结果节点已存在，平移视口并提示；
+            // 无节点上下文（如对话入口）时兜底创建新节点。
+            afterVideoAutoPlace(pendingNode, outVideos, canvasMeta);
+            // M2: 生成完成后拉取 3 条快捷操作建议（失败静默，不影响画布）
+            fetchSmartSuggestions(pendingNode, outVideos, canvasMeta, prompt);
             if(sourceVisualState) restoreSourceVisualState(node, sourceVisualState);
             addSmartGenerationLog({run:runLog, outputs:outVideos, runMs:nowMs() - runLogStart});
             clearPromptInput({preserveDraft:true});
@@ -15391,7 +15668,9 @@ async function runApiVideoGeneration(prompt, refs, runSettings=settings){
             body:JSON.stringify(payload)
         }).then(async r => { if(!r.ok) throw new Error(await smartResponseErrorMessage(r, tr('smart.errRunFailed'))); return r.json(); });
         if(result && result.jimeng_pending) throw new JimengPendingSignal({submitId:result.submit_id, kind:result.kind || 'video', queueInfo:result.queue_info, message:result.message});
-        return resultMediaUrls(result);
+        const urls = resultMediaUrls(result);
+        // M1: 透传 canvas_meta，供上层自动落画布/视口平移/提示使用（旧后端无此字段时为空对象）
+        return {urls, canvas_meta:(result && result.canvas_meta) || {}};
     } finally {
         transientSmartCloudLinks = [];
     }

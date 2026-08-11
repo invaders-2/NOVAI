@@ -6266,7 +6266,7 @@ async def generate_jimeng_video(payload: CanvasVideoRequest, provider):
                 args.append(f"--video_resolution={resolution}")
         raw = await run_jimeng_cli(args, timeout=jimeng_poll_seconds() + 180)
         urls = await jimeng_store_outputs(raw, "video")
-        return {"videos": urls, "task_id": jimeng_submit_id(raw) or None, "raw": raw}
+        return {**{"videos": urls, "task_id": jimeng_submit_id(raw) or None, "raw": raw}, **build_canvas_meta(urls, payload, "video")}
     finally:
         for path in temp_paths:
             try:
@@ -6374,6 +6374,38 @@ def output_url_for(filename, category="output"):
 def output_path_for(filename, category="output"):
     folder, _ = output_storage(category)
     return os.path.join(folder, filename)
+
+def build_canvas_meta(urls, payload=None, node_type="video"):
+    """为生成成功响应追加画布自动落位元数据（向后兼容：缺失时前端行为不变）。
+    urls: 生成产物 URL 列表（/output/ 或 /assets/ 开头）。
+    返回形如 {"output_url": ..., "canvas_meta": {"node_type": ..., "media_url": ..., "auto_place": true}}。"""
+    if not urls:
+        return {}
+    if isinstance(urls, (list, tuple)):
+        urls = [u for u in urls if u]
+    if not urls:
+        return {}
+    first = urls[0] if isinstance(urls, (list, tuple)) else urls
+    first = str(first or "").strip()
+    if not first:
+        return {}
+    title = ""
+    if payload is not None:
+        try:
+            prompt = str(getattr(payload, "prompt", "") or "").strip()
+            if prompt:
+                title = prompt if len(prompt) <= 24 else prompt[:24] + "…"
+        except Exception:
+            pass
+    return {
+        "output_url": first,
+        "canvas_meta": {
+            "node_type": node_type,
+            "title": title,
+            "media_url": first,
+            "auto_place": True,
+        },
+    }
 
 def output_file_from_url(url):
     if isinstance(url, dict):
@@ -10594,7 +10626,7 @@ async def generate_runninghub_video(payload, provider):
         if not urls:
             raise HTTPException(status_code=502, detail=f"RunningHub 视频生成成功但没有返回视频：{result}")
         local_urls = [await save_remote_video_to_output(url, prefix="rh_video_") for url in urls]
-        return {"videos": local_urls, "task_id": task_id, "raw": result}
+        return {**{"videos": local_urls, "task_id": task_id, "raw": result}, **build_canvas_meta(local_urls, payload, "video")}
 
 async def generate_ai_image(prompt, size, quality, model, reference_images=None, provider_id="comfly"):
     provider = get_api_provider(provider_id)
@@ -11250,6 +11282,92 @@ async def upload_ai_reference(files: List[UploadFile] = File(...)):
             f.write(content)
         uploaded.append({"url": output_url_for(filename, "input"), "name": file.filename or filename, "kind": kind, "mime": content_type})
     return {"files": uploaded}
+
+class VideoBlurFacesRequest(BaseModel):
+    url: str = ""            # 本地视频 URL（/assets/ 或 /output/ 开头）
+    strength: int = 60       # 高斯模糊核大小（20-100，越大越糊）
+
+@app.post("/api/video/blur-faces")
+async def video_blur_faces(payload: VideoBlurFacesRequest):
+    """检测视频中的人脸并高斯模糊，规避平台真人审核拦截。
+    返回模糊后的视频 URL（存 assets/input/blurred_*.mp4）。
+    人脸检测用 YuNet 模型（assets/models/face_detection_yunet.onnx），
+    无模型时返回 400 提示；无 ffmpeg 时返回 400 提示。"""
+    raw_url = (payload.url or "").strip()
+    if not raw_url:
+        raise HTTPException(status_code=400, detail="缺少视频 URL")
+    src_path = output_file_from_url(raw_url)
+    if not src_path or not os.path.isfile(src_path):
+        raise HTTPException(status_code=404, detail="视频文件不存在")
+    if os.path.getsize(src_path) > 200 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="视频超过 200MB，请先压缩")
+    strength = max(20, min(100, int(payload.strength or 60)))
+    ks = strength if strength % 2 == 1 else strength + 1
+
+    model_path = os.path.join(BASE_DIR, "assets", "models", "face_detection_yunet.onnx")
+    if not os.path.isfile(model_path):
+        raise HTTPException(status_code=400, detail="人脸检测模型缺失（assets/models/face_detection_yunet.onnx）")
+    try:
+        import cv2
+    except ImportError:
+        raise HTTPException(status_code=400, detail="服务器缺少 opencv-python-headless，无法做人脸检测")
+
+    def _blur():
+        cap = cv2.VideoCapture(src_path)
+        if not cap.isOpened():
+            raise RuntimeError("无法读取视频")
+        fps = cap.get(cv2.CAP_PROP_FPS) or 25
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        detector = cv2.FaceDetectorYN_create(model_path, "", (width, height), 0.6, 0.3, 5000)
+        tmp_path = src_path + ".blur_tmp.avi"
+        writer = cv2.VideoWriter(tmp_path, cv2.VideoWriter_fourcc(*'MJPG'), fps, (width, height))
+        faces_total = 0
+        frames = 0
+        while True:
+            ok, frame = cap.read()
+            if not ok:
+                break
+            frames += 1
+            _, faces = detector.detect(frame)
+            if faces is not None and len(faces):
+                faces_total += len(faces)
+                for face in faces:
+                    x, y, w, h = [int(v) for v in face[:4]]
+                    pad_x = int(w * 0.15); pad_y = int(h * 0.25)
+                    x0 = max(0, x - pad_x); y0 = max(0, y - pad_y)
+                    x1 = min(width, x + w + pad_x); y1 = min(height, y + h + pad_y)
+                    roi = frame[y0:y1, x0:x1]
+                    if roi.size:
+                        frame[y0:y1, x0:x1] = cv2.GaussianBlur(roi, (ks, ks), 0)
+            writer.write(frame)
+        cap.release()
+        writer.release()
+        out_filename = f"blurred_{uuid.uuid4().hex[:12]}.mp4"
+        out_path = output_path_for(out_filename, "input")
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", tmp_path, "-c:v", "libx264", "-preset", "fast",
+             "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out_path],
+            check=True, capture_output=True)
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        return out_filename, out_path, frames, faces_total
+
+    try:
+        out_filename, out_path, frames, faces_total = await asyncio.to_thread(_blur)
+    except subprocess.CalledProcessError as exc:
+        raise HTTPException(status_code=500, detail=f"视频编码失败：{(exc.stderr or b'').decode('utf-8', errors='replace')[:300]}")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"人脸模糊处理失败：{exc}")
+    return {
+        "url": output_url_for(out_filename, "input"),
+        "name": f"模糊人脸_{uuid.uuid4().hex[:6]}.mp4",
+        "kind": "video",
+        "frames": frames,
+        "faces_detected": faces_total,
+    }
 
 class Base64UploadRequest(BaseModel):
     data: str = ""            # 纯 base64 或 data:URL
@@ -14405,6 +14523,94 @@ def volcengine_video_prompt_text(prompt, aspect_ratio="", duration=None):
     suffix_text = " ".join(suffixes)
     return f"{text} {suffix_text}".strip() if text else suffix_text
 
+def parse_suggestion_json(text):
+    """解析模型输出的建议 JSON 数组（容错：剥离代码块、截取首个 [...]）。"""
+    _re = re
+    if not text:
+        return []
+    cleaned = str(text).strip()
+    if cleaned.startswith("```"):
+        cleaned = _re.sub(r"^```[a-zA-Z]*\s*", "", cleaned)
+        cleaned = _re.sub(r"\s*```$", "", cleaned)
+    start = cleaned.find("[")
+    end = cleaned.rfind("]")
+    if start >= 0 and end > start:
+        cleaned = cleaned[start:end + 1]
+    try:
+        data = json.loads(cleaned)
+    except Exception:
+        return []
+    if not isinstance(data, list):
+        return []
+    result = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label") or "").strip()
+        prompt = str(item.get("prompt") or "").strip()
+        if label and prompt:
+            result.append({"label": label, "prompt": prompt})
+    return result
+
+class CanvasSuggestionsRequest(BaseModel):
+    node_type: str = "video"
+    last_prompt: str = ""
+    media_url: str = ""
+    reference_nodes: list = []
+
+@app.post("/api/suggestions")
+async def suggest_next_actions(payload: CanvasSuggestionsRequest):
+    """生成后快捷操作建议：复用已配置的对话模型，返回 3 条可点击的下一步建议。
+    请求体: {node_type, last_prompt, media_url?, reference_nodes?: [{type, url}]}
+    响应: {suggestions: [{label, prompt}]}；失败/无模型时返回空列表（前端静默隐藏）。"""
+    try:
+        node_type = str(payload.node_type or "video").strip()
+        last_prompt = str(payload.last_prompt or "").strip()
+        suggestions = []
+        reference_nodes = payload.reference_nodes or []
+        ref_parts = []
+        for ref in reference_nodes:
+            if isinstance(ref, dict):
+                ref_type = str(ref.get("type") or "video").lower()
+                ref_url = str(ref.get("url") or "").strip()
+                if ref_url:
+                    ref_parts.append(f"@视频{len(ref_parts) + 1}" if ref_type == "video" else f"@图片{len(ref_parts) + 1}")
+        ref_hint = ""
+        if ref_parts:
+            ref_hint = f"参考素材：{'、'.join(ref_parts)}。"
+        system_hint = (
+            "你是 NOVAI 画布的生成建议助手。根据用户上一次的生成提示词，给出 3 条最合理的下一步操作建议。"
+            "要求：\n"
+            "1. 只输出 JSON 数组，禁止任何额外文字、markdown 代码块或解释。\n"
+            "2. 数组元素格式：{\"label\": \"按钮短文案（≤12字）\", \"prompt\": \"可直接用于视频生成的完整提示词\"}。\n"
+            "3. 若上次任务是视频编辑（替换/编辑类），建议 prompt 必须延续编辑"
+        )
+        type_label = "视频" if node_type == "video" else "图片"
+        user_text = f"上次生成类型：{type_label}\n上次提示词：{last_prompt[:400]}\n{ref_hint}\n请给出 3 条下一步建议（JSON 数组）。"
+        try:
+            base_url, hdrs, model = resolve_chat_provider("", "", "")
+            async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV, timeout=AI_REQUEST_TIMEOUT) as client:
+                resp = await client.post(
+                    f"{base_url}/chat/completions",
+                    headers=hdrs,
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": system_hint},
+                            {"role": "user", "content": user_text},
+                        ],
+                    },
+                )
+                resp.raise_for_status()
+                raw_text = text_from_chat_response(resp.json())
+                suggestions = parse_suggestion_json(raw_text)[:3]
+        except Exception as exc:
+            print(f"[suggestions] failed: {exc}")
+            suggestions = []
+        return {"suggestions": suggestions}
+    except Exception:
+        return {"suggestions": []}
+
 @app.post("/api/canvas-video")
 async def canvas_video(payload: CanvasVideoRequest):
     provider = get_api_provider(payload.provider_id)
@@ -14702,19 +14908,22 @@ async def canvas_video(payload: CanvasVideoRequest):
                             continue
                         # 视频 URL 必须公网可访问（data: URL 不适用于视频，火山要求 https:// URL）
                         if not media_url.startswith(("http://", "https://")):
-                            public_url = local_asset_public_url(text_url)
+                            # 本地素材公网化：云上传（Litterbox/temp.sh，72h 短链）优先——公网直链稳定、
+                            # 火山可访问；PUBLIC_MEDIA_BASE_URL 隧道直链仅作兜底（免费隧道易失效）。
+                            public_url = ""
+                            try:
+                                uploaded = await upload_local_video_to_cloud(text_url)
+                                public_url = str((uploaded or {}).get("url") or "")
+                            except Exception as e:
+                                print(f"火山视频上传云失败，尝试隧道直链: {e}")
                             if not public_url:
-                                try:
-                                    uploaded = await upload_local_video_to_cloud(text_url)
-                                    public_url = str((uploaded or {}).get("url") or "")
-                                except Exception as e:
-                                    print(f"火山视频上传云失败: {e}")
+                                public_url = local_asset_public_url(text_url)
                             if public_url and public_url.startswith(("http://", "https://")):
                                 media_url = public_url
                             else:
                                 raise HTTPException(
                                     status_code=400,
-                                    detail=f"视频必须可通过公网 URL 访问（火山引擎限制）。请在 API/.env 配置 PUBLIC_MEDIA_BASE_URL，或确保视频可被云上传服务处理。当前视频: {text_url[:80]}"
+                                    detail=f"视频必须可通过公网 URL 访问（火山引擎限制）。请确保视频可被云上传服务处理。当前视频: {text_url[:80]}"
                                 )
                         # 视频编辑/局部替换：目标视频 role 用 reference_video（火山要求），
                         # 通过 prompt 关键词或前端显式 role 判定（时长截取已在上方公网化前完成）。
@@ -14869,7 +15078,7 @@ async def canvas_video(payload: CanvasVideoRequest):
             if not urls:
                 raise HTTPException(status_code=502, detail=f"视频生成成功但没有返回视频：{result}")
             local_urls = [await save_remote_video_to_output(url) for url in urls]
-            return {"videos": local_urls, "task_id": task_id, "raw": result}
+            return {**{"videos": local_urls, "task_id": task_id, "raw": result}, **build_canvas_meta(local_urls, payload, "video")}
     except httpx.HTTPStatusError as exc:
         text = exc.response.text
         try:

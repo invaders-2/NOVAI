@@ -131,22 +131,23 @@
     function videoFallbackHtml(url, attrs=''){
         const original = originalMediaUrl(url);
         const src = displayMediaUrl(original);
-        return `<video src="${escapeAttr(src)}#t=0.5" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+        // 复刻上游：fallback 裸 video 也挂原生 controls（#t=0.5 显示首帧，原生条可播放）
+        return `<video src="${escapeAttr(src)}#t=0.5" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" controls${attrs ? ` ${attrs}` : ''}></video>`;
     }
 
     function videoFallbackHtmlFromItem(url, attrs=''){
         const original = originalMediaUrlFromItem(url);
         const src = displayMediaUrlFromItem({ url: original });
-        return `<video src="${escapeHtml(src)}#t=0.5" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>`;
+        return `<video src="${escapeHtml(src)}#t=0.5" data-url="${escapeAttr(original)}" muted preload="metadata" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" controls${attrs ? ` ${attrs}` : ''}></video>`;
     }
 
     function videoPlayerHtml(url, attrs=''){
         const original = originalMediaUrl(url);
         const src = displayMediaUrl(original);
-        // 自绘控制条：WKWebView（桌面端 pywebview）不渲染 video 原生 controls（无暂停/全屏按钮），
-        // 用自定义控件保证浏览器与桌面端行为一致。视频元素本身不挂 controls，避免双控件。
-        return `<div class="smart-video-player" data-url="${escapeAttr(original)}">
-      <video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>
+        // 复刻上游：video 挂原生 controls（WebKit/WKWebView 均渲染原生控制条），
+        // 自绘控制条保留为兜底——CSS 里 .has-native-controls 时隐藏自绘条，避免双控件。
+        return `<div class="smart-video-player has-native-controls" data-url="${escapeAttr(original)}">
+      <video src="${escapeAttr(src)}" data-url="${escapeAttr(original)}" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" controls${attrs ? ` ${attrs}` : ''}></video>
       <div class="smart-video-controls">
         <button class="svc-btn svc-play" type="button" title="播放/暂停"><i data-lucide="pause"></i></button>
         <div class="svc-progress"><div class="svc-progress-bg"><div class="svc-progress-fill"></div></div><div class="svc-time">0:00 / 0:00</div></div>
@@ -158,8 +159,8 @@
     function videoPlayerHtmlFromItem(url, attrs=''){
         const original = originalMediaUrlFromItem(url);
         const src = displayMediaUrlFromItem({ url: original });
-        return `<div class="smart-video-player" data-url="${escapeAttr(original)}">
-      <video src="${escapeHtml(src)}" data-url="${escapeAttr(original)}" data-inline-video-active="1" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback"${attrs ? ` ${attrs}` : ''}></video>
+        return `<div class="smart-video-player has-native-controls" data-url="${escapeAttr(original)}">
+      <video src="${escapeHtml(src)}" data-url="${escapeAttr(original)}" data-inline-video-active="1" autoplay playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" controls${attrs ? ` ${attrs}` : ''}></video>
       <div class="smart-video-controls">
         <button class="svc-btn svc-play" type="button" title="播放/暂停"><i data-lucide="pause"></i></button>
         <div class="svc-progress"><div class="svc-progress-bg"><div class="svc-progress-fill"></div></div><div class="svc-time">0:00 / 0:00</div></div>

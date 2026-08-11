@@ -332,6 +332,9 @@ body.canvas-selecting .node .llm-bubble { pointer-events:none !important; }
 /* 播放中控制条常显（不依赖 hover）：WKWebView/触屏下 hover 不可靠，保证按钮始终可点 */
 .smart-video-player.playing .smart-video-controls,
 .smart-video-player:active .smart-video-controls { opacity:1; pointer-events:auto; }
+/* 复刻上游：video 挂原生 controls 时隐藏自绘控制条（避免双条重叠）。
+   原生 controls 不可用的环境（罕见）自绘条兜底——通过 JS 移除 has-native-controls 类启用。 */
+.smart-video-player.has-native-controls .smart-video-controls { display:none !important; }
 /* CSS 全屏降级：WKWebView 无 requestFullscreen API 时铺满视口 */
 .smart-video-player.svc-css-fullscreen { position:fixed; left:0; top:0; width:100vw; height:100vh; z-index:9999;
   border-radius:0; background:#000; }

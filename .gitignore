@@ -19,6 +19,7 @@ NOVAI-Setup-*.exe
 
 # 运行时数据（不推送）
 assets/
+!assets/models/
 data/api_providers.json
 data/asset_library.json
 data/prompt_libraries.json

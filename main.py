@@ -16367,6 +16367,435 @@ def sanitize_export_filename(name: str, fallback: str) -> str:
     base = re.sub(r'[\\/:*?"<>|]+', "_", base)
     return base or fallback
 
+# ===== V2 Outputs 聚合 API（生成结果工作台） =====
+#
+# 聚合三路真实数据源（全部来自磁盘，无 mock）：
+#   1. 画布节点 images[]（data/canvases/*.json，仅取生成产物：/output/、/assets/output/ URL 或 generatedResult 标记）
+#   2. output/ 与 assets/output/ 目录下的媒体文件
+#   3. Task Engine 历史任务（data/tasks/ 分片）里 success 任务的 result 产物
+# 收藏持久化到 data/outputs_favorites.json（纯 JSON 文件，无数据库）。
+
+OUTPUTS_FAVORITES_PATH = os.path.join(DATA_DIR, "outputs_favorites.json")
+OUTPUTS_SUCCESS_STATUSES = {"success", "succeeded", "completed", "complete", "finished", "done"}
+OUTPUTS_DIR_MEDIA_EXTS = (
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff",
+    ".mp4", ".webm", ".mov", ".m4v", ".avi", ".mkv",
+    ".mp3", ".wav", ".m4a", ".aac", ".ogg", ".flac",
+)
+
+
+def outputs_favorites_load():
+    """读取收藏 id 列表（容错：文件损坏时返回空列表）。"""
+    try:
+        with open(OUTPUTS_FAVORITES_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        favs = data.get("favorites") if isinstance(data, dict) else data
+        if isinstance(favs, list):
+            return [str(x) for x in favs if x]
+    except Exception:
+        pass
+    return []
+
+
+def outputs_favorites_save(favs):
+    """原子写收藏列表（tmp + os.replace）。"""
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        tmp = OUTPUTS_FAVORITES_PATH + f".tmp{os.getpid()}"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"version": 1, "favorites": list(favs)}, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, OUTPUTS_FAVORITES_PATH)
+    except Exception as exc:
+        print(f"[Outputs] 收藏持久化失败: {exc}")
+
+
+def outputs_entry_id(scope, url):
+    """确定性条目 id（与 canvas_assets_index 同款 sha1 前缀），保证收藏跨请求稳定。"""
+    return hashlib.sha1(f"{scope}:{url}".encode("utf-8")).hexdigest()[:24]
+
+
+def outputs_ts_to_ms(value):
+    """时间戳归一化为毫秒：秒级（<1e12）自动乘 1000。"""
+    try:
+        v = float(value or 0)
+    except (TypeError, ValueError):
+        return 0
+    if v <= 0:
+        return 0
+    return int(v * 1000) if v < 1e12 else int(v)
+
+
+def outputs_is_generated_node_media(raw, url):
+    """画布节点 images[] 里只认「生成结果」：output 目录 URL 或显式 generatedResult 标记。
+    上传的输入素材（/assets/input/、/assets/library/）不算输出，避免污染结果工作台。"""
+    if url.startswith("/output/") or "/assets/output/" in url:
+        return True
+    return bool(raw.get("generatedResult")) if isinstance(raw, dict) else False
+
+
+def outputs_build_entry(eid, url, kind, name, created_at, source, canvas_id="", canvas_title="",
+                        task_id="", node_id="", raw=None, size=0, favorites=None):
+    path = output_file_from_url(url)
+    entry = {
+        "id": eid,
+        "url": url,
+        "kind": kind,
+        "name": name,
+        "size": size if size else (os.path.getsize(path) if path and os.path.isfile(path) else 0),
+        "created_at": created_at,
+        "source": source,          # canvas / task / output
+        "canvas_id": canvas_id,
+        "canvas_title": canvas_title,
+        "task_id": task_id,
+        "node_id": node_id,
+        "favorite": bool(favorites and eid in favorites),
+        "exists": bool(path and os.path.isfile(path)),
+    }
+    if isinstance(raw, dict):
+        for key in ("natural_w", "natural_h", "width", "height", "duration", "runMs"):
+            if raw.get(key) is not None:
+                entry[key] = raw.get(key)
+    return entry
+
+
+def outputs_collect_from_canvases(favorites):
+    entries = {}
+    for filename in os.listdir(CANVAS_DIR):
+        if not filename.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(CANVAS_DIR, filename), "r", encoding="utf-8") as f:
+                canvas = json.load(f)
+        except Exception:
+            continue
+        if canvas.get("deleted_at"):
+            continue
+        record = canvas_record(canvas)
+        canvas_id = str(record.get("id") or "")
+        canvas_title = record.get("title") or "未命名画布"
+        for node in canvas.get("nodes") or []:
+            if not isinstance(node, dict):
+                continue
+            node_id = str(node.get("id") or "")
+            node_created = outputs_ts_to_ms(node.get("created_at") or 0)
+            if not node_created:
+                node_created = outputs_ts_to_ms(record.get("updated_at") or record.get("created_at") or 0)
+            for raw in node.get("images") or []:
+                if not isinstance(raw, dict):
+                    continue
+                url = str(raw.get("url") or "").strip()
+                if not url or not outputs_is_generated_node_media(raw, url):
+                    continue
+                kind = str(raw.get("kind") or "").lower()
+                if kind not in ("image", "video", "audio"):
+                    kind = asset_library_media_kind(url)
+                if kind not in ("image", "video", "audio"):
+                    continue
+                eid = outputs_entry_id(f"canvas:{canvas_id}", url)
+                name = canvas_asset_name(raw, url, f"{canvas_title}-{kind}")
+                entries[url] = outputs_build_entry(
+                    eid, url, kind, name, node_created, "canvas",
+                    canvas_id=canvas_id, canvas_title=canvas_title, node_id=node_id,
+                    raw=raw, favorites=favorites,
+                )
+    return entries
+
+
+def outputs_collect_from_dirs(favorites):
+    entries = {}
+    for root, url_prefix in ((OUTPUT_DIR, "/output/"), (OUTPUT_OUTPUT_DIR, "/assets/output/")):
+        if not os.path.isdir(root):
+            continue
+        try:
+            names = sorted(os.listdir(root))
+        except Exception:
+            continue
+        for fn in names:
+            if fn.startswith("."):
+                continue
+            path = os.path.join(root, fn)
+            if not os.path.isfile(path):
+                continue
+            ext = os.path.splitext(fn)[1].lower()
+            if ext not in OUTPUTS_DIR_MEDIA_EXTS:
+                continue
+            kind = asset_library_media_kind(fn)
+            if kind not in ("image", "video", "audio"):
+                continue
+            url = url_prefix + urllib.parse.quote(fn, safe="/")
+            eid = outputs_entry_id("file", url)
+            entries[url] = outputs_build_entry(
+                eid, url, kind, sanitize_asset_name(fn, "output"), outputs_ts_to_ms(os.path.getmtime(path)),
+                "output", favorites=favorites,
+            )
+    return entries
+
+
+def outputs_task_result_urls(task):
+    """从任务 result 里抽取产物 URL（兼容 images/videos/audios/outputs/url 等字段形状）。"""
+    result = task.get("result")
+    if not isinstance(result, dict):
+        return []
+    urls = []
+    for key in ("images", "videos", "audios", "outputs", "url", "output_url", "outputUrl", "video", "video_url", "videoUrl"):
+        value = result.get(key)
+        if isinstance(value, list):
+            for raw in value:
+                u = canvas_asset_url_value(raw)
+                if u and u not in urls:
+                    urls.append(u)
+        elif value:
+            u = canvas_asset_url_value(value)
+            if u and u not in urls:
+                urls.append(u)
+    if not urls:
+        for _, raw, url in iter_canvas_asset_values(result):
+            if url not in urls:
+                urls.append(url)
+    return urls
+
+
+def outputs_collect_from_tasks(favorites):
+    entries = {}
+    with TASK_STORE_LOCK:
+        tasks = [json.loads(json.dumps(t, ensure_ascii=False, default=str)) for t in TASK_STORE.values()]
+    for task in tasks:
+        if str(task.get("status") or "").lower() not in OUTPUTS_SUCCESS_STATUSES:
+            continue
+        task_id = str(task.get("id") or "")
+        timing = task.get("timing") or {}
+        created = outputs_ts_to_ms(timing.get("completed") or task.get("updated_at") or task.get("created_at") or 0)
+        for url in outputs_task_result_urls(task):
+            if url not in entries:
+                kind = asset_library_media_kind(url)
+                if kind not in ("image", "video", "audio"):
+                    continue
+                eid = outputs_entry_id(f"task:{task_id}", url)
+                entries[url] = outputs_build_entry(
+                    eid, url, kind, sanitize_asset_name(filename_from_media_url(url, "task-output"), "task-output"),
+                    created, "task", task_id=task_id, favorites=favorites,
+                )
+    return entries
+
+
+def outputs_index():
+    """聚合三路数据源 → 按 URL 去重（画布 > 任务 > 目录）→ 按创建时间倒序。"""
+    favorites = outputs_favorites_load()
+    merged = {}
+    for source in (outputs_collect_from_canvases, outputs_collect_from_tasks, outputs_collect_from_dirs):
+        for url, entry in source(favorites).items():
+            if url not in merged:
+                merged[url] = entry
+    items = list(merged.values())
+    items.sort(key=lambda item: (-int(item.get("created_at") or 0), str(item.get("name") or "").lower()))
+    return {"items": items, "favorites": favorites}
+
+
+def outputs_find_entry(output_id):
+    """按 id 查找条目（供收藏/删除/加入画布复用）。"""
+    data = outputs_index()
+    for item in data["items"]:
+        if item["id"] == output_id:
+            return item
+    return None
+
+
+def outputs_reference_scan(url):
+    """扫描所有画布，找出引用该 URL 的节点（用于删除前的关联引用提示）。"""
+    refs = []
+    for filename in os.listdir(CANVAS_DIR):
+        if not filename.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(CANVAS_DIR, filename), "r", encoding="utf-8") as f:
+                canvas = json.load(f)
+        except Exception:
+            continue
+        if canvas.get("deleted_at"):
+            continue
+        record = canvas_record(canvas)
+        canvas_id = str(record.get("id") or "")
+        for node in canvas.get("nodes") or []:
+            if not isinstance(node, dict):
+                continue
+            hit = False
+            for _, _, u in iter_canvas_asset_values(node):
+                if u == url:
+                    hit = True
+                    break
+            if hit:
+                refs.append({
+                    "canvas_id": canvas_id,
+                    "canvas_title": record.get("title") or "未命名画布",
+                    "node_id": str(node.get("id") or ""),
+                    "node_title": canvas_node_title(node),
+                })
+    return refs
+
+
+class OutputsDeleteRequest(BaseModel):
+    force: bool = False
+
+
+class OutputsAddToCanvasRequest(BaseModel):
+    canvas_id: str = ""
+    x: float = None
+    y: float = None
+
+
+@app.get("/api/outputs")
+async def list_outputs(kind: str = "", canvas_id: str = "", q: str = "",
+                       from_ts: float = Query(0, alias="from"), to_ts: float = Query(0, alias="to"),
+                       favorites_only: bool = Query(False, alias="favorites"),
+                       limit: int = Query(60, ge=1, le=500), offset: int = Query(0, ge=0)):
+    """输出结果列表：kind(image/video/audio) / canvas_id / 时间范围(from,to 毫秒或秒) / q(名称搜索) / favorites 筛选 + 分页。"""
+    data = await asyncio.to_thread(outputs_index)
+    items = data["items"]
+    favorites = data["favorites"]
+    if kind in ("image", "video", "audio"):
+        items = [i for i in items if i.get("kind") == kind]
+    if canvas_id:
+        items = [i for i in items if i.get("canvas_id") == canvas_id]
+    if favorites_only:
+        items = [i for i in items if i.get("favorite")]
+    ts_from = outputs_ts_to_ms(from_ts) if from_ts else 0
+    ts_to = outputs_ts_to_ms(to_ts) if to_ts else 0
+    if ts_from:
+        items = [i for i in items if int(i.get("created_at") or 0) >= ts_from]
+    if ts_to:
+        items = [i for i in items if int(i.get("created_at") or 0) <= ts_to]
+    query = str(q or "").strip().lower()
+    if query:
+        items = [i for i in items if query in str(i.get("name") or "").lower() or query in i.get("url", "").lower()]
+    counts = {"all": len(items), "image": 0, "video": 0, "audio": 0}
+    for i in items:
+        k = i.get("kind")
+        if k in counts:
+            counts[k] += 1
+    total = len(items)
+    page = items[offset:offset + limit]
+    return {"items": page, "total": total, "counts": counts,
+            "favorites": favorites, "limit": limit, "offset": offset}
+
+
+@app.get("/api/outputs/favorites")
+async def list_output_favorites():
+    """收藏列表（完整条目）。"""
+    data = await asyncio.to_thread(outputs_index)
+    items = [i for i in data["items"] if i.get("favorite")]
+    items.sort(key=lambda item: -int(item.get("created_at") or 0))
+    return {"items": items, "count": len(items)}
+
+
+@app.post("/api/outputs/{output_id}/favorite")
+async def favorite_output(output_id: str):
+    """收藏（幂等）。"""
+    entry = outputs_find_entry(output_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="输出结果不存在")
+    favs = outputs_favorites_load()
+    if output_id not in favs:
+        favs.append(output_id)
+        outputs_favorites_save(favs)
+    return {"success": True, "id": output_id, "favorite": True}
+
+
+@app.delete("/api/outputs/{output_id}/favorite")
+async def unfavorite_output(output_id: str):
+    """取消收藏（幂等）。"""
+    favs = outputs_favorites_load()
+    if output_id in favs:
+        outputs_favorites_save([f for f in favs if f != output_id])
+    return {"success": True, "id": output_id, "favorite": False}
+
+
+@app.post("/api/outputs/{output_id}/delete")
+async def delete_output(output_id: str, payload: OutputsDeleteRequest = None):
+    """删除输出文件。被画布节点引用时返回 409 + 引用清单，需 force=true 二次确认后删除。"""
+    entry = outputs_find_entry(output_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="输出结果不存在")
+    refs = outputs_reference_scan(entry["url"])
+    force = bool(payload and payload.force)
+    if refs and not force:
+        raise HTTPException(status_code=409, detail={
+            "message": f"该文件仍被 {len(refs)} 处画布节点引用，删除后画布预览将失效。",
+            "references": refs,
+            "item": entry,
+        })
+    deleted = False
+    path = output_file_from_url(entry["url"])
+    if path and os.path.isfile(path):
+        try:
+            os.remove(path)
+            deleted = True
+        except OSError as exc:
+            raise HTTPException(status_code=500, detail=f"删除文件失败: {exc}")
+    favs = outputs_favorites_load()
+    if output_id in favs:
+        outputs_favorites_save([f for f in favs if f != output_id])
+    return {"success": True, "deleted": deleted, "references": refs, "item": entry}
+
+
+@app.post("/api/outputs/{output_id}/add-to-canvas")
+async def add_output_to_canvas(output_id: str, payload: OutputsAddToCanvasRequest):
+    """把输出加入指定画布：服务端加载画布 → 追加一个媒体节点（智能画布 smart-image / 普通画布 image）→ 保存 + 版本快照 + 广播。"""
+    if not payload or not str(payload.canvas_id or "").strip():
+        raise HTTPException(status_code=400, detail="缺少 canvas_id")
+    entry = outputs_find_entry(output_id)
+    if not entry:
+        raise HTTPException(status_code=404, detail="输出结果不存在")
+    canvas = load_canvas(payload.canvas_id)
+    canvas_kind = normalize_canvas_kind(canvas.get("kind"))
+    nodes = canvas.get("nodes")
+    if not isinstance(nodes, list):
+        nodes = []
+    viewport = canvas.get("viewport") or {}
+    scale = float(viewport.get("scale") or 1) or 1
+    cx = -float(viewport.get("x") or 0) / scale
+    cy = -float(viewport.get("y") or 0) / scale
+    slot = len(nodes) % 5
+    nx = float(payload.x) if payload.x is not None else (cx + 120 + slot * 56)
+    ny = float(payload.y) if payload.y is not None else (cy + 120 + slot * 56)
+    now = now_ms()
+    url = entry["url"]
+    name = entry["name"]
+    kind = entry["kind"]
+    node_id = f"n_{uuid.uuid4().hex[:16]}_{now}"
+    if canvas_kind == "smart":
+        img = {
+            "url": url, "name": name, "kind": kind, "generatedResult": True,
+            "_naturalSizeLoading": True,
+            "layout_w": int(entry.get("natural_w") or entry.get("width") or (768 if kind == "video" else 512)),
+            "layout_h": int(entry.get("natural_h") or entry.get("height") or (432 if kind == "video" else 512)),
+        }
+        if entry.get("duration"):
+            img["duration"] = entry["duration"]
+        node = {
+            "id": node_id, "type": "smart-image", "x": nx, "y": ny, "title": "生成结果",
+            "images": [img], "pending": 0, "scale": 1, "created_at": now,
+        }
+    else:
+        node = {
+            "id": node_id, "type": "image", "x": nx, "y": ny,
+            "url": url, "name": name, "created_at": now,
+        }
+    nodes.append(node)
+    canvas["nodes"] = nodes
+    save_canvas(canvas)
+    try:
+        snapshot_canvas_version(canvas, note="outputs add-to-canvas")
+    except Exception as exc:
+        print(f"[Outputs] 版本快照失败: {exc}")
+    try:
+        await manager.broadcast_canvas_updated(payload.canvas_id, int(canvas.get("updated_at") or now_ms()))
+    except Exception as exc:
+        print(f"[Outputs] 广播失败: {exc}")
+    return {
+        "success": True, "canvas_id": payload.canvas_id,
+        "canvas_title": canvas.get("title") or "未命名画布", "node": node,
+    }
+
 def canvas_workflow_collect_resource_refs(value, found=None):
     if found is None:
         found = []

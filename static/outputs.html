@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>输出</title>
+<link rel="stylesheet" href="/static/css/theme.css?v=1.0.108.1786428400.1786205339">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.108.1786428400.1785603211">
+<style>
+:root { --bg:#0F0F12; --panel:#131316; --card:#1B1B20; --line:#2B2B32; --text:#F2F0EA; --muted:#C8C5BD; --dim:#8A8680; --gold:#C8A876; }
+body { background:var(--bg); color:var(--text); font-family:'PingFang SC',-apple-system,sans-serif; margin:0; min-height:100vh; }
+.page { max-width:1200px; margin:0 auto; padding:24px 28px 60px; }
+.page-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.page-head h1 { font-size:22px; margin:0; font-weight:750; letter-spacing:.02em; }
+.page-head .sub { color:var(--dim); font-size:12px; margin-top:4px; }
+.filters { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+.tab { padding:7px 16px; border-radius:999px; border:1px solid var(--line); background:var(--panel); color:var(--muted); font-size:13px; cursor:pointer; transition:.15s; }
+.tab:hover { color:var(--text); border-color:var(--gold); }
+.tab.active { background:var(--gold); color:#0F0F12; border-color:var(--gold); font-weight:600; }
+.search { flex:1; min-width:200px; padding:8px 14px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:13px; outline:none; }
+.search:focus { border-color:var(--gold); }
+.stats { color:var(--dim); font-size:12px; margin-bottom:14px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+.card { background:var(--card); border-radius:14px; overflow:hidden; border:1px solid var(--line); cursor:pointer; transition:transform .15s, border-color .15s; position:relative; }
+.card:hover { transform:translateY(-2px); border-color:var(--gold); }
+.card .thumb { aspect-ratio:1/1; background:#0A0A0E; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; }
+.card .thumb img, .card .thumb video { width:100%; height:100%; object-fit:cover; }
+.card .badge { position:absolute; top:8px; left:8px; background:rgba(0,0,0,.65); color:#fff; font-size:10px; padding:3px 8px; border-radius:6px; letter-spacing:.04em; }
+.card .fav { position:absolute; top:6px; right:6px; width:30px; height:30px; border-radius:999px; border:0; background:rgba(0,0,0,.55); color:#fff; cursor:pointer; font-size:15px; display:flex; align-items:center; justify-content:center; transition:.15s; }
+.card .fav:hover { background:rgba(200,168,118,.85); }
+.card .fav.on { color:var(--gold); }
+.card .meta { padding:10px 12px; }
+.card .meta .name { font-size:12.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.card .meta .info { font-size:11px; color:var(--dim); margin-top:4px; display:flex; justify-content:space-between; }
+.card .actions { display:flex; gap:6px; padding:0 12px 10px; }
+.card .actions button { flex:1; padding:6px 0; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--muted); font-size:11.5px; cursor:pointer; transition:.15s; }
+.card .actions button:hover { color:var(--text); border-color:var(--gold); }
+.empty { text-align:center; color:var(--dim); padding:80px 0; font-size:14px; }
+/* 预览弹窗 */
+.modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.72); display:none; align-items:center; justify-content:center; z-index:1000; }
+.modal-mask.show { display:flex; }
+.modal { background:var(--panel); border-radius:16px; max-width:min(900px,92vw); max-height:88vh; overflow:auto; padding:20px; position:relative; }
+.modal .close { position:absolute; top:12px; right:12px; width:32px; height:32px; border-radius:999px; border:0; background:rgba(255,255,255,.1); color:#fff; cursor:pointer; font-size:16px; }
+.modal img, .modal video { max-width:100%; max-height:70vh; border-radius:10px; display:block; margin:0 auto; }
+.modal .m-name { text-align:center; color:var(--muted); font-size:13px; margin-top:12px; }
+/* 加入画布弹窗 */
+.canvas-pick { position:fixed; inset:0; background:rgba(0,0,0,.72); display:none; align-items:center; justify-content:center; z-index:1001; }
+.canvas-pick.show { display:flex; }
+.pick-box { background:var(--panel); border-radius:16px; width:min(440px,90vw); padding:18px; }
+.pick-box h3 { margin:0 0 12px; font-size:15px; }
+.pick-item { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:10px; border:1px solid var(--line); margin-bottom:8px; cursor:pointer; transition:.15s; }
+.pick-item:hover { border-color:var(--gold); }
+.pick-item .t { font-size:13px; }
+.pick-item .k { font-size:11px; color:var(--dim); }
+.toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); background:var(--card); border:1px solid var(--gold); color:var(--text); padding:10px 20px; border-radius:10px; font-size:13px; z-index:2000; display:none; }
+.toast.show { display:block; animation:fadeIn .2s; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="page-head">
+    <div>
+      <h1>输出工作台</h1>
+      <div class="sub">全部生成结果 · 收藏 · 加入画布</div>
+    </div>
+    <button class="tab" onclick="refreshOutputs()">刷新</button>
+  </div>
+  <div class="filters">
+    <button class="tab active" data-kind="" onclick="setKind(this)">全部</button>
+    <button class="tab" data-kind="image" onclick="setKind(this)">图片</button>
+    <button class="tab" data-kind="video" onclick="setKind(this)">视频</button>
+    <button class="tab" data-kind="audio" onclick="setKind(this)">音频</button>
+    <button class="tab" data-kind="" data-fav="1" onclick="setFav(this)">★ 收藏</button>
+    <input class="search" id="searchBox" placeholder="搜索文件名…" oninput="onSearch()">
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none">暂无输出结果</div>
+</div>
+
+<div class="modal-mask" id="previewMask" onclick="if(event.target===this)closePreview()">
+  <div class="modal">
+    <button class="close" onclick="closePreview()">×</button>
+    <div id="previewBody"></div>
+  </div>
+</div>
+
+<div class="canvas-pick" id="pickMask" onclick="if(event.target===this)closePick()">
+  <div class="pick-box">
+    <h3>选择目标画布</h3>
+    <div id="pickList"></div>
+    <button class="tab" style="width:100%;margin-top:8px" onclick="closePick()">取消</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/static/js/shared/media.js?v=1.0.108.1786428400.1786362373"></script>
+<script>
+let STATE = { kind:'', fav:false, q:'', items:[], offset:0, limit:60, total:0, pendingCanvas:null };
+
+async function api(path, opts){
+  const r = await fetch(path, opts);
+  if(!r.ok){ let d={}; try{ d = await r.json(); }catch(_){} throw new Error(d.detail || ('HTTP '+r.status)); }
+  return r.json();
+}
+function fmtSize(b){ if(!b) return ''; if(b>1048576) return (b/1048576).toFixed(1)+'MB'; if(b>1024) return Math.round(b/1024)+'KB'; return b+'B'; }
+function fmtTime(ms){ if(!ms) return ''; const d=new Date(ms); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+async function load(){
+  try{
+    const q = new URLSearchParams({limit:STATE.limit, offset:STATE.offset});
+    if(STATE.kind) q.set('kind', STATE.kind);
+    if(STATE.q) q.set('q', STATE.q);
+    if(STATE.fav) q.set('favorites','1');
+    const d = await api('/api/outputs?'+q.toString());
+    STATE.items = d.items || [];
+    STATE.total = d.total || 0;
+    render();
+  }catch(e){ showToast('加载失败: '+e.message); }
+}
+function render(){
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('empty');
+  document.getElementById('stats').textContent = '共 '+STATE.total+' 个结果' + (STATE.kind ? ' · '+STATE.kind : '');
+  grid.innerHTML = '';
+  if(!STATE.items.length){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  STATE.items.forEach(it => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const thumb = it.kind==='video' ? `<video src="${it.url}#t=0.5" muted preload="metadata" playsinline></video>` : `<img src="${it.url}" loading="lazy" onerror="this.style.display='none'">`;
+    card.innerHTML = `
+      <div class="thumb">${thumb}<span class="badge">${it.kind}</span><button class="fav ${it.favorite?'on':''}" onclick="event.stopPropagation();toggleFav('${it.id}')">${it.favorite?'★':'☆'}</button></div>
+      <div class="meta"><div class="name">${esc(it.name)}</div><div class="info"><span>${fmtSize(it.size)}</span><span>${fmtTime(it.created_at)}</span></div></div>
+      <div class="actions">
+        <button onclick="event.stopPropagation();openPreview('${it.id}')">预览</button>
+        <button onclick="event.stopPropagation();download('${it.id}')">下载</button>
+        <button onclick="event.stopPropagation();openPick('${it.id}')">加入画布</button>
+      </div>`;
+    card.addEventListener('click', () => openPreview(it.id));
+    grid.appendChild(card);
+  });
+}
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function setKind(el){ document.querySelectorAll('.tab[data-kind]').forEach(t=>t.classList.remove('active')); el.classList.add('active'); STATE.kind = el.dataset.kind||''; STATE.offset=0; load(); }
+function setFav(el){ STATE.fav = !STATE.fav; el.classList.toggle('active', STATE.fav); STATE.offset=0; load(); }
+let searchTimer=null;
+function onSearch(){ clearTimeout(searchTimer); searchTimer=setTimeout(()=>{ STATE.q = document.getElementById('searchBox').value.trim(); STATE.offset=0; load(); }, 400); }
+function refreshOutputs(){ load(); }
+
+async function openPreview(id){
+  try{
+    const it = STATE.items.find(x=>x.id===id) || await api('/api/outputs?q='+encodeURIComponent(id.split('_').slice(-1)[0]));
+    const body = document.getElementById('previewBody');
+    body.innerHTML = it.kind==='video'
+      ? `<video src="${it.url}" controls autoplay playsinline></video><div class="m-name">${esc(it.name)}</div>`
+      : `<img src="${it.url}"><div class="m-name">${esc(it.name)}</div>`;
+    document.getElementById('previewMask').classList.add('show');
+  }catch(e){ showToast('预览失败: '+e.message); }
+}
+function closePreview(){ document.getElementById('previewMask').classList.remove('show'); }
+
+async function toggleFav(id){
+  try{
+    const it = STATE.items.find(x=>x.id===id); if(!it) return;
+    if(it.favorite){ await api('/api/outputs/'+id+'/favorite', {method:'DELETE'}); it.favorite=false; }
+    else { await api('/api/outputs/'+id+'/favorite', {method:'POST'}); it.favorite=true; }
+    render();
+  }catch(e){ showToast('操作失败: '+e.message); }
+}
+async function download(id){
+  try{
+    const it = STATE.items.find(x=>x.id===id);
+    if(!it) return;
+    const a = document.createElement('a'); a.href = it.url; a.download = it.name; a.click();
+  }catch(e){ showToast('下载失败: '+e.message); }
+}
+async function openPick(id){
+  try{
+    const d = await api('/api/canvases');
+    const list = document.getElementById('pickList');
+    list.innerHTML = '';
+    (d.canvases||[]).filter(c=>!c.deleted_at).forEach(c => {
+      const el = document.createElement('div');
+      el.className = 'pick-item';
+      el.innerHTML = `<span class="t">${esc(c.title||'未命名')}</span><span class="k">${c.kind==='smart'?'智能画布':'普通画布'}</span>`;
+      el.onclick = () => addToCanvas(id, c.id);
+      list.appendChild(el);
+    });
+    STATE.pendingCanvas = id;
+    document.getElementById('pickMask').classList.add('show');
+  }catch(e){ showToast('加载画布列表失败: '+e.message); }
+}
+function closePick(){ document.getElementById('pickMask').classList.remove('show'); }
+async function addToCanvas(outputId, canvasId){
+  try{
+    await api('/api/outputs/'+outputId+'/add-to-canvas', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({canvas_id:canvasId})});
+    closePick(); showToast('已加入画布');
+  }catch(e){ showToast('加入画布失败: '+e.message); }
+}
+let toastTimer=null;
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'), 2600); }
+
+load();
+</script>
+</body>
+</html>

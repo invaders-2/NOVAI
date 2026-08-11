@@ -146,7 +146,7 @@ body {
 <!-- Sidebar -->
 <aside class="sidebar">
   <div class="sidebar-title">帮助文档</div>
-  <p class="sidebar-version">NOVAI v1.0.89 — 无限画布 AI 创作平台</p>
+  <p class="sidebar-version">NOVAI v1.0.106 — 无限画布 AI 创作平台</p>
 
       <div class="sidebar-section">
         <div class="sidebar-section-title">目录</div>
@@ -161,6 +161,8 @@ body {
         <a href="#gpt-chat">GPT 聊天</a>
         <a href="#api-protocols">AI 协议配置</a>
         <a href="#models">内置模型列表</a>
+        <a href="#face-compliance">人脸合规与换脸</a>
+        <a href="#novai-ops">NOVAI 实操指南</a>
         <a href="#faq">常见问题</a>
         <a href="#changelog">更新日志</a>
       </div>
@@ -435,6 +437,95 @@ python main.py</code></pre>
   
   </section>
 
+  <section class="doc-module" data-section-id="face-compliance">
+<!-- ===== 人脸合规与换脸 ===== -->
+  <h2 id="face-compliance">人脸合规与换脸</h2>
+  <p>NOVAI 的视频编辑基于火山引擎 Seedance 2.0。平台对<strong>未经授权的真人肖像</strong>有严格的内容安全审核——企业认证只是前提，参考素材必须走以下三条合规通道之一：</p>
+
+  <h3>三条合规通道</h3>
+  <table>
+    <tr><th>通道</th><th>适用场景</th><th>操作</th></tr>
+    <tr>
+      <td><strong>A · 已授权真人素材</strong></td>
+      <td>换特定真人（艺人 / 模特 / 本人）</td>
+      <td>方舟体验中心 → 我的 → 真人人像 → 建资产组 → 真人本人扫码认证上传 → 你接收拿 Asset ID → API 用 <code>asset://asset-xxx</code> 当参考 URL</td>
+    </tr>
+    <tr>
+      <td><strong>B · 信任模型产物</strong>（推荐）</td>
+      <td>AI 脸 + AI 视频（30 天内）</td>
+      <td>Seedance 2.0 生成的视频 / Seedream 5.0 lite 生成的图，同一账号 30 天内可直接作参考，<strong>零门槛不拦截</strong>。注意：必须是模型原始产物，不可剪辑 / 压缩 / 转码</td>
+    </tr>
+    <tr>
+      <td><strong>C · 预置虚拟人像库</strong></td>
+      <td>不需要指定真人</td>
+      <td>平台免费虚拟人像，零合规风险，开箱即用</td>
+    </tr>
+  </table>
+
+  <div class="warn">
+    <strong>哪些素材会被拦截？</strong> 网上下载的含人脸视频 / 自己拍摄的真人素材 / 其他平台生成的 AI 人脸——平台无法确认肖像权，全部拦截。想换脸必须：目标脸用 Seedream 生成（或授权入库），参考视频里的人脸先模糊 / 遮挡 / 裁掉（只留动作骨架）。
+  </div>
+
+  <h3>换脸提示词模板</h3>
+  <pre><code>严格编辑 视频1：将 视频1 中人物的面部替换为 图片1 中的人脸，
+面部细节参考 图片2（特写）。动作、走位、场景、运镜、光线
+全部保持不变，只修改面部。新脸与原脸型、光影自然融合，
+表情跟随原动作。保持无字幕，不要生成水印。</code></pre>
+  <ul>
+    <li>素材配置：<code>视频1</code>=动作骨架 · <code>图片1</code>=目标脸正脸 · <code>图片2</code>=目标脸特写（可选但强烈建议）</li>
+    <li>参数：<code>role=reference_video</code> + <code>reference_image</code>×N · 参考视频 ≤15.2s（超长自动截取）· 自动静音 · 自动公网化</li>
+    <li>换衣服 / 换场景 / 换人物同理：把「面部替换为图片1中的人脸」换成对应对象即可，保持「全部保持不变，只修改…」句式</li>
+  </ul>
+
+  <div class="note">
+    <strong>效果预期</strong>：① 视频人脸被模糊后，表情 / 嘴型无法与动作同步（脸是重新生成的）；② 视频背景的路人脸也要处理；③ 换脸后表情僵硬时，提示词强调「表情跟随原动作」可改善；④ 想换特定真人只能走通道 A 授权流程。
+  </div>
+
+  
+  </section>
+
+  <section class="doc-module" data-section-id="novai-ops">
+<!-- ===== NOVAI 实操指南 ===== -->
+  <h2 id="novai-ops">NOVAI 实操指南</h2>
+  <p>以「网上视频换脸」为例，完整走一遍 NOVAI 画布操作。全程在智能画布内完成，无需命令行。</p>
+
+  <h3>第 1 步：把素材放进画布</h3>
+  <ol>
+    <li>从文件夹把视频<strong>拖进画布</strong>，自动生成视频节点</li>
+    <li>把参考图拖进画布，自动生成图片节点</li>
+    <li>点击节点 → 上方浮出工具栏（预览 / 裁剪 / 扩图 / 遮罩 / 画笔 / 宫格 / <strong>人脸模糊</strong> / 下载）</li>
+    <li>视频节点工具栏点「<strong>人脸模糊</strong>」→ 自动检测全部人脸并模糊 → 结果自动加入节点（原视频保留）</li>
+  </ol>
+  <div class="note"><strong>为什么先处理人脸？</strong> 网上下载的视频含真人脸会被火山拦截。NOVAI 的「人脸模糊」用 YuNet 神经网络逐帧检测 + 高斯模糊（自动扩大 30% 覆盖发际线），一键规避拦截。自己拍的真人素材不能靠模糊解决（看不清动作参考），要走上面的通道 A 授权。</div>
+
+  <h3>第 2 步：@ 引用素材</h3>
+  <ol>
+    <li>点击画布顶部输入框</li>
+    <li>输入 <code>@</code> → 弹出素材浮层（节点 + 资产库双 Tab）</li>
+    <li>点选视频节点 → 自动插入 <code>@视频1</code>；点选图片节点 → 自动插入 <code>@图片1</code></li>
+    <li>浮层自动关闭，标签可直接删除；多个素材继续 <code>@</code>（编号按引用顺序）</li>
+  </ol>
+  <p>也可以从右上角「画布对话助手」弹窗输入框里 <code>@</code>——同样支持素材引用。</p>
+
+  <h3>第 3 步：选模型 → 写提示词 → 运行</h3>
+  <ol>
+    <li>顶部选择：平台 = <strong>火山引擎</strong> · 类型 = <strong>视频</strong> · 模型 = <strong>doubao-seedance-2-0-260128</strong></li>
+    <li>输入框粘贴换脸提示词（上一节模板），<code>@视频1</code> <code>@图片1</code> 自动携带为参考素材</li>
+    <li>点「<strong>运行</strong>」→ 生成完成后：结果自动落画布（新视频节点）· 底部弹出建议条（换衣服 / 换场景 / 加运镜…一键继续）· 参考视频自动截取 / 静音 / 公网化</li>
+  </ol>
+
+  <h3>常用提示词模板（可直接复制）</h3>
+  <table>
+    <tr><th>任务</th><th>模板</th></tr>
+    <tr><td>换鞋子</td><td><code>严格编辑 视频1：将视频1中的鞋子替换为图片1中的白色运动鞋，动作、场景、运镜、光线保持不变，只修改鞋子</code></td></tr>
+    <tr><td>换衣服</td><td><code>严格编辑 视频1：将视频1中人物的上衣替换为图片1中的红色连衣裙，动作、场景、运镜、光线保持不变，只修改服装</code></td></tr>
+    <tr><td>换场景</td><td><code>严格编辑 视频1：将视频1中的场景替换为图片1中的海边沙滩，人物动作、运镜、光线保持不变，只修改场景</code></td></tr>
+    <tr><td>换人物</td><td><code>严格编辑 视频1：将视频1中的人物替换为图片1中的人物，动作、走位、场景、运镜、光线保持不变，只修改人物</code></td></tr>
+  </table>
+
+  
+  </section>
+
   <section class="doc-module" data-section-id="faq">
 <!-- ===== 常见问题 ===== -->
   <h2 id="faq">常见问题</h2>
@@ -457,12 +548,28 @@ python main.py</code></pre>
   <h3>Q: 数据会传到云端吗？</h3>
   <p>不会。NOVAI 是纯本地桌面应用，你的提示词、图片和工作流数据仅存储在你的电脑上。只有当调用云端 API（如 OpenAI、ModelScope）时，对应的请求数据才会发送到对应平台。</p>
 
+  <h3>Q: 换脸 / 人脸编辑提示「包含真人身份 / 隐私信息」怎么办？</h3>
+  <p>这是火山引擎的内容安全策略，不是代码错误。解决方法：① 目标脸改用 Seedream 5.0 lite 生成（信任产物 30 天内可直接用）；② 参考视频里的人脸先用 NOVAI 的「人脸模糊」处理；③ 网上下载的真人素材无法直接使用，需走真人授权流程（见上方「人脸合规与换脸」章节）。</p>
+
+  <h3>Q: 人脸模糊在哪？</h3>
+  <p>智能画布中选中视频节点 → 上方工具栏「人脸模糊」按钮（人像图标）。点击后自动检测视频中全部人脸并高斯模糊，处理结果自动加入节点，原视频保留。</p>
+
   
   </section>
 
   <section class="doc-module" data-section-id="changelog">
 <!-- ===== 更新日志 ===== -->
   <h2 id="changelog">更新日志</h2>
+
+  <h3>v1.0.106 (2026-08-11)</h3>
+  <ul>
+    <li>新增：视频「人脸模糊」工具——选中视频节点 → 工具栏一键模糊全部人脸，规避平台真人审核（YuNet 检测 + 高斯模糊，结果自动入节点）</li>
+    <li>新增：生成后快捷建议条——生成完成自动弹出「换衣服 / 换场景 / 加运镜」一键继续编辑</li>
+    <li>新增：生成结果自动落画布——视频 / 图片生成完成自动创建节点，无需手动导入</li>
+    <li>修复：视频播放控制条全面修复（播放 / 暂停 / 全屏 / 进度条），桌面端与浏览器行为一致</li>
+    <li>修复：视频参考素材公网化改为云上传优先（Litterbox / temp.sh），不再依赖本地隧道</li>
+    <li>优化：Seedance 编辑链路自动截取（≤15.2s）、自动静音、参考素材自动公网化</li>
+  </ul>
 
   <h3>v1.0.89 (2025-07-20)</h3>
   <ul>

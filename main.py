@@ -22054,6 +22054,1265 @@ async def render_storyboard_all(storyboard_id: str, provider_id: str = Query("")
         "message": f"已创建 {len(launched)} 个视频任务进入 Task Engine 队列" + (f"（{len(skipped)} 个任务仍在执行，跳过）" if skipped else ""),
     }
 
+# ============================================================================
+# V2 Phase 5A: Agent 后端核心（工具注册表 + Command Layer + 计划 API）
+# 说明：
+#   * AGENT_TOOLS 统一注册表：{工具名: {description, schema, validate, run, preview, mutates_canvas}}
+#     - validate(args) -> 规范化后的 args（校验失败抛 AgentToolError）
+#     - run(args) -> result（同步或异步均可，Command Layer 统一执行）
+#     - preview(args, canvas) -> 影响描述文本（预览用，不执行）
+#   * 全部工具真实执行：直接操作画布 JSON / Task Engine / Matrix 存储，无 mock。
+#   * 会话持久化：data/agent_sessions/*.json（无数据库）。
+#   * 计划步骤支持 {stepN.path} 引用前序步骤结果（如 {step0.node_id}），
+#     apply 时解析，供「先建节点再连线」这类多步计划使用。
+# ============================================================================
+
+AGENT_SESSIONS_DIR = os.path.join(DATA_DIR, "agent_sessions")
+AGENT_SESSIONS_LOCK = Lock()
+
+
+class AgentToolError(Exception):
+    """工具校验/执行错误。code 供前端机器判断，requires_force 表示需 force 确认。"""
+
+    def __init__(self, message, code="tool_error", status_code=400, warnings=None, requires_force=False):
+        super().__init__(message)
+        self.message = str(message)
+        self.code = code
+        self.status_code = status_code
+        self.warnings = warnings or []
+        self.requires_force = requires_force
+
+
+def _agent_mutate_canvas(canvas_id, mutator):
+    """画布原子读-改-写（全程持有 CANVAS_LOCK，避免与前端保存竞争丢更新）。"""
+    with CANVAS_LOCK:
+        canvas = load_canvas(canvas_id)
+        result = mutator(canvas)
+        canvas["updated_at"] = now_ms()
+        with open(canvas_path(canvas["id"]), 'w', encoding='utf-8') as f:
+            json.dump(canvas, f, ensure_ascii=False, indent=2)
+        return canvas, result
+
+
+def _agent_snapshot(canvas, note="agent"):
+    """旁路存画布版本快照；失败不阻断主流程（与 Phase 2 语义一致）。"""
+    try:
+        return snapshot_canvas_version(canvas, note=note)
+    except Exception as exc:
+        print(f"[Agent] 版本快照失败（不影响主流程）: {exc}")
+        return None
+
+
+def _agent_find_node(canvas, node_id):
+    for n in canvas.get("nodes") or []:
+        if isinstance(n, dict) and n.get("id") == node_id:
+            return n
+    return None
+
+
+def _agent_node_text(node):
+    """提取节点提示词文本（兼容 prompt/text/params.prompt）。"""
+    for key in ("text", "prompt"):
+        v = node.get(key)
+        if isinstance(v, str) and v.strip():
+            return v
+    params = node.get("params")
+    if isinstance(params, dict):
+        for key in ("prompt", "text"):
+            v = params.get(key)
+            if isinstance(v, str) and v.strip():
+                return v
+    return ""
+
+
+def _agent_node_summary(node, max_text=120):
+    text = _agent_node_text(node)
+    return {
+        "id": node.get("id"),
+        "type": node.get("type"),
+        "title": (node.get("title") or "")[:60],
+        "x": node.get("x"),
+        "y": node.get("y"),
+        "images": len(node.get("images") or []) if isinstance(node.get("images"), list) else (1 if node.get("url") else 0),
+        "text": (text[:max_text] + "…") if len(text) > max_text else text,
+        "task_id": node.get("task_id") or node.get("lastTaskId") or "",
+    }
+
+
+def _agent_canvas_summary(canvas, max_nodes=60):
+    """画布快照摘要（供 get_canvas 工具与 plan 系统提示词使用）。"""
+    nodes = canvas.get("nodes") or []
+    return {
+        "canvas_id": canvas.get("id"),
+        "title": canvas.get("title"),
+        "kind": canvas.get("kind"),
+        "updated_at": canvas.get("updated_at"),
+        "node_count": len(nodes),
+        "connection_count": len(canvas.get("connections") or []),
+        "nodes": [_agent_node_summary(n) for n in nodes[:max_nodes]],
+        "connections": [{"from": c.get("from"), "to": c.get("to"), "kind": c.get("kind")} for c in (canvas.get("connections") or [])[:200]],
+        "viewport": canvas.get("viewport"),
+    }
+
+
+def _agent_task_result_url(task):
+    result = task.get("result")
+    if isinstance(result, dict):
+        for key in ("url", "image_url", "video_url", "local_url", "output_url"):
+            v = result.get(key)
+            if isinstance(v, str) and v:
+                return v
+        for key in ("urls", "image_urls", "video_urls"):
+            vals = result.get(key)
+            if isinstance(vals, list) and vals and isinstance(vals[0], str):
+                return vals[0]
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# 工具 1: list_canvases
+# ---------------------------------------------------------------------------
+
+def _agent_tool_list_canvases_validate(args):
+    if "project" in args and args["project"] is not None and not isinstance(args["project"], str):
+        raise AgentToolError("project 必须是字符串", code="invalid_args")
+    return {"project": str(args.get("project") or "").strip() or ""}
+
+
+def _agent_tool_list_canvases_run(args):
+    canvases = list_canvases()
+    if args.get("project"):
+        canvases = [c for c in canvases if c.get("project") == args["project"]]
+    slim = [{
+        "id": c.get("id"), "title": c.get("title"), "kind": c.get("kind"),
+        "node_count": c.get("node_count", 0), "updated_at": c.get("updated_at"),
+    } for c in canvases]
+    return {"total": len(slim), "canvases": slim}
+
+
+def _agent_tool_list_canvases_preview(args, canvas):
+    return "列出全部画布（标题/类型/节点数），供选择操作目标。"
+
+
+# ---------------------------------------------------------------------------
+# 工具 2: get_canvas
+# ---------------------------------------------------------------------------
+
+def _agent_tool_get_canvas_validate(args):
+    canvas_id = str(args.get("canvas_id") or "").strip()
+    if not canvas_id:
+        raise AgentToolError("canvas_id 不能为空", code="invalid_args")
+    load_canvas(canvas_id)  # 404 校验（含软删除）
+    return {"canvas_id": canvas_id}
+
+
+def _agent_tool_get_canvas_run(args):
+    canvas = load_canvas(args["canvas_id"])
+    return {"canvas": _agent_canvas_summary(canvas)}
+
+
+def _agent_tool_get_canvas_preview(args, canvas):
+    return f"读取画布「{canvas.get('title')}」的快照摘要（节点/连线/视口）。"
+
+
+# ---------------------------------------------------------------------------
+# 工具 3: create_node
+# ---------------------------------------------------------------------------
+
+_AGENT_NODE_TYPE_MAP = {
+    "smart": {"image": "smart-image", "prompt": "smart-prompt", "video": "smart-video"},
+    "classic": {"image": "image", "prompt": "prompt", "video": "video"},
+}
+
+
+def _agent_tool_create_node_validate(args):
+    canvas_id = str(args.get("canvas_id") or "").strip()
+    if not canvas_id:
+        raise AgentToolError("canvas_id 不能为空", code="invalid_args")
+    node_type = str(args.get("type") or "").strip().lower()
+    if node_type not in ("image", "prompt", "video"):
+        raise AgentToolError("type 必须是 image|prompt|video", code="invalid_args")
+    load_canvas(canvas_id)
+    norm = {"canvas_id": canvas_id, "type": node_type}
+    norm["title"] = str(args.get("title") or "")[:120]
+    try:
+        norm["x"] = float(args["x"]) if args.get("x") is not None else None
+        norm["y"] = float(args["y"]) if args.get("y") is not None else None
+    except (TypeError, ValueError):
+        raise AgentToolError("x/y 必须是数字", code="invalid_args")
+    norm["prompt"] = str(args.get("prompt") or args.get("text") or "")
+    params = args.get("params") or {}
+    if params is not None and not isinstance(params, dict):
+        raise AgentToolError("params 必须是对象", code="invalid_args")
+    norm["params"] = dict(params or {})
+    return norm
+
+
+def _agent_tool_create_node_run(args):
+    canvas_id = args["canvas_id"]
+    canvas_kind = "smart" if load_canvas(canvas_id).get("kind") == "smart" else "classic"
+    node_type = _AGENT_NODE_TYPE_MAP[canvas_kind][args["type"]]
+    node = {
+        "id": f"agent_{uuid.uuid4().hex[:16]}",
+        "type": node_type,
+        "x": args["x"] if args["x"] is not None else 0,
+        "y": args["y"] if args["y"] is not None else 0,
+        "created_at": now_ms(),
+    }
+    if node_type in ("smart-image", "image"):
+        node["title"] = args["title"] or ("Image" if node_type == "smart-image" else "图片")
+        if node_type == "smart-image":
+            node["images"] = []
+        else:
+            node["url"] = str(args["params"].get("url") or "")
+            node["name"] = str(args["params"].get("name") or "")
+    elif node_type in ("smart-prompt", "prompt"):
+        node["title"] = args["title"] or "Prompt"
+        node["text"] = args["prompt"]
+        if node_type == "smart-prompt":
+            node.update({"w": 316, "h": 240, "promptSeparator": ";", "promptSplitEnabled": False,
+                         "llmEnabled": False, "llmSystemEnabled": False, "llmInstruction": ""})
+    else:  # smart-video / video
+        node["title"] = args["title"] or "视频"
+        node["model"] = str(args["params"].get("model") or "")
+        node["duration"] = int(args["params"].get("duration") or 5)
+        node["aspectRatio"] = str(args["params"].get("aspectRatio") or "16:9")
+        node["inputs"] = []
+    for k, v in args["params"].items():
+        if k not in ("url", "name", "model", "duration", "aspectRatio"):
+            node[k] = v
+
+    def _mutate(canvas):
+        canvas.setdefault("nodes", []).append(node)
+        return None
+
+    canvas, _ = _agent_mutate_canvas(canvas_id, _mutate)
+    _agent_snapshot(canvas, note=f"agent:create_node {node['id']}")
+    return {"node": node, "node_id": node["id"], "node_count": len(canvas.get("nodes") or [])}
+
+
+def _agent_tool_create_node_preview(args, canvas):
+    return f"将在画布「{canvas.get('title')}」新建 1 个 {args.get('type')} 节点" + \
+           (f"（标题：{args.get('title')}）" if args.get("title") else "") + \
+           (f"，提示词：{args.get('prompt', '')[:40]}…" if args.get("prompt") else "")
+
+
+# ---------------------------------------------------------------------------
+# 工具 4: delete_node
+# ---------------------------------------------------------------------------
+
+def _agent_tool_delete_node_validate(args):
+    canvas_id = str(args.get("canvas_id") or "").strip()
+    node_id = str(args.get("node_id") or "").strip()
+    if not canvas_id or not node_id:
+        raise AgentToolError("canvas_id 与 node_id 不能为空", code="invalid_args")
+    canvas = load_canvas(canvas_id)
+    if not _agent_find_node(canvas, node_id):
+        raise AgentToolError(f"节点 {node_id} 不存在", code="node_not_found", status_code=404)
+    return {"canvas_id": canvas_id, "node_id": node_id, "force": bool(args.get("force") or False)}
+
+
+def _agent_tool_delete_node_run(args):
+    canvas_id, node_id, force = args["canvas_id"], args["node_id"], args["force"]
+
+    def _mutate(canvas):
+        refs = [c for c in (canvas.get("connections") or [])
+                if c.get("from") == node_id or c.get("to") == node_id]
+        if refs and not force:
+            raise AgentToolError(
+                f"节点 {node_id} 被 {len(refs)} 条连线引用，删除将同时移除这些连线",
+                code="references_exist", requires_force=True,
+                warnings=[{"from": c.get("from"), "to": c.get("to"), "kind": c.get("kind")} for c in refs])
+        node = _agent_find_node(canvas, node_id)
+        canvas["nodes"] = [n for n in (canvas.get("nodes") or []) if n.get("id") != node_id]
+        canvas["connections"] = [c for c in (canvas.get("connections") or [])
+                                 if c.get("from") != node_id and c.get("to") != node_id]
+        return {"node": node, "removed_connections": len(refs), "refs": refs}
+
+    canvas, result = _agent_mutate_canvas(canvas_id, _mutate)
+    _agent_snapshot(canvas, note=f"agent:delete_node {node_id}")
+    return {
+        "deleted_node": _agent_node_summary(result["node"]),
+        "removed_connections": result["removed_connections"],
+        "node_count": len(canvas.get("nodes") or []),
+    }
+
+
+def _agent_tool_delete_node_preview(args, canvas):
+    node = _agent_find_node(canvas, str(args.get("node_id") or ""))
+    title = node.get("title") or node.get("id") if node else args.get("node_id")
+    refs = [c for c in (canvas.get("connections") or [])
+            if c.get("from") == args.get("node_id") or c.get("to") == args.get("node_id")]
+    base = f"将删除节点 {title}"
+    if refs and not args.get("force"):
+        base += f"；⚠️ 该节点被 {len(refs)} 条连线引用，需 force=true 才会连同连线一起删除"
+    else:
+        base += f"（同时移除 {len(refs)} 条关联连线）"
+    return base
+
+
+# ---------------------------------------------------------------------------
+# 工具 5: connect_nodes
+# ---------------------------------------------------------------------------
+
+_AGENT_CONNECTION_KINDS = ("input", "output", "prompt", "data", "")
+
+
+def _agent_tool_connect_nodes_validate(args):
+    canvas_id = str(args.get("canvas_id") or "").strip()
+    from_id = str(args.get("from") or "").strip()
+    to_id = str(args.get("to") or "").strip()
+    if not canvas_id or not from_id or not to_id:
+        raise AgentToolError("canvas_id / from / to 不能为空", code="invalid_args")
+    if from_id == to_id:
+        raise AgentToolError("from 与 to 不能是同一节点", code="invalid_args")
+    canvas = load_canvas(canvas_id)
+    for nid in (from_id, to_id):
+        if not _agent_find_node(canvas, nid):
+            raise AgentToolError(f"节点 {nid} 不存在", code="node_not_found", status_code=404)
+    kind = str(args.get("kind") or "input").strip() or "input"
+    if kind not in _AGENT_CONNECTION_KINDS:
+        raise AgentToolError(f"kind 必须是 {_AGENT_CONNECTION_KINDS} 之一", code="invalid_args")
+    return {"canvas_id": canvas_id, "from": from_id, "to": to_id, "kind": kind}
+
+
+def _agent_tool_connect_nodes_run(args):
+    canvas_id = args["canvas_id"]
+
+    def _mutate(canvas):
+        conn = {"from": args["from"], "to": args["to"], "kind": args["kind"]}
+        conns = canvas.get("connections") or []
+        for c in conns:
+            if c.get("from") == conn["from"] and c.get("to") == conn["to"] and (c.get("kind") or "input") == conn["kind"]:
+                return {"connection": c, "duplicate": True}
+        conns.append(conn)
+        canvas["connections"] = conns
+        return {"connection": conn, "duplicate": False}
+
+    canvas, result = _agent_mutate_canvas(canvas_id, _mutate)
+    if not result["duplicate"]:
+        _agent_snapshot(canvas, note=f"agent:connect_nodes {args['from']}->{args['to']}")
+    return {"connection": result["connection"], "duplicate": result["duplicate"],
+            "connection_count": len(canvas.get("connections") or [])}
+
+
+def _agent_tool_connect_nodes_preview(args, canvas):
+    f_node = _agent_find_node(canvas, str(args.get("from") or ""))
+    t_node = _agent_find_node(canvas, str(args.get("to") or ""))
+    f_name = (f_node.get("title") or f_node.get("id")) if f_node else args.get("from")
+    t_name = (t_node.get("title") or t_node.get("id")) if t_node else args.get("to")
+    return f"创建连线 {f_name} → {t_name}（kind={args.get('kind') or 'input'}）"
+
+
+# ---------------------------------------------------------------------------
+# 工具 6: update_node
+# ---------------------------------------------------------------------------
+
+def _agent_tool_update_node_validate(args):
+    canvas_id = str(args.get("canvas_id") or "").strip()
+    node_id = str(args.get("node_id") or "").strip()
+    if not canvas_id or not node_id:
+        raise AgentToolError("canvas_id 与 node_id 不能为空", code="invalid_args")
+    canvas = load_canvas(canvas_id)
+    if not _agent_find_node(canvas, node_id):
+        raise AgentToolError(f"节点 {node_id} 不存在", code="node_not_found", status_code=404)
+    norm = {"canvas_id": canvas_id, "node_id": node_id}
+    if args.get("title") is not None:
+        norm["title"] = str(args["title"])[:120]
+    text = args.get("prompt") if args.get("prompt") is not None else args.get("text")
+    if text is not None:
+        norm["text"] = str(text)
+    for key in ("x", "y"):
+        if args.get(key) is not None:
+            try:
+                norm[key] = float(args[key])
+            except (TypeError, ValueError):
+                raise AgentToolError(f"{key} 必须是数字", code="invalid_args")
+    params = args.get("params")
+    if params is not None:
+        if not isinstance(params, dict):
+            raise AgentToolError("params 必须是对象", code="invalid_args")
+        norm["params"] = dict(params)
+    if not any(k in norm for k in ("title", "text", "x", "y", "params")):
+        raise AgentToolError("没有可更新的字段（title/prompt/text/x/y/params）", code="invalid_args")
+    return norm
+
+
+def _agent_tool_update_node_run(args):
+    canvas_id, node_id = args["canvas_id"], args["node_id"]
+
+    def _mutate(canvas):
+        node = _agent_find_node(canvas, node_id)
+        if not node:
+            raise AgentToolError(f"节点 {node_id} 不存在", code="node_not_found", status_code=404)
+        if "title" in args:
+            node["title"] = args["title"]
+        if "text" in args:
+            node["text"] = args["text"]
+        for key in ("x", "y"):
+            if key in args:
+                node[key] = args[key]
+        if "params" in args:
+            node.setdefault("params", {})
+            if isinstance(node["params"], dict):
+                node["params"].update(args["params"])
+            else:
+                node["params"] = dict(args["params"])
+        return node
+
+    canvas, node = _agent_mutate_canvas(canvas_id, _mutate)
+    _agent_snapshot(canvas, note=f"agent:update_node {node_id}")
+    return {"node": _agent_node_summary(node)}
+
+
+def _agent_tool_update_node_preview(args, canvas):
+    node = _agent_find_node(canvas, str(args.get("node_id") or ""))
+    fields = [k for k in ("title", "prompt", "text", "x", "y", "params") if args.get(k) is not None]
+    name = (node.get("title") or node.get("id")) if node else args.get("node_id")
+    return f"更新节点 {name} 的字段：{', '.join(fields)}" + \
+           (f"（提示词：{str(args.get('prompt') or args.get('text'))[:40]}…）" if args.get("prompt") or args.get("text") else "")
+
+
+# ---------------------------------------------------------------------------
+# 工具 7: run_generation
+# ---------------------------------------------------------------------------
+
+def _agent_tool_run_generation_validate(args):
+    canvas_id = str(args.get("canvas_id") or "").strip()
+    node_id = str(args.get("node_id") or "").strip()
+    if not canvas_id or not node_id:
+        raise AgentToolError("canvas_id 与 node_id 不能为空", code="invalid_args")
+    canvas = load_canvas(canvas_id)
+    node = _agent_find_node(canvas, node_id)
+    if not node:
+        raise AgentToolError(f"节点 {node_id} 不存在", code="node_not_found", status_code=404)
+    norm = {"canvas_id": canvas_id, "node_id": node_id,
+            "provider": str(args.get("provider") or "comfly").strip() or "comfly",
+            "model": str(args.get("model") or "").strip(),
+            "size": str(args.get("size") or "1024x1024").strip() or "1024x1024",
+            "quality": str(args.get("quality") or "auto").strip() or "auto"}
+    refs = args.get("reference_images") or []
+    if refs is not None and not isinstance(refs, list):
+        raise AgentToolError("reference_images 必须是数组", code="invalid_args")
+    norm["reference_images"] = []
+    for ref in (refs or [])[:10]:
+        if isinstance(ref, str) and ref.strip():
+            norm["reference_images"].append({"url": ref.strip()})
+        elif isinstance(ref, dict) and str(ref.get("url") or "").strip():
+            norm["reference_images"].append({"url": str(ref["url"]).strip()})
+    return norm
+
+
+async def _agent_tool_run_generation_run(args):
+    canvas = load_canvas(args["canvas_id"])
+    node = _agent_find_node(canvas, args["node_id"])
+    if not node:
+        raise AgentToolError(f"节点 {args['node_id']} 不存在", code="node_not_found", status_code=404)
+    prompt = _agent_node_text(node)
+    if not prompt:
+        raise AgentToolError(
+            f"节点 {args['node_id']} 没有提示词（text/prompt 为空），请先用 update_node 写入提示词",
+            code="empty_prompt")
+    # 节点自带图片（images[] / url）自动作为参考图（不覆盖显式传入的 reference_images）
+    refs = list(args["reference_images"])
+    if not refs:
+        for img in (node.get("images") or [])[:10]:
+            if isinstance(img, dict) and str(img.get("url") or "").strip():
+                refs.append({"url": str(img["url"]).strip()})
+        if not refs and str(node.get("url") or "").strip():
+            refs.append({"url": str(node["url"]).strip()})
+    payload = {
+        "prompt": prompt,
+        "provider_id": args["provider"],
+        "model": args["model"],
+        "size": args["size"],
+        "quality": args["quality"],
+        "n": 1,
+        "reference_images": refs,
+    }
+    task = task_create(
+        kind="online-image", payload=payload, runner_name="run_canvas_image_task",
+        provider_id=args["provider"], model_id=args["model"],
+        extra={"agent": True, "canvas_id": args["canvas_id"], "node_id": args["node_id"]})
+    await task_enqueue(task["id"])
+
+    def _mutate(canvas):
+        n = _agent_find_node(canvas, args["node_id"])
+        if n is not None:
+            n["task_id"] = task["id"]
+            n["lastTaskStatus"] = "queued"
+        return None
+
+    try:
+        _agent_mutate_canvas(args["canvas_id"], _mutate)
+    except Exception as exc:
+        print(f"[Agent] 记录 task_id 到节点失败（不影响任务）: {exc}")
+    return {
+        "task_id": task["id"], "status": "queued", "node_id": args["node_id"],
+        "provider": args["provider"], "model": args["model"], "size": args["size"],
+        "prompt": prompt[:160] + ("…" if len(prompt) > 160 else ""),
+    }
+
+
+def _agent_tool_run_generation_preview(args, canvas):
+    node = _agent_find_node(canvas, str(args.get("node_id") or ""))
+    name = (node.get("title") or node.get("id")) if node else args.get("node_id")
+    prompt = _agent_node_text(node) if node else ""
+    return f"将对节点 {name} 发起真实图片生成任务（provider={args.get('provider') or 'comfly'}, model={args.get('model') or '默认'}, size={args.get('size') or '1024x1024'}）" + \
+           (f"，提示词：{prompt[:40]}…" if prompt else "；⚠️ 节点当前无提示词，执行会失败")
+
+
+# ---------------------------------------------------------------------------
+# 工具 8: check_task
+# ---------------------------------------------------------------------------
+
+def _agent_tool_check_task_validate(args):
+    task_id = str(args.get("task_id") or "").strip()
+    if not task_id:
+        raise AgentToolError("task_id 不能为空", code="invalid_args")
+    if not task_get(task_id):
+        raise AgentToolError(f"任务 {task_id} 不存在（可能已过期或服务重启）", code="task_not_found", status_code=404)
+    return {"task_id": task_id}
+
+
+def _agent_tool_check_task_run(args):
+    task = task_get(args["task_id"])
+    return {
+        "task_id": task["id"],
+        "kind": task.get("kind"),
+        "status": task.get("status"),
+        "error": task.get("error") or "",
+        "retry_count": task.get("retry_count") or 0,
+        "provider_id": task.get("provider_id") or "",
+        "model_id": task.get("model_id") or "",
+        "created_at": task.get("created_at"),
+        "updated_at": task.get("updated_at"),
+        "result_url": _agent_task_result_url(task),
+        "transition_count": len(task.get("transitions") or []),
+        "timing": task.get("timing"),
+    }
+
+
+def _agent_tool_check_task_preview(args, canvas):
+    return f"查询任务 {args.get('task_id')} 的当前状态与结果（只读，不执行任何操作）。"
+
+
+# ---------------------------------------------------------------------------
+# 工具 9: create_matrix
+# ---------------------------------------------------------------------------
+
+def _agent_tool_create_matrix_validate(args):
+    name = str(args.get("name") or "").strip()
+    if not name:
+        raise AgentToolError("name 不能为空", code="invalid_args")
+    dims = args.get("dimensions") or {}
+    if not isinstance(dims, dict):
+        raise AgentToolError("dimensions 必须是对象", code="invalid_args")
+    norm_dims = {}
+    for k, v in dims.items():
+        key = str(k).strip()
+        if not key:
+            continue
+        vals = [str(x).strip() for x in v if str(x).strip()] if isinstance(v, list) else []
+        if vals:
+            norm_dims[key] = vals
+    if not norm_dims:
+        raise AgentToolError("至少需要一个维度（名称 + 至少一个值）", code="invalid_args")
+    if len(norm_dims) > MATRIX_MAX_DIMENSIONS:
+        raise AgentToolError(f"维度数量超过上限（{MATRIX_MAX_DIMENSIONS}）", code="invalid_args")
+    cells = _matrix_build_cells(norm_dims)
+    if len(cells) > MATRIX_MAX_CELLS:
+        raise AgentToolError(f"单元格数量 {len(cells)} 超过上限 {MATRIX_MAX_CELLS}", code="invalid_args")
+    base_params = args.get("base_params") or {}
+    if not isinstance(base_params, dict):
+        raise AgentToolError("base_params 必须是对象", code="invalid_args")
+    if not str(base_params.get("prompt") or "").strip():
+        raise AgentToolError("base_params.prompt 不能为空（提示词模板，可用 {维度名} 占位符）", code="invalid_args")
+    return {"name": name[:120], "project_id": str(args.get("project_id") or "").strip(),
+            "dimensions": norm_dims, "base_params": dict(base_params)}
+
+
+def _agent_tool_create_matrix_run(args):
+    matrix_id = f"mx_{uuid.uuid4().hex}"
+    now = time.time()
+    matrix = {
+        "matrix_id": matrix_id,
+        "name": args["name"],
+        "project_id": args["project_id"],
+        "dimensions": args["dimensions"],
+        "base_params": args["base_params"],
+        "cells": _matrix_build_cells(args["dimensions"]),
+        "created_at": now,
+        "updated_at": now,
+    }
+    with MATRIX_STORE_LOCK:
+        MATRIX_STORE[matrix_id] = matrix
+        matrix_save_store()
+    public = _matrix_public(matrix_get(matrix_id), with_cells=True)
+    return {"matrix_id": matrix_id, "matrix": public,
+            "cells": len(matrix["cells"]),
+            "message": f"矩阵已创建（{len(matrix['cells'])} 个单元格，未执行；可用 /api/matrices/{matrix_id}/run 启动）"}
+
+
+def _agent_tool_create_matrix_preview(args, canvas):
+    dims = args.get("dimensions") or {}
+    total = 1
+    for v in dims.values():
+        if isinstance(v, list):
+            total *= max(1, len([x for x in v if str(x).strip()]))
+    return f"创建矩阵「{args.get('name')}」（维度 {list(dims.keys())}，约 {total} 个单元格），仅创建不执行。"
+
+
+# ---------------------------------------------------------------------------
+# 注册表
+# ---------------------------------------------------------------------------
+
+AGENT_TOOLS = {
+    "list_canvases": {
+        "description": "列出所有画布（标题/类型/节点数），返回画布 ID 供后续步骤使用。",
+        "schema": {"type": "object", "properties": {"project": {"type": "string", "description": "可选：按项目过滤"}}},
+        "validate": _agent_tool_list_canvases_validate,
+        "run": _agent_tool_list_canvases_run,
+        "preview": _agent_tool_list_canvases_preview,
+        "mutates_canvas": False,
+    },
+    "get_canvas": {
+        "description": "读取画布快照摘要（节点列表/连线/视口），了解当前画布状态。",
+        "schema": {"type": "object", "properties": {"canvas_id": {"type": "string", "description": "目标画布 ID"}}, "required": ["canvas_id"]},
+        "validate": _agent_tool_get_canvas_validate,
+        "run": _agent_tool_get_canvas_run,
+        "preview": _agent_tool_get_canvas_preview,
+        "mutates_canvas": False,
+    },
+    "create_node": {
+        "description": "在画布上新建节点。type 为 image|prompt|video；image/prompt 节点可带 prompt 提示词；video 节点可带 model/duration/aspectRatio 参数（放 params 里）。返回 node.id，后续步骤用 {stepN.node_id} 引用。",
+        "schema": {"type": "object", "properties": {
+            "canvas_id": {"type": "string"}, "type": {"type": "string", "enum": ["image", "prompt", "video"]},
+            "title": {"type": "string"}, "x": {"type": "number"}, "y": {"type": "number"},
+            "prompt": {"type": "string", "description": "提示词（prompt/image 节点）"},
+            "params": {"type": "object", "description": "额外参数（如 video 的 model/duration/aspectRatio）"}},
+            "required": ["canvas_id", "type"]},
+        "validate": _agent_tool_create_node_validate,
+        "run": _agent_tool_create_node_run,
+        "preview": _agent_tool_create_node_preview,
+        "mutates_canvas": True,
+    },
+    "delete_node": {
+        "description": "删除画布上的节点。若节点被连线引用：需 force=true 才会连同关联连线一起删除，否则返回引用警告清单。",
+        "schema": {"type": "object", "properties": {
+            "canvas_id": {"type": "string"}, "node_id": {"type": "string"},
+            "force": {"type": "boolean", "description": "节点被连线引用时是否强制删除（连同连线）"}},
+            "required": ["canvas_id", "node_id"]},
+        "validate": _agent_tool_delete_node_validate,
+        "run": _agent_tool_delete_node_run,
+        "preview": _agent_tool_delete_node_preview,
+        "mutates_canvas": True,
+    },
+    "connect_nodes": {
+        "description": "创建连线 from → to（kind 默认 input）。两个节点必须已存在。",
+        "schema": {"type": "object", "properties": {
+            "canvas_id": {"type": "string"}, "from": {"type": "string", "description": "源节点 ID"},
+            "to": {"type": "string", "description": "目标节点 ID"},
+            "kind": {"type": "string", "enum": ["input", "output", "prompt", "data", ""]}},
+            "required": ["canvas_id", "from", "to"]},
+        "validate": _agent_tool_connect_nodes_validate,
+        "run": _agent_tool_connect_nodes_run,
+        "preview": _agent_tool_connect_nodes_preview,
+        "mutates_canvas": True,
+    },
+    "update_node": {
+        "description": "更新节点字段：title/prompt 或 text（提示词）/x/y/params（合并进节点参数）。",
+        "schema": {"type": "object", "properties": {
+            "canvas_id": {"type": "string"}, "node_id": {"type": "string"},
+            "title": {"type": "string"}, "prompt": {"type": "string", "description": "新提示词"},
+            "text": {"type": "string", "description": "新提示词（等价 prompt）"},
+            "x": {"type": "number"}, "y": {"type": "number"},
+            "params": {"type": "object"}},
+            "required": ["canvas_id", "node_id"]},
+        "validate": _agent_tool_update_node_validate,
+        "run": _agent_tool_update_node_run,
+        "preview": _agent_tool_update_node_preview,
+        "mutates_canvas": True,
+    },
+    "run_generation": {
+        "description": "对画布节点发起真实图片生成任务（进 Task Engine 队列）。节点必须有提示词（text/prompt）；节点自带图片自动作为参考图。返回 task_id，用 check_task 查状态。",
+        "schema": {"type": "object", "properties": {
+            "canvas_id": {"type": "string"}, "node_id": {"type": "string"},
+            "provider": {"type": "string", "default": "comfly"}, "model": {"type": "string"},
+            "size": {"type": "string", "default": "1024x1024"}, "quality": {"type": "string", "default": "auto"},
+            "reference_images": {"type": "array", "items": {"type": "object"}}},
+            "required": ["canvas_id", "node_id"]},
+        "validate": _agent_tool_run_generation_validate,
+        "run": _agent_tool_run_generation_run,
+        "preview": _agent_tool_run_generation_preview,
+        "mutates_canvas": True,
+    },
+    "check_task": {
+        "description": "查询任务状态（queued/running/provider_processing/succeeded/failed/cancelled…）与结果 URL。只读。",
+        "schema": {"type": "object", "properties": {"task_id": {"type": "string"}}, "required": ["task_id"]},
+        "validate": _agent_tool_check_task_validate,
+        "run": _agent_tool_check_task_run,
+        "preview": _agent_tool_check_task_preview,
+        "mutates_canvas": False,
+    },
+    "create_matrix": {
+        "description": "创建批量生成矩阵（维度笛卡尔积 → 单元格，只创建不执行）。base_params 是图片生成参数模板，prompt 里可用 {维度名} 占位符。",
+        "schema": {"type": "object", "properties": {
+            "name": {"type": "string"}, "project_id": {"type": "string"},
+            "dimensions": {"type": "object", "description": "维度名 -> 值数组，如 {\"风格\": [\"赛博朋克\", \"水墨\"]}"},
+            "base_params": {"type": "object", "description": "生成参数模板，prompt 必填"}},
+            "required": ["name", "dimensions", "base_params"]},
+        "validate": _agent_tool_create_matrix_validate,
+        "run": _agent_tool_create_matrix_run,
+        "preview": _agent_tool_create_matrix_preview,
+        "mutates_canvas": False,
+    },
+}
+
+
+def _agent_args_have_step_refs(args):
+    """args 中是否含 {stepN...} 前序步骤引用占位符（预览时跳过存在性校验）。"""
+    if isinstance(args, str):
+        return args.startswith("{step") and args.endswith("}")
+    if isinstance(args, dict):
+        return any(_agent_args_have_step_refs(v) for v in args.values())
+    if isinstance(args, list):
+        return any(_agent_args_have_step_refs(v) for v in args)
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Command Layer：统一执行器
+# ---------------------------------------------------------------------------
+
+async def agent_execute_step(tool_name, args):
+    """执行单个工具步骤。返回统一结构 {ok, tool, result/error, code, ...}，绝不吞错误。"""
+    entry = AGENT_TOOLS.get(tool_name)
+    if not entry:
+        return {"ok": False, "tool": tool_name, "error": f"未知工具：{tool_name}",
+                "code": "unknown_tool", "status_code": 400}
+    try:
+        norm_args = entry["validate"](args or {})
+        fn = entry["run"]
+        result = await fn(norm_args) if asyncio.iscoroutinefunction(fn) else fn(norm_args)
+        return {"ok": True, "tool": tool_name, "result": result, "message": "执行成功"}
+    except AgentToolError as exc:
+        return {"ok": False, "tool": tool_name, "error": exc.message, "code": exc.code,
+                "status_code": exc.status_code, "warnings": exc.warnings,
+                "requires_force": exc.requires_force}
+    except HTTPException as exc:
+        detail = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+        return {"ok": False, "tool": tool_name, "error": detail, "code": "http_error",
+                "status_code": exc.status_code}
+    except Exception as exc:
+        return {"ok": False, "tool": tool_name, "error": f"{type(exc).__name__}: {exc}",
+                "code": "internal_error", "status_code": 500}
+
+
+def _agent_resolve_step_refs(args, results):
+    """把 args 里的 {stepN.path} 引用替换为前序步骤结果值（计划状态机的轻量实现）。"""
+    if isinstance(args, str):
+        if args.startswith("{step") and args.endswith("}"):
+            path = args[1:-1].split(".")
+            try:
+                idx = int(path[0][4:])
+            except (ValueError, IndexError):
+                return args
+            if idx < len(results) and results[idx].get("ok"):
+                cur = results[idx].get("result")
+                for part in path[1:]:
+                    if isinstance(cur, dict):
+                        cur = cur.get(part)
+                    elif isinstance(cur, list) and part.isdigit() and int(part) < len(cur):
+                        cur = cur[int(part)]
+                    else:
+                        return args
+                return cur if cur is not None else args
+        return args
+    if isinstance(args, dict):
+        return {k: _agent_resolve_step_refs(v, results) for k, v in args.items()}
+    if isinstance(args, list):
+        return [_agent_resolve_step_refs(v, results) for v in args]
+    return args
+
+
+# ---------------------------------------------------------------------------
+# Agent 会话持久化（data/agent_sessions/*.json）
+# ---------------------------------------------------------------------------
+
+def agent_session_path(session_id):
+    cleaned = re.sub(r"[^a-zA-Z0-9_-]", "", session_id or "")
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="无效的会话 ID")
+    return os.path.join(AGENT_SESSIONS_DIR, f"{cleaned}.json")
+
+
+def agent_session_save(session):
+    try:
+        os.makedirs(AGENT_SESSIONS_DIR, exist_ok=True)
+        tmp = agent_session_path(session["session_id"]) + f".tmp{os.getpid()}"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(session, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, agent_session_path(session["session_id"]))
+    except Exception as exc:
+        print(f"[Agent] 会话持久化失败: {exc}")
+
+
+def agent_session_load(session_id):
+    path = agent_session_path(session_id)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def agent_session_list():
+    sessions = []
+    if os.path.isdir(AGENT_SESSIONS_DIR):
+        for filename in sorted(os.listdir(AGENT_SESSIONS_DIR), reverse=True):
+            if not filename.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(AGENT_SESSIONS_DIR, filename), "r", encoding="utf-8") as f:
+                    rec = json.load(f)
+                sessions.append({
+                    "session_id": rec.get("session_id"),
+                    "canvas_id": rec.get("canvas_id"),
+                    "instruction": (rec.get("instruction") or "")[:200],
+                    "intent": (rec.get("intent") or "")[:200],
+                    "status": rec.get("status") or "planned",
+                    "step_count": len((rec.get("plan") or {}).get("steps") or []),
+                    "version": rec.get("version"),
+                    "created_at": rec.get("created_at"),
+                    "updated_at": rec.get("updated_at"),
+                })
+            except Exception:
+                continue
+    return sessions
+
+
+def _agent_new_session(canvas_id, instruction, context, plan):
+    now = time.time()
+    return {
+        "session_id": f"agent_{uuid.uuid4().hex}",
+        "canvas_id": canvas_id,
+        "instruction": instruction,
+        "context": context or "",
+        "intent": plan.get("intent") or "",
+        "plan": plan,
+        "execution_log": [],
+        "status": "planned",
+        "version": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 计划生成（LLM）与解析
+# ---------------------------------------------------------------------------
+
+_AGENT_PLAN_SYSTEM_PROMPT = (
+    "你是 NOVAI 无限画布 Agent 的计划生成器。用户用自然语言给出操作指令，你要把它拆解为"
+    "「按顺序执行」的工具步骤序列。\n"
+    "可用工具清单（JSON Schema）：\n{tools_json}\n"
+    "当前画布快照摘要：\n{canvas_summary}\n"
+    "要求：\n"
+    "1. 只返回 JSON，不要 Markdown、不要任何解释文字。\n"
+    "2. 格式：{{\"intent\": \"一句话意图\", \"steps\": [{{\"tool\": \"工具名\", \"args\": {{...}}, \"description\": \"这一步做什么\"}}], \"expected_output\": \"预期结果描述\"}}\n"
+    "3. steps 至少 1 步；tool 必须是清单中的工具名；args 必须符合该工具的 JSON Schema。\n"
+    "4. 多步计划中，后续步骤需要引用前面步骤创建节点的 ID 时，用 {stepN.node_id} 占位符"
+    "（N 从 0 开始，如 {step0.node_id}）。\n"
+    "5. 需要生成图片时：先用 create_node 建节点（type=image 或 prompt，prompt 写提示词），"
+    "再用 run_generation 触发；不要遗漏步骤。\n"
+    "6. 删除操作不要擅自使用 force=true。"
+)
+
+
+def _agent_build_tools_catalog():
+    return [{"name": name, "description": entry["description"], "schema": entry["schema"]}
+            for name, entry in AGENT_TOOLS.items()]
+
+
+def _agent_extract_json(text):
+    """容错提取 JSON：去代码围栏，取第一对 { } 之间的内容。"""
+    cleaned = (text or "").strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```[a-zA-Z]*\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start == -1 or end <= start:
+        return None
+    return cleaned[start:end + 1]
+
+
+async def agent_generate_plan(canvas_id, instruction, context, provider="comfly", model="", ms_model=""):
+    """调用对话模型生成结构化计划。LLM 不可用时抛 HTTPException（400/502），绝不 mock。"""
+    canvas = load_canvas(canvas_id)  # 404 校验
+    summary = _agent_canvas_summary(canvas)
+    try:
+        chat_base, chat_hdrs, mdl = resolve_chat_provider(provider, model, ms_model)
+    except HTTPException as exc:
+        raise HTTPException(status_code=400,
+                            detail=f"无法生成计划（对话模型不可用）：{exc.detail}") from exc
+    system = _AGENT_PLAN_SYSTEM_PROMPT.format(
+        tools_json=json.dumps(_agent_build_tools_catalog(), ensure_ascii=False),
+        canvas_summary=json.dumps(summary, ensure_ascii=False))
+    user_text = f"用户指令：{instruction}"
+    if context:
+        user_text += f"\n补充上下文：{context}"
+    user_text += "\n请返回计划 JSON。"
+    upstream_messages = [{"role": "system", "content": system}, {"role": "user", "content": user_text}]
+    provider_cfg = get_api_provider(provider) if provider not in ("modelscope",) else {}
+    try:
+        async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV,
+                                     timeout=AI_REQUEST_TIMEOUT) as client:
+            req_body = {"model": mdl, "messages": upstream_messages}
+            if is_apimart_provider(provider_cfg):
+                req_body["stream"] = False
+            response = await client.post(f"{chat_base}/chat/completions", headers=chat_hdrs, json=req_body)
+            response.raise_for_status()
+            raw = response.json()
+    except httpx.HTTPStatusError as exc:
+        body = exc.response.text or ""
+        raise HTTPException(status_code=exc.response.status_code,
+                            detail=f"计划生成失败：上游模型接口错误 {body[:300]}") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"计划生成失败：请求上游模型接口出错：{exc}") from exc
+    text = text_from_chat_response(raw)
+    json_text = _agent_extract_json(text)
+    if not json_text:
+        raise HTTPException(status_code=400,
+                            detail=f"计划生成失败：模型返回的不是合法 JSON：{(text or '')[:300]}")
+    try:
+        plan = json.loads(json_text)
+    except Exception as exc:
+        raise HTTPException(status_code=400,
+                            detail=f"计划生成失败：JSON 解析错误：{exc}；原文：{(text or '')[:300]}") from exc
+    if not isinstance(plan, dict):
+        raise HTTPException(status_code=400, detail="计划生成失败：模型返回的不是对象")
+    intent = str(plan.get("intent") or "").strip()
+    steps = plan.get("steps")
+    if not isinstance(steps, list) or not steps:
+        raise HTTPException(status_code=400, detail="计划生成失败：steps 为空或不是数组")
+    unknown_tools = []
+    clean_steps = []
+    for i, step in enumerate(steps):
+        if not isinstance(step, dict):
+            raise HTTPException(status_code=400, detail=f"计划生成失败：第 {i} 步不是对象")
+        tool = str(step.get("tool") or "").strip()
+        if tool not in AGENT_TOOLS:
+            unknown_tools.append(tool or "<空>")
+            continue
+        args = step.get("args")
+        if args is None:
+            args = {}
+        if not isinstance(args, dict):
+            raise HTTPException(status_code=400, detail=f"计划生成失败：第 {i} 步（{tool}）的 args 必须是对象")
+        clean_steps.append({
+            "tool": tool,
+            "args": args,
+            "description": str(step.get("description") or "")[:300],
+        })
+    if unknown_tools:
+        raise HTTPException(status_code=400,
+                            detail=f"计划生成失败：包含未知工具 {unknown_tools}（可用工具：{list(AGENT_TOOLS.keys())}）")
+    return {
+        "intent": intent or "未命名意图",
+        "steps": clean_steps,
+        "expected_output": str(plan.get("expected_output") or "")[:500],
+        "model": mdl,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 计划 API
+# ---------------------------------------------------------------------------
+
+class AgentPlanRequest(BaseModel):
+    canvas_id: str
+    instruction: str = Field(min_length=1, max_length=4000)
+    context: str = ""
+    provider: str = "comfly"
+    model: str = ""
+    ms_model: str = ""
+
+
+class AgentPreviewRequest(BaseModel):
+    plan_id: str = ""
+    steps: Optional[List[Dict[str, Any]]] = None
+    canvas_id: str = ""
+
+
+class AgentApplyRequest(BaseModel):
+    plan_id: str = ""
+    steps: Optional[List[Dict[str, Any]]] = None
+    canvas_id: str = ""
+
+
+class AgentRollbackRequest(BaseModel):
+    canvas_id: str
+    to_version: int
+
+
+@app.get("/api/agent/tools")
+async def agent_tools_list():
+    """工具注册表目录（名称/描述/Schema），供前端与 LLM 使用。"""
+    return {"total": len(AGENT_TOOLS), "tools": _agent_build_tools_catalog()}
+
+
+@app.post("/api/agent/tools/{tool_name}")
+async def agent_tools_execute(tool_name: str, payload: dict = None):
+    """直接执行单个工具（调试/前端直调）。统一返回 {ok, result, message} 或 4xx 错误详情。"""
+    payload = payload or {}
+    args = payload.get("args") or {}
+    result = await agent_execute_step(tool_name, args)
+    if result["ok"]:
+        return {"ok": True, "tool": tool_name, "result": result.get("result"), "message": result.get("message")}
+    detail = {"ok": False, "tool": tool_name, "message": result.get("error"),
+              "code": result.get("code"), "warnings": result.get("warnings") or []}
+    status = 409 if result.get("requires_force") else (result.get("status_code") or 400)
+    raise HTTPException(status_code=status, detail=detail)
+
+
+@app.post("/api/agent/plan")
+async def agent_plan(payload: AgentPlanRequest):
+    """接收 {canvas_id, instruction, context?} → 对话模型生成结构化计划并存为会话。"""
+    plan = await agent_generate_plan(payload.canvas_id, payload.instruction, payload.context,
+                                     payload.provider, payload.model, payload.ms_model)
+    session = _agent_new_session(payload.canvas_id, payload.instruction, payload.context, plan)
+    agent_session_save(session)
+    return {
+        "session_id": session["session_id"],
+        "canvas_id": payload.canvas_id,
+        "intent": plan["intent"],
+        "steps": plan["steps"],
+        "expected_output": plan["expected_output"],
+        "model": plan["model"],
+        "created_at": session["created_at"],
+        "status": "planned",
+    }
+
+
+def _agent_steps_from_request(payload, require_canvas: bool):
+    """从 plan_id 或 steps 提取步骤列表 + 画布 ID（统一 preview/apply 的取数逻辑）。"""
+    steps = None
+    canvas_id = str(payload.canvas_id or "").strip()
+    session = None
+    if str(payload.plan_id or "").strip():
+        session = agent_session_load(str(payload.plan_id).strip())
+        if not session:
+            raise HTTPException(status_code=404, detail="计划会话不存在")
+        plan = session.get("plan") or {}
+        steps = plan.get("steps") or []
+        if not canvas_id:
+            canvas_id = str(session.get("canvas_id") or "")
+        elif canvas_id != session.get("canvas_id"):
+            raise HTTPException(status_code=400, detail="plan_id 与 canvas_id 不匹配（计划属于另一个画布）")
+    elif payload.steps:
+        steps = payload.steps
+    if not steps:
+        raise HTTPException(status_code=400, detail="需要提供 plan_id 或 steps")
+    if require_canvas and not canvas_id:
+        raise HTTPException(status_code=400, detail="canvas_id 不能为空（使用 steps 时必填）")
+    clean = []
+    for i, step in enumerate(steps):
+        if not isinstance(step, dict):
+            raise HTTPException(status_code=400, detail=f"第 {i} 步不是对象")
+        tool = str(step.get("tool") or "").strip()
+        if tool not in AGENT_TOOLS:
+            raise HTTPException(status_code=400, detail=f"第 {i} 步包含未知工具：{tool or '<空>'}")
+        args = step.get("args")
+        if args is None:
+            args = {}
+        if not isinstance(args, dict):
+            raise HTTPException(status_code=400, detail=f"第 {i} 步（{tool}）的 args 必须是对象")
+        clean.append({"tool": tool, "args": dict(args),
+                      "description": str(step.get("description") or "")[:300]})
+    return clean, canvas_id, session
+
+
+@app.post("/api/agent/preview")
+async def agent_preview(payload: AgentPreviewRequest):
+    """接收计划 → 不执行，返回每步的「将要做什么」（描述 + 参数摘要 + 影响范围 + 校验警告）。"""
+    steps, canvas_id, session = _agent_steps_from_request(payload, require_canvas=False)
+    canvas = None
+    if canvas_id:
+        try:
+            canvas = load_canvas(canvas_id)
+        except HTTPException:
+            canvas = None
+    previews = []
+    for i, step in enumerate(steps):
+        entry = AGENT_TOOLS[step["tool"]]
+        item = {
+            "index": i,
+            "tool": step["tool"],
+            "description": step["description"] or entry["description"],
+            "args": step["args"],
+            "impact": "",
+            "valid": True,
+            "warning": "",
+        }
+        try:
+            norm_args = entry["validate"](step["args"])
+            item["impact"] = entry["preview"](norm_args, canvas or {})
+            item["args_summary"] = {k: (v if not isinstance(v, (dict, list)) else f"<{type(v).__name__} {len(v)}项>")
+                                    for k, v in norm_args.items() if v not in (None, "", [])}
+        except AgentToolError as exc:
+            if _agent_args_have_step_refs(step["args"]):
+                # 含 {stepN...} 前序结果引用：apply 时才解析，预览跳过存在性校验
+                item["valid"] = True
+                item["warning"] = "步骤含 {stepN...} 前序结果引用，apply 时解析（预览跳过存在性校验）"
+            else:
+                item["valid"] = False
+                item["warning"] = exc.message
+            item["impact"] = entry["preview"](step["args"], canvas or {})
+        except HTTPException as exc:
+            item["valid"] = False
+            item["warning"] = str(exc.detail)
+        previews.append(item)
+    return {
+        "canvas_id": canvas_id,
+        "steps": previews,
+        "summary": {"total": len(previews),
+                    "valid": sum(1 for p in previews if p["valid"]),
+                    "invalid": sum(1 for p in previews if not p["valid"])},
+        "note": "仅预览，未执行任何操作",
+    }
+
+
+@app.post("/api/agent/apply")
+async def agent_apply(payload: AgentApplyRequest):
+    """接收 {plan_id 或 steps, canvas_id} → 顺序执行（走工具注册表）；任一失败即停；
+    全部成功后自动存画布版本快照便于回滚。"""
+    steps, canvas_id, session = _agent_steps_from_request(payload, require_canvas=True)
+    load_canvas(canvas_id)  # 404 校验
+    if not session:
+        # 直接 steps 执行也落一个会话（执行记录），保证 GET /api/agent/sessions/{id} 可查
+        session = _agent_new_session(canvas_id, "直接步骤执行（未走计划生成）", "",
+                                     {"intent": "direct-steps", "steps": steps, "expected_output": ""})
+    session_id = session["session_id"]
+    execution_log = []
+    results = []
+    failed = None
+    for i, step in enumerate(steps):
+        resolved_args = _agent_resolve_step_refs(step["args"], results)
+        r = await agent_execute_step(step["tool"], resolved_args)
+        entry = {
+            "index": i,
+            "tool": step["tool"],
+            "args": resolved_args,
+            "description": step["description"] or "",
+            "ok": r["ok"],
+            "result": r.get("result"),
+            "error": r.get("error"),
+            "code": r.get("code"),
+            "warnings": r.get("warnings") or [],
+            "requires_force": r.get("requires_force") or False,
+            "at": time.time(),
+        }
+        execution_log.append(entry)
+        results.append(r)
+        if not r["ok"]:
+            failed = {"step_index": i, "tool": step["tool"], "reason": r.get("error"),
+                      "code": r.get("code"), "warnings": r.get("warnings") or [],
+                      "requires_force": r.get("requires_force") or False}
+            break
+    ok = failed is None
+    version = None
+    if ok:
+        try:
+            fresh = load_canvas(canvas_id)
+            version = _agent_snapshot(fresh, note=f"agent apply {session_id or 'direct'}")
+        except Exception as exc:
+            print(f"[Agent] apply 后版本快照失败（不影响结果）: {exc}")
+    if session:
+        session["execution_log"] = execution_log
+        session["status"] = "applied" if ok else "failed"
+        session["version"] = version
+        session["updated_at"] = time.time()
+        agent_session_save(session)
+    try:
+        fresh = load_canvas(canvas_id)
+        await manager.broadcast_canvas_updated(canvas_id, int(fresh.get("updated_at") or now_ms()))
+    except Exception:
+        pass
+    if ok:
+        return {
+            "ok": True,
+            "session_id": session_id,
+            "canvas_id": canvas_id,
+            "executed": len(execution_log),
+            "total": len(steps),
+            "version": version,
+            "message": f"计划执行完成：{len(execution_log)}/{len(steps)} 步成功，已存画布版本 v{version}（可回滚）" if version
+                       else f"计划执行完成：{len(execution_log)}/{len(steps)} 步成功（版本快照未生成）",
+            "log": execution_log,
+        }
+    return {
+        "ok": False,
+        "session_id": session_id,
+        "canvas_id": canvas_id,
+        "executed": failed["step_index"],
+        "total": len(steps),
+        "failed_step": failed,
+        "message": f"计划执行失败：第 {failed['step_index']} 步（{failed['tool']}）— {failed['reason']}",
+        "log": execution_log,
+    }
+
+
+@app.post("/api/agent/rollback")
+async def agent_rollback(payload: AgentRollbackRequest):
+    """接收 {canvas_id, to_version} → 复用 Phase 2 版本化还原逻辑回滚画布。"""
+    canvas_id = str(payload.canvas_id or "").strip()
+    to_version = int(payload.to_version or 0)
+    if to_version <= 0:
+        raise HTTPException(status_code=400, detail="to_version 必须是正整数")
+    canvas = load_canvas(canvas_id)
+    rec = read_canvas_version(canvas_id, to_version)
+    snapshot = rec.get("canvas_snapshot")
+    if not isinstance(snapshot, dict):
+        raise HTTPException(status_code=400, detail="版本快照损坏，无法回滚")
+    restored = dict(snapshot)
+    for key in ("id", "created_at", "project", "owner", "color", "pinned", "board_x", "board_y", "deleted_at"):
+        if key in canvas:
+            restored[key] = canvas[key]
+    restored["kind"] = canvas.get("kind") or restored.get("kind") or "classic"
+    save_canvas(restored)
+    note = f"agent rollback to v{to_version}"
+    new_version = snapshot_canvas_version(restored, note=note)
+    try:
+        await manager.broadcast_canvas_updated(canvas_id, int(restored.get("updated_at") or now_ms()))
+    except Exception:
+        pass
+    return {
+        "ok": True,
+        "canvas_id": canvas_id,
+        "restored_from": to_version,
+        "version": new_version,
+        "note": note,
+        "canvas": _agent_canvas_summary(restored),
+    }
+
+
+@app.get("/api/agent/sessions")
+async def agent_sessions_list():
+    """Agent 会话列表（slim）。"""
+    return {"total": len(agent_session_list()), "sessions": agent_session_list()}
+
+
+@app.get("/api/agent/sessions/{session_id}")
+async def agent_session_get(session_id: str):
+    """Agent 会话详情（计划 + 执行日志）。"""
+    session = agent_session_load(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    return {"session": session}
 if __name__ == "__main__":
     import uvicorn
     port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3000))
@@ -22107,3 +23366,4 @@ async def native_save(data: dict):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"save dialog failed: {e}")
+

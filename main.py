@@ -178,6 +178,27 @@ class ConnectionManager:
                 print(f"Broadcast asset library error: {e}")
                 self.active_connections.remove(connection)
 
+    async def broadcast_task_status(self, task: dict):
+        """Task Engine 任务状态变化推送（V2 Phase 1；兼容现有 {"type": ...} 消息格式）。"""
+        task = task or {}
+        data = json.dumps({
+            "type": "task_status",
+            "data": {
+                "id": task.get("id", ""),
+                "status": task.get("status", ""),
+                "task_type": task.get("kind") or task.get("type") or "",
+                "provider_id": task.get("provider_id") or "",
+                "error": task.get("error") or "",
+                "updated_at": task.get("updated_at"),
+            },
+        })
+        for connection in self.active_connections[:]:
+            try:
+                await connection.send_text(data)
+            except Exception as e:
+                print(f"Broadcast task status error: {e}")
+                self.active_connections.remove(connection)
+
     async def send_personal_message(self, message: dict, client_id: str):
         ws = self.user_connections.get(client_id)
         if ws:
@@ -212,6 +233,11 @@ MODELSCOPE_TREE_URL = "https://modelscope.cn/api/v1/studio/bllack/NOVAI/repo/fil
 async def startup_event():
     global GLOBAL_LOOP
     GLOBAL_LOOP = asyncio.get_running_loop()
+    # Task Engine（V2 Phase 1）：载入持久化任务、恢复中断/排队任务、拉起 worker 队列
+    try:
+        await task_engine_start()
+    except Exception as exc:
+        print(f"Task Engine 启动失败: {exc}")
     sync_static_html_versions()
     # 启动时整理资产库：给所有图片分组（含默认角色/场景）建好文件夹，并把根目录里的旧素材归整进去。
     try:
@@ -2721,8 +2747,526 @@ class ImageTaskQueryRequest(BaseModel):
     provider_id: str = "comfly"
     task_id: str = Field(min_length=1, max_length=240)
 
-CANVAS_TASKS: Dict[str, Dict[str, Any]] = {}
-CANVAS_TASK_LOCK = Lock()
+# ============================================================================
+# Task Engine（V2 Phase 1）— 真实任务系统
+# 说明：
+#   * 状态机：queued → running → provider_processing → downloading → saving → succeeded
+#             失败 → failed；网络层错误（未提交上游）→ retry → queued（自动重试 ≤2 次）
+#             取消 → cancel_requested → cancelled；兼容状态 jimeng_pending（即梦云端排队）
+#     ⚠️ 对外兼容：前端轮询沿用代码库既有终态名 "succeeded"（即规范里的 success），
+#        legacy 端点（/api/canvas-image-tasks、/api/canvas-comfy-tasks）透出兼容状态，
+#        /api/tasks 新 API 原样透出完整状态机。
+#   * 持久化：data/tasks/tasks-YYYY-MM-DD.json 按创建日期分片；启动全量载入内存，
+#     每次状态转换即写回对应分片（服务重启不丢任务、可查历史）。
+#   * 队列：asyncio.Queue + N 个 worker（NOVAI_TASK_WORKERS 环境变量，默认 2），真实排队执行。
+#   * 重试：仅"网络层/传输层错误 且 尚未提交上游"可自动重试（限 2 次）；
+#     已提交上游的任务只支持手动重试（防重复扣费）。
+#   * 证据链：transitions[]（每次转换带时间戳/错误）+ timing + provider_task_id + retry_count。
+#   * 阶段说明：当前生成链路（build_online_image_result / generate / canvas_video_run）
+#     为聚合调用，上游产物下载在 provider_processing 阶段内完成，"downloading" 状态
+#     保留给未来可独立观测下载阶段的 runner；"saving" = 结果登记/持久化阶段（真实落盘）。
+# ============================================================================
+from fastapi import Query  # noqa: E402
+
+TASK_DIR = os.path.join(DATA_DIR, "tasks")
+TASK_STORE: Dict[str, Dict[str, Any]] = {}
+TASK_STORE_LOCK = Lock()
+TASK_QUEUE: "asyncio.Queue" = asyncio.Queue()
+TASK_WORKER_COUNT = max(1, int(os.getenv("NOVAI_TASK_WORKERS", "2")))
+TASK_AUTO_RETRY_MAX = 2                       # 网络层自动重试上限（未提交上游时）
+TASK_MAX_PAYLOAD_VALUE_LEN = 200 * 1024       # 单个参数值持久化上限（防超大 workflow JSON 撑爆分片）
+TASK_RUNNERS: Dict[str, Any] = {}             # runner 注册表：runner_name -> async runner(task_id, payload)
+TASK_ID_PREFIX = {"online-image": "canvas_img_", "comfy": "canvas_comfy_", "video": "canvas_video_"}
+# runner 对应的请求模型类名（重启后把持久化 payload dict 还原成 runner 需要的参数对象）
+TASK_RUNNER_MODEL_NAMES = {
+    "run_canvas_image_task": "OnlineImageRequest",
+    "run_canvas_comfy_task": "GenerateRequest",
+    "run_canvas_video_task": "CanvasVideoRequest",
+}
+
+TASK_TERMINAL_STATUSES = {"succeeded", "failed", "cancelled"}
+TASK_STATUS_FLOW = {
+    # 状态机：状态 -> 可达状态集合（非法转换直接拒绝并记录）
+    "queued": {"running", "cancel_requested", "cancelled", "failed", "retry"},
+    "running": {"provider_processing", "downloading", "saving", "succeeded", "failed", "cancel_requested", "retry", "cancelled", "jimeng_pending"},
+    "provider_processing": {"downloading", "saving", "succeeded", "failed", "cancel_requested", "retry", "cancelled", "jimeng_pending"},
+    "downloading": {"saving", "succeeded", "failed", "cancel_requested", "retry", "cancelled"},
+    "saving": {"succeeded", "failed", "cancel_requested", "retry", "cancelled"},
+    "retry": {"queued", "failed", "cancelled"},
+    "cancel_requested": {"cancelled", "failed"},
+    "jimeng_pending": {"running", "provider_processing", "succeeded", "failed", "cancel_requested", "retry", "cancelled", "queued"},
+    "succeeded": {"queued"},   # 手动重试（重新排队）
+    "failed": {"queued"},      # 手动重试（重新排队）
+    "cancelled": {"queued"},   # 手动重试（重新排队）
+}
+
+
+def _task_shard_path(created_at: float = None) -> str:
+    day = datetime.date.fromtimestamp(created_at or time.time()).isoformat()
+    return os.path.join(TASK_DIR, f"tasks-{day}.json")
+
+
+def task_load_all():
+    """启动时把所有分片载入内存（TASK_STORE）。"""
+    global TASK_STORE
+    with TASK_STORE_LOCK:
+        loaded: Dict[str, Dict[str, Any]] = {}
+        try:
+            if os.path.isdir(TASK_DIR):
+                for fn in sorted(glob.glob(os.path.join(TASK_DIR, "tasks-*.json"))):
+                    try:
+                        with open(fn, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        for tid, t in (data.get("tasks") or {}).items():
+                            loaded[tid] = t
+                    except Exception as e:
+                        print(f"[TaskEngine] 读取分片 {fn} 失败: {e}")
+        except Exception as e:
+            print(f"[TaskEngine] 载入任务存储失败: {e}")
+        TASK_STORE = loaded
+        print(f"[TaskEngine] 已载入 {len(loaded)} 个历史任务")
+
+
+def task_save(task: dict):
+    """把单个任务原子写回其所在分片（调用方需持有 TASK_STORE_LOCK）。"""
+    try:
+        os.makedirs(TASK_DIR, exist_ok=True)
+        shard = _task_shard_path(task.get("created_at") or time.time())
+        shard_tasks = {}
+        if os.path.isfile(shard):
+            try:
+                with open(shard, "r", encoding="utf-8") as f:
+                    shard_tasks = (json.load(f).get("tasks") or {})
+            except Exception:
+                shard_tasks = {}
+        shard_tasks[task["id"]] = task
+        tmp = shard + f".tmp{os.getpid()}"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"version": 1, "tasks": shard_tasks}, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, shard)
+    except Exception as e:
+        print(f"[TaskEngine] 任务持久化失败 {task.get('id')}: {e}")
+
+
+def task_get(task_id: str) -> Optional[dict]:
+    """深拷贝读（安全给外部使用）。"""
+    with TASK_STORE_LOCK:
+        t = TASK_STORE.get(task_id)
+        if not t:
+            return None
+        try:
+            return json.loads(json.dumps(t, ensure_ascii=False, default=str))
+        except Exception:
+            return dict(t)
+
+
+def task_get_raw(task_id: str) -> Optional[dict]:
+    """锁内直接引用（仅供引擎内部在持锁时修改）。"""
+    return TASK_STORE.get(task_id)
+
+
+def _task_broadcast(task: dict):
+    """WS 推送任务状态变化（兼容现有消息格式 {"type": "task_status", "data": {...}}）。"""
+    if not GLOBAL_LOOP:
+        return
+    try:
+        asyncio.run_coroutine_threadsafe(manager.broadcast_task_status(task), GLOBAL_LOOP)
+    except Exception as e:
+        print(f"[TaskEngine] WS 推送失败 {task.get('id')}: {e}")
+
+
+def _task_payload_dict(payload) -> dict:
+    if isinstance(payload, BaseModel):
+        return payload.dict()
+    if isinstance(payload, dict):
+        return dict(payload)
+    return {}
+
+
+def _task_input_summary(kind: str, payload: dict) -> str:
+    if kind == "comfy":
+        wf = str(payload.get("workflow_json") or "")
+        return f"ComfyUI 工作流生成（workflow: {wf[:80]}）"
+    prompt = str(payload.get("prompt") or "")
+    if not prompt:
+        return f"{kind} 任务"
+    return prompt[:160] + ("…" if len(prompt) > 160 else "")
+
+
+def _task_truncate_payload(payload: dict) -> dict:
+    """超长参数值截断（防 data URL / workflow JSON 撑爆分片文件）。"""
+    out = {}
+    for k, v in payload.items():
+        if isinstance(v, str) and len(v) > TASK_MAX_PAYLOAD_VALUE_LEN:
+            out[k] = v[:TASK_MAX_PAYLOAD_VALUE_LEN] + f"…[truncated {len(v)} chars]"
+        elif isinstance(v, list):
+            out[k] = [_task_truncate_payload(x) if isinstance(x, dict)
+                      else (x[:TASK_MAX_PAYLOAD_VALUE_LEN] + "…[truncated]" if isinstance(x, str) and len(x) > TASK_MAX_PAYLOAD_VALUE_LEN else x)
+                      for x in v[:50]]
+        elif isinstance(v, dict):
+            out[k] = _task_truncate_payload(v)
+        else:
+            out[k] = v
+    return out
+
+
+def task_create(kind: str, payload, runner_name: str, provider_id: str = "", model_id: str = "",
+                extra: dict = None) -> dict:
+    """创建任务（状态 queued）并持久化。"""
+    prefix = TASK_ID_PREFIX.get(kind, "task_")
+    task_id = f"{prefix}{uuid.uuid4().hex}"
+    now = time.time()
+    payload_dict = _task_payload_dict(payload)
+    task = {
+        "id": task_id,
+        "kind": kind,
+        "type": kind,                          # 兼容旧字段
+        "status": "queued",
+        "created_at": now,
+        "updated_at": now,
+        "timing": {"created": now, "started": None, "provider_submitted": None, "completed": None},
+        "transitions": [{"from": None, "to": "queued", "at": now}],
+        "provider_id": provider_id or "",
+        "model_id": model_id or "",
+        "model": model_id or "",               # 兼容旧字段
+        "provider_task_id": "",
+        "input_summary": _task_input_summary(kind, payload_dict),
+        "parameters": _task_truncate_payload(payload_dict),
+        "payload": _task_truncate_payload(payload_dict),   # runner 重跑/重试需要
+        "result": None,
+        "error": "",
+        "status_code": None,
+        "retry_count": 0,
+        "submitted_to_provider": False,
+        "cancel_requested": False,
+        "runner": runner_name,
+        # 兼容旧字段（前端轮询可能读取）
+        "jimeng_pending": False,
+        "submit_id": "",
+        "kind_legacy": "",
+        "queue_info": None,
+        "message": "",
+        "upstream_task_id": "",
+        "request_id": "",
+    }
+    if extra:
+        task.update(extra)
+    with TASK_STORE_LOCK:
+        TASK_STORE[task_id] = task
+        task_save(task)
+    _task_broadcast(task)
+    return task_get(task_id)
+
+
+def task_set_status(task_id: str, status: str, error: str = None, status_code: int = None,
+                    extra: dict = None) -> bool:
+    """状态机转换：校验合法性 → 记录 transitions 时间戳 → 更新 timing → 持久化 → WS 推送。"""
+    with TASK_STORE_LOCK:
+        task = TASK_STORE.get(task_id)
+        if not task:
+            return False
+        old = task.get("status") or "queued"
+        if old == status:
+            # 幂等调用：刷新 error/extra/updated_at，不重复记录转换
+            if error is not None:
+                task["error"] = str(error)
+            if status_code is not None:
+                task["status_code"] = status_code
+            if extra:
+                task.update(extra)
+            task["updated_at"] = time.time()
+            task_save(task)
+            return True
+        # 取消拦截：已受理取消的任务不再推进中间态；成功/失败统一收敛为 cancelled
+        if task.get("cancel_requested") and status in ("running", "provider_processing", "downloading", "saving", "succeeded", "failed"):
+            if status in ("succeeded", "failed"):
+                status = "cancelled"
+            else:
+                return True
+        allowed = TASK_STATUS_FLOW.get(old, set())
+        if status not in allowed:
+            print(f"[TaskEngine] 非法状态转换 {task_id}: {old} -> {status}（忽略）")
+            return False
+        now = time.time()
+        task["status"] = status
+        task["updated_at"] = now
+        transition = {"from": old, "to": status, "at": now}
+        if error is not None:
+            transition["error"] = str(error)[:2000]
+        task["transitions"].append(transition)
+        if status == "running" and not task["timing"].get("started"):
+            task["timing"]["started"] = now
+        if status == "provider_processing" and not task["timing"].get("provider_submitted"):
+            task["timing"]["provider_submitted"] = now
+        if status in TASK_TERMINAL_STATUSES and not task["timing"].get("completed"):
+            task["timing"]["completed"] = now
+        if status == "cancel_requested":
+            task["cancel_requested"] = True
+        if status == "running":
+            # 新一轮尝试：清空上一轮错误（历史保留在 transitions 里）
+            task["error"] = ""
+            task["status_code"] = None
+        if old == "retry" and status == "queued":
+            task["error"] = ""
+            task["status_code"] = None
+        if error is not None:
+            task["error"] = str(error)
+        if status_code is not None:
+            task["status_code"] = status_code
+        if extra:
+            task.update(extra)
+        task_save(task)
+        try:
+            snapshot = json.loads(json.dumps(task, ensure_ascii=False, default=str))
+        except Exception:
+            snapshot = dict(task)
+    _task_broadcast(snapshot)
+    return True
+
+
+def task_bump_retry(task_id: str) -> int:
+    with TASK_STORE_LOCK:
+        t = TASK_STORE.get(task_id)
+        if not t:
+            return 0
+        t["retry_count"] = int(t.get("retry_count") or 0) + 1
+        return t["retry_count"]
+
+
+def _is_transport_error(exc) -> bool:
+    """网络/传输层错误（连接/超时/读错误等）——可安全自动重试；
+    HTTPStatusError / HTTPException 属于业务或已计费响应，不算。"""
+    if isinstance(exc, httpx.TransportError):
+        return True
+    try:
+        if isinstance(exc, requests.exceptions.RequestException) and not isinstance(exc, requests.exceptions.HTTPError):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+async def task_enqueue(task_id: str) -> bool:
+    task = task_get(task_id)
+    if not task or task.get("status") != "queued":
+        return False
+    await TASK_QUEUE.put(task_id)
+    return True
+
+
+def task_enqueue_after(task_id: str, delay: float):
+    """延迟重新入队（自动重试退避），不阻塞 worker。"""
+    async def _later():
+        await asyncio.sleep(delay)
+        await TASK_QUEUE.put(task_id)
+    try:
+        asyncio.create_task(_later())
+    except Exception as e:
+        print(f"[TaskEngine] 延迟入队失败 {task_id}: {e}")
+
+
+async def task_worker_loop():
+    while True:
+        task_id = await TASK_QUEUE.get()
+        try:
+            await task_run(task_id)
+        except Exception:
+            traceback.print_exc()
+            try:
+                t = task_get(task_id)
+                if t and t.get("status") not in TASK_TERMINAL_STATUSES and t.get("status") != "retry":
+                    task_set_status(task_id, "failed", error=f"任务执行异常：{traceback.format_exc()[-800:]}")
+            except Exception:
+                pass
+        finally:
+            TASK_QUEUE.task_done()
+
+
+def _task_restore_payload(task: dict):
+    """把持久化的 payload dict 还原成 runner 需要的参数对象（重启/重试后 payload 来自 JSON 分片）。"""
+    payload = task.get("payload")
+    if payload is None:
+        return None
+    cls_name = TASK_RUNNER_MODEL_NAMES.get(task.get("runner") or "")
+    if cls_name:
+        cls = globals().get(cls_name)
+        if cls is not None:
+            try:
+                return cls(**payload)
+            except Exception as e:
+                print(f"[TaskEngine] payload 还原失败 {task.get('id')}: {e}")
+                return payload
+    return payload
+
+
+async def task_run(task_id: str):
+    """worker 单任务执行：取消检查 → running → 调用 runner → 自动重试判定。"""
+    task = task_get(task_id)
+    if not task:
+        return
+    if task.get("cancel_requested") or task.get("status") == "cancel_requested":
+        task_set_status(task_id, "cancelled", error="任务已取消")
+        return
+    if task.get("status") != "queued":
+        return
+    runner = TASK_RUNNERS.get(task.get("runner") or "")
+    if not runner:
+        task_set_status(task_id, "failed", error=f"未知执行器: {task.get('runner')}")
+        return
+    task_set_status(task_id, "running")
+    try:
+        await runner(task_id, _task_restore_payload(task))
+    except Exception as exc:
+        # runner 未捕获的异常兜底（runner 内部一般已记录状态）
+        t = task_get(task_id)
+        if t and t.get("status") not in TASK_TERMINAL_STATUSES and t.get("status") != "retry":
+            detail = getattr(exc, "detail", None) or str(exc)
+            task_set_status(task_id, "failed", error=str(detail)[:2000], status_code=getattr(exc, "status_code", 500))
+    # 自动重试判定：runner 标记 retry（网络层错误）→ 未提交上游 且 次数未超限 才允许
+    task = task_get(task_id)
+    if task and task.get("status") == "retry":
+        if task.get("submitted_to_provider") or (task.get("retry_count") or 0) >= TASK_AUTO_RETRY_MAX:
+            task_set_status(task_id, "failed", error=(task.get("error") or "任务失败") + f"（已自动重试 {task.get('retry_count') or 0} 次）")
+        else:
+            task_bump_retry(task_id)
+            task_set_status(task_id, "queued")
+            backoff = min(2 ** max(0, (task_get(task_id).get("retry_count") or 1) - 1), 30)
+            task_enqueue_after(task_id, backoff)
+
+
+async def task_provider_cancel(task: dict):
+    """尽力而为的 provider 层取消（扩展点）。
+    当前接入平台（即梦 CLI/火山/APIMart/RunningHub/灵境/玉玉/Agnes）在现有代码中没有可复用的
+    取消接口封装，此处不伪造调用；任务会通过 cancel_requested 状态在最近检查点停止。
+    后续平台提供取消 API 时在此接入真实调用。"""
+    provider_id = task.get("provider_id") or ""
+    upstream = task.get("provider_task_id") or task.get("upstream_task_id") or ""
+    if provider_id and upstream:
+        print(f"[TaskEngine] 取消任务 {task.get('id')}: provider={provider_id} upstream={upstream}（当前无平台取消接口，等待任务自然结束）")
+
+
+async def task_cancel(task_id: str) -> dict:
+    task = task_get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if task.get("status") in TASK_TERMINAL_STATUSES:
+        raise HTTPException(status_code=400, detail=f"任务已结束（{task.get('status')}），无法取消")
+    task_set_status(task_id, "cancel_requested")
+    await task_provider_cancel(task_get(task_id))
+    return {
+        "task_id": task_id,
+        "status": "cancel_requested",
+        "message": "取消请求已受理：排队中的任务不会再执行，运行中的任务将尽力停止",
+    }
+
+
+async def task_retry(task_id: str) -> dict:
+    task = task_get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    status = task.get("status")
+    if status not in ("failed", "cancelled", "jimeng_pending"):
+        raise HTTPException(status_code=400, detail=f"仅失败/已取消/即梦挂起的任务可重试（当前状态：{status}）")
+    was_submitted = bool(task.get("submitted_to_provider"))
+    with TASK_STORE_LOCK:
+        raw = TASK_STORE.get(task_id)
+        if raw:
+            raw["retry_count"] = int(raw.get("retry_count") or 0) + 1
+            raw["submitted_to_provider"] = False
+            raw["provider_task_id"] = ""
+            raw["result"] = None
+            raw["error"] = ""
+            raw["status_code"] = None
+            raw["cancel_requested"] = False
+            raw["timing"] = {"created": raw["timing"].get("created") or time.time(), "started": None, "provider_submitted": None, "completed": None}
+            raw["jimeng_pending"] = False
+            raw["submit_id"] = ""
+            raw["queue_info"] = None
+            raw["message"] = ""
+    task_set_status(task_id, "queued")
+    await task_enqueue(task_id)
+    resp = {"task_id": task_id, "status": "queued", "retry_count": (task_get(task_id) or {}).get("retry_count", 0)}
+    if was_submitted:
+        resp["warning"] = "该任务此前已提交上游生成，重试可能产生额外费用"
+    return resp
+
+
+def task_delete(task_id: str) -> bool:
+    with TASK_STORE_LOCK:
+        task = TASK_STORE.pop(task_id, None)
+        if not task:
+            return False
+        shard = _task_shard_path(task.get("created_at") or time.time())
+        try:
+            if os.path.isfile(shard):
+                with open(shard, "r", encoding="utf-8") as f:
+                    shard_tasks = (json.load(f).get("tasks") or {})
+                shard_tasks.pop(task_id, None)
+                tmp = shard + f".tmp{os.getpid()}"
+                with open(tmp, "w", encoding="utf-8") as f:
+                    json.dump({"version": 1, "tasks": shard_tasks}, f, ensure_ascii=False, indent=2)
+                os.replace(tmp, shard)
+        except Exception as e:
+            print(f"[TaskEngine] 删除任务分片记录失败 {task_id}: {e}")
+    return True
+
+
+def task_list(status: str = "", task_type: str = "", ts_from: float = 0, ts_to: float = 0,
+              limit: int = 50, offset: int = 0) -> dict:
+    """任务列表：status（逗号分隔多值）/ task_type / 创建时间范围 过滤，按创建时间倒序。"""
+    with TASK_STORE_LOCK:
+        items = [json.loads(json.dumps(t, ensure_ascii=False, default=str)) for t in TASK_STORE.values()]
+    statuses = [s.strip() for s in str(status).split(",") if s.strip()]
+    if statuses:
+        items = [t for t in items if (t.get("status") or "") in statuses]
+    if task_type:
+        items = [t for t in items if (t.get("kind") or t.get("type")) == task_type]
+    if ts_from:
+        items = [t for t in items if (t.get("created_at") or 0) >= ts_from]
+    if ts_to:
+        items = [t for t in items if (t.get("created_at") or 0) <= ts_to]
+    items.sort(key=lambda t: t.get("created_at") or 0, reverse=True)
+    total = len(items)
+    # 列表响应去掉内部 payload（详情接口保留完整证据链）
+    slim = []
+    for t in items[offset:offset + limit]:
+        t = dict(t)
+        t.pop("payload", None)
+        slim.append(t)
+    return {"total": total, "items": slim}
+
+
+def _task_legacy_status(task: dict) -> str:
+    """legacy 端点（canvas-image-tasks / canvas-comfy-tasks）只认
+    queued/running/succeeded/failed/jimeng_pending：新状态向下兼容映射。"""
+    s = task.get("status") or "queued"
+    if s == "retry":
+        return "queued"
+    if s == "cancelled":
+        return "failed"
+    return s
+
+
+async def task_engine_start():
+    """启动：载入持久化任务 → 恢复（queued 重新排队；运行中/挂起标记中断失败）→ 拉起 worker。"""
+    task_load_all()
+    requeued = 0
+    interrupted = 0
+    for tid in list(TASK_STORE.keys()):
+        s = (TASK_STORE.get(tid) or {}).get("status") or ""
+        if s == "queued":
+            requeued += 1
+        elif s == "cancel_requested":
+            task_set_status(tid, "cancelled", error="服务重启，取消请求未完成")
+        elif s not in TASK_TERMINAL_STATUSES:
+            interrupted += 1
+            task_set_status(tid, "failed", error="服务重启，任务中断", status_code=500)
+    for i in range(TASK_WORKER_COUNT):
+        asyncio.create_task(task_worker_loop(), name=f"task-worker-{i}")
+    for tid in list(TASK_STORE.keys()):
+        if (TASK_STORE.get(tid) or {}).get("status") == "queued":
+            await TASK_QUEUE.put(tid)
+    print(f"[TaskEngine] 启动完成：workers={TASK_WORKER_COUNT} 重新排队={requeued} 中断标记失败={interrupted}")
 
 class CanvasVideoRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=VIDEO_PROMPT_MAX_LENGTH)
@@ -13827,123 +14371,146 @@ async def query_image_task(payload: ImageTaskQueryRequest):
     }
 
 async def run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
-    with CANVAS_TASK_LOCK:
-        if task_id in CANVAS_TASKS:
-            CANVAS_TASKS[task_id]["status"] = "running"
-            CANVAS_TASKS[task_id]["updated_at"] = time.time()
+    """图片生成任务执行器（Task Engine worker 调用）。
+    阶段：running → provider_processing（上游提交/生成/产物下载）→ saving（结果登记）→ succeeded/failed。"""
+    task_set_status(task_id, "running")
+    # 进入上游调用（含素材上传与生成）：此后不允许自动重试（防重复扣费）
+    task_set_status(task_id, "provider_processing", extra={"submitted_to_provider": True})
     try:
         result = await build_online_image_result(payload)
-        with CANVAS_TASK_LOCK:
-            CANVAS_TASKS[task_id].update({
-                "status": "succeeded",
-                "result": result,
-                "error": "",
-                "updated_at": time.time(),
-            })
     except JimengPendingError as exc:
         # 即梦云端还在排队：标记为 jimeng_pending，前端据 submit_id 持久续查（任务未丢失）
         info = jimeng_pending_payload(exc)
-        with CANVAS_TASK_LOCK:
-            CANVAS_TASKS[task_id].update({
-                "status": "jimeng_pending",
-                "jimeng_pending": True,
-                "submit_id": exc.submit_id,
-                "kind": exc.kind,
-                "queue_info": exc.queue_info,
-                "message": info["message"],
-                "error": "",
-                "updated_at": time.time(),
-            })
+        task_set_status(task_id, "jimeng_pending", extra={
+            "jimeng_pending": True,
+            "submit_id": exc.submit_id,
+            "kind_legacy": exc.kind,
+            "queue_info": exc.queue_info,
+            "message": info["message"],
+        })
+        return
     except Exception as exc:
         detail = getattr(exc, "detail", None) or str(exc)
         status_code = getattr(exc, "status_code", 500)
-        upstream_task_id = getattr(exc, "upstream_task_id", "") or extract_task_id_from_text(detail)
-        with CANVAS_TASK_LOCK:
-            CANVAS_TASKS[task_id].update({
-                "status": "failed",
-                "error": str(detail),
-                "status_code": status_code,
-                "upstream_task_id": upstream_task_id,
-                "updated_at": time.time(),
-            })
+        upstream_task_id = getattr(exc, "upstream_task_id", "") or extract_task_id_from_text(str(detail))
+        # 自动重试仅限：网络层错误 且 未提交上游 且 次数未超限（提交标记在上游调用前已置位，
+        # 因此真实生成链路几乎不触发自动重试——这正是防重复扣费策略的预期行为）
+        cur = task_get(task_id) or {}
+        if _is_transport_error(exc) and not cur.get("submitted_to_provider") and (cur.get("retry_count") or 0) < TASK_AUTO_RETRY_MAX:
+            task_set_status(task_id, "retry", error=str(detail)[:2000], status_code=status_code)
+        else:
+            task_set_status(task_id, "failed", error=str(detail)[:2000], status_code=status_code,
+                            extra={"upstream_task_id": upstream_task_id or ""})
+        return
+    task_set_status(task_id, "saving")
+    upstream = ""
+    request_id = ""
+    if isinstance(result, dict):
+        raw = result.get("raw")
+        upstream = str(extract_task_id(raw) or "") if isinstance(raw, dict) else str(result.get("task_id") or "")
+        request_id = str(raw.get("id") or "") if isinstance(raw, dict) else str(result.get("request_id") or "")
+    task_set_status(task_id, "succeeded", extra={
+        "result": result,
+        "provider_task_id": upstream,
+        "request_id": request_id,
+    })
+
+TASK_RUNNERS["run_canvas_image_task"] = run_canvas_image_task
 
 @app.post("/api/canvas-image-tasks")
 async def create_canvas_image_task(payload: OnlineImageRequest):
-    task_id = f"canvas_img_{uuid.uuid4().hex}"
-    with CANVAS_TASK_LOCK:
-        CANVAS_TASKS[task_id] = {
-            "id": task_id,
-            "type": "online-image",
-            "status": "queued",
-            "created_at": time.time(),
-            "updated_at": time.time(),
-            "result": None,
-            "error": "",
-            "provider_id": payload.provider_id,
-            "model": payload.model,
-        }
-    asyncio.create_task(run_canvas_image_task(task_id, payload))
-    return {"task_id": task_id, "status": "queued"}
+    task = task_create(kind="online-image", payload=payload, runner_name="run_canvas_image_task",
+                       provider_id=payload.provider_id, model_id=payload.model or "")
+    await task_enqueue(task["id"])
+    return {"task_id": task["id"], "status": "queued"}
 
 @app.get("/api/canvas-image-tasks/{task_id}")
 async def get_canvas_image_task(task_id: str):
-    with CANVAS_TASK_LOCK:
-        task = dict(CANVAS_TASKS.get(task_id) or {})
+    task = task_get(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="画布任务不存在，可能服务已重启或任务已过期")
-    return task
+    out = dict(task)
+    out["status"] = _task_legacy_status(task)
+    if task.get("status") == "cancelled":
+        out["error"] = out.get("error") or "任务已取消"
+    if task.get("status") == "jimeng_pending":
+        out["kind"] = task.get("kind_legacy") or out.get("kind")
+    return out
 
 async def run_canvas_comfy_task(task_id: str, payload: GenerateRequest):
-    with CANVAS_TASK_LOCK:
-        if task_id in CANVAS_TASKS:
-            CANVAS_TASKS[task_id]["status"] = "running"
-            CANVAS_TASKS[task_id]["updated_at"] = time.time()
+    """ComfyUI 生成任务执行器（Task Engine worker 调用）。"""
+    task_set_status(task_id, "running")
+    task_set_status(task_id, "provider_processing")
     try:
         result = await asyncio.to_thread(generate, payload)
         if isinstance(result, dict) and result.get("error"):
             raise RuntimeError(str(result.get("error") or "ComfyUI 生成失败"))
-        with CANVAS_TASK_LOCK:
-            CANVAS_TASKS[task_id].update({
-                "status": "succeeded",
-                "result": result,
-                "error": "",
-                "updated_at": time.time(),
-            })
     except Exception as exc:
         detail = getattr(exc, "detail", None) or str(exc)
         status_code = getattr(exc, "status_code", 500)
-        with CANVAS_TASK_LOCK:
-            CANVAS_TASKS[task_id].update({
-                "status": "failed",
-                "error": str(detail),
-                "status_code": status_code,
-                "updated_at": time.time(),
-            })
+        # 本地 ComfyUI 不计费：纯传输层错误（实例重启/未就绪）可自动重试；业务错误直接失败
+        cur = task_get(task_id) or {}
+        if _is_transport_error(exc) and (cur.get("retry_count") or 0) < TASK_AUTO_RETRY_MAX:
+            task_set_status(task_id, "retry", error=str(detail)[:2000], status_code=status_code)
+        else:
+            task_set_status(task_id, "failed", error=str(detail)[:2000], status_code=status_code)
+        return
+    task_set_status(task_id, "saving")
+    task_set_status(task_id, "succeeded", extra={"result": result})
+
+TASK_RUNNERS["run_canvas_comfy_task"] = run_canvas_comfy_task
 
 @app.post("/api/canvas-comfy-tasks")
 async def create_canvas_comfy_task(payload: GenerateRequest):
-    task_id = f"canvas_comfy_{uuid.uuid4().hex}"
-    with CANVAS_TASK_LOCK:
-        CANVAS_TASKS[task_id] = {
-            "id": task_id,
-            "type": "comfy",
-            "status": "queued",
-            "created_at": time.time(),
-            "updated_at": time.time(),
-            "result": None,
-            "error": "",
-            "workflow_json": payload.workflow_json,
-        }
-    asyncio.create_task(run_canvas_comfy_task(task_id, payload))
-    return {"task_id": task_id, "status": "queued"}
+    task = task_create(kind="comfy", payload=payload, runner_name="run_canvas_comfy_task",
+                       provider_id="comfyui", model_id=payload.workflow_json or "")
+    await task_enqueue(task["id"])
+    return {"task_id": task["id"], "status": "queued"}
 
 @app.get("/api/canvas-comfy-tasks/{task_id}")
 async def get_canvas_comfy_task(task_id: str):
-    with CANVAS_TASK_LOCK:
-        task = dict(CANVAS_TASKS.get(task_id) or {})
+    task = task_get(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="ComfyUI 任务不存在，可能服务已重启或任务已过期")
+    out = dict(task)
+    out["status"] = _task_legacy_status(task)
+    if task.get("status") == "cancelled":
+        out["error"] = out.get("error") or "任务已取消"
+    return out
+
+# --- Task Engine API（V2 Phase 1） ---
+
+@app.get("/api/tasks")
+async def list_tasks(status: str = "", task_type: str = "",
+                     from_ts: float = Query(0, alias="from"), to_ts: float = Query(0, alias="to"),
+                     limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0)):
+    """任务列表：status（逗号分隔多值）/ type（online-image|comfy|video）/ 创建时间范围 过滤。"""
+    return task_list(status=status, task_type=task_type, ts_from=from_ts, ts_to=to_ts, limit=limit, offset=offset)
+
+@app.get("/api/tasks/{task_id}")
+async def get_task_detail(task_id: str):
+    """任务详情：完整证据链（transitions/timing/provider_task_id/parameters/error/result）。"""
+    task = task_get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
     return task
+
+@app.post("/api/tasks/{task_id}/retry")
+async def retry_task(task_id: str):
+    """手动重试（仅 failed/cancelled/jimeng_pending）。已提交上游的任务重试可能产生额外费用。"""
+    return await task_retry(task_id)
+
+@app.post("/api/tasks/{task_id}/cancel")
+async def cancel_task(task_id: str):
+    """取消任务：排队中任务不再执行；运行中任务尽力而为。"""
+    return await task_cancel(task_id)
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: str):
+    """删除任务记录（不影响已生成产物）。"""
+    if not task_delete(task_id):
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return {"success": True, "task_id": task_id}
 
 # --- 图像生成参数 schema（供客户端动态渲染参数表单，避免把参数写死在前端） ---
 IMAGE_PARAM_RATIOS = [
@@ -14612,8 +15179,60 @@ async def suggest_next_actions(payload: CanvasSuggestionsRequest):
     except Exception:
         return {"suggestions": []}
 
+async def run_canvas_video_task(task_id: str, payload: CanvasVideoRequest):
+    """视频生成任务执行器（Task Engine 调用；同步模式下由请求内联执行，异步模式由 worker 执行）。
+    阶段：provider_processing（含素材上传/提交/轮询/下载）→ saving → succeeded/failed/jimeng_pending。
+    平台分发逻辑不动（canvas_video_run 原样）。"""
+    task_set_status(task_id, "provider_processing", extra={"submitted_to_provider": True})
+    try:
+        result = await canvas_video_run(payload)
+    except Exception as exc:
+        detail = getattr(exc, "detail", None) or str(exc)
+        task_set_status(task_id, "failed", error=str(detail)[:2000], status_code=getattr(exc, "status_code", 500))
+        raise
+    if isinstance(result, dict) and result.get("jimeng_pending"):
+        # 即梦云端还在排队：标记为 jimeng_pending，前端据 submit_id 持久续查
+        task_set_status(task_id, "jimeng_pending", extra={
+            "jimeng_pending": True,
+            "submit_id": result.get("submit_id") or "",
+            "kind_legacy": result.get("kind") or "video",
+            "queue_info": result.get("queue_info"),
+            "message": result.get("message") or "",
+        })
+        return result
+    upstream = ""
+    request_id = ""
+    if isinstance(result, dict):
+        raw = result.get("raw")
+        upstream = str(extract_task_id(raw) or "") if isinstance(raw, dict) else str(result.get("task_id") or "")
+        request_id = str(raw.get("id") or "") if isinstance(raw, dict) else ""
+    task_set_status(task_id, "saving")
+    task_set_status(task_id, "succeeded", extra={
+        "result": result,
+        "provider_task_id": upstream,
+        "request_id": request_id,
+    })
+    return result
+
+TASK_RUNNERS["run_canvas_video_task"] = run_canvas_video_task
+
 @app.post("/api/canvas-video")
-async def canvas_video(payload: CanvasVideoRequest):
+async def canvas_video(payload: CanvasVideoRequest, async_mode: bool = Query(False, alias="async")):
+    """视频生成入口（V2 Phase 1 任务化适配，平台分发逻辑不动）。
+    默认同步模式：请求内联执行并返回原响应结构（前端零改动），同时记录完整任务证据链；
+    ?async=1 时进入 Task Engine 队列，立即返回 {task_id, status: "queued"}。"""
+    task = task_create(kind="video", payload=payload, runner_name="run_canvas_video_task",
+                       provider_id=payload.provider_id, model_id=payload.model or "")
+    if async_mode:
+        await task_enqueue(task["id"])
+        return {"task_id": task["id"], "status": "queued", "async_mode": True}
+    task_set_status(task["id"], "running")
+    result = await run_canvas_video_task(task["id"], payload)
+    if isinstance(result, dict) and result.get("jimeng_pending"):
+        return result
+    return {**result, "task_id": task["id"]}
+
+async def canvas_video_run(payload: CanvasVideoRequest):
     provider = get_api_provider(payload.provider_id)
     if is_jimeng_provider(provider):
         return await generate_jimeng_video(payload, provider)

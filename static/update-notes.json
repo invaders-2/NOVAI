@@ -1,7 +1,23 @@
 {
-  "version": "1.0.106",
-  "updated_at": "2026-08-10T06:10:00+08:00",
+  "version": "1.0.107",
+  "updated_at": "2026-08-11T18:00:00+08:00",
   "items": [
+    {
+      "type": "fix",
+      "text": "智能画布视频节点交互彻底修复：点击视频画面选中节点并打开编辑器、播放预览后编辑器同步显示、节点拖动排除播放器区域"
+    },
+    {
+      "type": "fix",
+      "text": "视频控制条交互修复：mousedown去掉preventDefault确保手势激活、全屏超时自动CSS降级并挂body铺满视口"
+    },
+    {
+      "type": "feature",
+      "text": "新增人脸模糊接口 /api/video/blur-faces：自动检测视频人脸并高斯模糊，规避平台真人审核拦截"
+    },
+    {
+      "type": "feature",
+      "text": "生成接口返回canvas_meta自动落位元数据：视频/图片生成完成后自动带节点参数，方便前端一键摆放"
+    },
     {
       "type": "fix",
       "text": "修复视频播放：播放按钮mousedown不再拦截手势、全屏350ms超时自动CSS降级并挂body铺满视口、传统画布同步"

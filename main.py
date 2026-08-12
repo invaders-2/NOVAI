@@ -22563,6 +22563,200 @@ def _agent_tool_run_generation_preview(args, canvas):
 
 
 # ---------------------------------------------------------------------------
+# 工具 7b: generate_image（一句话出图：建节点 + 真实生成 + 结果落画布）
+# ---------------------------------------------------------------------------
+
+_AGENT_RATIO_TO_SIZE = {
+    "1:1": "1024x1024", "16:9": "1344x768", "9:16": "768x1344",
+    "4:3": "1024x768", "3:4": "768x1024", "21:9": "1344x576",
+    "2:3": "832x1248", "3:2": "1248x832",
+}
+
+
+def _agent_tool_generate_image_validate(args):
+    canvas_id = str(args.get("canvas_id") or "").strip()
+    prompt = str(args.get("prompt") or args.get("text") or "").strip()
+    if not canvas_id:
+        raise AgentToolError("canvas_id 不能为空", code="invalid_args")
+    if not prompt:
+        raise AgentToolError("prompt 不能为空（描述你想生成的图）", code="invalid_args")
+    load_canvas(canvas_id)  # 404 校验
+    refs = args.get("reference_urls")
+    if refs is None:
+        refs = args.get("reference_images")
+    if refs is not None and not isinstance(refs, list):
+        raise AgentToolError("reference_urls 必须是数组", code="invalid_args")
+    norm_refs = []
+    for ref in (refs or [])[:10]:
+        if isinstance(ref, str) and ref.strip():
+            norm_refs.append({"url": ref.strip()})
+        elif isinstance(ref, dict) and str(ref.get("url") or "").strip():
+            norm_refs.append({"url": str(ref["url"]).strip()})
+    size = str(args.get("size") or "").strip()
+    ratio = str(args.get("ratio") or "").strip().lower()
+    if not size:
+        size = _AGENT_RATIO_TO_SIZE.get(ratio, "1024x1024")
+    return {
+        "canvas_id": canvas_id,
+        "prompt": prompt,
+        "reference_urls": norm_refs,
+        "provider": _agent_pick_image_provider(str(args.get("provider") or "").strip()),
+        "model": str(args.get("model") or "").strip(),
+        "size": size,
+        "ratio": ratio,
+        "title": str(args.get("title") or "")[:120],
+    }
+
+
+def _agent_pick_image_provider(preferred=""):
+    """生图 provider 自动探测：用户指定 > 有 key 的平台（lingjing/modelscope/volcengine）> comfly。"""
+    pref = str(preferred or "").strip().lower()
+    if pref and pref != "comfly":
+        try:
+            base, _, _ = resolve_chat_provider(pref, "", "")
+            if base:
+                return pref
+        except HTTPException:
+            pass
+    for cand in ("lingjing", "modelscope", "volcengine"):
+        try:
+            base, _, _ = resolve_chat_provider(cand, "", "")
+            if base:
+                return cand
+        except HTTPException:
+            continue
+    return "comfly"
+
+
+async def _agent_tool_generate_image_run(args):
+    """建 smart-image 节点（带参考图）→ 真实生成任务（Task Engine）→ 结果自动落画布。"""
+    canvas_id = args["canvas_id"]
+    # 1) 建节点：复用 create_node 工具，保证节点结构与画布类型一致（smart-image / image）
+    count = len(load_canvas(canvas_id).get("nodes") or [])
+    node_args = _agent_tool_create_node_validate({
+        "canvas_id": canvas_id, "type": "image",
+        "prompt": args["prompt"],
+        "title": args["title"] or "Image",
+        "x": 220 + (count % 5) * 70,
+        "y": 160 + (count % 4) * 70,
+    })
+    node_res = _agent_tool_create_node_run(node_args)
+    node_id = node_res["node_id"]
+    # 2) 参考图挂到节点 images（画布上可见）+ 记录提示词
+    refs = args["reference_urls"]
+
+    def _attach(canvas):
+        n = _agent_find_node(canvas, node_id)
+        if n is not None:
+            n["images"] = [{"url": r["url"], "name": f"ref-{i + 1}.png", "kind": "image"}
+                           for i, r in enumerate(refs)]
+            n["text"] = args["prompt"]
+        return None
+
+    _agent_mutate_canvas(canvas_id, _attach)
+    # 3) 真实生成：与 run_generation 同构，进 Task Engine（run_canvas_image_task runner）
+    payload = {
+        "prompt": args["prompt"],
+        "provider_id": args["provider"],
+        "model": args["model"],
+        "size": args["size"],
+        "quality": "auto",
+        "n": 1,
+        "reference_images": refs,
+    }
+    task = task_create(
+        kind="online-image", payload=payload, runner_name="run_canvas_image_task",
+        provider_id=args["provider"], model_id=args["model"],
+        extra={"agent": True, "canvas_id": canvas_id, "node_id": node_id})
+    await task_enqueue(task["id"])
+
+    def _mark(canvas):
+        n = _agent_find_node(canvas, node_id)
+        if n is not None:
+            n["task_id"] = task["id"]
+            n["lastTaskStatus"] = "queued"
+        return None
+
+    try:
+        _agent_mutate_canvas(canvas_id, _mark)
+    except Exception as exc:
+        print(f"[Agent] 记录 task_id 到节点失败（不影响任务）: {exc}")
+    return {
+        "node_id": node_id,
+        "task_id": task["id"],
+        "status": "queued",
+        "provider": args["provider"],
+        "model": args["model"],
+        "size": args["size"],
+        "reference_count": len(refs),
+        "prompt": args["prompt"][:160] + ("…" if len(args["prompt"]) > 160 else ""),
+        "message": f"已在画布创建图片节点并提交生成任务（{args['provider']}，size={args['size']}），出图后自动落到节点",
+    }
+
+
+def _agent_tool_generate_image_preview(args, canvas):
+    refs = args.get("reference_urls") or []
+    return f"将在画布新建图片节点并立即发起真实生成（provider={args.get('provider') or 'comfly'}, " + \
+           f"model={args.get('model') or '默认'}, size={args.get('size') or '1024x1024'}，参考图 {len(refs)} 张）" + \
+           f"，提示词：{str(args.get('prompt') or '')[:40]}…"
+
+
+# ---------------------------------------------------------------------------
+# 工具 7c: use_asset（从素材库检索参考图，供 generate_image 使用）
+# ---------------------------------------------------------------------------
+
+_AGENT_ASSET_KINDS = ("image", "video", "audio", "workflow")
+
+
+def _agent_tool_use_asset_validate(args):
+    query = str(args.get("query") or "").strip()
+    kind = str(args.get("kind") or "").strip().lower()
+    if kind and kind not in _AGENT_ASSET_KINDS:
+        raise AgentToolError(f"kind 必须是 {'|'.join(_AGENT_ASSET_KINDS)}", code="invalid_args")
+    try:
+        limit = max(1, min(20, int(args.get("limit") or 10)))
+    except (TypeError, ValueError):
+        limit = 10
+    return {"query": query, "kind": kind, "limit": limit}
+
+
+def _agent_tool_use_asset_run(args):
+    lib = load_asset_library()
+    query = args["query"].lower()
+    kind = args["kind"]
+    hits = []
+    seen = set()
+    for cat in (lib.get("categories") or []):
+        if not isinstance(cat, dict):
+            continue
+        cat_kind = str(cat.get("type") or "image").lower()
+        for item in (cat.get("items") or []):
+            if not isinstance(item, dict):
+                continue
+            url = str(item.get("url") or "")
+            if not url or url in seen:
+                continue
+            item_kind = str(item.get("kind") or cat_kind or "image").lower()
+            if kind and item_kind != kind:
+                continue
+            name = str(item.get("name") or "")
+            if query and query not in name.lower() and query not in url.lower():
+                continue
+            seen.add(url)
+            hits.append({"url": url, "name": name[:120], "kind": item_kind,
+                         "category": str(cat.get("name") or "")})
+            if len(hits) >= args["limit"]:
+                break
+        if len(hits) >= args["limit"]:
+            break
+    return {"total": len(hits), "items": hits, "query": args["query"], "kind": args["kind"]}
+
+
+def _agent_tool_use_asset_preview(args, canvas):
+    return f"从素材库检索参考素材（关键词：{args.get('query') or '全部'}，类型：{args.get('kind') or '全部'}，最多 {args.get('limit') or 10} 条），返回 URL 供 generate_image 作参考图。"
+
+
+# ---------------------------------------------------------------------------
 # 工具 8: check_task
 # ---------------------------------------------------------------------------
 
@@ -22747,6 +22941,35 @@ AGENT_TOOLS = {
         "preview": _agent_tool_run_generation_preview,
         "mutates_canvas": True,
     },
+    "generate_image": {
+        "description": "一句话出图：在画布新建图片节点（带提示词/参考图）并立即发起真实生成任务（进 Task Engine），出图后结果自动落到该节点。返回 node_id 与 task_id。",
+        "schema": {"type": "object", "properties": {
+            "canvas_id": {"type": "string"},
+            "prompt": {"type": "string", "description": "图片提示词（必填）"},
+            "reference_urls": {"type": "array", "items": {"type": "string"},
+                               "description": "参考图 URL 列表（可来自选中节点素材或 use_asset 结果）"},
+            "provider": {"type": "string", "default": "comfly"}, "model": {"type": "string"},
+            "ratio": {"type": "string", "description": "画面比例，如 1:1 / 16:9 / 9:16 / 4:3 / 3:4（默认 1:1）"},
+            "size": {"type": "string", "description": "直接指定尺寸，如 1024x1024（优先于 ratio）"},
+            "title": {"type": "string", "description": "节点标题（可选）"}},
+            "required": ["canvas_id", "prompt"]},
+        "validate": _agent_tool_generate_image_validate,
+        "run": _agent_tool_generate_image_run,
+        "preview": _agent_tool_generate_image_preview,
+        "mutates_canvas": True,
+    },
+    "use_asset": {
+        "description": "从素材库检索素材（按关键词/类型过滤），返回 URL 列表供 generate_image 的 reference_urls 使用（只读，不修改素材库）。",
+        "schema": {"type": "object", "properties": {
+            "query": {"type": "string", "description": "关键词（按名称/URL 模糊匹配）"},
+            "kind": {"type": "string", "enum": ["image", "video", "audio", "workflow"]},
+            "limit": {"type": "integer", "default": 10}},
+            "required": []},
+        "validate": _agent_tool_use_asset_validate,
+        "run": _agent_tool_use_asset_run,
+        "preview": _agent_tool_use_asset_preview,
+        "mutates_canvas": False,
+    },
     "check_task": {
         "description": "查询任务状态（queued/running/provider_processing/succeeded/failed/cancelled…）与结果 URL。只读。",
         "schema": {"type": "object", "properties": {"task_id": {"type": "string"}}, "required": ["task_id"]},
@@ -22926,8 +23149,9 @@ _AGENT_PLAN_SYSTEM_PROMPT = (
     "3. steps 至少 1 步；tool 必须是清单中的工具名；args 必须符合该工具的 JSON Schema。\n"
     "4. 多步计划中，后续步骤需要引用前面步骤创建节点的 ID 时，用 {{stepN.node_id}} 占位符"
     "（N 从 0 开始，如 {{step0.node_id}}）。\n"
-    "5. 需要生成图片时：先用 create_node 建节点（type=image 或 prompt，prompt 写提示词），"
-    "再用 run_generation 触发；不要遗漏步骤。\n"
+    "5. 用户直接要求生成图片时（如「生成一张…的图」）：用 generate_image 一步完成（建节点+真实生成+结果落画布）；"
+    "上下文或素材库有参考图 URL 时，填入 generate_image 的 reference_urls。"
+    "仅当用户明确要求「先建节点、稍后再生成」时，才拆成 create_node + run_generation。\n"
     "6. 删除操作不要擅自使用 force=true。"
 )
 

@@ -1423,9 +1423,13 @@ function applyTheme(theme){
     document.body?.classList.toggle('theme-dark', dark);
     document.body?.classList.toggle('studio-theme-dark', dark);
 }
-function toast(text){
+function toast(text, icon){
     const el = document.getElementById('toast');
-    el.textContent = text;
+    if(icon){
+        el.innerHTML = '<span class="toast-icon">' + icon + '</span><span class="toast-text">' + escapeHtml(text) + '</span>';
+    } else {
+        el.textContent = text;
+    }
     el.classList.add('show');
     clearTimeout(toast._timer);
     toast._timer = setTimeout(() => el.classList.remove('show'), 1800);
@@ -4607,7 +4611,7 @@ function executeChatActions(actions){
 function toggleChatPanel(){
     chatModal.classList.toggle('open');
     var inp = document.getElementById('chatInput');
-    if(chatModal.classList.contains('open') && inp){ setTimeout(function(){ inp.focus(); syncChatContext(); refreshChatModels(); }, 200); }
+    if(chatModal.classList.contains('open') && inp){ setTimeout(function(){ inp.focus(); syncChatContext(); refreshChatModels(); renderChatWelcomeIfEmpty(); }, 200); }
 }
 function syncChatContext(){
     if(!chatModal.classList.contains('open')) return;
@@ -4689,14 +4693,88 @@ window.addEventListener('mousemove', function(e){
     }
 });
 window.addEventListener('mouseup', function(){ chatDrag = false; chatResize = false; });
-function addChatMessage(role, text, images){
-    chatMessages.push({role:role, text:text, images:images||[]});
+function createChatMsgEl(role){
+    // 现代气泡结构：assistant = 头像 + 气泡；user = 右侧气泡
     var div = document.createElement('div');
     div.className = 'chat-msg ' + role;
-    var imgsHtml = (images||[]).length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">'+images.map(function(u){return '<img src="'+escapeHtml(u)+'" style="width:60px;height:60px;object-fit:cover;border-radius:6px">'}).join('')+'</div>' : '';
-    div.innerHTML = imgsHtml + '<span>' + text + '</span>';
-    document.getElementById('chatMessages').appendChild(div);
-    div.scrollIntoView({behavior:'smooth',block:'end'});
+    var bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    if(role === 'assistant'){
+        var av = document.createElement('span');
+        av.className = 'chat-avatar';
+        av.innerHTML = '<i data-lucide="sparkles"></i>';
+        div.appendChild(av);
+    }
+    div.appendChild(bubble);
+    return {div:div, bubble:bubble};
+}
+function addChatMessage(role, text, images){
+    chatMessages.push({role:role, text:text, images:images||[]});
+    removeChatWelcome();
+    var parts = createChatMsgEl(role);
+    var box = document.getElementById('chatMessages');
+    var imgsHtml = (images||[]).length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">'+images.map(function(u){return '<img src="'+escapeHtml(u)+'" style="width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid var(--border)">'}).join('')+'</div>' : '';
+    parts.bubble.innerHTML = imgsHtml + '<span>' + text + '</span>';
+    box.appendChild(parts.div);
+    parts.div.scrollIntoView({behavior:'smooth',block:'end'});
+}
+// ── 空状态欢迎卡：示例指令 chips 点击即用 ──
+var chatWelcomeExamples = [
+    '生成一张红色杯子的图',
+    '用选中的图做电商主图',
+    '创建提示词节点并连线',
+    '生成一张赛博朋克风格的街道图'
+];
+function renderChatWelcomeIfEmpty(){
+    var box = document.getElementById('chatMessages');
+    if(!box) return;
+    if(box.querySelector('.chat-msg')){ removeChatWelcome(); return; }
+    if(box.querySelector('.chat-welcome')) return;
+    var w = document.createElement('div');
+    w.className = 'chat-welcome';
+    w.innerHTML =
+        '<div class="chat-welcome-icon"><i data-lucide="sparkles"></i></div>' +
+        '<div class="chat-welcome-title">你好，我是画布助手</div>' +
+        '<div class="chat-welcome-sub">直接告诉我你想做什么，我会规划步骤并在你确认后执行<br>试试下面的示例：</div>' +
+        '<div class="chat-welcome-chips">' +
+        chatWelcomeExamples.map(function(t){
+            return '<button type="button" class="chat-welcome-chip" onclick="fillChatExample(this)">' + escapeHtml(t) + '</button>';
+        }).join('') +
+        '</div>';
+    box.appendChild(w);
+    refreshIcons();
+}
+function removeChatWelcome(){
+    var w = document.querySelector('.chat-welcome');
+    if(w) w.remove();
+}
+function fillChatExample(btn){
+    var inp = document.getElementById('chatInput');
+    if(!inp) return;
+    inp.value = btn.textContent.trim();
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 100) + 'px';
+    inp.focus();
+}
+// ── 打字机效果：助手文本逐步显示 ──
+function typewriteText(el, text, done){
+    if(!el) return;
+    el.textContent = '';
+    var i = 0, chunk = 3;
+    var timer = setInterval(function(){
+        i = Math.min(text.length, i + chunk);
+        el.textContent = text.slice(0, i);
+        if(i >= text.length){
+            clearInterval(timer);
+            el.scrollIntoView({behavior:'smooth', block:'end'});
+            if(done) done();
+        }
+    }, 22);
+}
+// ── 思考动画：三个跳动圆点 + 文案 ──
+function thinkingHtml(text){
+    return '<div class="agent-thinking"><span class="agent-thinking-dots"><i></i><i></i><i></i></span>' +
+           '<span class="agent-thinking-text">' + escapeHtml(text || '正在规划…') + '</span></div>';
 }
 let chatSending = false;
 // ── V2 Phase 5B: Agent 对话模式（计划卡片 / 预览 / 应用 / 回滚）──
@@ -4708,6 +4786,9 @@ function buildCanvasContextSummary(){
         var sel = selectedNode();
         if(sel) parts.push('当前选中:' + (sel.title || sel.type || sel.id) + ' 类型:' + (sel.type || 'image') + ' 图片:' + ((sel.images || []).length) + '张');
         if(chatRefs.length) parts.push('引用节点:' + chatRefs.map(function(r){ return r.name + '(' + r.type + ')'; }).join(','));
+        // 引用节点素材 URL：generate_image 的 reference_urls 可直接使用
+        var refImgs = chatContextImages();
+        if(refImgs.length) parts.push('可用参考图URL:' + refImgs.slice(0, 6).join(' '));
         var titles = (nodes || []).slice(0, 15).map(function(n){ return n.title || n.type || n.id; }).filter(Boolean);
         if(titles.length) parts.push('画布现有节点:' + titles.join(' | '));
         if(typeof viewport !== 'undefined' && viewport) parts.push('视口:x=' + Math.round(viewport.x || 0) + ',y=' + Math.round(viewport.y || 0) + ',scale=' + Number(viewport.scale || 1).toFixed(2));
@@ -4798,8 +4879,9 @@ async function sendChatFallback(text, msgDiv){
             reply = (reply || '已执行') + '\n\n✅ 操作完成';
         } catch(ex){ reply += '\n\n⚠️ 指令解析失败'; }
     }
-    msgDiv.textContent = reply;
     chatMessages.push({role:'assistant', text:reply});
+    // 打字机效果逐步显示
+    typewriteText(msgDiv, reply);
 }
 async function sendChatMessage(){
     /* —— 防重入保护：防止用户连续按Enter发送多条消息产生竞态 —— */
@@ -4812,30 +4894,68 @@ async function sendChatMessage(){
     refreshChatModels();
     inp.value = ''; inp.style.height = 'auto';
     addChatMessage('user', text, chatContextImages());
-    var msgDiv = document.createElement('div');
-    msgDiv.className = 'chat-msg assistant';
-    msgDiv.textContent = '...';
-    document.getElementById('chatMessages').appendChild(msgDiv);
-    msgDiv.scrollIntoView({behavior:'smooth',block:'end'});
+    var parts = createChatMsgEl('assistant');
+    parts.bubble.innerHTML = thinkingHtml('正在规划…');
+    document.getElementById('chatMessages').appendChild(parts.div);
+    parts.div.scrollIntoView({behavior:'smooth',block:'end'});
     try {
         // Agent 优先：计划成功 → 计划卡片；失败（模型不可用等）→ 降级普通聊天，不伪造计划
         var plan = canvasId ? await requestAgentPlan(text) : null;
         if(plan && plan.steps && plan.steps.length){
-            renderAgentPlanCard(msgDiv, plan);
+            renderAgentPlanCard(parts.bubble, plan);
         } else {
-            await sendChatFallback(text, msgDiv);
+            await sendChatFallback(text, parts.bubble);
         }
     } catch(e){
-        msgDiv.textContent = '失败: ' + (e.message || '未知');
-        chatMessages.push({role:'assistant', text:msgDiv.textContent});
+        parts.bubble.textContent = '失败: ' + (e.message || '未知');
+        chatMessages.push({role:'assistant', text:parts.bubble.textContent});
     } finally {
         chatSending = false;
         inp.disabled = false;
         inp.focus();
     }
 }
-// ── Agent 计划卡片渲染与操作 ──
-function renderAgentPlanCard(msgDiv, plan){
+// ── Agent 计划卡片渲染与操作（时间线卡片流）──
+var AGENT_TOOL_ICONS = {
+    'create_node': 'square-plus', 'delete_node': 'trash-2', 'connect_nodes': 'link-2',
+    'update_node': 'pencil-line', 'run_generation': 'play', 'generate_image': 'wand-sparkles',
+    'check_task': 'search-check', 'create_matrix': 'grid-3x3', 'list_canvases': 'list',
+    'get_canvas': 'scan-eye', 'use_asset': 'image-plus'
+};
+function agentToolIcon(tool){ return AGENT_TOOL_ICONS[tool] || 'zap'; }
+function agentArgsChips(args){
+    // 步骤参数 → 友好 chips（忽略 canvas_id/空值，长值截断）
+    if(!args || typeof args !== 'object') return [];
+    var chips = [];
+    Object.keys(args).forEach(function(k){
+        if(k === 'canvas_id') return;
+        var v = args[k];
+        if(v === null || v === undefined || v === '') return;
+        var s = '';
+        if(typeof v === 'object') s = '<' + (Array.isArray(v) ? '数组' : '对象') + ' ' + (Array.isArray(v) ? v.length : Object.keys(v).length) + '项>';
+        else s = String(v);
+        if(s.length > 30) s = s.slice(0, 30) + '…';
+        var label = k;
+        if(k === 'prompt' || k === 'text') label = '提示词';
+        else if(k === 'reference_urls' || k === 'reference_images') label = '参考图';
+        else if(k === 'provider') label = '服务商';
+        else if(k === 'model') label = '模型';
+        else if(k === 'size' || k === 'ratio') label = '尺寸';
+        else if(k === 'title') label = '标题';
+        else if(k === 'node_id') label = '节点';
+        chips.push({label:label, value:s});
+    });
+    return chips;
+}
+function agentStepStateHtml(state){
+    // state: '' | 'ok' | 'fail' | 'spin'
+    if(state === 'ok') return '<span class="agent-state-dot ok" title="成功"></span>';
+    if(state === 'fail') return '<span class="agent-state-dot fail" title="失败"></span>';
+    if(state === 'spin') return '<span class="agent-state-dot spin" title="执行中"></span>';
+    return '';
+}
+function renderAgentPlanCard(bubble, plan){
+    bubble.innerHTML = '';
     var card = document.createElement('div');
     card.className = 'agent-plan-card';
     card._agentPlan = {
@@ -4848,39 +4968,50 @@ function renderAgentPlanCard(msgDiv, plan){
         status: 'planned'
     };
     var stepsHtml = (plan.steps || []).map(function(s, i){
-        var argsSummary = agentArgsSummary(s.args);
-        return '<div class="agent-step">' +
-            '<span class="agent-step-idx">' + (i + 1) + '</span>' +
+        var chips = agentArgsChips(s.args).map(function(c){
+            return '<span class="agent-chip"><b>' + escapeHtml(c.label) + '</b> ' + escapeHtml(c.value) + '</span>';
+        }).join('');
+        return '<div class="agent-step" data-step="' + i + '">' +
+            '<div class="agent-step-rail">' +
+                '<span class="agent-step-icon"><i data-lucide="' + agentToolIcon(s.tool) + '"></i></span>' +
+                '<span class="agent-step-line"></span>' +
+            '</div>' +
             '<div class="agent-step-body">' +
-                '<div class="agent-step-tool">' + escapeHtml(s.tool || '') + '</div>' +
+                '<div class="agent-step-head">' +
+                    '<span class="agent-step-tool"><i data-lucide="' + agentToolIcon(s.tool) + '"></i>' + escapeHtml(s.tool || '') + '</span>' +
+                    '<span class="agent-step-state"></span>' +
+                '</div>' +
                 (s.description ? '<div class="agent-step-desc">' + escapeHtml(s.description) + '</div>' : '') +
-                (argsSummary ? '<div class="agent-step-args">' + escapeHtml(argsSummary) + '</div>' : '') +
+                (chips ? '<div class="agent-step-chips">' + chips + '</div>' : '') +
             '</div></div>';
     }).join('');
     card.innerHTML =
         '<div class="agent-plan-head">' +
-            '<span class="agent-plan-badge">Agent 计划</span>' +
+            '<span class="agent-plan-badge"><i data-lucide="sparkles"></i> Agent 计划</span>' +
             '<span class="agent-plan-status">已生成</span>' +
         '</div>' +
         '<div class="agent-plan-intent">🎯 ' + escapeHtml(plan.intent || '画布操作计划') + '</div>' +
-        '<div class="agent-plan-steps">' + stepsHtml + '</div>' +
-        (plan.expected_output ? '<div class="agent-plan-expected">预期结果：' + escapeHtml(plan.expected_output) + '</div>' : '') +
+        (plan.expected_output ? '<div class="agent-plan-expected">' + escapeHtml(plan.expected_output) + '</div>' : '') +
+        '<div class="agent-plan-timeline">' + stepsHtml + '</div>' +
         '<div class="agent-plan-preview"></div>' +
         '<div class="agent-plan-actions">' +
-            '<button type="button" class="agent-btn" onclick="agentPlanAction(\'preview\', this)">预览</button>' +
-            '<button type="button" class="agent-btn primary" onclick="agentPlanAction(\'apply\', this)">应用</button>' +
+            '<button type="button" class="agent-btn" onclick="agentPlanAction(\'preview\', this)">👁 预览</button>' +
+            '<button type="button" class="agent-btn primary" onclick="agentPlanAction(\'apply\', this)">🚀 应用</button>' +
             '<button type="button" class="agent-btn ghost" onclick="agentPlanAction(\'cancel\', this)">取消</button>' +
         '</div>';
-    msgDiv.innerHTML = '';
-    msgDiv.appendChild(card);
+    bubble.appendChild(card);
+    refreshIcons();
     chatMessages.push({role:'assistant', text:'[Agent 计划] ' + (plan.intent || '')});
-    msgDiv.scrollIntoView({behavior:'smooth',block:'end'});
+    card.scrollIntoView({behavior:'smooth',block:'end'});
 }
-function agentPlanSetBusy(card, busy, statusText){
+function agentPlanSetBusy(card, busy, statusText, busyBtn){
     var row = card.querySelector('.agent-plan-actions');
     if(row) row.querySelectorAll('button').forEach(function(b){ b.disabled = busy; });
+    if(busyBtn){
+        busyBtn.innerHTML = '<span class="agent-btn-spinner"></span>' + escapeHtml(statusText || '执行中…');
+    }
     var st = card.querySelector('.agent-plan-status');
-    if(st && statusText !== undefined) st.textContent = statusText;
+    if(st && statusText !== undefined && !busyBtn) st.textContent = statusText;
 }
 async function agentPlanAction(act, btn){
     var card = btn.closest('.agent-plan-card');
@@ -4893,7 +5024,7 @@ async function agentPlanAction(act, btn){
         return;
     }
     if(act === 'preview'){
-        agentPlanSetBusy(card, true, '预览中...');
+        agentPlanSetBusy(card, true, '预览中…');
         try {
             var resp = await fetch('/api/agent/preview', {
                 method:'POST', headers:{'Content-Type':'application/json'},
@@ -4920,23 +5051,37 @@ async function agentPlanAction(act, btn){
         return;
     }
     if(act === 'apply'){
-        agentPlanSetBusy(card, true, '执行中...');
+        agentPlanSetBusy(card, true, '执行中…', btn);
+        btn.classList.add('applying');
         try {
+            // 选中节点素材 → 自动作为 generate_image 的参考图（LLM 未带时前端补齐）
+            var steps = st.steps || [];
+            var refUrls = chatContextImages();
+            if(refUrls.length){
+                steps = JSON.parse(JSON.stringify(steps));
+                steps.forEach(function(s){
+                    if(s.tool === 'generate_image' && !(s.args && (s.args.reference_urls || s.args.reference_images))){
+                        s.args = s.args || {};
+                        s.args.reference_urls = refUrls.slice(0, 10);
+                    }
+                });
+            }
             var resp = await fetch('/api/agent/apply', {
                 method:'POST', headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({canvas_id: st.canvas_id, plan_id: st.session_id, steps: st.steps})
+                body:JSON.stringify({canvas_id: st.canvas_id, steps: steps})
             });
             var data = await resp.json();
             renderAgentApplyResult(card, data, resp.ok);
         } catch(e){
             agentPlanSetBusy(card, false, '已生成');
+            btn.classList.remove('applying');
             previewBox.innerHTML = '<div class="agent-preview-fail">应用失败：' + escapeHtml(e.message || '网络错误') + '</div>';
         }
         return;
     }
     if(act === 'rollback'){
         if(!st.version) return;
-        agentPlanSetBusy(card, true, '回滚中...');
+        agentPlanSetBusy(card, true, '回滚中…', btn);
         try {
             var resp = await fetch('/api/agent/rollback', {
                 method:'POST', headers:{'Content-Type':'application/json'},
@@ -4944,61 +5089,156 @@ async function agentPlanAction(act, btn){
             });
             var data = await resp.json();
             if(!resp.ok){
-                toast('回滚失败：' + agentErrText(data));
+                toast('回滚失败：' + agentErrText(data), '⚠️');
                 agentPlanSetBusy(card, false, '已应用');
+                btn.classList.remove('applying');
                 return;
             }
             st.status = 'rolled_back';
             agentPlanSetBusy(card, false, '已回滚');
+            btn.classList.remove('applying');
             btn.disabled = true;
-            btn.textContent = '已回滚';
-            toast('已回滚到 v' + data.restored_from);
+            btn.innerHTML = '↩ 已撤销';
+            toast('已回滚到 v' + data.restored_from, '↩️');
             refreshCanvasAfterAgent();
         } catch(e){
-            toast('回滚失败：' + (e.message || '网络错误'));
+            toast('回滚失败：' + (e.message || '网络错误'), '⚠️');
             agentPlanSetBusy(card, false, '已应用');
+            btn.classList.remove('applying');
         }
         return;
     }
 }
 function renderAgentApplyResult(card, data, ok){
     var st = card._agentPlan;
-    var previewBox = card.querySelector('.agent-plan-preview');
     var log = data.log || [];
-    var html = '<div class="agent-apply-results">' + log.map(function(r){
-        var cls = r.ok ? 'ok' : 'fail';
-        var detail = r.ok ? '' : '<div class="agent-step-error">' + escapeHtml(r.error || r.message || '执行失败') + '</div>';
-        var resultTxt = r.ok && r.result ? '<div class="agent-step-result">' + escapeHtml(agentResultText(r.result)) + '</div>' : '';
-        return '<div class="agent-apply-step ' + cls + '">' +
-            '<span class="agent-apply-mark">' + (r.ok ? '✓' : '✗') + '</span>' +
-            '<span class="agent-apply-tool">' + escapeHtml(r.tool || ('步骤 ' + ((r.index || 0) + 1))) + '</span>' +
-            detail + resultTxt +
-        '</div>';
-    }).join('') + '</div>';
-    previewBox.innerHTML = html;
+    // 每步状态直接更新到时间线卡片
+    log.forEach(function(r, i){
+        var stepEl = card.querySelector('.agent-step[data-step="' + i + '"]');
+        if(!stepEl) return;
+        var stateEl = stepEl.querySelector('.agent-step-state');
+        if(r.ok){
+            stepEl.classList.add('ok');
+            if(stateEl) stateEl.innerHTML = agentStepStateHtml('ok');
+            if(r.tool === 'generate_image' && r.result && r.result.task_id){
+                agentPollGenerateTask(r.result.node_id, r.result.task_id, stepEl, card);
+            }
+        } else {
+            stepEl.classList.add('fail');
+            if(stateEl) stateEl.innerHTML = agentStepStateHtml('fail');
+            var errBox = document.createElement('div');
+            errBox.className = 'agent-step-error';
+            errBox.textContent = (r.error || r.message || '执行失败').slice(0, 200);
+            stepEl.querySelector('.agent-step-body').appendChild(errBox);
+        }
+    });
     if(ok && data.ok){
         st.version = data.version;
         st.pre_version = data.pre_version || data.version;
         st.status = 'applied';
         var statusEl = card.querySelector('.agent-plan-status');
         if(statusEl) statusEl.textContent = '已应用';
-        // 应用成功 → 出现回滚按钮
+        // 应用成功 → 回滚按钮（更易懂的文案）
         var rb = document.createElement('button');
         rb.type = 'button';
         rb.className = 'agent-btn danger';
-        rb.textContent = '回滚';
+        rb.innerHTML = '↩ 撤销本次修改';
         rb.setAttribute('onclick', "agentPlanAction('rollback', this)");
         var row = card.querySelector('.agent-plan-actions');
         if(row) row.appendChild(rb);
-        toast('Agent 修改已应用，可回滚');
+        var applyBtn = card.querySelector('.agent-btn.primary.applying');
+        if(applyBtn) applyBtn.remove();
+        toast('Agent 修改已应用，可撤销', '✅');
         refreshCanvasAfterAgent();
     } else {
         st.status = 'failed';
         var statusEl2 = card.querySelector('.agent-plan-status');
         if(statusEl2) statusEl2.textContent = '失败';
-        toast('Agent 计划执行失败：' + agentErrText(data));
+        toast('Agent 计划执行失败：' + agentErrText(data), '❌');
+        var applyBtn2 = card.querySelector('.agent-btn.primary.applying');
+        if(applyBtn2){
+            applyBtn2.classList.remove('applying');
+            applyBtn2.innerHTML = '🚀 重试';
+        }
     }
     agentPlanSetBusy(card, false, undefined);
+}
+// ── 生成任务轮询：出图后自动落到画布节点 + 步骤卡状态更新 ──
+var agentGenPolls = {};
+function agentPollGenerateTask(nodeId, taskId, stepEl, card){
+    if(!taskId || agentGenPolls[taskId]) return;
+    agentGenPolls[taskId] = true;
+    var stateEl = stepEl ? stepEl.querySelector('.agent-step-state') : null;
+    if(stateEl) stateEl.innerHTML = agentStepStateHtml('spin');
+    var maxTicks = 120; // ~6 分钟 @3s
+    var tick = 0;
+    function finalizeSucceeded(task){
+        delete agentGenPolls[taskId];
+        if(stepEl){
+            stepEl.classList.add('ok');
+            if(stateEl) stateEl.innerHTML = agentStepStateHtml('ok');
+        }
+        var result = task.result || {};
+        var items = (result.image_items && result.image_items.length) ? result.image_items
+                  : ((result.images && result.images.length) ? result.images : result);
+        var urls = resultMediaUrls(items);
+        var thumbUrl = '';
+        if(urls.length){
+            var first = urls[0];
+            thumbUrl = typeof first === 'string' ? first : (first && first.url) || '';
+        }
+        // 结果落画布节点（merge 拉取后按 id 找最新节点，最多等 8 秒）
+        var tries = 0;
+        (function place(){
+            var node = nodes.find(function(n){ return n.id === nodeId; });
+            if(node && urls.length){
+                try {
+                    finalizeSmartPendingTask(node, taskId, urls, 'image');
+                    render();
+                    scheduleSave();
+                } catch(e){ console.warn('[Agent] 落画布失败', e); }
+                if(thumbUrl && stepEl){
+                    var imgBox = document.createElement('div');
+                    imgBox.className = 'agent-gen-result';
+                    imgBox.innerHTML = '<img src="' + escapeHtml(thumbUrl) + '" alt="生成结果">';
+                    stepEl.querySelector('.agent-step-body').appendChild(imgBox);
+                    refreshIcons();
+                }
+                toast('图片已生成到画布', '🎉');
+                return;
+            }
+            if(!node && tries++ < 8){ setTimeout(place, 1000); return; }
+            if(thumbUrl && stepEl){
+                var imgBox2 = document.createElement('div');
+                imgBox2.className = 'agent-gen-result';
+                imgBox2.innerHTML = '<img src="' + escapeHtml(thumbUrl) + '" alt="生成结果">';
+                stepEl.querySelector('.agent-step-body').appendChild(imgBox2);
+            }
+            toast('图片已生成（节点未找到，已刷新画布查看）', '🎉');
+        })();
+    }
+    (function tickOnce(){
+        fetch('/api/canvas-image-tasks/' + encodeURIComponent(taskId))
+            .then(function(r){ return r.json(); })
+            .then(function(task){
+                if(task.status === 'succeeded'){ finalizeSucceeded(task); return; }
+                if(task.status === 'failed' || task.status === 'cancelled'){
+                    delete agentGenPolls[taskId];
+                    if(stepEl){
+                        stepEl.classList.add('fail');
+                        if(stateEl) stateEl.innerHTML = agentStepStateHtml('fail');
+                        var errBox = document.createElement('div');
+                        errBox.className = 'agent-step-error';
+                        errBox.textContent = (task.error || '生成失败').slice(0, 200);
+                        stepEl.querySelector('.agent-step-body').appendChild(errBox);
+                    }
+                    toast('生成失败：' + (task.error || '').slice(0, 80), '⚠️');
+                    return;
+                }
+                if(++tick < maxTicks) setTimeout(tickOnce, 3000);
+            })
+            .catch(function(){ if(++tick < maxTicks) setTimeout(tickOnce, 3000); });
+    })();
 }
 function refreshCanvasAfterAgent(){
     // 应用/回滚后刷新画布状态（复用现有合并机制，不打断用户操作）
@@ -18517,6 +18757,7 @@ window.resetGridJoinLayout = resetGridJoinLayout;
 window.restoreCanvasVersion = restoreCanvasVersion;
 window.sendChatMessage = sendChatMessage;
 window.agentPlanAction = agentPlanAction;
+window.fillChatExample = fillChatExample;
 window.setBrushTool = setBrushTool;
 window.setGridCustomOrientation = setGridCustomOrientation;
 window.setGridJoinOutputSize = setGridJoinOutputSize;

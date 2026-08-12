@@ -4863,7 +4863,7 @@ function renderChatWelcomeIfEmpty(){
     var w = document.createElement('div');
     w.className = 'chat-welcome';
     w.innerHTML =
-        '<div class="chat-welcome-icon"><i data-lucide="sparkles"></i></div>' +
+        '<div class="chat-welcome-icon"><i data-lucide="message-square-text"></i></div>' +
         '<div class="chat-welcome-title">你好，我是画布助手</div>' +
         '<div class="chat-welcome-sub">直接告诉我你想做什么，我会规划步骤并在你确认后执行<br>试试下面的示例：</div>' +
         '<div class="chat-welcome-chips">' +
@@ -5048,7 +5048,7 @@ async function sendChatMessage(){
 // ── Agent 计划卡片渲染与操作（时间线卡片流）──
 var AGENT_TOOL_ICONS = {
     'create_node': 'square-plus', 'delete_node': 'trash-2', 'connect_nodes': 'link-2',
-    'update_node': 'pencil-line', 'run_generation': 'play', 'generate_image': 'wand-sparkles',
+    'update_node': 'pencil-line', 'run_generation': 'play', 'generate_image': 'image-plus',
     'generate_video': 'clapperboard', 'check_task': 'search-check', 'create_matrix': 'grid-3x3',
     'list_canvases': 'list', 'get_canvas': 'scan-eye', 'use_asset': 'image-plus'
 };
@@ -5239,10 +5239,10 @@ function renderAgentPlanCard(bubble, plan){
     }).join('');
     card.innerHTML =
         '<div class="agent-plan-head">' +
-            '<span class="agent-plan-badge"><i data-lucide="sparkles"></i> Agent 计划</span>' +
+            '<span class="agent-plan-badge"><i data-lucide="workflow"></i> Agent 计划</span>' +
             '<span class="agent-plan-status">已生成</span>' +
         '</div>' +
-        '<div class="agent-plan-intent"><i data-lucide="wand-sparkles" class="agent-intent-icon"></i> ' + escapeHtml(plan.intent || '画布操作计划') + '</div>' +
+        '<div class="agent-plan-intent"><i data-lucide="list-todo" class="agent-intent-icon"></i> ' + escapeHtml(plan.intent || '画布操作计划') + '</div>' +
         (plan.expected_output ? '<div class="agent-plan-expected">' + escapeHtml(plan.expected_output) + '</div>' : '') +
         '<div class="agent-plan-timeline">' + stepsHtml + '</div>' +
         '<div class="agent-plan-preview"></div>' +
@@ -5606,10 +5606,10 @@ window.agentRetryGenerate = agentRetryGenerate;
 var AGENT_EXEC_BADGES = {
     ok:      ['ok',    '✓ 成功'],
     fail:    ['fail',  '✗ 失败'],
-    spin:    ['spin',  '⏳ 执行中'],
-    queued:  ['queued','⏳ 排队中'],
-    running: ['spin',  '⏳ 执行中'],
-    provider_processing: ['spin', '⏳ 生成中'],
+    spin:    ['spin',  '<i data-lucide="loader-circle"></i> 执行中'],
+    queued:  ['queued','<i data-lucide="circle-dot"></i> 排队中'],
+    running: ['spin',  '<i data-lucide="loader-circle"></i> 执行中'],
+    provider_processing: ['spin', '<i data-lucide="loader-circle"></i> 生成中'],
     succeeded: ['ok',  '✓ 成功'],
     failed:   ['fail', '✗ 失败'],
     cancelled:['fail', '✗ 已取消'],
@@ -5776,7 +5776,7 @@ function agentExecRenderPanel(card){
         '<div class="agent-exec-head">' +
             '<span class="agent-exec-total"><i data-lucide="timer"></i>总耗时 <b>' + agentFmtDur(agentExecOverallMs(card)) + '</b></span>' +
             '<span class="agent-exec-meta"><span class="agent-exec-badge ' + (oState === 'ok' ? 'ok' : (oState === 'fail' ? 'fail' : 'spin')) + '">' +
-            (oState === 'ok' ? '✓ 全部成功' : (oState === 'fail' ? '✗ 有失败' : '⏳ 执行中')) +
+            (oState === 'ok' ? '✓ 全部成功' : (oState === 'fail' ? '✗ 有失败' : '<i data-lucide="loader-circle"></i> 执行中')) +
             '</span><b>' + stepsDone + '</b>/' + stepsTotal + ' 步</span>' +
         '</div>' +
         '<div class="agent-exec-section">执行链</div>' +
@@ -6284,7 +6284,7 @@ function renderPromptTemplatePanel(options={}){
                     <button type="button" class="primary" data-template-edit-save><i data-lucide="save"></i><span>${escapeHtml(tr('common.save'))}</span></button>
                 ` : `
                     <button type="button" data-template-apply="positive"><i data-lucide="corner-down-left"></i><span>${escapeHtml(tr('smart.tplApplyPositive'))}</span></button>
-                    <button type="button" class="primary" data-template-apply="full"><i data-lucide="wand-sparkles"></i><span>${escapeHtml(tr('smart.tplApplyFull'))}</span></button>
+                    <button type="button" class="primary" data-template-apply="full"><i data-lucide="plug-zap"></i><span>${escapeHtml(tr('smart.tplApplyFull'))}</span></button>
                 `}
             </div>
             ` : `<div class="prompt-template-empty">${escapeHtml(tr('smart.tplPickOrCreate'))}</div>`}

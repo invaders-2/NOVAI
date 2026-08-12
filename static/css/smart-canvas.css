@@ -1847,6 +1847,9 @@ input[type=range].smart-range::-webkit-slider-thumb { -webkit-appearance:none; w
     display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; line-height: 1.3;
     background: var(--soft); border: 1px solid var(--border);
 }
+.agent-exec-badge svg { width: 10px; height: 10px; }
+.agent-exec-badge.spin svg { animation: agentSpinRotate 1s linear infinite; }
+@keyframes agentSpinRotate { to { transform: rotate(360deg); } }
 .agent-exec-badge.ok { color: var(--success); border-color: var(--success); }
 .agent-exec-badge.fail { color: var(--danger); border-color: var(--danger); }
 .agent-exec-badge.spin, .agent-exec-badge.queued { color: var(--info); border-color: var(--info); }

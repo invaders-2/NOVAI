@@ -14705,6 +14705,55 @@ async def run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
         "provider_task_id": upstream,
         "request_id": request_id,
     })
+    # Agent 生成（generate_image 工具）：任务完成后直接把结果挂回画布节点（不依赖前端轮询）
+    try:
+        cur_task = task_get(task_id) or {}
+        # extra 字段平铺在任务顶层（task_create 时 task.update(extra)）
+        x_extra = cur_task.get("extra") or {}
+        cid = x_extra.get("canvas_id") or cur_task.get("canvas_id") or ""
+        nid = x_extra.get("node_id") or cur_task.get("node_id") or ""
+        is_agent = x_extra.get("agent") or cur_task.get("agent")
+        if cid and nid and is_agent:
+            canvas = load_canvas(cid)
+            node = _agent_find_node(canvas, nid)
+            if node is not None:
+                urls = _agent_result_media_urls(result)
+                if urls:
+                    node["images"] = [{"url": u, "name": f"gen-{i + 1}.png", "kind": "image"}
+                                      for i, u in enumerate(urls)]
+                    node["lastTaskStatus"] = "succeeded"
+                    canvas["updated_at"] = now_ms()
+                    with open(canvas_path(cid), 'w', encoding='utf-8') as f:
+                        json.dump(canvas, f, ensure_ascii=False, indent=2)
+                    print(f"[Agent] 生成结果已落画布节点 {nid}（{len(urls)} 张）")
+    except Exception as exc:
+        print(f"[Agent] 结果落画布节点失败（不影响任务状态）: {exc}")
+
+def _agent_result_media_urls(result):
+    """从任务 result 提取媒体 URL 列表（兼容 image_items/images/raw 结构）。"""
+    urls = []
+    if not isinstance(result, dict):
+        return urls
+    items = result.get("image_items") or []
+    if not items:
+        items = result.get("images") or []
+    for it in items:
+        if isinstance(it, str):
+            urls.append(it)
+        elif isinstance(it, dict):
+            u = it.get("url") or ""
+            if u:
+                urls.append(u)
+    if not urls:
+        raw = result.get("raw")
+        if isinstance(raw, dict):
+            for it in (raw.get("image_items") or raw.get("images") or []):
+                if isinstance(it, str):
+                    urls.append(it)
+                elif isinstance(it, dict) and it.get("url"):
+                    urls.append(it["url"])
+    return urls
+
 
 TASK_RUNNERS["run_canvas_image_task"] = run_canvas_image_task
 

@@ -7,7 +7,7 @@
     <title data-i18n="smart.title">智能画布</title>
     <!-- 关键渲染路径优化：CSS 先于 JS 加载，浏览器可并行下载 CSS 和 JS -->
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.108.1786428400.1786503882">
+    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.108.1786428400.1786507075">
     <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.108.1786428400.1785603211">
     <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.108.1786428400.1786205339">
     <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.108.1786428400.1785603211"></script>
@@ -585,8 +585,20 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
             <span class="chat-modal-title"><i data-lucide="sparkles" class="w-4 h-4"></i> 画布助手</span>
             <div style="display:flex;align-items:center;gap:6px">
                 <select id="chatModelSelect" class="chat-model-select" onchange="changeChatModel(this.value)"></select>
+                <button class="chat-history-btn" onclick="toggleAgentHistoryPanel()" title="历史记录"><i data-lucide="history"></i></button>
                 <button class="chat-modal-close" onclick="toggleChatPanel()"><i data-lucide="x"></i></button>
             </div>
+        </div>
+        <div id="agentHistoryPanel" class="agent-history-panel">
+            <div class="agent-history-head">
+                <span class="agent-history-title"><i data-lucide="history"></i> 历史记录</span>
+                <div class="agent-history-filter">
+                    <button type="button" class="agent-history-filter-btn active" data-mode="canvas" onclick="agentHistoryFilter('canvas', this)">当前画布</button>
+                    <button type="button" class="agent-history-filter-btn" data-mode="all" onclick="agentHistoryFilter('all', this)">全部</button>
+                </div>
+                <button class="chat-modal-close" onclick="toggleAgentHistoryPanel()" title="关闭"><i data-lucide="x"></i></button>
+            </div>
+            <div id="agentHistoryList" class="agent-history-list"></div>
         </div>
         <div id="chatMessages" class="chat-messages"></div>
         <div class="chat-input-row">
@@ -610,6 +622,6 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         <div id="smartSuggestBtns" class="smart-suggest-btns"></div>
         <button type="button" class="smart-suggest-close" onclick="closeSmartSuggestions()" title="关闭"><i data-lucide="x"></i></button>
     </div>
-    <script defer src="/static/js/smart-canvas.js?v=1.0.108.1786428400.1786503817"></script>
+    <script defer src="/static/js/smart-canvas.js?v=1.0.108.1786428400.1786515625"></script>
 </body>
 </html>

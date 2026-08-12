@@ -1451,6 +1451,70 @@ input[type=range].smart-range::-webkit-slider-thumb { -webkit-appearance:none; w
 }
 .chat-modal-close { background: none; border: none; cursor: pointer; color: var(--muted); padding: 2px; border-radius: 4px; display: flex; }
 .chat-modal-close:hover { background: var(--soft); color: var(--text); }
+/* ── Agent 历史记录 ── */
+.chat-history-btn {
+    background: none; border: none; cursor: pointer; color: var(--muted);
+    padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    transition: background .15s, color .15s;
+}
+.chat-history-btn svg, .chat-history-btn i { width: 14px; height: 14px; }
+.chat-history-btn:hover { background: var(--soft); color: var(--text); }
+.agent-history-panel {
+    position: absolute; inset: 0; z-index: 5; display: none;
+    flex-direction: column; background: var(--panel);
+    border-radius: 18px; overflow: hidden;
+}
+.agent-history-panel.open { display: flex; }
+.agent-history-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line);
+    flex-shrink: 0; background: var(--surface);
+}
+.agent-history-title {
+    font-size: 13px; font-weight: 650; color: var(--text);
+    display: flex; align-items: center; gap: 6px; margin-right: auto;
+}
+.agent-history-title svg, .agent-history-title i { width: 14px; height: 14px; }
+.agent-history-filter {
+    display: flex; gap: 2px; background: var(--soft);
+    border-radius: 999px; padding: 2px;
+}
+.agent-history-filter-btn {
+    font-size: 10.5px; padding: 2px 10px; border-radius: 999px;
+    border: none; background: none; color: var(--muted); cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.agent-history-filter-btn.active { background: var(--panel); color: var(--text); box-shadow: 0 1px 4px var(--shadow); }
+.agent-history-list {
+    flex: 1; overflow-y: auto; padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 8px;
+}
+.agent-history-item {
+    border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
+    background: var(--bg); cursor: pointer; flex-shrink: 0;
+    transition: border-color .15s, box-shadow .15s;
+}
+.agent-history-item:hover { border-color: var(--accent); box-shadow: 0 2px 8px var(--shadow); }
+.agent-history-item-top { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.agent-history-intent {
+    font-size: 12px; font-weight: 600; color: var(--text);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.agent-history-meta { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+.agent-history-status {
+    font-size: 10px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+    flex-shrink: 0; white-space: nowrap;
+}
+.agent-history-status.planned { background: var(--soft); color: var(--muted); border: 1px solid var(--border); }
+.agent-history-status.applied {
+    background: color-mix(in srgb, var(--success) 14%, transparent);
+    color: var(--success); border: 1px solid color-mix(in srgb, var(--success) 38%, transparent);
+}
+.agent-history-status.failed {
+    background: color-mix(in srgb, var(--danger) 14%, transparent);
+    color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 38%, transparent);
+}
+.agent-history-empty { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 12px; }
 /* ── V2: 版本历史面板 ── */
 .version-history-toggle { bottom: 226px; }
 .version-panel {

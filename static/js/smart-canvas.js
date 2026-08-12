@@ -4628,8 +4628,126 @@ function executeChatActions(actions){
 }
 function toggleChatPanel(){
     chatModal.classList.toggle('open');
+    if(!chatModal.classList.contains('open')) closeAgentHistoryPanel();
     var inp = document.getElementById('chatInput');
     if(chatModal.classList.contains('open') && inp){ setTimeout(function(){ inp.focus(); syncChatContext(); refreshChatModels(); renderChatWelcomeIfEmpty(); }, 200); }
+}
+// ── Agent 历史记录面板（只读展示，不做删除）──
+var agentHistoryMode = 'canvas'; // 'canvas'=当前画布 / 'all'=全部
+var agentHistorySessions = [];
+function toggleAgentHistoryPanel(){
+    var panel = document.getElementById('agentHistoryPanel');
+    if(!panel) return;
+    if(panel.classList.contains('open')){ panel.classList.remove('open'); return; }
+    panel.classList.add('open');
+    loadAgentHistory();
+}
+function closeAgentHistoryPanel(){
+    var panel = document.getElementById('agentHistoryPanel');
+    if(panel) panel.classList.remove('open');
+}
+function agentHistoryFilter(mode, btn){
+    agentHistoryMode = mode;
+    var btns = document.querySelectorAll('.agent-history-filter-btn');
+    btns.forEach(function(b){ b.classList.toggle('active', b === btn); });
+    renderAgentHistoryList();
+}
+function agentRelativeTime(ts){
+    if(!ts) return '';
+    var t = typeof ts === 'number' ? ts : (parseFloat(ts) || 0);
+    if(!t) return '';
+    var diff = Date.now()/1000 - t;
+    if(diff < 60) return '刚刚';
+    if(diff < 3600) return Math.floor(diff/60) + ' 分钟前';
+    if(diff < 86400) return Math.floor(diff/3600) + ' 小时前';
+    if(diff < 86400*30) return Math.floor(diff/86400) + ' 天前';
+    var d = new Date(t*1000);
+    return (d.getMonth()+1) + '月' + d.getDate() + '日';
+}
+function agentStatusLabel(status){
+    if(status === 'applied') return '已应用';
+    if(status === 'failed') return '失败';
+    return '已计划';
+}
+async function loadAgentHistory(){
+    var listEl = document.getElementById('agentHistoryList');
+    if(!listEl) return;
+    listEl.innerHTML = '<div class="agent-history-empty">加载中…</div>';
+    try{
+        var resp = await fetch('/api/agent/sessions');
+        if(!resp.ok) throw new Error('HTTP ' + resp.status);
+        var data = await resp.json();
+        agentHistorySessions = (data.sessions || []).slice(0, 20);
+        renderAgentHistoryList();
+    }catch(e){
+        listEl.innerHTML = '<div class="agent-history-empty">历史记录加载失败</div>';
+    }
+}
+function renderAgentHistoryList(){
+    var listEl = document.getElementById('agentHistoryList');
+    if(!listEl) return;
+    var sessions = agentHistorySessions.filter(function(s){
+        return agentHistoryMode !== 'canvas' || s.canvas_id === canvasId;
+    });
+    if(!sessions.length){
+        listEl.innerHTML = '<div class="agent-history-empty">暂无历史记录</div>';
+        return;
+    }
+    listEl.innerHTML = sessions.map(function(s){
+        var intent = (s.intent || s.instruction || '未命名会话').trim();
+        if(intent.length > 42) intent = intent.slice(0, 42) + '…';
+        var meta = agentRelativeTime(s.updated_at || s.created_at);
+        if(s.step_count) meta += ' · ' + s.step_count + ' 步';
+        return '<div class="agent-history-item" data-sid="' + escapeHtml(s.session_id || '') + '" onclick="openAgentHistorySession(this)">' +
+            '<div class="agent-history-item-top">' +
+                '<span class="agent-history-intent">' + escapeHtml(intent) + '</span>' +
+                '<span class="agent-history-status ' + escapeHtml(s.status || 'planned') + '">' + agentStatusLabel(s.status) + '</span>' +
+            '</div>' +
+            '<div class="agent-history-meta">' + escapeHtml(meta) + '</div>' +
+        '</div>';
+    }).join('');
+}
+async function openAgentHistorySession(el){
+    var sid = el.getAttribute('data-sid');
+    if(!sid) return;
+    var listEl = document.getElementById('agentHistoryList');
+    try{
+        var resp = await fetch('/api/agent/sessions/' + encodeURIComponent(sid));
+        if(!resp.ok) throw new Error('HTTP ' + resp.status);
+        var data = await resp.json();
+        closeAgentHistoryPanel();
+        renderAgentHistorySession(data.session || {});
+    }catch(e){
+        if(listEl) listEl.innerHTML = '<div class="agent-history-empty">会话加载失败</div>';
+    }
+}
+function renderAgentHistorySession(s){
+    // 消息区渲染：用户指令 + 计划卡（可继续预览/应用/回滚；回滚按钮在实际 apply 后出现，不伪造 pre_version）
+    removeChatWelcome();
+    var instruction = s.instruction || s.intent || '';
+    if(instruction) addChatMessage('user', instruction);
+    var plan = {
+        session_id: s.session_id || '',
+        canvas_id: s.canvas_id || canvasId,
+        steps: ((s.plan || {}).steps) || [],
+        intent: (s.plan || {}).intent || s.intent || '',
+        expected_output: (s.plan || {}).expected_output || ''
+    };
+    if(!plan.steps.length){
+        addChatMessage('system', '该会话没有可执行的计划步骤。');
+        return;
+    }
+    var parts = createChatMsgEl('assistant');
+    var box = document.getElementById('chatMessages');
+    box.appendChild(parts.div);
+    renderAgentPlanCard(parts.bubble, plan);
+    // 历史状态回填到计划卡状态位（预览/应用/回滚能力与新建计划一致）
+    var st = parts.div.querySelector('.agent-plan-status');
+    if(st){
+        if(s.status === 'applied') st.textContent = '已应用';
+        else if(s.status === 'failed') st.textContent = '失败';
+        else st.textContent = '已生成';
+    }
 }
 function syncChatContext(){
     if(!chatModal.classList.contains('open')) return;
@@ -18930,6 +19048,9 @@ window.setGridCustomOrientation = setGridCustomOrientation;
 window.setGridJoinOutputSize = setGridJoinOutputSize;
 window.setGridOperationMode = setGridOperationMode;
 window.toggleChatPanel = toggleChatPanel;
+window.toggleAgentHistoryPanel = toggleAgentHistoryPanel;
+window.agentHistoryFilter = agentHistoryFilter;
+window.openAgentHistorySession = openAgentHistorySession;
 window.toggleGridCustomMode = toggleGridCustomMode;
 window.togglePanoramaPreview = togglePanoramaPreview;
 window.togglePreviewCompare = togglePreviewCompare;

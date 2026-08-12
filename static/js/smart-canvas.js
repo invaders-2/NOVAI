@@ -1467,6 +1467,7 @@ function clearSelection(){
     selectedId = '';
     selectedIds = [];
     selectedImage = {nodeId:'', index:-1};
+    syncChatContext();
 }
 function clearImageClickTimer(){
     if(imageClickTimer){
@@ -4610,8 +4611,22 @@ function toggleChatPanel(){
 }
 function syncChatContext(){
     if(!chatModal.classList.contains('open')) return;
-    var sel = selectedNode();
-    if(sel && sel.id && !chatRefs.some(function(r){return r.id === sel.id})){
+    // 当前选中集：selectedIds（多选）+ selectedId（单选兜底）
+    var selIds = [];
+    (selectedIds && selectedIds.length ? selectedIds : (selectedId ? [selectedId] : [])).forEach(function(id){
+        if(id && selIds.indexOf(id) === -1) selIds.push(id);
+    });
+    // 移除已不在选中集的引用（选中即加入、取消选中即清除）
+    if(selIds.length){
+        chatRefs = chatRefs.filter(function(r){ return selIds.indexOf(r.id) !== -1; });
+    } else {
+        chatRefs = [];
+    }
+    // 添加新选中的节点
+    selIds.forEach(function(id){
+        if(chatRefs.some(function(r){return r.id === id;})) return;
+        var sel = nodes.find(function(n){ return n.id === id; });
+        if(!sel) return;
         var imgs = (sel.images||[]).map(function(img){
             var kind = img.kind || mediaKindForItem(img) || 'image';
             var url = img.url || '';
@@ -4620,7 +4635,7 @@ function syncChatContext(){
         var firstImg = imgs[0] || {};
         var thumbUrl = firstImg.preview || firstImg.url || '';
         chatRefs.push({id:sel.id, name:sel.title || (sel.type||'node'), thumbUrl:thumbUrl, type:sel.type, images:imgs});
-    }
+    });
     renderChatContext();
 }
 function removeChatRef(id){ chatRefs = chatRefs.filter(function(r){return r.id !== id}); renderChatContext(); }

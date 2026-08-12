@@ -265,6 +265,7 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         </div>
         <button id="smartArrangeBtn" class="minimap-arrange-btn" type="button" title="整理选中节点" aria-label="整理选中节点"><i data-lucide="layout-grid"></i><span>整理选中</span></button>
         <button id="chatToggleBtn" class="chat-toggle" onclick="toggleChatPanel()" title="画布对话助手"><i data-lucide="message-square"></i></button>
+        <button id="versionHistoryBtn" class="chat-toggle version-history-toggle" onclick="openCanvasVersionsPanel()" title="版本历史" aria-label="版本历史"><i data-lucide="history"></i></button>
         <div id="minimap" class="smart-minimap" aria-hidden="true">
             <div id="minimapContent" class="smart-minimap-content">
                 <div id="minimapViewport" class="smart-minimap-viewport"></div>
@@ -596,7 +597,7 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         <div class="chat-resize"></div>
     </div>
     <!-- V2: 版本历史面板 -->
-    <div id="versionPanel" class="version-panel" style="display:none">
+    <div id="versionPanel" class="version-panel">
         <div class="version-panel-header">
             <span class="version-panel-title"><i data-lucide="history" class="w-4 h-4"></i> 版本历史</span>
             <button class="chat-modal-close" onclick="closeCanvasVersionsPanel()" title="关闭"><i data-lucide="x"></i></button>

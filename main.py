@@ -14755,6 +14755,32 @@ def _agent_result_media_urls(result):
     return urls
 
 
+def _agent_result_video_urls(result):
+    """从任务 result 提取视频 URL 列表（兼容 videos/video_items/raw 结构）。"""
+    urls = []
+    if not isinstance(result, dict):
+        return urls
+    items = result.get("video_items") or []
+    if not items:
+        items = result.get("videos") or []
+    for it in items:
+        if isinstance(it, str):
+            urls.append(it)
+        elif isinstance(it, dict):
+            u = it.get("url") or ""
+            if u:
+                urls.append(u)
+    if not urls:
+        raw = result.get("raw")
+        if isinstance(raw, dict):
+            for it in (raw.get("video_items") or raw.get("videos") or []):
+                if isinstance(it, str):
+                    urls.append(it)
+                elif isinstance(it, dict) and it.get("url"):
+                    urls.append(it["url"])
+    return urls
+
+
 TASK_RUNNERS["run_canvas_image_task"] = run_canvas_image_task
 
 @app.post("/api/canvas-image-tasks")
@@ -15552,6 +15578,28 @@ async def run_canvas_video_task(task_id: str, payload: CanvasVideoRequest):
         "provider_task_id": upstream,
         "request_id": request_id,
     })
+    # Agent 生成（generate_video 工具）：任务完成后直接把视频结果挂回画布节点（不依赖前端轮询）
+    try:
+        cur_task = task_get(task_id) or {}
+        x_extra = cur_task.get("extra") or {}
+        cid = x_extra.get("canvas_id") or cur_task.get("canvas_id") or ""
+        nid = x_extra.get("node_id") or cur_task.get("node_id") or ""
+        is_agent = x_extra.get("agent") or cur_task.get("agent")
+        if cid and nid and is_agent:
+            canvas = load_canvas(cid)
+            node = _agent_find_node(canvas, nid)
+            if node is not None:
+                vurls = _agent_result_video_urls(result)
+                if vurls:
+                    node["images"] = [{"url": u, "name": f"gen-{i + 1}.mp4", "kind": "video"}
+                                      for i, u in enumerate(vurls)]
+                    node["lastTaskStatus"] = "succeeded"
+                    canvas["updated_at"] = now_ms()
+                    with open(canvas_path(cid), 'w', encoding='utf-8') as f:
+                        json.dump(canvas, f, ensure_ascii=False, indent=2)
+                    print(f"[Agent] 生成结果已落画布节点 {nid}（{len(vurls)} 个视频）")
+    except Exception as exc:
+        print(f"[Agent] 视频结果落画布节点失败（不影响任务状态）: {exc}")
     return result
 
 TASK_RUNNERS["run_canvas_video_task"] = run_canvas_video_task
@@ -22775,6 +22823,155 @@ def _agent_tool_generate_image_preview(args, canvas):
 
 
 # ---------------------------------------------------------------------------
+# 工具 7c: generate_video（一句话生成视频：建节点 + 真实生成 + 结果落画布）
+# ---------------------------------------------------------------------------
+
+def _agent_pick_video_provider(preferred=""):
+    """生视频 provider 自动探测：用户指定 > 配置了 video_models 的动态平台 > comfly。"""
+    pref = str(preferred or "").strip().lower()
+    if pref and pref != "comfly":
+        try:
+            base, _, _ = resolve_chat_provider(pref, "", "")
+            if base:
+                return pref
+        except HTTPException:
+            pass
+    avail = _agent_available_providers()
+    for cand in avail:
+        p = get_api_provider(cand)
+        if p and (p.get("video_models") or []):
+            return cand
+    for cand in avail:
+        return cand
+    return "comfly"
+
+
+def _agent_tool_generate_video_validate(args):
+    canvas_id = str(args.get("canvas_id") or "").strip()
+    prompt = str(args.get("prompt") or args.get("text") or "").strip()
+    if not canvas_id:
+        raise AgentToolError("canvas_id 不能为空", code="invalid_args")
+    if not prompt:
+        raise AgentToolError("prompt 不能为空（描述你想生成的视频）", code="invalid_args")
+    load_canvas(canvas_id)  # 404 校验
+    # 参考媒体：reference_urls（图片）可字符串或 {url}；reference_video（视频）同理
+    refs = args.get("reference_urls")
+    if refs is None:
+        refs = args.get("reference_images")
+    if refs is not None and not isinstance(refs, list):
+        raise AgentToolError("reference_urls 必须是数组", code="invalid_args")
+    norm_refs = []
+    for ref in (refs or [])[:10]:
+        if isinstance(ref, str) and ref.strip():
+            norm_refs.append({"url": ref.strip()})
+        elif isinstance(ref, dict) and str(ref.get("url") or "").strip():
+            norm_refs.append({"url": str(ref["url"]).strip()})
+    vids = args.get("reference_video")
+    norm_vids = []
+    if vids is not None:
+        if not isinstance(vids, list):
+            vids = [vids]
+        for v in vids[:3]:
+            if isinstance(v, str) and v.strip():
+                norm_vids.append({"url": v.strip()})
+            elif isinstance(v, dict) and str(v.get("url") or "").strip():
+                norm_vids.append({"url": str(v["url"]).strip()})
+    duration = int(args.get("duration") or 5)
+    if duration < 1:
+        duration = 5
+    if duration > 15:
+        duration = 15  # 火山约束 ≤15.2s
+    ratio = str(args.get("ratio") or "").strip().lower() or "adaptive"
+    return {
+        "canvas_id": canvas_id,
+        "prompt": prompt,
+        "reference_urls": norm_refs,
+        "reference_video": norm_vids,
+        "provider": _agent_pick_video_provider(str(args.get("provider") or "").strip()),
+        "model": str(args.get("model") or "").strip(),
+        "duration": duration,
+        "ratio": ratio,
+        "title": str(args.get("title") or "")[:120],
+    }
+
+
+async def _agent_tool_generate_video_run(args):
+    """建 video 节点 → 真实视频生成任务（Task Engine）→ 结果自动落画布。"""
+    canvas_id = args["canvas_id"]
+    count = len(load_canvas(canvas_id).get("nodes") or [])
+    node_args = _agent_tool_create_node_validate({
+        "canvas_id": canvas_id, "type": "video",
+        "prompt": args["prompt"],
+        "title": args["title"] or "Video",
+        "x": 220 + (count % 5) * 70,
+        "y": 160 + (count % 4) * 70,
+    })
+    node_res = _agent_tool_create_node_run(node_args)
+    node_id = node_res["node_id"]
+    refs = args["reference_urls"]
+    vids = args["reference_video"]
+
+    def _attach(canvas):
+        n = _agent_find_node(canvas, node_id)
+        if n is not None:
+            n["images"] = [{"url": r["url"], "name": f"ref-{i + 1}.png", "kind": "image"}
+                           for i, r in enumerate(refs)]
+            n["text"] = args["prompt"]
+            n["duration"] = args["duration"]
+            n["aspectRatio"] = args["ratio"]
+        return None
+
+    _agent_mutate_canvas(canvas_id, _attach)
+    # 真实生成：进 Task Engine（run_canvas_video_task runner）
+    payload = {
+        "prompt": args["prompt"],
+        "provider_id": args["provider"],
+        "model": args["model"],
+        "duration": args["duration"],
+        "aspect_ratio": args["ratio"],
+        "images": refs,
+        "videos": vids,
+        "generate_audio": False,
+    }
+    task = task_create(
+        kind="video", payload=payload, runner_name="run_canvas_video_task",
+        provider_id=args["provider"], model_id=args["model"],
+        extra={"agent": True, "canvas_id": canvas_id, "node_id": node_id})
+    await task_enqueue(task["id"])
+
+    def _mark(canvas):
+        n = _agent_find_node(canvas, node_id)
+        if n is not None:
+            n["task_id"] = task["id"]
+            n["lastTaskStatus"] = "queued"
+        return None
+
+    try:
+        _agent_mutate_canvas(canvas_id, _mark)
+    except Exception as exc:
+        print(f"[Agent] 记录 task_id 到节点失败（不影响任务）: {exc}")
+    return {
+        "node_id": node_id,
+        "task_id": task["id"],
+        "status": "queued",
+        "provider": args["provider"],
+        "model": args["model"],
+        "duration": args["duration"],
+        "reference_count": len(refs) + len(vids),
+        "prompt": args["prompt"][:160] + ("…" if len(args["prompt"]) > 160 else ""),
+        "message": f"已在画布创建视频节点并提交生成任务（{args['provider']}，duration={args['duration']}s，ratio={args['ratio']}），完成后自动落到节点",
+    }
+
+
+def _agent_tool_generate_video_preview(args, canvas):
+    refs = args.get("reference_urls") or []
+    vids = args.get("reference_video") or []
+    return f"将在画布新建视频节点并立即发起真实生成（provider={args.get('provider') or 'comfly'}, " + \
+           f"model={args.get('model') or '默认'}, {args.get('duration') or 5}s，参考 {len(refs)} 图 + {len(vids)} 视频）" + \
+           f"，提示词：{str(args.get('prompt') or '')[:40]}…"
+
+
+# ---------------------------------------------------------------------------
 # 工具 7c: use_asset（从素材库检索参考图，供 generate_image 使用）
 # ---------------------------------------------------------------------------
 
@@ -22822,6 +23019,38 @@ def _agent_tool_use_asset_run(args):
                 break
         if len(hits) >= args["limit"]:
             break
+    # 补充：画布上传的素材（assets/input/ 目录）——用户上传的素材也应可检索作参考
+    if len(hits) < args["limit"]:
+        try:
+            in_dir = os.path.join(os.path.dirname(__file__), "assets", "input")
+            if os.path.isdir(in_dir):
+                for fn in sorted(os.listdir(in_dir)):
+                    if len(hits) >= args["limit"]:
+                        break
+                    if fn.startswith(".") or fn == "ai_ref":
+                        continue
+                    low = fn.lower()
+                    ext_ok = low.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp4", ".mov", ".webm", ".mp3", ".wav", ".m4a"))
+                    if not ext_ok:
+                        continue
+                    if kind == "image" and not low.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+                        continue
+                    if kind == "video" and not low.endswith((".mp4", ".mov", ".webm")):
+                        continue
+                    if kind == "audio" and not low.endswith((".mp3", ".wav", ".m4a")):
+                        continue
+                    url = f"/assets/input/{fn}"
+                    if url in seen:
+                        continue
+                    if query and query not in low:
+                        continue
+                    item_kind = "video" if low.endswith((".mp4", ".mov", ".webm")) else ("audio" if low.endswith((".mp3", ".wav", ".m4a")) else "image")
+                    if kind and item_kind != kind:
+                        continue
+                    seen.add(url)
+                    hits.append({"url": url, "name": fn[:120], "kind": item_kind, "category": "上传素材"})
+        except Exception as exc:
+            print(f"[Agent] use_asset 扫描上传素材失败: {exc}")
     return {"total": len(hits), "items": hits, "query": args["query"], "kind": args["kind"]}
 
 
@@ -23029,6 +23258,25 @@ AGENT_TOOLS = {
         "validate": _agent_tool_generate_image_validate,
         "run": _agent_tool_generate_image_run,
         "preview": _agent_tool_generate_image_preview,
+        "mutates_canvas": True,
+    },
+    "generate_video": {
+        "description": "一句话生成视频：在画布新建视频节点（带提示词/参考图/参考视频）并立即发起真实视频生成任务（进 Task Engine），完成后结果自动落到该节点。返回 node_id 与 task_id。",
+        "schema": {"type": "object", "properties": {
+            "canvas_id": {"type": "string"},
+            "prompt": {"type": "string", "description": "视频提示词（必填），描述画面内容/运镜/动作"},
+            "reference_urls": {"type": "array", "items": {"type": "string"},
+                               "description": "参考图 URL 列表（首图优先作外观参考）"},
+            "reference_video": {"type": "array", "items": {"type": "string"},
+                                "description": "参考视频 URL 列表（作动作骨架/编辑源）"},
+            "provider": {"type": "string", "default": "comfly"}, "model": {"type": "string"},
+            "duration": {"type": "integer", "default": 5, "description": "时长秒数 1-15（默认 5）"},
+            "ratio": {"type": "string", "default": "adaptive", "description": "画面比例 adaptive/16:9/9:16/1:1（默认 adaptive）"},
+            "title": {"type": "string", "description": "节点标题（可选）"}},
+            "required": ["canvas_id", "prompt"]},
+        "validate": _agent_tool_generate_video_validate,
+        "run": _agent_tool_generate_video_run,
+        "preview": _agent_tool_generate_video_preview,
         "mutates_canvas": True,
     },
     "use_asset": {

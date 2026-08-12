@@ -4931,8 +4931,8 @@ async function sendChatMessage(){
 var AGENT_TOOL_ICONS = {
     'create_node': 'square-plus', 'delete_node': 'trash-2', 'connect_nodes': 'link-2',
     'update_node': 'pencil-line', 'run_generation': 'play', 'generate_image': 'wand-sparkles',
-    'check_task': 'search-check', 'create_matrix': 'grid-3x3', 'list_canvases': 'list',
-    'get_canvas': 'scan-eye', 'use_asset': 'image-plus'
+    'generate_video': 'clapperboard', 'check_task': 'search-check', 'create_matrix': 'grid-3x3',
+    'list_canvases': 'list', 'get_canvas': 'scan-eye', 'use_asset': 'image-plus'
 };
 function agentToolIcon(tool){ return AGENT_TOOL_ICONS[tool] || 'zap'; }
 function agentArgsChips(args){
@@ -4984,27 +4984,46 @@ function agentImageModelOptions(selected){
     }).join('');
     return {html: html, count: opts.length};
 }
+function agentVideoModelOptions(selected){
+    // 收集可用生视频模型（apiProviders 的 video_models——绝不用对话/生图模型）
+    var opts = [];
+    (apiProviders||[]).forEach(function(p){
+        if(!p.enabled) return;
+        var models = p.video_models || [];
+        models.forEach(function(m){
+            if(!opts.some(function(o){return o.value===m;})) opts.push({value:m, provider:p.id});
+        });
+    });
+    if(!opts.length) opts.push({value:'', provider:''});
+    var html = opts.map(function(o){
+        var sel = (o.value === selected) ? ' selected' : '';
+        return '<option value="'+escapeHtml(o.value)+'"' + sel + '>'+escapeHtml(o.value)+'</option>';
+    }).join('');
+    return {html: html, count: opts.length};
+}
 function agentStepEditHtml(s, i){
     var a = s.args || {};
     var isGen = s.tool === 'generate_image';
+    var isVid = s.tool === 'generate_video';
     var curProvider = a.provider || chatProvider || resolveChatProviderId() || '';
     var curModel = a.model || '';
     if(!curModel){
-        // 默认该 provider 的第一个生图模型（绝不用对话模型）
+        // 默认该 provider 的第一个生图/生视频模型（绝不用对话模型）
         var provFirst = null;
         (apiProviders||[]).forEach(function(p){
             if(provFirst || p.id !== curProvider) return;
-            var ms = p.image_models || [];
-            if(!ms.length && Array.isArray(p.models)) ms = p.models;
+            var ms = isVid ? (p.video_models || []) : (p.image_models || []);
+            if(!ms.length && !isVid && Array.isArray(p.models)) ms = p.models;
             if(ms.length) provFirst = ms[0];
         });
         curModel = provFirst || '';
     }
-    var modelOpts = agentImageModelOptions(curModel);
-    var curRatio = a.ratio || '1:1';
+    var modelOpts = isVid ? agentVideoModelOptions(curModel) : agentImageModelOptions(curModel);
+    var curRatio = a.ratio || (isVid ? 'adaptive' : '1:1');
     var curSize = a.size || '';
+    var curDuration = a.duration || 5;
     var curPrompt = a.prompt || a.text || '';
-    var ratios = ['1:1','16:9','9:16','4:3','3:4','2:3','3:2'];
+    var ratios = isVid ? ['adaptive','16:9','9:16','1:1','4:3','3:4'] : ['1:1','16:9','9:16','4:3','3:4','2:3','3:2'];
     var ratioOpts = ratios.map(function(r){
         return '<option value="'+r+'"'+(r===curRatio?' selected':'')+'>'+r+'</option>';
     }).join('');
@@ -5016,18 +5035,28 @@ function agentStepEditHtml(s, i){
     if(curSize && sizeOpts.indexOf('value="'+curSize+'"') === -1){
         sizeOpts += '<option value="'+escapeHtml(curSize)+'" selected>'+escapeHtml(curSize)+'</option>';
     }
+    // 时长选项（视频）
+    var durOpts = [3,5,8,10,15].map(function(d){
+        return '<option value="'+d+'"'+(d===curDuration?' selected':'')+'>'+d+' 秒</option>';
+    }).join('');
     return '<div class="agent-step-edit">' +
         '<div class="agent-edit-row">' +
             '<label>模型</label>' +
             '<select class="agent-edit-model" data-step="'+i+'" onchange="agentStepEditChange(this)">' + modelOpts.html + '</select>' +
         '</div>' +
+        (isVid ? '<div class="agent-edit-row">' +
+            '<label>时长</label>' +
+            '<select class="agent-edit-duration" data-step="'+i+'" onchange="agentStepEditChange(this)">' + durOpts + '</select>' +
+            '<label style="margin-left:8px">比例</label>' +
+            '<select class="agent-edit-ratio" data-step="'+i+'" onchange="agentStepEditChange(this)">' + ratioOpts + '</select>' +
+        '</div>' : '') +
         (isGen ? '<div class="agent-edit-row">' +
             '<label>比例</label>' +
             '<select class="agent-edit-ratio" data-step="'+i+'" onchange="agentStepEditChange(this)"><option value="">自动</option>' + ratioOpts + '</select>' +
             '<label style="margin-left:8px">分辨率</label>' +
             '<select class="agent-edit-size" data-step="'+i+'" onchange="agentStepEditChange(this)"><option value="">自动</option>' + sizeOpts + '</select>' +
         '</div>' : '') +
-        (isGen ? '<div class="agent-edit-row">' +
+        ((isGen || isVid) ? '<div class="agent-edit-row">' +
             '<label>提示词</label>' +
             '<textarea class="agent-edit-prompt" data-step="'+i+'" rows="2" onchange="agentStepEditChange(this)">'+escapeHtml(curPrompt)+'</textarea>' +
         '</div>' : '') +
@@ -5044,6 +5073,7 @@ function agentStepEditChange(el){
     if(el.classList.contains('agent-edit-model')) step.args.model = el.value;
     if(el.classList.contains('agent-edit-ratio')) step.args.ratio = el.value || '';
     if(el.classList.contains('agent-edit-size')) step.args.size = el.value || '';
+    if(el.classList.contains('agent-edit-duration')) step.args.duration = Number(el.value) || 5;
     if(el.classList.contains('agent-edit-prompt')) step.args.prompt = el.value;
 }
 function renderAgentPlanCard(bubble, plan){
@@ -5064,8 +5094,8 @@ function renderAgentPlanCard(bubble, plan){
             return '<span class="agent-chip"><b>' + escapeHtml(c.label) + '</b> ' + escapeHtml(c.value) + '</span>';
         }).join('');
         var editable = '';
-        // generate_image / create_node 步骤：提供参数编辑区（模型/比例/分辨率/提示词）
-        if(s.tool === 'generate_image' || s.tool === 'create_node'){
+        // generate_image / generate_video / create_node 步骤：提供参数编辑区（模型/比例/分辨率/时长/提示词）
+        if(s.tool === 'generate_image' || s.tool === 'generate_video' || s.tool === 'create_node'){
             editable = agentStepEditHtml(s, i);
         }
         return '<div class="agent-step" data-step="' + i + '">' +
@@ -5152,39 +5182,40 @@ async function agentPlanAction(act, btn){
         agentPlanSetBusy(card, true, '执行中…', btn);
         btn.classList.add('applying');
         try {
-            // 选中节点素材 → 自动作为 generate_image 的参考图（LLM 未带时前端补齐）
+            // 选中节点素材 → 自动作为 generate_image/generate_video 的参考（LLM 未带时前端补齐）
             var steps = st.steps || [];
             var refUrls = chatContextImages();
             if(refUrls.length){
                 steps = JSON.parse(JSON.stringify(steps));
                 steps.forEach(function(s){
-                    if(s.tool === 'generate_image' && !(s.args && (s.args.reference_urls || s.args.reference_images))){
+                    if((s.tool === 'generate_image' || s.tool === 'generate_video') && !(s.args && (s.args.reference_urls || s.args.reference_images))){
                         s.args = s.args || {};
                         s.args.reference_urls = refUrls.slice(0, 10);
                     }
                 });
             }
-            // 用户在下拉选择的 provider → 覆盖 generate_image 的 provider（跟随用户选择）
-            // model：只在该步骤没有生图模型时补该 provider 的默认生图模型（绝不用对话模型）
+            // 用户在下拉选择的 provider → 覆盖 generate_image/generate_video 的 provider（跟随用户选择）
+            // model：只在该步骤没有对应模型时补该 provider 的默认生图/生视频模型（绝不用对话模型）
             var userProvider = chatProvider || resolveChatProviderId();
             steps = JSON.parse(JSON.stringify(steps));
             steps.forEach(function(s){
-                if(s.tool === 'generate_image'){
+                if(s.tool === 'generate_image' || s.tool === 'generate_video'){
                     s.args = s.args || {};
                     s.args.provider = userProvider;
+                    var isVid = s.tool === 'generate_video';
                     var curM = s.args.model || '';
-                    // 若当前模型不在任何 provider 的生图模型清单里（可能是 LLM 瞎写或对话模型），替换为该 provider 的生图模型
-                    var isImageModel = (apiProviders||[]).some(function(p){
-                        var ms = p.image_models || [];
-                        if(!ms.length && Array.isArray(p.models)) ms = p.models;
+                    // 若当前模型不在任何 provider 的生图/生视频模型清单里（可能是 LLM 瞎写或对话模型），替换为该 provider 的对应模型
+                    var valid = (apiProviders||[]).some(function(p){
+                        var ms = isVid ? (p.video_models || []) : (p.image_models || []);
+                        if(!ms.length && !isVid && Array.isArray(p.models)) ms = p.models;
                         return ms.indexOf(curM) !== -1;
                     });
-                    if(!isImageModel){
+                    if(!valid){
                         var fallback = '';
                         (apiProviders||[]).forEach(function(p){
                             if(fallback || p.id !== userProvider) return;
-                            var ms = p.image_models || [];
-                            if(!ms.length && Array.isArray(p.models)) ms = p.models;
+                            var ms = isVid ? (p.video_models || []) : (p.image_models || []);
+                            if(!ms.length && !isVid && Array.isArray(p.models)) ms = p.models;
                             if(ms.length) fallback = ms[0];
                         });
                         s.args.model = fallback || curM;
@@ -5245,8 +5276,8 @@ function renderAgentApplyResult(card, data, ok){
         if(r.ok){
             stepEl.classList.add('ok');
             if(stateEl) stateEl.innerHTML = agentStepStateHtml('ok');
-            if(r.tool === 'generate_image' && r.result && r.result.task_id){
-                agentPollGenerateTask(r.result.node_id, r.result.task_id, stepEl, card);
+            if((r.tool === 'generate_image' || r.tool === 'generate_video') && r.result && r.result.task_id){
+                agentPollGenerateTask(r.result.node_id, r.result.task_id, stepEl, card, r.tool === 'generate_video' ? 'video' : 'image');
             }
         } else {
             stepEl.classList.add('fail');
@@ -5290,12 +5321,13 @@ function renderAgentApplyResult(card, data, ok){
 }
 // ── 生成任务轮询：出图后自动落到画布节点 + 步骤卡状态更新 ──
 var agentGenPolls = {};
-function agentPollGenerateTask(nodeId, taskId, stepEl, card){
+function agentPollGenerateTask(nodeId, taskId, stepEl, card, kind){
     if(!taskId || agentGenPolls[taskId]) return;
     agentGenPolls[taskId] = true;
+    kind = kind || 'image';
     var stateEl = stepEl ? stepEl.querySelector('.agent-step-state') : null;
     if(stateEl) stateEl.innerHTML = agentStepStateHtml('spin');
-    var maxTicks = 120; // ~6 分钟 @3s
+    var maxTicks = 160; // ~8 分钟 @3s（视频生成更久）
     var tick = 0;
     function finalizeSucceeded(task){
         delete agentGenPolls[taskId];
@@ -5304,8 +5336,10 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card){
             if(stateEl) stateEl.innerHTML = agentStepStateHtml('ok');
         }
         var result = task.result || {};
-        var items = (result.image_items && result.image_items.length) ? result.image_items
-                  : ((result.images && result.images.length) ? result.images : result);
+        var items = (result.video_items && result.video_items.length) ? result.video_items
+                  : ((result.videos && result.videos.length) ? result.videos
+                  : ((result.image_items && result.image_items.length) ? result.image_items
+                  : ((result.images && result.images.length) ? result.images : result)));
         var urls = resultMediaUrls(items);
         var thumbUrl = '';
         if(urls.length){
@@ -5318,32 +5352,40 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card){
             var node = nodes.find(function(n){ return n.id === nodeId; });
             if(node && urls.length){
                 try {
-                    finalizeSmartPendingTask(node, taskId, urls, 'image');
+                    finalizeSmartPendingTask(node, taskId, urls, kind);
                     render();
                     scheduleSave();
                 } catch(e){ console.warn('[Agent] 落画布失败', e); }
                 if(thumbUrl && stepEl){
-                    var imgBox = document.createElement('div');
-                    imgBox.className = 'agent-gen-result';
-                    imgBox.innerHTML = '<img src="' + escapeHtml(thumbUrl) + '" alt="生成结果">';
-                    stepEl.querySelector('.agent-step-body').appendChild(imgBox);
+                    var box = document.createElement('div');
+                    box.className = 'agent-gen-result';
+                    if(kind === 'video'){
+                        box.innerHTML = '<video src="' + escapeHtml(thumbUrl) + '" muted controls playsinline style="width:100%;border-radius:10px"></video>';
+                    } else {
+                        box.innerHTML = '<img src="' + escapeHtml(thumbUrl) + '" alt="生成结果">';
+                    }
+                    stepEl.querySelector('.agent-step-body').appendChild(box);
                     refreshIcons();
                 }
-                toast('图片已生成到画布', '✓');
+                toast(kind === 'video' ? '视频已生成到画布' : '图片已生成到画布', '✓');
                 return;
             }
             if(!node && tries++ < 8){ setTimeout(place, 1000); return; }
             if(thumbUrl && stepEl){
-                var imgBox2 = document.createElement('div');
-                imgBox2.className = 'agent-gen-result';
-                imgBox2.innerHTML = '<img src="' + escapeHtml(thumbUrl) + '" alt="生成结果">';
-                stepEl.querySelector('.agent-step-body').appendChild(imgBox2);
+                var box2 = document.createElement('div');
+                box2.className = 'agent-gen-result';
+                if(kind === 'video'){
+                    box2.innerHTML = '<video src="' + escapeHtml(thumbUrl) + '" muted controls playsinline style="width:100%;border-radius:10px"></video>';
+                } else {
+                    box2.innerHTML = '<img src="' + escapeHtml(thumbUrl) + '" alt="生成结果">';
+                }
+                stepEl.querySelector('.agent-step-body').appendChild(box2);
             }
-            toast('图片已生成（节点未找到，已刷新画布查看）', '✓');
+            toast(kind === 'video' ? '视频已生成（节点未找到，已刷新画布查看）' : '图片已生成（节点未找到，已刷新画布查看）', '✓');
         })();
     }
     (function tickOnce(){
-        fetch('/api/canvas-image-tasks/' + encodeURIComponent(taskId))
+        fetch('/api/tasks/' + encodeURIComponent(taskId))
             .then(function(r){ return r.json(); })
             .then(function(task){
                 if(task.status === 'succeeded'){ finalizeSucceeded(task); return; }

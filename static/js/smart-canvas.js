@@ -4967,13 +4967,12 @@ function agentStepStateHtml(state){
     return '';
 }
 function agentImageModelOptions(selected){
-    // 收集可用生图模型（apiProviders 的 image_models/models）
+    // 收集可用生图模型（apiProviders 的 image_models；没有则用 models——绝不用 chat_models）
     var opts = [];
     (apiProviders||[]).forEach(function(p){
         if(!p.enabled) return;
         var models = p.image_models || [];
-        if(!models.length) models = p.models || [];
-        if(!models.length && p.chat_models) models = p.chat_models;
+        if(!models.length && Array.isArray(p.models)) models = p.models;
         models.forEach(function(m){
             if(!opts.some(function(o){return o.value===m;})) opts.push({value:m, provider:p.id});
         });
@@ -4990,7 +4989,17 @@ function agentStepEditHtml(s, i){
     var isGen = s.tool === 'generate_image';
     var curProvider = a.provider || chatProvider || resolveChatProviderId() || '';
     var curModel = a.model || '';
-    if(!curModel && chatProvider === curProvider) curModel = currentChatModel();
+    if(!curModel){
+        // 默认该 provider 的第一个生图模型（绝不用对话模型）
+        var provFirst = null;
+        (apiProviders||[]).forEach(function(p){
+            if(provFirst || p.id !== curProvider) return;
+            var ms = p.image_models || [];
+            if(!ms.length && Array.isArray(p.models)) ms = p.models;
+            if(ms.length) provFirst = ms[0];
+        });
+        curModel = provFirst || '';
+    }
     var modelOpts = agentImageModelOptions(curModel);
     var curRatio = a.ratio || '1:1';
     var curSize = a.size || '';
@@ -5155,15 +5164,31 @@ async function agentPlanAction(act, btn){
                     }
                 });
             }
-            // 用户在下拉选择的 provider/model → 覆盖 generate_image 的模型（跟随用户选择）
+            // 用户在下拉选择的 provider → 覆盖 generate_image 的 provider（跟随用户选择）
+            // model：只在该步骤没有生图模型时补该 provider 的默认生图模型（绝不用对话模型）
             var userProvider = chatProvider || resolveChatProviderId();
-            var userModel = currentChatModel();
             steps = JSON.parse(JSON.stringify(steps));
             steps.forEach(function(s){
                 if(s.tool === 'generate_image'){
                     s.args = s.args || {};
                     s.args.provider = userProvider;
-                    s.args.model = userModel;
+                    var curM = s.args.model || '';
+                    // 若当前模型不在任何 provider 的生图模型清单里（可能是 LLM 瞎写或对话模型），替换为该 provider 的生图模型
+                    var isImageModel = (apiProviders||[]).some(function(p){
+                        var ms = p.image_models || [];
+                        if(!ms.length && Array.isArray(p.models)) ms = p.models;
+                        return ms.indexOf(curM) !== -1;
+                    });
+                    if(!isImageModel){
+                        var fallback = '';
+                        (apiProviders||[]).forEach(function(p){
+                            if(fallback || p.id !== userProvider) return;
+                            var ms = p.image_models || [];
+                            if(!ms.length && Array.isArray(p.models)) ms = p.models;
+                            if(ms.length) fallback = ms[0];
+                        });
+                        s.args.model = fallback || curM;
+                    }
                 }
             });
             var resp = await fetch('/api/agent/apply', {

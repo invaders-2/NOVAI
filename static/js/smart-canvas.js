@@ -4712,17 +4712,11 @@ window.addEventListener('mousemove', function(e){
 });
 window.addEventListener('mouseup', function(){ chatDrag = false; chatResize = false; });
 function createChatMsgEl(role){
-    // 现代气泡结构：assistant = 头像 + 气泡；user = 右侧气泡
+    // 现代气泡结构：assistant = 气泡（无头像）；user = 右侧气泡
     var div = document.createElement('div');
     div.className = 'chat-msg ' + role;
     var bubble = document.createElement('div');
     bubble.className = 'chat-bubble';
-    if(role === 'assistant'){
-        var av = document.createElement('span');
-        av.className = 'chat-avatar';
-        av.innerHTML = '<i data-lucide="sparkles"></i>';
-        div.appendChild(av);
-    }
     div.appendChild(bubble);
     return {div:div, bubble:bubble};
 }

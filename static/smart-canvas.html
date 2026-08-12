@@ -7,16 +7,16 @@
     <title data-i18n="smart.title">智能画布</title>
     <!-- 关键渲染路径优化：CSS 先于 JS 加载，浏览器可并行下载 CSS 和 JS -->
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.107.1786416290.1786362399">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.107.1786416290.1785603211">
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.107.1786416290.1786205339">
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.107.1786416290.1785603211"></script>
-    <script src="/static/js/theme.js?v=1.0.107.1786416290.1786205339"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.107.1786416290.1785603211"></script>
-    <script src="/static/js/shared/media.js?v=1.0.107.1786416290.1786362373"></script>
-    <script src="/static/js/shared/viewport.js?v=1.0.107.1786416290.1785603211"></script>
-    <script defer src="/static/js/touch-mouse.js?v=1.0.107.1786416290.1786205339"></script>
-    <script src="/static/js/i18n.js?v=1.0.107.1786416290.1786205339"></script>
+    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.108.1786428400.1786438775">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.108.1786428400.1785603211">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.108.1786428400.1786205339">
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.108.1786428400.1785603211"></script>
+    <script src="/static/js/theme.js?v=1.0.108.1786428400.1786205339"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.108.1786428400.1785603211"></script>
+    <script src="/static/js/shared/media.js?v=1.0.108.1786428400.1786362373"></script>
+    <script src="/static/js/shared/viewport.js?v=1.0.108.1786428400.1785603211"></script>
+    <script defer src="/static/js/touch-mouse.js?v=1.0.108.1786428400.1786205339"></script>
+    <script src="/static/js/i18n.js?v=1.0.108.1786428400.1786205339"></script>
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
 /* ═══ 隐藏滚动条 & 防止双滚动条 ═══ */
@@ -265,6 +265,10 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         </div>
         <button id="smartArrangeBtn" class="minimap-arrange-btn" type="button" title="整理选中节点" aria-label="整理选中节点"><i data-lucide="layout-grid"></i><span>整理选中</span></button>
         <button id="chatToggleBtn" class="chat-toggle" onclick="toggleChatPanel()" title="画布对话助手"><i data-lucide="message-square"></i></button>
+        <button id="versionHistoryBtn" class="chat-toggle version-history-toggle" onclick="openCanvasVersionsPanel()" title="版本历史" aria-label="版本历史"><i data-lucide="history"></i></button>
+        <button id="outputsPanelBtn" class="chat-toggle canvas-panel-toggle" onclick="openCanvasPanel('outputs')" title="输出工作台" aria-label="输出工作台"><i data-lucide="folder-open"></i></button>
+        <button id="matrixPanelBtn" class="chat-toggle canvas-panel-toggle" onclick="openCanvasPanel('matrix')" title="批量生产" aria-label="批量生产"><i data-lucide="grid-3x3"></i></button>
+        <button id="storyboardPanelBtn" class="chat-toggle canvas-panel-toggle" onclick="openCanvasPanel('storyboard')" title="视频分镜" aria-label="视频分镜"><i data-lucide="clapperboard"></i></button>
         <div id="minimap" class="smart-minimap" aria-hidden="true">
             <div id="minimapContent" class="smart-minimap-content">
                 <div id="minimapViewport" class="smart-minimap-viewport"></div>
@@ -595,12 +599,204 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         <div id="chatContext" class="chat-context"></div>
         <div class="chat-resize"></div>
     </div>
+    <!-- V2: 版本历史面板 -->
+    <div id="versionPanel" class="version-panel" style="display:none">
+        <div class="version-panel-header">
+            <span class="version-panel-title"><i data-lucide="history" class="w-4 h-4"></i> 版本历史</span>
+            <button class="chat-modal-close" onclick="closeCanvasVersionsPanel()" title="关闭"><i data-lucide="x"></i></button>
+        </div>
+        <div id="versionList" class="version-list"></div>
+    </div>
+    <!-- V2.5: 输出工作台抽屉 -->
+    <aside id="outputsPanel" class="canvas-drawer">
+        <div class="canvas-drawer-header">
+            <span class="canvas-drawer-title"><i data-lucide="folder-open" class="w-4 h-4"></i> 输出</span>
+            <div class="canvas-drawer-head-actions">
+                <button class="chat-modal-close" onclick="refreshOutputsPanel()" title="刷新" aria-label="刷新"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                <button class="chat-modal-close" onclick="closeCanvasPanel('outputs')" title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+            </div>
+        </div>
+        <div class="canvas-drawer-tabs" id="outputsTabs">
+            <button class="canvas-tab active" type="button" data-kind="" onclick="outputsSetKind(this)">全部</button>
+            <button class="canvas-tab" type="button" data-kind="image" onclick="outputsSetKind(this)">图片</button>
+            <button class="canvas-tab" type="button" data-kind="video" onclick="outputsSetKind(this)">视频</button>
+            <button class="canvas-tab" type="button" data-kind="audio" onclick="outputsSetKind(this)">音频</button>
+            <button class="canvas-tab" type="button" data-fav="1" onclick="outputsSetFav(this)">★ 收藏</button>
+        </div>
+        <input id="outputsSearch" class="canvas-drawer-search" type="search" placeholder="搜索文件名…" oninput="outputsSearchInput()">
+        <div id="outputsStats" class="canvas-drawer-stats"></div>
+        <div id="outputsGrid" class="outputs-grid"></div>
+        <div id="outputsEmpty" class="canvas-drawer-empty" style="display:none">暂无输出结果</div>
+    </aside>
+    <!-- V2.5: 批量生产抽屉 -->
+    <aside id="matrixPanel" class="canvas-drawer">
+        <div class="canvas-drawer-header">
+            <span class="canvas-drawer-title"><i data-lucide="grid-3x3" class="w-4 h-4"></i> 批量生产</span>
+            <div class="canvas-drawer-head-actions">
+                <button class="chat-modal-close" onclick="refreshMatricesPanel()" title="刷新" aria-label="刷新"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                <button class="chat-modal-close" onclick="closeCanvasPanel('matrix')" title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+            </div>
+        </div>
+        <div id="matrixViewList" class="canvas-drawer-body">
+            <div class="canvas-drawer-toolbar">
+                <span style="flex:1"></span>
+                <button class="canvas-btn primary" onclick="openMatrixCreatePanel()">＋ 新建矩阵</button>
+            </div>
+            <div id="matrixListLegend" class="matrix-legend"></div>
+            <div id="matrixListGrid" class="matrix-list"></div>
+            <div id="matrixListEmpty" class="canvas-drawer-empty" style="display:none">还没有矩阵<br>点击「新建矩阵」：定义维度（如 角色×产品×场景），系统自动生成全部组合单元格，一键批量执行</div>
+        </div>
+        <div id="matrixViewDetail" class="canvas-drawer-body" style="display:none">
+            <div class="canvas-drawer-toolbar">
+                <button class="chat-modal-close" onclick="matrixBackToList()" title="返回列表" aria-label="返回列表"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                <div class="matrix-detail-name" id="matrixDetailName"></div>
+                <span style="flex:1"></span>
+                <button class="chat-modal-close" onclick="refreshMatrixDetail()" title="刷新" aria-label="刷新"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div class="matrix-detail-sub" id="matrixDetailSub"></div>
+            <div class="canvas-drawer-toolbar">
+                <button class="canvas-btn primary" onclick="matrixRun()">▶ 运行</button>
+                <button class="canvas-btn" onclick="matrixCancel()">⏹ 取消</button>
+                <button class="canvas-btn danger" onclick="matrixDelete()">删除</button>
+            </div>
+            <div id="matrixDetailDims" class="matrix-dims-chips"></div>
+            <div id="matrixDetailStats" class="matrix-stats-bar"></div>
+            <div id="matrixDetailLegend" class="matrix-legend"></div>
+            <div id="matrixDetailCells" class="matrix-cells"></div>
+        </div>
+        <div id="matrixViewCreate" class="canvas-drawer-body" style="display:none">
+            <div class="canvas-drawer-toolbar">
+                <button class="chat-modal-close" onclick="matrixBackToList()" title="返回列表" aria-label="返回列表"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                <span class="canvas-drawer-title" style="padding:0;border:0"><i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i> 新建矩阵</span>
+            </div>
+            <div class="canvas-field">
+                <label>矩阵名称</label>
+                <input id="matrixCreateName" placeholder="例如：电商主图批量生成" maxlength="120">
+            </div>
+            <div class="canvas-field">
+                <label>维度（名称 + 值，多个值用英文逗号分隔）</label>
+                <div id="matrixCreateDims"></div>
+                <button class="canvas-btn" onclick="matrixAddDimRow()">＋ 添加维度</button>
+                <div class="count-preview" id="matrixCreateCount"></div>
+            </div>
+            <div class="canvas-field">
+                <label>生成参数模板（JSON，prompt 中可用 {维度名} 占位符）</label>
+                <textarea id="matrixCreateParams" spellcheck="false"></textarea>
+                <div class="count-preview">例：{"prompt":"一张电商主图：{角色} 正在展示 {产品}，背景为 {场景}","provider_id":"comfly","model":"flux","size":"1024x1024","quality":"auto","n":1}</div>
+            </div>
+            <div class="canvas-drawer-toolbar">
+                <span style="flex:1"></span>
+                <button class="canvas-btn" onclick="matrixBackToList()">取消</button>
+                <button class="canvas-btn primary" onclick="matrixCreate()">创建矩阵</button>
+            </div>
+        </div>
+    </aside>
+    <!-- V2.5: 视频分镜抽屉 -->
+    <aside id="storyboardPanel" class="canvas-drawer">
+        <div class="canvas-drawer-header">
+            <span class="canvas-drawer-title"><i data-lucide="clapperboard" class="w-4 h-4"></i> 视频分镜</span>
+            <div class="canvas-drawer-head-actions">
+                <button class="chat-modal-close" onclick="refreshStoryboardsPanel()" title="刷新" aria-label="刷新"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                <button class="chat-modal-close" onclick="closeCanvasPanel('storyboard')" title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+            </div>
+        </div>
+        <div class="canvas-drawer-body">
+            <div class="canvas-drawer-toolbar">
+                <select id="storyboardSelect" class="canvas-drawer-select" onchange="storyboardSwitch(this.value)"><option value="">（暂无分镜）</option></select>
+                <button class="canvas-btn" onclick="storyboardCreateOpen()">＋ 新建</button>
+                <button class="canvas-btn primary" id="storyboardRenderAllBtn" onclick="storyboardRenderAll()" disabled>▶ 渲染全部</button>
+                <button class="canvas-btn danger" id="storyboardDeleteBtn" onclick="storyboardDelete()" disabled>删除</button>
+            </div>
+            <div class="storyboard-list" id="storyboardList"></div>
+            <div id="storyboardEmpty" class="canvas-drawer-empty" style="display:none">还没有分镜<br>点击「＋ 新建」：定义场景序列（参考图/提示词/运镜/动作/时长/转场/音频），一键渲染成连续视频片段</div>
+            <button class="canvas-btn storyboard-add-scene" id="storyboardAddSceneBtn" style="display:none" onclick="storyboardAddScene()">＋ 新增场景</button>
+            <div class="storyboard-editor" id="storyboardEditor" style="display:none">
+                <div class="canvas-field">
+                    <label>分镜名称</label>
+                    <input id="storyboardName" placeholder="分镜名称" maxlength="120">
+                </div>
+                <div class="canvas-field">
+                    <label>参考图 / 参考视频（visual）</label>
+                    <div class="storyboard-visual-row">
+                        <div class="storyboard-visual-preview" id="storyboardVisualPreview"><span>🎬</span></div>
+                        <div class="storyboard-visual-actions">
+                            <input id="storyboardVisual" placeholder="粘贴图片/视频 URL，或从素材库选择" spellcheck="false">
+                            <div class="canvas-drawer-toolbar">
+                                <button class="canvas-btn" onclick="storyboardPickOpen()">从素材库选择…</button>
+                                <button class="canvas-btn danger" onclick="storyboardClearVisual()">清除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="canvas-drawer-grid2">
+                    <div class="canvas-field">
+                        <label>运镜（camera）</label>
+                        <input id="storyboardCamera" placeholder="如：缓慢推近 / 环绕 / 俯拍" spellcheck="false">
+                    </div>
+                    <div class="canvas-field">
+                        <label>动作（motion）</label>
+                        <input id="storyboardMotion" placeholder="如：人物转身微笑 / 镜头跟随" spellcheck="false">
+                    </div>
+                    <div class="canvas-field">
+                        <label>时长（秒）</label>
+                        <input id="storyboardDuration" type="number" min="1" max="60" placeholder="默认 5">
+                    </div>
+                    <div class="canvas-field">
+                        <label>转场（transition）</label>
+                        <select id="storyboardTransition">
+                            <option value="">无</option>
+                            <option value="硬切">硬切</option>
+                            <option value="淡入淡出">淡入淡出</option>
+                            <option value="叠化">叠化</option>
+                            <option value="推近">推近</option>
+                            <option value="拉远">拉远</option>
+                            <option value="左移">左移</option>
+                            <option value="右移">右移</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="canvas-field">
+                    <label>音频 URL（audio）<span class="canvas-opt">（可空）</span></label>
+                    <input id="storyboardAudio" placeholder="如：/output/xxx.mp3 或 https://…" spellcheck="false">
+                </div>
+                <div class="canvas-field">
+                    <label>提示词（prompt）</label>
+                    <textarea id="storyboardPrompt" placeholder="描述画面主体、构图、光线与氛围；运镜与动作会自动拼接到提示词末尾" spellcheck="false"></textarea>
+                </div>
+                <div class="storyboard-editor-actions">
+                    <span class="storyboard-status norun" id="storyboardStatus">未渲染</span>
+                    <span class="storyboard-taskid" id="storyboardTaskId"></span>
+                    <span style="flex:1"></span>
+                    <button class="canvas-btn" onclick="storyboardSaveScene()">保存</button>
+                    <button class="canvas-btn primary" onclick="storyboardRenderScene()">▶ 渲染本场景</button>
+                    <button class="canvas-btn danger" onclick="storyboardDeleteScene()">删除场景</button>
+                </div>
+                <details class="storyboard-cfg">
+                    <summary>分镜生成设置（视频平台 / 模型 / 默认时长 / 画幅）</summary>
+                    <div class="storyboard-cfg-body">
+                        <div class="canvas-field"><label>provider_id</label><input id="storyboardCfgProvider" placeholder="comfly" spellcheck="false"></div>
+                        <div class="canvas-field"><label>model</label><input id="storyboardCfgModel" placeholder="veo3-fast" spellcheck="false"></div>
+                        <div class="canvas-field"><label>默认时长（秒）</label><input id="storyboardCfgDuration" type="number" min="1" max="60" placeholder="5"></div>
+                        <div class="canvas-field"><label>画幅（aspect_ratio）</label><input id="storyboardCfgAspect" placeholder="16:9" spellcheck="false"></div>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </aside>
+    <!-- V2.5: 画布内共享弹窗（预览 / 任务详情 / 画布选择 / 参考图选择） -->
+    <div id="canvasModalMask" class="canvas-modal-mask" onclick="if(event.target===this)canvasModalClose()">
+        <div class="canvas-modal">
+            <button class="canvas-modal-close" onclick="canvasModalClose()" title="关闭" aria-label="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <div id="canvasModalTitle" class="canvas-modal-title"></div>
+            <div id="canvasModalBody" class="canvas-modal-body"></div>
+        </div>
+    </div>
     <!-- M2: 生成后快捷操作建议条 -->
     <div id="smartSuggestBar" class="smart-suggest-bar" style="display:none">
         <div class="smart-suggest-label"><i data-lucide="sparkles" class="w-3 h-3"></i><span>接下来</span></div>
         <div id="smartSuggestBtns" class="smart-suggest-btns"></div>
         <button type="button" class="smart-suggest-close" onclick="closeSmartSuggestions()" title="关闭"><i data-lucide="x"></i></button>
     </div>
-    <script defer src="/static/js/smart-canvas.js?v=1.0.107.1786416290.1786415454"></script>
+    <script defer src="/static/js/smart-canvas.js?v=1.0.108.1786428400.1786438856"></script>
 </body>
 </html>

@@ -3205,37 +3205,6 @@
                     </svg>
                     <span class="nav-text" data-i18n="nav.assetManager">素材库</span>
                 </div>
-                <div class="nav-item" onclick="switchUI(this, 'outputs')">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
-                        <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
-                        <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
-                        <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
-                        <path d="M8 12h8"></path>
-                        <path d="M12 8v8"></path>
-                    </svg>
-                    <span class="nav-text">输出</span>
-                </div>
-                <div class="nav-item" onclick="switchUI(this, 'matrix')">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="3" width="7" height="7"></rect>
-                        <rect x="14" y="14" width="7" height="7"></rect>
-                        <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                    <span class="nav-text">批量</span>
-                </div>
-                <div class="nav-item" onclick="switchUI(this, 'storyboard')">
-                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M8 21h8"></path>
-                        <path d="M12 17v4"></path>
-                        <path d="M17 4H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
-                        <path d="M9 8h6"></path>
-                        <path d="M9 11h6"></path>
-                        <path d="M12 14h.01"></path>
-                    </svg>
-                    <span class="nav-text">分镜</span>
-                </div>
             </nav>
 
             <div class="side-actions">
@@ -3304,9 +3273,6 @@
             <iframe id="frame-online" data-src="/static/online.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
             <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
             <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
-            <iframe id="frame-outputs" data-src="/static/outputs.html?v=1.0.108.1786428400.1786440247" scrolling="yes"></iframe>
-            <iframe id="frame-matrix" data-src="/static/matrix.html?v=1.0.108.1786428400.1786440723" scrolling="yes"></iframe>
-            <iframe id="frame-storyboard" data-src="/static/storyboard.html?v=1.0.108.1786428400.1786441389" scrolling="yes"></iframe>
             <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
             <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
             <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.108.1786428400.1786437852" scrolling="yes"></iframe>
@@ -3861,7 +3827,7 @@
         const SIDEBAR_SETTINGS_COLLAPSED_KEY = 'studio_sidebar_settings_collapsed';
         const SIDEBAR_PINNED_KEY = 'studio_sidebar_pinned';
         const DEFAULT_PAGE_ID = 'zimage';
-        const PAGE_IDS = ['home','zimage','enhance','klein','angle','online','gpt-chat','canvas','asset-manager','outputs','matrix','storyboard','api-settings','comfyui-settings'];
+        const PAGE_IDS = ['home','zimage','enhance','klein','angle','online','gpt-chat','canvas','asset-manager','api-settings','comfyui-settings'];
         const PROJECT_URL = 'https://github.com/invaders-2/NOVAI';
         let appInfo = { version:'', repo_url:PROJECT_URL, version_url:'https://raw.githubusercontent.com/invaders-2/NOVAI/main/VERSION' };
         let updateConnectivityResult = null;

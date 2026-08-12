@@ -22750,20 +22750,36 @@ def _agent_pick_image_provider(preferred=""):
 
 
 async def _agent_tool_generate_image_run(args):
-    """建 smart-image 节点（带参考图）→ 真实生成任务（Task Engine）→ 结果自动落画布。"""
+    """建「提示词节点 → 图片节点」完整工作流（含连线，ComfyUI 式管线）
+    → 真实生成任务（Task Engine）→ 结果自动落画布图片节点。"""
     canvas_id = args["canvas_id"]
-    # 1) 建节点：复用 create_node 工具，保证节点结构与画布类型一致（smart-image / image）
     count = len(load_canvas(canvas_id).get("nodes") or [])
+    rx = 220 + (count % 5) * 70
+    ry = 160 + (count % 4) * 70
+    # 1) 建提示词节点（结果节点左侧，作为工作流起点）
+    prompt_args = _agent_tool_create_node_validate({
+        "canvas_id": canvas_id, "type": "prompt",
+        "prompt": args["prompt"],
+        "title": (args["title"] or "Image") + " 提示词",
+        "x": rx - 280, "y": ry,
+    })
+    prompt_res = _agent_tool_create_node_run(prompt_args)
+    prompt_node_id = prompt_res["node_id"]
+    # 2) 建图片结果节点（复用 create_node 工具，保证节点结构与画布类型一致 smart-image / image）
     node_args = _agent_tool_create_node_validate({
         "canvas_id": canvas_id, "type": "image",
         "prompt": args["prompt"],
         "title": args["title"] or "Image",
-        "x": 220 + (count % 5) * 70,
-        "y": 160 + (count % 4) * 70,
+        "x": rx, "y": ry,
     })
     node_res = _agent_tool_create_node_run(node_args)
     node_id = node_res["node_id"]
-    # 2) 参考图挂到节点 images（画布上可见）+ 记录提示词
+    # 3) 连线：提示词节点 → 图片节点（用户可见完整管线）
+    conn_args = _agent_tool_connect_nodes_validate({
+        "canvas_id": canvas_id, "from": prompt_node_id, "to": node_id, "kind": "input",
+    })
+    _agent_tool_connect_nodes_run(conn_args)
+    # 4) 参考图挂到图片节点 images（画布上可见）+ 记录提示词
     refs = args["reference_urls"]
 
     def _attach(canvas):
@@ -22803,6 +22819,7 @@ async def _agent_tool_generate_image_run(args):
     except Exception as exc:
         print(f"[Agent] 记录 task_id 到节点失败（不影响任务）: {exc}")
     return {
+        "prompt_node_id": prompt_node_id,
         "node_id": node_id,
         "task_id": task["id"],
         "status": "queued",
@@ -22811,13 +22828,13 @@ async def _agent_tool_generate_image_run(args):
         "size": args["size"],
         "reference_count": len(refs),
         "prompt": args["prompt"][:160] + ("…" if len(args["prompt"]) > 160 else ""),
-        "message": f"已在画布创建图片节点并提交生成任务（{args['provider']}，size={args['size']}），出图后自动落到节点",
+        "message": f"已在画布创建提示词节点+图片节点并连线（{args['provider']}，size={args['size']}），生成任务已提交，出图后自动落到图片节点",
     }
 
 
 def _agent_tool_generate_image_preview(args, canvas):
     refs = args.get("reference_urls") or []
-    return f"将在画布新建图片节点并立即发起真实生成（provider={args.get('provider') or 'comfly'}, " + \
+    return f"将在画布创建提示词节点 + 图片节点并连线，立即发起真实生成（provider={args.get('provider') or 'comfly'}, " + \
            f"model={args.get('model') or '默认'}, size={args.get('size') or '1024x1024'}，参考图 {len(refs)} 张）" + \
            f"，提示词：{str(args.get('prompt') or '')[:40]}…"
 
@@ -22896,18 +22913,35 @@ def _agent_tool_generate_video_validate(args):
 
 
 async def _agent_tool_generate_video_run(args):
-    """建 video 节点 → 真实视频生成任务（Task Engine）→ 结果自动落画布。"""
+    """建「提示词节点 → 视频节点」完整工作流（含连线，ComfyUI 式管线）
+    → 真实视频生成任务（Task Engine）→ 结果自动落画布视频节点。"""
     canvas_id = args["canvas_id"]
     count = len(load_canvas(canvas_id).get("nodes") or [])
+    rx = 220 + (count % 5) * 70
+    ry = 160 + (count % 4) * 70
+    # 1) 建提示词节点（结果节点左侧，作为工作流起点）
+    prompt_args = _agent_tool_create_node_validate({
+        "canvas_id": canvas_id, "type": "prompt",
+        "prompt": args["prompt"],
+        "title": (args["title"] or "Video") + " 提示词",
+        "x": rx - 280, "y": ry,
+    })
+    prompt_res = _agent_tool_create_node_run(prompt_args)
+    prompt_node_id = prompt_res["node_id"]
+    # 2) 建视频结果节点（复用 create_node 工具，保证节点结构与画布类型一致 smart-video / video）
     node_args = _agent_tool_create_node_validate({
         "canvas_id": canvas_id, "type": "video",
         "prompt": args["prompt"],
         "title": args["title"] or "Video",
-        "x": 220 + (count % 5) * 70,
-        "y": 160 + (count % 4) * 70,
+        "x": rx, "y": ry,
     })
     node_res = _agent_tool_create_node_run(node_args)
     node_id = node_res["node_id"]
+    # 3) 连线：提示词节点 → 视频节点（用户可见完整管线）
+    conn_args = _agent_tool_connect_nodes_validate({
+        "canvas_id": canvas_id, "from": prompt_node_id, "to": node_id, "kind": "input",
+    })
+    _agent_tool_connect_nodes_run(conn_args)
     refs = args["reference_urls"]
     vids = args["reference_video"]
 
@@ -22951,6 +22985,7 @@ async def _agent_tool_generate_video_run(args):
     except Exception as exc:
         print(f"[Agent] 记录 task_id 到节点失败（不影响任务）: {exc}")
     return {
+        "prompt_node_id": prompt_node_id,
         "node_id": node_id,
         "task_id": task["id"],
         "status": "queued",
@@ -22959,14 +22994,14 @@ async def _agent_tool_generate_video_run(args):
         "duration": args["duration"],
         "reference_count": len(refs) + len(vids),
         "prompt": args["prompt"][:160] + ("…" if len(args["prompt"]) > 160 else ""),
-        "message": f"已在画布创建视频节点并提交生成任务（{args['provider']}，duration={args['duration']}s，ratio={args['ratio']}），完成后自动落到节点",
+        "message": f"已在画布创建提示词节点+视频节点并连线（{args['provider']}，duration={args['duration']}s，ratio={args['ratio']}），生成任务已提交，完成后自动落到视频节点",
     }
 
 
 def _agent_tool_generate_video_preview(args, canvas):
     refs = args.get("reference_urls") or []
     vids = args.get("reference_video") or []
-    return f"将在画布新建视频节点并立即发起真实生成（provider={args.get('provider') or 'comfly'}, " + \
+    return f"将在画布创建提示词节点 + 视频节点并连线，立即发起真实视频生成（provider={args.get('provider') or 'comfly'}, " + \
            f"model={args.get('model') or '默认'}, {args.get('duration') or 5}s，参考 {len(refs)} 图 + {len(vids)} 视频）" + \
            f"，提示词：{str(args.get('prompt') or '')[:40]}…"
 
@@ -23244,7 +23279,7 @@ AGENT_TOOLS = {
         "mutates_canvas": True,
     },
     "generate_image": {
-        "description": "一句话出图：在画布新建图片节点（带提示词/参考图）并立即发起真实生成任务（进 Task Engine），出图后结果自动落到该节点。返回 node_id 与 task_id。",
+        "description": "一句话出图：在画布创建「提示词节点 → 图片节点」完整工作流并连线（ComfyUI 式管线，用户可见），立即发起真实生成任务（进 Task Engine），出图后结果自动落到图片节点。返回 node_id（图片节点）、prompt_node_id（提示词节点）与 task_id。",
         "schema": {"type": "object", "properties": {
             "canvas_id": {"type": "string"},
             "prompt": {"type": "string", "description": "图片提示词（必填）"},
@@ -23261,7 +23296,7 @@ AGENT_TOOLS = {
         "mutates_canvas": True,
     },
     "generate_video": {
-        "description": "一句话生成视频：在画布新建视频节点（带提示词/参考图/参考视频）并立即发起真实视频生成任务（进 Task Engine），完成后结果自动落到该节点。返回 node_id 与 task_id。",
+        "description": "一句话生成视频：在画布创建「提示词节点 → 视频节点」完整工作流并连线（ComfyUI 式管线，用户可见），立即发起真实视频生成任务（进 Task Engine），完成后结果自动落到视频节点。返回 node_id（视频节点）、prompt_node_id（提示词节点）与 task_id。",
         "schema": {"type": "object", "properties": {
             "canvas_id": {"type": "string"},
             "prompt": {"type": "string", "description": "视频提示词（必填），描述画面内容/运镜/动作"},

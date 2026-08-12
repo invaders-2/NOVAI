@@ -1731,6 +1731,9 @@ input[type=range].smart-range::-webkit-slider-thumb { -webkit-appearance:none; w
     border-radius: 10px; border: 1px solid var(--border);
 }
 .agent-step-error { font-size: 10.5px; color: var(--danger); line-height: 1.45; margin-top: 4px; word-break: break-all; }
+.agent-wf-note { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+.agent-retry-btn { margin-top: 6px; padding: 4px 12px; font-size: 10.5px; color: var(--accent); border-color: var(--accent); background: var(--panel); }
+.agent-retry-btn:hover:not(:disabled) { background: var(--soft); }
 .agent-plan-preview { display: flex; flex-direction: column; gap: 6px; }
 .agent-preview-note { font-size: 10px; color: var(--muted); }
 .agent-preview-step {

@@ -5216,6 +5216,12 @@ function renderAgentPlanCard(bubble, plan){
         if(s.tool === 'generate_image' || s.tool === 'generate_video' || s.tool === 'create_node'){
             editable = agentStepEditHtml(s, i);
         }
+        // 描述兜底：LLM 未写描述时，生图/生视频步骤展示完整工作流说明
+        var desc = s.description;
+        if(!desc){
+            if(s.tool === 'generate_image') desc = '创建提示词节点 → 图片节点 → 连线 → 生成';
+            else if(s.tool === 'generate_video') desc = '创建提示词节点 → 视频节点 → 连线 → 生成';
+        }
         return '<div class="agent-step" data-step="' + i + '">' +
             '<div class="agent-step-rail">' +
                 '<span class="agent-step-icon"><i data-lucide="' + agentToolIcon(s.tool) + '"></i></span>' +
@@ -5226,7 +5232,7 @@ function renderAgentPlanCard(bubble, plan){
                     '<span class="agent-step-tool"><i data-lucide="' + agentToolIcon(s.tool) + '"></i>' + escapeHtml(s.tool || '') + '</span>' +
                     '<span class="agent-step-state"></span>' +
                 '</div>' +
-                (s.description ? '<div class="agent-step-desc">' + escapeHtml(s.description) + '</div>' : '') +
+                (desc ? '<div class="agent-step-desc">' + escapeHtml(desc) + '</div>' : '') +
                 (chips ? '<div class="agent-step-chips">' + chips + '</div>' : '') +
                 editable +
             '</div></div>';
@@ -5397,6 +5403,14 @@ function renderAgentApplyResult(card, data, ok){
             if((r.tool === 'generate_image' || r.tool === 'generate_video') && r.result && r.result.task_id){
                 agentPollGenerateTask(r.result.node_id, r.result.task_id, stepEl, card, r.tool === 'generate_video' ? 'video' : 'image');
             }
+            // 完整工作流提示：已建提示词节点 → 结果节点（已连线）
+            if((r.tool === 'generate_image' || r.tool === 'generate_video') && r.result && r.result.prompt_node_id){
+                var wfNote = document.createElement('div');
+                wfNote.className = 'agent-wf-note';
+                wfNote.textContent = '已创建提示词节点 ' + r.result.prompt_node_id + ' → ' +
+                    (r.tool === 'generate_video' ? '视频节点' : '图片节点') + '（已连线）';
+                stepEl.querySelector('.agent-step-body').appendChild(wfNote);
+            }
         } else {
             stepEl.classList.add('fail');
             if(stateEl) stateEl.innerHTML = agentStepStateHtml('fail');
@@ -5516,6 +5530,16 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card, kind){
                         errBox.className = 'agent-step-error';
                         errBox.textContent = (task.error || '生成失败').slice(0, 200);
                         stepEl.querySelector('.agent-step-body').appendChild(errBox);
+                        // 失败 → [🔄 重新生成] 按钮（POST /api/tasks/{id}/retry，成功后重新轮询）
+                        var retryBtn = document.createElement('button');
+                        retryBtn.type = 'button';
+                        retryBtn.className = 'agent-btn agent-retry-btn';
+                        retryBtn.innerHTML = '<i data-lucide="refresh-cw"></i> 重新生成';
+                        retryBtn.addEventListener('click', function(){
+                            agentRetryGenerate(this, taskId, nodeId, stepEl, card);
+                        });
+                        stepEl.querySelector('.agent-step-body').appendChild(retryBtn);
+                        refreshIcons();
                     }
                     toast('生成失败：' + (task.error || '').slice(0, 80), '!');
                     return;
@@ -5525,6 +5549,47 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card, kind){
             .catch(function(){ if(++tick < maxTicks) setTimeout(tickOnce, 3000); });
     })();
 }
+// 失败任务重试：POST /api/tasks/{id}/retry → 成功后清理错误 UI + 重置防重入 + 重新轮询
+function agentRetryGenerate(btn, taskId, nodeId, stepEl, card){
+    if(!btn || btn.disabled) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="agent-btn-spinner"></span> 重试中…';
+    fetch('/api/tasks/' + encodeURIComponent(taskId) + '/retry', {method:'POST', headers:{'Content-Type':'application/json'}})
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, data:d}; }); })
+        .then(function(res){
+            if(!res.ok){
+                var msg = (res.data && (res.data.detail || res.data.error)) || '重试失败';
+                if(typeof msg === 'object') msg = JSON.stringify(msg);
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="refresh-cw"></i> 重试失败：' + escapeHtml(String(msg).slice(0, 60));
+                refreshIcons();
+                toast('重新生成失败：' + String(msg).slice(0, 80), '!');
+                return;
+            }
+            // 成功：移除错误框与按钮，状态变 spin，重新开始轮询
+            var body = stepEl ? stepEl.querySelector('.agent-step-body') : null;
+            if(body){
+                var errBox = body.querySelector('.agent-step-error');
+                if(errBox) errBox.remove();
+                if(btn.parentNode) btn.parentNode.removeChild(btn);
+            }
+            if(stepEl) stepEl.classList.remove('fail');
+            // kind 从计划步骤反查（generate_video → video，其余 image）
+            var kind = 'image';
+            if(card && card._agentPlan && stepEl){
+                var s = card._agentPlan.steps[Number(stepEl.getAttribute('data-step'))];
+                if(s && s.tool === 'generate_video') kind = 'video';
+            }
+            delete agentGenPolls[taskId]; // 重置防重入，允许重新轮询
+            agentPollGenerateTask(nodeId, taskId, stepEl, card, kind);
+        })
+        .catch(function(e){
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="refresh-cw"></i> 重试失败：' + escapeHtml((e.message || '网络错误').slice(0, 60));
+            refreshIcons();
+        });
+}
+window.agentRetryGenerate = agentRetryGenerate;
 function refreshCanvasAfterAgent(){
     // 应用/回滚后刷新画布状态（复用现有合并机制，不打断用户操作）
     try {

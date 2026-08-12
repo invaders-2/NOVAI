@@ -595,6 +595,14 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         <div id="chatContext" class="chat-context"></div>
         <div class="chat-resize"></div>
     </div>
+    <!-- V2: 版本历史面板 -->
+    <div id="versionPanel" class="version-panel" style="display:none">
+        <div class="version-panel-header">
+            <span class="version-panel-title"><i data-lucide="history" class="w-4 h-4"></i> 版本历史</span>
+            <button class="chat-modal-close" onclick="closeCanvasVersionsPanel()" title="关闭"><i data-lucide="x"></i></button>
+        </div>
+        <div id="versionList" class="version-list"></div>
+    </div>
     <!-- M2: 生成后快捷操作建议条 -->
     <div id="smartSuggestBar" class="smart-suggest-bar" style="display:none">
         <div class="smart-suggest-label"><i data-lucide="sparkles" class="w-3 h-3"></i><span>接下来</span></div>

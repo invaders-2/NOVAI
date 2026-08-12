@@ -22951,50 +22951,74 @@ def _agent_extract_json(text):
 
 
 async def agent_generate_plan(canvas_id, instruction, context, provider="comfly", model="", ms_model=""):
-    """调用对话模型生成结构化计划。LLM 不可用时抛 HTTPException（400/502），绝不 mock。"""
+    """调用对话模型生成结构化计划。LLM 不可用时抛 HTTPException（400/502），绝不 mock。
+    provider 不可用时自动回退到可用 provider（modelscope → lingjing → volcengine）。"""
     canvas = load_canvas(canvas_id)  # 404 校验
     summary = _agent_canvas_summary(canvas)
-    try:
-        chat_base, chat_hdrs, mdl = resolve_chat_provider(provider, model, ms_model)
-    except HTTPException as exc:
-        raise HTTPException(status_code=400,
-                            detail=f"无法生成计划（对话模型不可用）：{exc.detail}") from exc
-    system = _AGENT_PLAN_SYSTEM_PROMPT.format(
-        tools_json=json.dumps(_agent_build_tools_catalog(), ensure_ascii=False),
-        canvas_summary=json.dumps(summary, ensure_ascii=False))
-    user_text = f"用户指令：{instruction}"
-    if context:
-        user_text += f"\n补充上下文：{context}"
-    user_text += "\n请返回计划 JSON。"
-    upstream_messages = [{"role": "system", "content": system}, {"role": "user", "content": user_text}]
-    provider_cfg = get_api_provider(provider) if provider not in ("modelscope",) else {}
-    try:
-        async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV,
-                                     timeout=AI_REQUEST_TIMEOUT) as client:
-            req_body = {"model": mdl, "messages": upstream_messages}
-            if is_apimart_provider(provider_cfg):
-                req_body["stream"] = False
-            response = await client.post(f"{chat_base}/chat/completions", headers=chat_hdrs, json=req_body)
-            response.raise_for_status()
-            raw = response.json()
-    except httpx.HTTPStatusError as exc:
-        body = exc.response.text or ""
-        raise HTTPException(status_code=exc.response.status_code,
-                            detail=f"计划生成失败：上游模型接口错误 {body[:300]}") from exc
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=f"计划生成失败：请求上游模型接口出错：{exc}") from exc
-    text = text_from_chat_response(raw)
-    json_text = _agent_extract_json(text)
-    if not json_text:
-        raise HTTPException(status_code=400,
-                            detail=f"计划生成失败：模型返回的不是合法 JSON：{(text or '')[:300]}")
-    try:
-        plan = json.loads(json_text)
-    except Exception as exc:
-        raise HTTPException(status_code=400,
-                            detail=f"计划生成失败：JSON 解析错误：{exc}；原文：{(text or '')[:300]}") from exc
-    if not isinstance(plan, dict):
-        raise HTTPException(status_code=400, detail="计划生成失败：模型返回的不是对象")
+    # 探测可用 provider：前端传的优先，不可用则依次尝试
+    tried = []
+    candidates = [provider] if provider and provider != "comfly" else []
+    candidates += ["modelscope", "lingjing", "volcengine"]
+    seen = set()
+    candidates = [p for p in candidates if not (p in seen or seen.add(p))]
+    last_detail = ""
+    for cand in candidates:
+        tried.append(cand)
+        try:
+            chat_base, chat_hdrs, mdl = resolve_chat_provider(cand, model if cand == provider else "", ms_model if cand == "modelscope" else "")
+        except HTTPException as exc:
+            last_detail = str(exc.detail)
+            continue
+        if not chat_base:
+            last_detail = f"{cand} 未配置 Base URL"
+            continue
+        provider_cfg = get_api_provider(cand) if cand not in ("modelscope",) else {}
+        system = _AGENT_PLAN_SYSTEM_PROMPT.format(
+            tools_json=json.dumps(_agent_build_tools_catalog(), ensure_ascii=False),
+            canvas_summary=json.dumps(summary, ensure_ascii=False))
+        user_text = f"用户指令：{instruction}"
+        if context:
+            user_text += f"\n补充上下文：{context}"
+        user_text += "\n请返回计划 JSON。"
+        upstream_messages = [{"role": "system", "content": system}, {"role": "user", "content": user_text}]
+        try:
+            async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV,
+                                         timeout=AI_REQUEST_TIMEOUT) as client:
+                req_body = {"model": mdl, "messages": upstream_messages}
+                if is_apimart_provider(provider_cfg):
+                    req_body["stream"] = False
+                response = await client.post(f"{chat_base}/chat/completions", headers=chat_hdrs, json=req_body)
+                response.raise_for_status()
+                raw = response.json()
+        except httpx.HTTPStatusError as exc:
+            last_detail = f"上游模型接口错误 {exc.response.text[:200]}"
+            continue
+        except httpx.HTTPError as exc:
+            last_detail = f"请求上游模型接口出错：{exc}"
+            continue
+        text = text_from_chat_response(raw)
+        json_text = _agent_extract_json(text)
+        if not json_text:
+            last_detail = f"模型返回的不是合法 JSON：{(text or '')[:200]}"
+            continue
+        try:
+            plan = json.loads(json_text)
+        except Exception as exc:
+            last_detail = f"JSON 解析错误：{exc}"
+            continue
+        if not isinstance(plan, dict):
+            last_detail = "模型返回的不是对象"
+            continue
+        if not isinstance(plan.get("steps"), list):
+            last_detail = "模型返回格式不符合要求（缺 steps 数组）"
+            continue
+        return _agent_normalize_plan(plan, mdl)
+    raise HTTPException(status_code=400,
+                        detail=f"无法生成计划（对话模型不可用）：{last_detail or '无可用 provider'}（已尝试: {'、'.join(tried)}）")
+
+
+def _agent_normalize_plan(plan, mdl):
+    """校验并清洗模型返回的计划：过滤未知工具、规范 steps 结构。"""
     intent = str(plan.get("intent") or "").strip()
     steps = plan.get("steps")
     if not isinstance(steps, list) or not steps:

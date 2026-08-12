@@ -4565,8 +4565,17 @@ function initChatModel(){
         });
     });
     if(!allModels.length) allModels.push({name:'gpt-4o-mini', provider:'openai'});
-    chatModel = allModels[0].name;
-    chatProvider = allModels[0].provider;
+    // 优先恢复用户上次选择的模型（localStorage 记忆），否则取第一个
+    var savedModel = localStorage.getItem('smart_chat_model') || '';
+    var savedProvider = localStorage.getItem('smart_chat_provider') || '';
+    var chosen = null;
+    if(savedModel){
+        chosen = allModels.find(function(m){ return m.name === savedModel && (!savedProvider || m.provider === savedProvider); });
+        if(!chosen) chosen = allModels.find(function(m){ return m.name === savedModel; });
+    }
+    if(!chosen) chosen = allModels[0];
+    chatModel = chosen.name;
+    chatProvider = chosen.provider;
     chatModelSelect.innerHTML = allModels.map(function(m){
         return '<option value="'+escapeHtml(m.name)+'" data-provider="'+escapeHtml(m.provider)+'">'+escapeHtml(m.name)+'</option>';
     }).join('');
@@ -4576,8 +4585,16 @@ function changeChatModel(val){
     chatModel = val;
     var sel = chatModelSelect.selectedOptions[0];
     if(sel) chatProvider = sel.dataset.provider || resolveChatProviderId();
+    // 记忆用户选择，下次打开助手沿用
+    try {
+        localStorage.setItem('smart_chat_model', chatModel);
+        localStorage.setItem('smart_chat_provider', chatProvider);
+    } catch(e){}
 }
 initChatModel();
+window.changeChatModel = changeChatModel;
+window.initChatModel = initChatModel;
+window.currentChatModel = currentChatModel;
 function refreshChatModels(){
     initChatModel();
 }
@@ -5066,6 +5083,17 @@ async function agentPlanAction(act, btn){
                     }
                 });
             }
+            // 用户在下拉选择的 provider/model → 覆盖 generate_image 的模型（跟随用户选择）
+            var userProvider = chatProvider || resolveChatProviderId();
+            var userModel = currentChatModel();
+            steps = JSON.parse(JSON.stringify(steps));
+            steps.forEach(function(s){
+                if(s.tool === 'generate_image'){
+                    s.args = s.args || {};
+                    s.args.provider = userProvider;
+                    s.args.model = userModel;
+                }
+            });
             var resp = await fetch('/api/agent/apply', {
                 method:'POST', headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({canvas_id: st.canvas_id, steps: steps})

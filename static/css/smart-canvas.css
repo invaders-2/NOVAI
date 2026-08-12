@@ -1697,6 +1697,10 @@ input[type=range].smart-range::-webkit-slider-thumb { -webkit-appearance:none; w
     cursor: pointer; transition: transform .15s, box-shadow .15s, background .15s, opacity .15s;
     display: inline-flex; align-items: center; gap: 5px;
 }
+.agent-btn svg, .agent-btn i { width: 13px; height: 13px; flex-shrink: 0; }
+.agent-intent-icon { width: 15px; height: 15px; color: var(--accent); vertical-align: -2px; margin-right: 4px; }
+.agent-step-icon { width: 13px; height: 13px; flex-shrink: 0; color: var(--muted); }
+.agent-step-tool svg { width: 12px; height: 12px; vertical-align: -2px; margin-right: 3px; }
 .agent-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px var(--shadow); }
 .agent-btn:active:not(:disabled) { transform: translateY(0); }
 .agent-btn:disabled { opacity: .5; cursor: default; }

@@ -4876,8 +4876,8 @@ async function sendChatFallback(text, msgDiv){
             var cmd = JSON.parse(actionMatch[0]);
             reply = reply.replace(actionMatch[0], '').trim();
             executeChatActions(cmd.actions);
-            reply = (reply || '已执行') + '\n\n✅ 操作完成';
-        } catch(ex){ reply += '\n\n⚠️ 指令解析失败'; }
+            reply = (reply || '已执行') + '\n\n✓ 操作完成';
+        } catch(ex){ reply += '\n\n! 指令解析失败'; }
     }
     chatMessages.push({role:'assistant', text:reply});
     // 打字机效果逐步显示
@@ -4990,13 +4990,13 @@ function renderAgentPlanCard(bubble, plan){
             '<span class="agent-plan-badge"><i data-lucide="sparkles"></i> Agent 计划</span>' +
             '<span class="agent-plan-status">已生成</span>' +
         '</div>' +
-        '<div class="agent-plan-intent">🎯 ' + escapeHtml(plan.intent || '画布操作计划') + '</div>' +
+        '<div class="agent-plan-intent"><i data-lucide="wand-sparkles" class="agent-intent-icon"></i> ' + escapeHtml(plan.intent || '画布操作计划') + '</div>' +
         (plan.expected_output ? '<div class="agent-plan-expected">' + escapeHtml(plan.expected_output) + '</div>' : '') +
         '<div class="agent-plan-timeline">' + stepsHtml + '</div>' +
         '<div class="agent-plan-preview"></div>' +
         '<div class="agent-plan-actions">' +
-            '<button type="button" class="agent-btn" onclick="agentPlanAction(\'preview\', this)">👁 预览</button>' +
-            '<button type="button" class="agent-btn primary" onclick="agentPlanAction(\'apply\', this)">🚀 应用</button>' +
+            '<button type="button" class="agent-btn" onclick="agentPlanAction(\'preview\', this)"><i data-lucide="scan-line"></i> 预览</button>' +
+            '<button type="button" class="agent-btn primary" onclick="agentPlanAction(\'apply\', this)"><i data-lucide="mouse-pointer-click"></i> 应用</button>' +
             '<button type="button" class="agent-btn ghost" onclick="agentPlanAction(\'cancel\', this)">取消</button>' +
         '</div>';
     bubble.appendChild(card);
@@ -5035,7 +5035,7 @@ async function agentPlanAction(act, btn){
                 previewBox.innerHTML = '<div class="agent-preview-fail">预览失败：' + escapeHtml(agentErrText(data)) + '</div>';
             } else {
                 var items = (data.steps || []).map(function(p){
-                    var warnHtml = p.warning ? '<div class="agent-warn' + (p.valid === false ? ' invalid' : '') + '">⚠️ ' + escapeHtml(p.warning) + '</div>' : '';
+                    var warnHtml = p.warning ? '<div class="agent-warn' + (p.valid === false ? ' invalid' : '') + '"><span class="agent-warn-mark">!</span> ' + escapeHtml(p.warning) + '</div>' : '';
                     return '<div class="agent-preview-step' + (p.valid === false ? ' invalid' : '') + '">' +
                         '<div class="agent-preview-tool">' + (p.index + 1) + '. ' + escapeHtml(p.tool) + '</div>' +
                         (p.impact ? '<div class="agent-preview-impact">' + escapeHtml(p.impact) + '</div>' : '') +
@@ -5089,20 +5089,20 @@ async function agentPlanAction(act, btn){
             });
             var data = await resp.json();
             if(!resp.ok){
-                toast('回滚失败：' + agentErrText(data), '⚠️');
+                toast('回滚失败：' + agentErrText(data), '!');
                 agentPlanSetBusy(card, false, '已应用');
                 btn.classList.remove('applying');
                 return;
             }
             st.status = 'rolled_back';
-            agentPlanSetBusy(card, false, '已回滚');
+            agentPlanSetBusy(card, false, '已撤销');
             btn.classList.remove('applying');
             btn.disabled = true;
-            btn.innerHTML = '↩ 已撤销';
-            toast('已回滚到 v' + data.restored_from, '↩️');
+            btn.innerHTML = '<i data-lucide="check"></i> 已撤销';
+            toast('已回滚到 v' + data.restored_from, '↩');
             refreshCanvasAfterAgent();
         } catch(e){
-            toast('回滚失败：' + (e.message || '网络错误'), '⚠️');
+            toast('回滚失败：' + (e.message || '网络错误'), '!');
             agentPlanSetBusy(card, false, '已应用');
             btn.classList.remove('applying');
         }
@@ -5142,23 +5142,23 @@ function renderAgentApplyResult(card, data, ok){
         var rb = document.createElement('button');
         rb.type = 'button';
         rb.className = 'agent-btn danger';
-        rb.innerHTML = '↩ 撤销本次修改';
+        rb.innerHTML = '<i data-lucide="undo-2"></i> 撤销本次修改';
         rb.setAttribute('onclick', "agentPlanAction('rollback', this)");
         var row = card.querySelector('.agent-plan-actions');
         if(row) row.appendChild(rb);
         var applyBtn = card.querySelector('.agent-btn.primary.applying');
         if(applyBtn) applyBtn.remove();
-        toast('Agent 修改已应用，可撤销', '✅');
+        toast('Agent 修改已应用，可撤销', '✓');
         refreshCanvasAfterAgent();
     } else {
         st.status = 'failed';
         var statusEl2 = card.querySelector('.agent-plan-status');
         if(statusEl2) statusEl2.textContent = '失败';
-        toast('Agent 计划执行失败：' + agentErrText(data), '❌');
+        toast('Agent 计划执行失败：' + agentErrText(data), '✗');
         var applyBtn2 = card.querySelector('.agent-btn.primary.applying');
         if(applyBtn2){
             applyBtn2.classList.remove('applying');
-            applyBtn2.innerHTML = '🚀 重试';
+            applyBtn2.innerHTML = '<i data-lucide="refresh-cw"></i> 重试';
         }
     }
     agentPlanSetBusy(card, false, undefined);
@@ -5204,7 +5204,7 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card){
                     stepEl.querySelector('.agent-step-body').appendChild(imgBox);
                     refreshIcons();
                 }
-                toast('图片已生成到画布', '🎉');
+                toast('图片已生成到画布', '✓');
                 return;
             }
             if(!node && tries++ < 8){ setTimeout(place, 1000); return; }
@@ -5214,7 +5214,7 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card){
                 imgBox2.innerHTML = '<img src="' + escapeHtml(thumbUrl) + '" alt="生成结果">';
                 stepEl.querySelector('.agent-step-body').appendChild(imgBox2);
             }
-            toast('图片已生成（节点未找到，已刷新画布查看）', '🎉');
+            toast('图片已生成（节点未找到，已刷新画布查看）', '✓');
         })();
     }
     (function tickOnce(){
@@ -5232,7 +5232,7 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card){
                         errBox.textContent = (task.error || '生成失败').slice(0, 200);
                         stepEl.querySelector('.agent-step-body').appendChild(errBox);
                     }
-                    toast('生成失败：' + (task.error || '').slice(0, 80), '⚠️');
+                    toast('生成失败：' + (task.error || '').slice(0, 80), '!');
                     return;
                 }
                 if(++tick < maxTicks) setTimeout(tickOnce, 3000);

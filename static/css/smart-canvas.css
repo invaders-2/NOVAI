@@ -1683,6 +1683,8 @@ input[type=range].smart-range::-webkit-slider-thumb { -webkit-appearance:none; w
 .agent-preview-impact { color: var(--muted); margin-top: 2px; line-height: 1.45; }
 .agent-warn { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
 .agent-warn.invalid { color: var(--danger); }
+.agent-warn-mark { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border-radius:999px; background:var(--warning); color:#fff; font-size:9px; font-weight:700; margin-right:4px; }
+.agent-warn.invalid .agent-warn-mark { background: var(--danger); }
 .agent-preview-fail {
     font-size: 11px; color: var(--danger); background: var(--soft);
     border: 1px solid var(--danger); border-radius: 10px; padding: 6px 10px;

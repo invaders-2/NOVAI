@@ -22608,8 +22608,31 @@ def _agent_tool_generate_image_validate(args):
     }
 
 
+def _agent_available_providers():
+    """动态返回可用的 provider 列表（按用户配置顺序：启用的、有 key 的优先）。
+    不做任何平台硬编码——用户配了什么用什么。"""
+    providers = load_api_providers()
+    ordered = []
+    seen = set()
+    for p in providers:
+        pid = str((p or {}).get("id") or "").strip().lower()
+        if not pid or pid in seen:
+            continue
+        seen.add(pid)
+        if (p or {}).get("enabled") is False:
+            continue
+        try:
+            base, _, _ = resolve_chat_provider(pid, "", "")
+            if base:
+                ordered.append(pid)
+        except HTTPException:
+            continue
+    # 保证 comfly 在最后兜底（如果配置里有）
+    return [p for p in ordered if p != "comfly"] + [p for p in ordered if p == "comfly"]
+
+
 def _agent_pick_image_provider(preferred=""):
-    """生图 provider 自动探测：用户指定 > 有 key 的平台（lingjing/modelscope/volcengine）> comfly。"""
+    """生图 provider 自动探测：用户指定 > 动态可用平台（按用户配置顺序）> comfly。"""
     pref = str(preferred or "").strip().lower()
     if pref and pref != "comfly":
         try:
@@ -22618,13 +22641,14 @@ def _agent_pick_image_provider(preferred=""):
                 return pref
         except HTTPException:
             pass
-    for cand in ("lingjing", "modelscope", "volcengine"):
-        try:
-            base, _, _ = resolve_chat_provider(cand, "", "")
-            if base:
-                return cand
-        except HTTPException:
-            continue
+    avail = _agent_available_providers()
+    for cand in avail:
+        # 生图优先选配置了 image_models 的平台
+        p = get_api_provider(cand)
+        if p and ((p.get("image_models") or []) or (p.get("models") or [])):
+            return cand
+    for cand in avail:
+        return cand
     return "comfly"
 
 
@@ -23176,13 +23200,13 @@ def _agent_extract_json(text):
 
 async def agent_generate_plan(canvas_id, instruction, context, provider="comfly", model="", ms_model=""):
     """调用对话模型生成结构化计划。LLM 不可用时抛 HTTPException（400/502），绝不 mock。
-    provider 不可用时自动回退到可用 provider（modelscope → lingjing → volcengine）。"""
+    provider 不可用时自动回退到用户配置的可用 provider（动态顺序）。"""
     canvas = load_canvas(canvas_id)  # 404 校验
     summary = _agent_canvas_summary(canvas)
-    # 探测可用 provider：前端传的优先，不可用则依次尝试
+    # 探测可用 provider：前端传的优先，不可用则按用户配置顺序动态尝试
     tried = []
     candidates = [provider] if provider and provider != "comfly" else []
-    candidates += ["modelscope", "lingjing", "volcengine"]
+    candidates += _agent_available_providers()
     seen = set()
     candidates = [p for p in candidates if not (p in seen or seen.add(p))]
     last_detail = ""

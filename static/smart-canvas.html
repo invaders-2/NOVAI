@@ -7,7 +7,7 @@
     <title data-i18n="smart.title">智能画布</title>
     <!-- 关键渲染路径优化：CSS 先于 JS 加载，浏览器可并行下载 CSS 和 JS -->
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.108.1786428400.1786517003">
+    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=1.0.108.1786428400.1786620002">
     <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.108.1786428400.1785603211">
     <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.108.1786428400.1786205339">
     <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.108.1786428400.1785603211"></script>
@@ -602,6 +602,8 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         </div>
         <div id="chatMessages" class="chat-messages"></div>
         <div class="chat-input-row">
+            <button id="chatUploadBtn" class="chat-upload" onclick="chatUploadClick()" title="上传素材（图片/视频，生成时自动作为参考）"><i data-lucide="paperclip"></i></button>
+            <input type="file" id="chatUploadInput" accept="image/*,video/*" multiple style="display:none" onchange="chatUploadSelected(this)">
             <textarea id="chatInput" class="chat-input" placeholder="试试：生成一张红色杯子的图 / 用选中的图做电商主图..." rows="1"></textarea>
             <button id="chatSendBtn" class="chat-send" onclick="sendChatMessage()"><i data-lucide="send"></i></button>
         </div>
@@ -622,6 +624,6 @@ body.studio-theme-dark .canvas-zoombar .zoombar-sep { background: rgba(255,255,2
         <div id="smartSuggestBtns" class="smart-suggest-btns"></div>
         <button type="button" class="smart-suggest-close" onclick="closeSmartSuggestions()" title="关闭"><i data-lucide="x"></i></button>
     </div>
-    <script defer src="/static/js/smart-canvas.js?v=1.0.108.1786428400.1786516997"></script>
+    <script defer src="/static/js/smart-canvas.js?v=1.0.108.1786428400.1786528320"></script>
 </body>
 </html>

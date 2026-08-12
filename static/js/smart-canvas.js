@@ -4756,11 +4756,11 @@ function syncChatContext(){
     (selectedIds && selectedIds.length ? selectedIds : (selectedId ? [selectedId] : [])).forEach(function(id){
         if(id && selIds.indexOf(id) === -1) selIds.push(id);
     });
-    // 移除已不在选中集的引用（选中即加入、取消选中即清除）
+    // 移除已不在选中集的引用（选中即加入、取消选中即清除）；上传素材引用（r.upload）保留
     if(selIds.length){
-        chatRefs = chatRefs.filter(function(r){ return selIds.indexOf(r.id) !== -1; });
+        chatRefs = chatRefs.filter(function(r){ return r.upload || selIds.indexOf(r.id) !== -1; });
     } else {
-        chatRefs = [];
+        chatRefs = chatRefs.filter(function(r){ return r.upload; });
     }
     // 添加新选中的节点
     selIds.forEach(function(id){
@@ -4779,27 +4779,70 @@ function syncChatContext(){
     renderChatContext();
 }
 function removeChatRef(id){ chatRefs = chatRefs.filter(function(r){return r.id !== id}); renderChatContext(); }
+// ── 助手输入区上传素材（图片/视频 → 引用条，生成时自动作为参考）──
+function chatUploadClick(){
+    var input = document.getElementById('chatUploadInput');
+    if(input) input.click();
+}
+async function chatUploadSelected(input){
+    var files = [...(input.files || [])].filter(isSupportedUploadFile).slice(0, SMART_UPLOAD_MAX);
+    input.value = '';
+    if(!files.length){ toast('请选择图片或视频文件', '!'); return; }
+    try {
+        var uploaded = await uploadFiles(files);
+        if(!uploaded.length){ toast('上传失败，请重试', '!'); return; }
+        var ts = Date.now();
+        uploaded.forEach(function(f, i){
+            var kind = f.kind || mediaKindForFile(files[i]) || 'image';
+            var item = { url:f.url || '', name:f.name || ('素材' + (i + 1)), kind:kind };
+            chatRefs.push({
+                id:'upload_' + ts + '_' + i,
+                name:item.name,
+                thumbUrl: kind === 'video' ? '' : item.url,
+                type:'upload',
+                upload:true,
+                images:[item]
+            });
+        });
+        renderChatContext();
+        toast('已上传 ' + uploaded.length + ' 个素材，生成时会自动作为参考', '📎');
+    } catch(e){
+        toast(e.message || '上传失败', '!');
+    }
+}
 function renderChatContext(){
     if(!chatRefs.length){ chatContext.innerHTML = ''; chatContext.classList.remove('has-items'); return; }
     var html = chatRefs.map(function(r){
-        var isVideo = (r.images||[])[0] && (r.images[0]).kind === 'video';
+        var first = (r.images||[])[0] || {};
+        var isVideo = first.kind === 'video';
         var thumb;
         if(r.thumbUrl){
             thumb = '<img src="'+escapeHtml(r.thumbUrl)+'" alt="" style="'+(isVideo?'opacity:.7':'')+'">';
+        } else if(isVideo){
+            thumb = '<span class="chat-ctx-vthumb">▶</span>';
         } else {
-            var icon = r.type==='smart-prompt'?'P':r.type==='smart-loop'?'L':r.type==='storyboard'?'S':'?';
+            var icon = r.type==='smart-prompt'?'P':r.type==='smart-loop'?'L':r.type==='storyboard'?'S':r.type==='upload'?'+':'?';
             thumb = '<span style="width:28px;height:28px;border-radius:4px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">'+icon+'</span>';
         }
-        return '<div class="chat-ctx-chip">'+thumb+'<span class="chat-ctx-name">'+escapeHtml(r.name)+'</span><span class="chat-ctx-remove" onclick="removeChatRef(\''+escapeHtml(r.id)+'\')">×</span></div>';
+        return '<div class="chat-ctx-chip">'+thumb+'<span class="chat-ctx-name">'+escapeHtml(r.name)+'</span>'+(isVideo?'<span class="chat-ctx-kind">视频</span>':'')+'<span class="chat-ctx-remove" onclick="removeChatRef(\''+escapeHtml(r.id)+'\')">×</span></div>';
     }).join('');
     html += '<span class="chat-ctx-clear" onclick="chatRefs=[];renderChatContext()">清除</span>';
     chatContext.innerHTML = html;
     chatContext.classList.add('has-items');
 }
 function chatContextImages(){
+    // 图片参考 URL：只收集 kind=image 的素材（视频不当作图片参考）
     var urls = [];
     chatRefs.forEach(function(r){
-        (r.images||[]).forEach(function(img){ if(img.url) urls.push(img.url); });
+        (r.images||[]).forEach(function(img){ if(img.kind === 'image' && img.url) urls.push(img.url); });
+    });
+    return urls;
+}
+function chatContextVideos(){
+    // 视频参考 URL：kind=video 的素材（generate_video 的 reference_video）
+    var urls = [];
+    chatRefs.forEach(function(r){
+        (r.images||[]).forEach(function(img){ if(img.kind === 'video' && img.url) urls.push(img.url); });
     });
     return urls;
 }
@@ -4870,7 +4913,8 @@ function renderChatWelcomeIfEmpty(){
         chatWelcomeExamples.map(function(t){
             return '<button type="button" class="chat-welcome-chip" onclick="fillChatExample(this)">' + escapeHtml(t) + '</button>';
         }).join('') +
-        '</div>';
+        '</div>' +
+        '<div class="chat-welcome-tip"><i data-lucide="paperclip"></i> 上传素材或选中画布节点，生成时会自动作为参考</div>';
     box.appendChild(w);
     refreshIcons();
 }
@@ -4916,9 +4960,11 @@ function buildCanvasContextSummary(){
         var sel = selectedNode();
         if(sel) parts.push('当前选中:' + (sel.title || sel.type || sel.id) + ' 类型:' + (sel.type || 'image') + ' 图片:' + ((sel.images || []).length) + '张');
         if(chatRefs.length) parts.push('引用节点:' + chatRefs.map(function(r){ return r.name + '(' + r.type + ')'; }).join(','));
-        // 引用节点素材 URL：generate_image 的 reference_urls 可直接使用
+        // 引用素材 URL：generate_image 的 reference_urls 用图片，generate_video 的 reference_video 用视频
         var refImgs = chatContextImages();
         if(refImgs.length) parts.push('可用参考图URL:' + refImgs.slice(0, 6).join(' '));
+        var refVids = chatContextVideos();
+        if(refVids.length) parts.push('可用参考视频URL:' + refVids.slice(0, 4).join(' '));
         var titles = (nodes || []).slice(0, 15).map(function(n){ return n.title || n.type || n.id; }).filter(Boolean);
         if(titles.length) parts.push('画布现有节点:' + titles.join(' | '));
         if(typeof viewport !== 'undefined' && viewport) parts.push('视口:x=' + Math.round(viewport.x || 0) + ',y=' + Math.round(viewport.y || 0) + ',scale=' + Number(viewport.scale || 1).toFixed(2));
@@ -5068,6 +5114,7 @@ function agentArgsChips(args){
         var label = k;
         if(k === 'prompt' || k === 'text') label = '提示词';
         else if(k === 'reference_urls' || k === 'reference_images') label = '参考图';
+        else if(k === 'reference_video') label = '参考视频';
         else if(k === 'provider') label = '服务商';
         else if(k === 'model') label = '模型';
         else if(k === 'size' || k === 'ratio') label = '尺寸';
@@ -5211,6 +5258,16 @@ function renderAgentPlanCard(bubble, plan){
         var chips = agentArgsChips(s.args).map(function(c){
             return '<span class="agent-chip"><b>' + escapeHtml(c.label) + '</b> ' + escapeHtml(c.value) + '</span>';
         }).join('');
+        // 参考素材提示 chips：引用条里的图片/视频数量（apply 时自动注入 reference_urls / reference_video）
+        var refChips = '';
+        if(s.tool === 'generate_image' || s.tool === 'generate_video'){
+            var rc = [];
+            var refImgsN = chatContextImages().length;
+            var refVidsN = chatContextVideos().length;
+            if(refImgsN) rc.push('<span class="agent-chip ref"><b>参考图</b> ' + refImgsN + ' 个</span>');
+            if(s.tool === 'generate_video' && refVidsN) rc.push('<span class="agent-chip ref"><b>参考视频</b> ' + refVidsN + ' 个</span>');
+            if(rc.length) refChips = rc.join('');
+        }
         var editable = '';
         // generate_image / generate_video / create_node 步骤：提供参数编辑区（模型/比例/分辨率/时长/提示词）
         if(s.tool === 'generate_image' || s.tool === 'generate_video' || s.tool === 'create_node'){
@@ -5233,7 +5290,7 @@ function renderAgentPlanCard(bubble, plan){
                     '<span class="agent-step-state"></span>' +
                 '</div>' +
                 (desc ? '<div class="agent-step-desc">' + escapeHtml(desc) + '</div>' : '') +
-                (chips ? '<div class="agent-step-chips">' + chips + '</div>' : '') +
+                (chips || refChips ? '<div class="agent-step-chips">' + chips + refChips + '</div>' : '') +
                 editable +
             '</div></div>';
     }).join('');
@@ -5306,15 +5363,21 @@ async function agentPlanAction(act, btn){
         agentPlanSetBusy(card, true, '执行中…', btn);
         btn.classList.add('applying');
         try {
-            // 选中节点素材 → 自动作为 generate_image/generate_video 的参考（LLM 未带时前端补齐）
+            // 选中节点/上传素材 → 自动作为 generate_image/generate_video 的参考（LLM 未带时前端补齐）
+            // generate_image：只注入图片（reference_urls）；generate_video：图片 → reference_urls，视频 → reference_video
             var steps = st.steps || [];
             var refUrls = chatContextImages();
-            if(refUrls.length){
+            var refVids = chatContextVideos();
+            if(refUrls.length || refVids.length){
                 steps = JSON.parse(JSON.stringify(steps));
                 steps.forEach(function(s){
-                    if((s.tool === 'generate_image' || s.tool === 'generate_video') && !(s.args && (s.args.reference_urls || s.args.reference_images))){
+                    if(s.tool === 'generate_image'){
                         s.args = s.args || {};
-                        s.args.reference_urls = refUrls.slice(0, 10);
+                        if(refUrls.length && !(s.args.reference_urls || s.args.reference_images)) s.args.reference_urls = refUrls.slice(0, 10);
+                    } else if(s.tool === 'generate_video'){
+                        s.args = s.args || {};
+                        if(refUrls.length && !(s.args.reference_urls || s.args.reference_images)) s.args.reference_urls = refUrls.slice(0, 10);
+                        if(refVids.length && !s.args.reference_video) s.args.reference_video = refVids.slice(0, 5);
                     }
                 });
             }
@@ -19342,6 +19405,8 @@ window.restoreCanvasVersion = restoreCanvasVersion;
 window.sendChatMessage = sendChatMessage;
 window.agentPlanAction = agentPlanAction;
 window.fillChatExample = fillChatExample;
+window.chatUploadClick = chatUploadClick;
+window.chatUploadSelected = chatUploadSelected;
 window.setBrushTool = setBrushTool;
 window.setGridCustomOrientation = setGridCustomOrientation;
 window.setGridJoinOutputSize = setGridJoinOutputSize;

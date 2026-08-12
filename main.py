@@ -22924,8 +22924,8 @@ _AGENT_PLAN_SYSTEM_PROMPT = (
     "1. 只返回 JSON，不要 Markdown、不要任何解释文字。\n"
     "2. 格式：{{\"intent\": \"一句话意图\", \"steps\": [{{\"tool\": \"工具名\", \"args\": {{...}}, \"description\": \"这一步做什么\"}}], \"expected_output\": \"预期结果描述\"}}\n"
     "3. steps 至少 1 步；tool 必须是清单中的工具名；args 必须符合该工具的 JSON Schema。\n"
-    "4. 多步计划中，后续步骤需要引用前面步骤创建节点的 ID 时，用 {stepN.node_id} 占位符"
-    "（N 从 0 开始，如 {step0.node_id}）。\n"
+    "4. 多步计划中，后续步骤需要引用前面步骤创建节点的 ID 时，用 {{stepN.node_id}} 占位符"
+    "（N 从 0 开始，如 {{step0.node_id}}）。\n"
     "5. 需要生成图片时：先用 create_node 建节点（type=image 或 prompt，prompt 写提示词），"
     "再用 run_generation 触发；不要遗漏步骤。\n"
     "6. 删除操作不要擅自使用 force=true。"
@@ -23200,6 +23200,12 @@ async def agent_apply(payload: AgentApplyRequest):
     execution_log = []
     results = []
     failed = None
+    # 执行前快照（回滚目标：apply 前状态）
+    pre_version = None
+    try:
+        pre_version = _agent_snapshot(load_canvas(canvas_id), note=f"agent apply 前 {session_id or 'direct'}")
+    except Exception as exc:
+        print(f"[Agent] apply 前版本快照失败（不影响执行）: {exc}")
     for i, step in enumerate(steps):
         resolved_args = _agent_resolve_step_refs(step["args"], results)
         r = await agent_execute_step(step["tool"], resolved_args)
@@ -23250,7 +23256,8 @@ async def agent_apply(payload: AgentApplyRequest):
             "executed": len(execution_log),
             "total": len(steps),
             "version": version,
-            "message": f"计划执行完成：{len(execution_log)}/{len(steps)} 步成功，已存画布版本 v{version}（可回滚）" if version
+            "pre_version": pre_version,
+            "message": f"计划执行完成：{len(execution_log)}/{len(steps)} 步成功，已存画布版本 v{version}（可回滚到 v{pre_version}）" if version
                        else f"计划执行完成：{len(execution_log)}/{len(steps)} 步成功（版本快照未生成）",
             "log": execution_log,
         }

@@ -1528,3 +1528,69 @@ input[type=range].smart-range::-webkit-slider-thumb { -webkit-appearance:none; w
   background:rgba(22, 22, 26, .88); border:1px solid rgba(255,255,255,.12); color:#f5f5f7;
   box-shadow:0 16px 44px rgba(0,0,0,.4); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
   max-width:min(760px, 92vw); flex-wrap:wrap; }
+/* ── V2 Phase 5B: Agent 计划卡片（chatModal 内）── */
+.agent-plan-card { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.agent-plan-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.agent-plan-badge {
+    font-size: 10px; font-weight: 700; letter-spacing: .04em;
+    color: var(--accent); background: var(--soft);
+    border: 1px solid var(--border); padding: 2px 8px; border-radius: 999px;
+}
+.agent-plan-status { font-size: 10px; color: var(--muted); }
+.agent-plan-intent { font-size: 12.5px; font-weight: 650; color: var(--text); line-height: 1.5; }
+.agent-plan-expected { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.agent-plan-steps { display: flex; flex-direction: column; gap: 6px; }
+.agent-step {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 7px 9px;
+}
+.agent-step-idx {
+    flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--soft); color: var(--muted); font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+}
+.agent-step-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.agent-step-tool { font-size: 11px; font-weight: 700; color: var(--text); font-family: var(--font-mono); }
+.agent-step-desc { font-size: 11px; color: var(--text); line-height: 1.45; }
+.agent-step-args { font-size: 10px; color: var(--muted); word-break: break-all; }
+.agent-plan-preview { display: flex; flex-direction: column; gap: 6px; }
+.agent-preview-note { font-size: 10px; color: var(--muted); }
+.agent-preview-step {
+    font-size: 11px; color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px;
+}
+.agent-preview-step.invalid { border-color: var(--danger); }
+.agent-preview-tool { font-weight: 650; }
+.agent-preview-impact { color: var(--muted); margin-top: 2px; line-height: 1.45; }
+.agent-warn { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+.agent-warn.invalid { color: var(--danger); }
+.agent-preview-fail {
+    font-size: 11px; color: var(--danger); background: var(--soft);
+    border: 1px solid var(--danger); border-radius: 8px; padding: 6px 8px;
+}
+.agent-plan-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.agent-btn {
+    font-size: 11px; padding: 4px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--panel);
+    color: var(--text); cursor: pointer; transition: background .15s, opacity .15s;
+}
+.agent-btn:hover:not(:disabled) { background: var(--soft); }
+.agent-btn:disabled { opacity: .45; cursor: default; }
+.agent-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.agent-btn.danger { color: var(--danger); border-color: var(--danger); }
+.agent-btn.ghost { color: var(--muted); }
+.agent-apply-results { display: flex; flex-direction: column; gap: 5px; }
+.agent-apply-step {
+    display: flex; align-items: flex-start; gap: 6px; font-size: 11px;
+    color: var(--text); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px;
+}
+.agent-apply-step.ok { border-color: var(--success); }
+.agent-apply-step.fail { border-color: var(--danger); }
+.agent-apply-mark { flex-shrink: 0; font-weight: 700; }
+.agent-apply-step.ok .agent-apply-mark { color: var(--success); }
+.agent-apply-step.fail .agent-apply-mark { color: var(--danger); }
+.agent-apply-tool { font-weight: 650; }
+.agent-step-error { font-size: 10.5px; color: var(--danger); line-height: 1.45; margin-top: 2px; }
+.agent-step-result { font-size: 10.5px; color: var(--muted); margin-top: 2px; word-break: break-all; }

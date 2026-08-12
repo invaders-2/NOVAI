@@ -4684,6 +4684,108 @@ function addChatMessage(role, text, images){
     div.scrollIntoView({behavior:'smooth',block:'end'});
 }
 let chatSending = false;
+// ── V2 Phase 5B: Agent 对话模式（计划卡片 / 预览 / 应用 / 回滚）──
+function buildCanvasContextSummary(){
+    // 生成发送给 Agent 的画布上下文摘要（节点/选中/引用/视口）
+    try {
+        var parts = [];
+        parts.push('画布节点数:' + (nodes ? nodes.length : 0) + ', 连线数:' + (canvas && canvas.connections ? canvas.connections.length : 0));
+        var sel = selectedNode();
+        if(sel) parts.push('当前选中:' + (sel.title || sel.type || sel.id) + ' 类型:' + (sel.type || 'image') + ' 图片:' + ((sel.images || []).length) + '张');
+        if(chatRefs.length) parts.push('引用节点:' + chatRefs.map(function(r){ return r.name + '(' + r.type + ')'; }).join(','));
+        var titles = (nodes || []).slice(0, 15).map(function(n){ return n.title || n.type || n.id; }).filter(Boolean);
+        if(titles.length) parts.push('画布现有节点:' + titles.join(' | '));
+        if(typeof viewport !== 'undefined' && viewport) parts.push('视口:x=' + Math.round(viewport.x || 0) + ',y=' + Math.round(viewport.y || 0) + ',scale=' + Number(viewport.scale || 1).toFixed(2));
+        return parts.join('\n').slice(0, 1200);
+    } catch(e){ return ''; }
+}
+function agentArgsSummary(args){
+    // 步骤参数摘要：忽略 canvas_id/空值，压缩长值
+    try {
+        if(!args || typeof args !== 'object') return '';
+        var items = [];
+        Object.keys(args).forEach(function(k){
+            if(k === 'canvas_id') return;
+            var v = args[k];
+            if(v === null || v === undefined || v === '') return;
+            var s = '';
+            if(typeof v === 'object') s = '<' + (Array.isArray(v) ? '数组' : '对象') + ' ' + (Array.isArray(v) ? v.length : Object.keys(v).length) + '项>';
+            else s = String(v);
+            if(s.length > 36) s = s.slice(0, 36) + '…';
+            items.push(k + ':' + s);
+        });
+        return items.join(', ');
+    } catch(e){ return ''; }
+}
+function agentErrText(data){
+    // 提取 FastAPI 错误详情（detail 可能是字符串或对象）
+    try {
+        if(!data) return '未知错误';
+        if(typeof data.detail === 'string') return data.detail;
+        if(data.detail && typeof data.detail === 'object') return JSON.stringify(data.detail).slice(0, 200);
+        if(data.message) return data.message;
+        return JSON.stringify(data).slice(0, 200);
+    } catch(e){ return '未知错误'; }
+}
+function agentResultText(result){
+    try {
+        if(result === null || result === undefined) return '';
+        var s = typeof result === 'string' ? result : JSON.stringify(result);
+        return s.length > 90 ? s.slice(0, 90) + '…' : s;
+    } catch(e){ return ''; }
+}
+async function requestAgentPlan(instruction){
+    // Agent 优先：POST /api/agent/plan；失败（如模型不可用 400）→ 返回 null 由调用方降级聊天
+    var provider = chatProvider || resolveChatProviderId();
+    var model = currentChatModel();
+    var body = {
+        canvas_id: canvasId,
+        instruction: instruction,
+        context: buildCanvasContextSummary(),
+        provider: provider,
+        model: model,
+        ms_model: provider === 'modelscope' ? model : ''
+    };
+    var resp = await fetch('/api/agent/plan', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+    });
+    if(!resp.ok){
+        var detail = '';
+        try { var err = await resp.json(); detail = agentErrText(err); } catch(e){}
+        addChatMessage('system', 'Agent 计划暂不可用' + (detail ? '：' + detail : '（HTTP ' + resp.status + '）') + '，已切换为普通对话。');
+        return null;
+    }
+    return await resp.json();
+}
+async function sendChatFallback(text, msgDiv){
+    // 降级路径：原 /api/canvas-llm 单轮聊天 + 2 命令正则执行（保持原有行为）
+    var sysP = '你是 NOVAI 智能画布助手，请用中文自然对话。如果用户要求你操作画布（如创建节点、建立连接），在回复末尾附加 JSON：{"actions":[{"cmd":"create_node","type":"image","x":300,"y":200},{"cmd":"connect","from":"{0}","to":"{1}"}]}。{0}表示第1个创建的节点，{1}第2个。可创建 image|prompt|loop 类型节点。';
+    var fullMsg = text;
+    if(chatRefs.length) fullMsg += '\n\n[引用的画布节点: '+chatRefs.map(function(r){return r.name+'('+r.type+')'}).join(', ')+']';
+    var provider = chatProvider || resolveChatProviderId();
+    var model = currentChatModel();
+    var resp = await fetch('/api/canvas-llm', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:fullMsg, messages:[], images:chatContextImages(), videos:[], model:model, provider:provider, ms_model: provider==='modelscope'?model:'', system_prompt:sysP})
+    });
+    if(!resp.ok){ msgDiv.textContent = '请求失败: HTTP ' + resp.status; chatMessages.push({role:'assistant', text:msgDiv.textContent}); return; }
+    var data = await resp.json();
+    var reply = (data.text || '').trim();
+    if(!reply){ msgDiv.textContent = '收到了，但模型返回了空内容，请重试或切换模型。'; chatMessages.push({role:'assistant', text:msgDiv.textContent}); return; }
+    // 解析画布操作指令（保留原 2 命令逻辑）
+    var actionMatch = reply.match(/\{"actions"\s*:\s*\[[\s\S]*?\]\s*\}/);
+    if(actionMatch){
+        try {
+            var cmd = JSON.parse(actionMatch[0]);
+            reply = reply.replace(actionMatch[0], '').trim();
+            executeChatActions(cmd.actions);
+            reply = (reply || '已执行') + '\n\n✅ 操作完成';
+        } catch(ex){ reply += '\n\n⚠️ 指令解析失败'; }
+    }
+    msgDiv.textContent = reply;
+    chatMessages.push({role:'assistant', text:reply});
+}
 async function sendChatMessage(){
     /* —— 防重入保护：防止用户连续按Enter发送多条消息产生竞态 —— */
     if(chatSending) return;
@@ -4695,39 +4797,19 @@ async function sendChatMessage(){
     refreshChatModels();
     inp.value = ''; inp.style.height = 'auto';
     addChatMessage('user', text, chatContextImages());
-    var sel = selectedNode();
-    var ctx = sel ? ('当前选中: ' + (sel.title || sel.type || '') + ', 类型:' + (sel.type || 'image') + ', 图片:' + ((sel.images||[]).length) + '张') : '未选中节点';
     var msgDiv = document.createElement('div');
     msgDiv.className = 'chat-msg assistant';
     msgDiv.textContent = '...';
     document.getElementById('chatMessages').appendChild(msgDiv);
     msgDiv.scrollIntoView({behavior:'smooth',block:'end'});
     try {
-        var sysP = '你是 NOVAI 智能画布助手，请用中文自然对话。如果用户要求你操作画布（如创建节点、建立连接），在回复末尾附加 JSON：{"actions":[{"cmd":"create_node","type":"image","x":300,"y":200},{"cmd":"connect","from":"{0}","to":"{1}"}]}。{0}表示第1个创建的节点，{1}第2个。可创建 image|prompt|loop 类型节点。';
-        var fullMsg = text;
-        if(chatRefs.length) fullMsg += '\n\n[引用的画布节点: '+chatRefs.map(function(r){return r.name+'('+r.type+')'}).join(', ')+']';
-        var provider = chatProvider || resolveChatProviderId();
-        var model = currentChatModel();
-        var resp = await fetch('/api/canvas-llm', {
-            method:'POST', headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({message:fullMsg, messages:[], images:chatContextImages(), videos:[], model:model, provider:provider, ms_model: provider==='modelscope'?model:'', system_prompt:sysP})
-        });
-        if(!resp.ok){ msgDiv.textContent = '请求失败: HTTP ' + resp.status; chatMessages.push({role:'assistant', text:msgDiv.textContent}); return; }
-        var data = await resp.json();
-        var reply = (data.text || '').trim();
-        if(!reply){ msgDiv.textContent = '收到了，但模型返回了空内容，请重试或切换模型。'; chatMessages.push({role:'assistant', text:msgDiv.textContent}); return; }
-        // 解析画布操作指令
-        var actionMatch = reply.match(/\{"actions"\s*:\s*\[[\s\S]*?\]\s*\}/);
-        if(actionMatch){
-            try {
-                var cmd = JSON.parse(actionMatch[0]);
-                reply = reply.replace(actionMatch[0], '').trim();
-                executeChatActions(cmd.actions);
-                reply = (reply || '已执行') + '\n\n✅ 操作完成';
-            } catch(ex){ reply += '\n\n⚠️ 指令解析失败'; }
+        // Agent 优先：计划成功 → 计划卡片；失败（模型不可用等）→ 降级普通聊天，不伪造计划
+        var plan = canvasId ? await requestAgentPlan(text) : null;
+        if(plan && plan.steps && plan.steps.length){
+            renderAgentPlanCard(msgDiv, plan);
+        } else {
+            await sendChatFallback(text, msgDiv);
         }
-        msgDiv.textContent = reply;
-        chatMessages.push({role:'assistant', text:reply});
     } catch(e){
         msgDiv.textContent = '失败: ' + (e.message || '未知');
         chatMessages.push({role:'assistant', text:msgDiv.textContent});
@@ -4736,6 +4818,179 @@ async function sendChatMessage(){
         inp.disabled = false;
         inp.focus();
     }
+}
+// ── Agent 计划卡片渲染与操作 ──
+function renderAgentPlanCard(msgDiv, plan){
+    var card = document.createElement('div');
+    card.className = 'agent-plan-card';
+    card._agentPlan = {
+        session_id: plan.session_id || '',
+        canvas_id: plan.canvas_id || canvasId,
+        steps: plan.steps || [],
+        intent: plan.intent || '',
+        expected_output: plan.expected_output || '',
+        version: null,
+        status: 'planned'
+    };
+    var stepsHtml = (plan.steps || []).map(function(s, i){
+        var argsSummary = agentArgsSummary(s.args);
+        return '<div class="agent-step">' +
+            '<span class="agent-step-idx">' + (i + 1) + '</span>' +
+            '<div class="agent-step-body">' +
+                '<div class="agent-step-tool">' + escapeHtml(s.tool || '') + '</div>' +
+                (s.description ? '<div class="agent-step-desc">' + escapeHtml(s.description) + '</div>' : '') +
+                (argsSummary ? '<div class="agent-step-args">' + escapeHtml(argsSummary) + '</div>' : '') +
+            '</div></div>';
+    }).join('');
+    card.innerHTML =
+        '<div class="agent-plan-head">' +
+            '<span class="agent-plan-badge">Agent 计划</span>' +
+            '<span class="agent-plan-status">已生成</span>' +
+        '</div>' +
+        '<div class="agent-plan-intent">🎯 ' + escapeHtml(plan.intent || '画布操作计划') + '</div>' +
+        '<div class="agent-plan-steps">' + stepsHtml + '</div>' +
+        (plan.expected_output ? '<div class="agent-plan-expected">预期结果：' + escapeHtml(plan.expected_output) + '</div>' : '') +
+        '<div class="agent-plan-preview"></div>' +
+        '<div class="agent-plan-actions">' +
+            '<button type="button" class="agent-btn" onclick="agentPlanAction(\'preview\', this)">预览</button>' +
+            '<button type="button" class="agent-btn primary" onclick="agentPlanAction(\'apply\', this)">应用</button>' +
+            '<button type="button" class="agent-btn ghost" onclick="agentPlanAction(\'cancel\', this)">取消</button>' +
+        '</div>';
+    msgDiv.innerHTML = '';
+    msgDiv.appendChild(card);
+    chatMessages.push({role:'assistant', text:'[Agent 计划] ' + (plan.intent || '')});
+    msgDiv.scrollIntoView({behavior:'smooth',block:'end'});
+}
+function agentPlanSetBusy(card, busy, statusText){
+    var row = card.querySelector('.agent-plan-actions');
+    if(row) row.querySelectorAll('button').forEach(function(b){ b.disabled = busy; });
+    var st = card.querySelector('.agent-plan-status');
+    if(st && statusText !== undefined) st.textContent = statusText;
+}
+async function agentPlanAction(act, btn){
+    var card = btn.closest('.agent-plan-card');
+    if(!card) return;
+    var st = card._agentPlan || {};
+    var previewBox = card.querySelector('.agent-plan-preview');
+    if(act === 'cancel'){
+        card.remove();
+        addChatMessage('system', '已取消该计划。');
+        return;
+    }
+    if(act === 'preview'){
+        agentPlanSetBusy(card, true, '预览中...');
+        try {
+            var resp = await fetch('/api/agent/preview', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({canvas_id: st.canvas_id, plan_id: st.session_id, steps: st.steps})
+            });
+            var data = await resp.json();
+            if(!resp.ok){
+                previewBox.innerHTML = '<div class="agent-preview-fail">预览失败：' + escapeHtml(agentErrText(data)) + '</div>';
+            } else {
+                var items = (data.steps || []).map(function(p){
+                    var warnHtml = p.warning ? '<div class="agent-warn' + (p.valid === false ? ' invalid' : '') + '">⚠️ ' + escapeHtml(p.warning) + '</div>' : '';
+                    return '<div class="agent-preview-step' + (p.valid === false ? ' invalid' : '') + '">' +
+                        '<div class="agent-preview-tool">' + (p.index + 1) + '. ' + escapeHtml(p.tool) + '</div>' +
+                        (p.impact ? '<div class="agent-preview-impact">' + escapeHtml(p.impact) + '</div>' : '') +
+                        warnHtml +
+                    '</div>';
+                }).join('');
+                previewBox.innerHTML = (data.note ? '<div class="agent-preview-note">' + escapeHtml(data.note) + '</div>' : '') + items;
+            }
+        } catch(e){
+            previewBox.innerHTML = '<div class="agent-preview-fail">预览失败：' + escapeHtml(e.message || '网络错误') + '</div>';
+        }
+        agentPlanSetBusy(card, false, '已生成');
+        return;
+    }
+    if(act === 'apply'){
+        agentPlanSetBusy(card, true, '执行中...');
+        try {
+            var resp = await fetch('/api/agent/apply', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({canvas_id: st.canvas_id, plan_id: st.session_id, steps: st.steps})
+            });
+            var data = await resp.json();
+            renderAgentApplyResult(card, data, resp.ok);
+        } catch(e){
+            agentPlanSetBusy(card, false, '已生成');
+            previewBox.innerHTML = '<div class="agent-preview-fail">应用失败：' + escapeHtml(e.message || '网络错误') + '</div>';
+        }
+        return;
+    }
+    if(act === 'rollback'){
+        if(!st.version) return;
+        agentPlanSetBusy(card, true, '回滚中...');
+        try {
+            var resp = await fetch('/api/agent/rollback', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({canvas_id: st.canvas_id, to_version: st.pre_version || st.version})
+            });
+            var data = await resp.json();
+            if(!resp.ok){
+                toast('回滚失败：' + agentErrText(data));
+                agentPlanSetBusy(card, false, '已应用');
+                return;
+            }
+            st.status = 'rolled_back';
+            agentPlanSetBusy(card, false, '已回滚');
+            btn.disabled = true;
+            btn.textContent = '已回滚';
+            toast('已回滚到 v' + data.restored_from);
+            refreshCanvasAfterAgent();
+        } catch(e){
+            toast('回滚失败：' + (e.message || '网络错误'));
+            agentPlanSetBusy(card, false, '已应用');
+        }
+        return;
+    }
+}
+function renderAgentApplyResult(card, data, ok){
+    var st = card._agentPlan;
+    var previewBox = card.querySelector('.agent-plan-preview');
+    var log = data.log || [];
+    var html = '<div class="agent-apply-results">' + log.map(function(r){
+        var cls = r.ok ? 'ok' : 'fail';
+        var detail = r.ok ? '' : '<div class="agent-step-error">' + escapeHtml(r.error || r.message || '执行失败') + '</div>';
+        var resultTxt = r.ok && r.result ? '<div class="agent-step-result">' + escapeHtml(agentResultText(r.result)) + '</div>' : '';
+        return '<div class="agent-apply-step ' + cls + '">' +
+            '<span class="agent-apply-mark">' + (r.ok ? '✓' : '✗') + '</span>' +
+            '<span class="agent-apply-tool">' + escapeHtml(r.tool || ('步骤 ' + ((r.index || 0) + 1))) + '</span>' +
+            detail + resultTxt +
+        '</div>';
+    }).join('') + '</div>';
+    previewBox.innerHTML = html;
+    if(ok && data.ok){
+        st.version = data.version;
+        st.pre_version = data.pre_version || data.version;
+        st.status = 'applied';
+        var statusEl = card.querySelector('.agent-plan-status');
+        if(statusEl) statusEl.textContent = '已应用';
+        // 应用成功 → 出现回滚按钮
+        var rb = document.createElement('button');
+        rb.type = 'button';
+        rb.className = 'agent-btn danger';
+        rb.textContent = '回滚';
+        rb.setAttribute('onclick', "agentPlanAction('rollback', this)");
+        var row = card.querySelector('.agent-plan-actions');
+        if(row) row.appendChild(rb);
+        toast('Agent 修改已应用，可回滚');
+        refreshCanvasAfterAgent();
+    } else {
+        st.status = 'failed';
+        var statusEl2 = card.querySelector('.agent-plan-status');
+        if(statusEl2) statusEl2.textContent = '失败';
+        toast('Agent 计划执行失败：' + agentErrText(data));
+    }
+    agentPlanSetBusy(card, false, undefined);
+}
+function refreshCanvasAfterAgent(){
+    // 应用/回滚后刷新画布状态（复用现有合并机制，不打断用户操作）
+    try {
+        if(typeof mergeReloadCanvasNow === 'function'){ mergeReloadCanvasNow(); }
+        else if(canvasId){ location.reload(); }
+    } catch(e){}
 }
 // 输入框自动撑高 + @ 引用节点
 var chatInput = document.getElementById('chatInput');
@@ -18246,6 +18501,7 @@ window.redoEditDrawing = redoEditDrawing;
 window.resetGridJoinLayout = resetGridJoinLayout;
 window.restoreCanvasVersion = restoreCanvasVersion;
 window.sendChatMessage = sendChatMessage;
+window.agentPlanAction = agentPlanAction;
 window.setBrushTool = setBrushTool;
 window.setGridCustomOrientation = setGridCustomOrientation;
 window.setGridJoinOutputSize = setGridJoinOutputSize;

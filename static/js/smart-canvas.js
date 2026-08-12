@@ -4595,6 +4595,7 @@ initChatModel();
 window.changeChatModel = changeChatModel;
 window.initChatModel = initChatModel;
 window.currentChatModel = currentChatModel;
+window.agentStepEditChange = agentStepEditChange;
 function refreshChatModels(){
     initChatModel();
 }
@@ -4971,6 +4972,77 @@ function agentStepStateHtml(state){
     if(state === 'spin') return '<span class="agent-state-dot spin" title="执行中"></span>';
     return '';
 }
+function agentImageModelOptions(selected){
+    // 收集可用生图模型（apiProviders 的 image_models/models）
+    var opts = [];
+    (apiProviders||[]).forEach(function(p){
+        if(!p.enabled) return;
+        var models = p.image_models || [];
+        if(!models.length) models = p.models || [];
+        if(!models.length && p.chat_models) models = p.chat_models;
+        models.forEach(function(m){
+            if(!opts.some(function(o){return o.value===m;})) opts.push({value:m, provider:p.id});
+        });
+    });
+    if(!opts.length) opts.push({value:'', provider:''});
+    var html = opts.map(function(o){
+        var sel = (o.value === selected) ? ' selected' : '';
+        return '<option value="'+escapeHtml(o.value)+'"' + sel + '>'+escapeHtml(o.value)+'</option>';
+    }).join('');
+    return {html: html, count: opts.length};
+}
+function agentStepEditHtml(s, i){
+    var a = s.args || {};
+    var isGen = s.tool === 'generate_image';
+    var curProvider = a.provider || chatProvider || resolveChatProviderId() || '';
+    var curModel = a.model || '';
+    if(!curModel && chatProvider === curProvider) curModel = currentChatModel();
+    var modelOpts = agentImageModelOptions(curModel);
+    var curRatio = a.ratio || '1:1';
+    var curSize = a.size || '';
+    var curPrompt = a.prompt || a.text || '';
+    var ratios = ['1:1','16:9','9:16','4:3','3:4','2:3','3:2'];
+    var ratioOpts = ratios.map(function(r){
+        return '<option value="'+r+'"'+(r===curRatio?' selected':'')+'>'+r+'</option>';
+    }).join('');
+    // 分辨率：size 已给（如 1024x1024）则用，否则按比例默认
+    var sizeOpts = ['1024x1024','1344x768','768x1344','1280x720','720x1280','1536x1024','1024x1536','2048x2048']
+        .map(function(sz){
+            return '<option value="'+sz+'"'+(sz===curSize?' selected':'')+'>'+sz+'</option>';
+        }).join('');
+    if(curSize && sizeOpts.indexOf('value="'+curSize+'"') === -1){
+        sizeOpts += '<option value="'+escapeHtml(curSize)+'" selected>'+escapeHtml(curSize)+'</option>';
+    }
+    return '<div class="agent-step-edit">' +
+        '<div class="agent-edit-row">' +
+            '<label>模型</label>' +
+            '<select class="agent-edit-model" data-step="'+i+'" onchange="agentStepEditChange(this)">' + modelOpts.html + '</select>' +
+        '</div>' +
+        (isGen ? '<div class="agent-edit-row">' +
+            '<label>比例</label>' +
+            '<select class="agent-edit-ratio" data-step="'+i+'" onchange="agentStepEditChange(this)"><option value="">自动</option>' + ratioOpts + '</select>' +
+            '<label style="margin-left:8px">分辨率</label>' +
+            '<select class="agent-edit-size" data-step="'+i+'" onchange="agentStepEditChange(this)"><option value="">自动</option>' + sizeOpts + '</select>' +
+        '</div>' : '') +
+        (isGen ? '<div class="agent-edit-row">' +
+            '<label>提示词</label>' +
+            '<textarea class="agent-edit-prompt" data-step="'+i+'" rows="2" onchange="agentStepEditChange(this)">'+escapeHtml(curPrompt)+'</textarea>' +
+        '</div>' : '') +
+    '</div>';
+}
+function agentStepEditChange(el){
+    // 编辑后的参数写回 card._agentPlan.steps（apply 时生效）
+    var stepIdx = Number(el.dataset.step);
+    var card = el.closest('.agent-plan-card');
+    if(!card || !card._agentPlan) return;
+    var step = card._agentPlan.steps[stepIdx];
+    if(!step) return;
+    step.args = step.args || {};
+    if(el.classList.contains('agent-edit-model')) step.args.model = el.value;
+    if(el.classList.contains('agent-edit-ratio')) step.args.ratio = el.value || '';
+    if(el.classList.contains('agent-edit-size')) step.args.size = el.value || '';
+    if(el.classList.contains('agent-edit-prompt')) step.args.prompt = el.value;
+}
 function renderAgentPlanCard(bubble, plan){
     bubble.innerHTML = '';
     var card = document.createElement('div');
@@ -4988,6 +5060,11 @@ function renderAgentPlanCard(bubble, plan){
         var chips = agentArgsChips(s.args).map(function(c){
             return '<span class="agent-chip"><b>' + escapeHtml(c.label) + '</b> ' + escapeHtml(c.value) + '</span>';
         }).join('');
+        var editable = '';
+        // generate_image / create_node 步骤：提供参数编辑区（模型/比例/分辨率/提示词）
+        if(s.tool === 'generate_image' || s.tool === 'create_node'){
+            editable = agentStepEditHtml(s, i);
+        }
         return '<div class="agent-step" data-step="' + i + '">' +
             '<div class="agent-step-rail">' +
                 '<span class="agent-step-icon"><i data-lucide="' + agentToolIcon(s.tool) + '"></i></span>' +
@@ -5000,6 +5077,7 @@ function renderAgentPlanCard(bubble, plan){
                 '</div>' +
                 (s.description ? '<div class="agent-step-desc">' + escapeHtml(s.description) + '</div>' : '') +
                 (chips ? '<div class="agent-step-chips">' + chips + '</div>' : '') +
+                editable +
             '</div></div>';
     }).join('');
     card.innerHTML =

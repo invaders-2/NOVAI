@@ -5346,6 +5346,7 @@ async function agentPlanAction(act, btn){
                     }
                 }
             });
+            st.applyStart = Date.now(); // 执行详情：整体耗时起点
             var resp = await fetch('/api/agent/apply', {
                 method:'POST', headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({canvas_id: st.canvas_id, steps: steps})
@@ -5391,6 +5392,12 @@ async function agentPlanAction(act, btn){
 }
 function renderAgentApplyResult(card, data, ok){
     var st = card._agentPlan;
+    // 执行详情：留存执行链数据（apply 返回 log）+ 任务段状态容器
+    st.execLog = (data && Array.isArray(data.log)) ? data.log : [];
+    st.execTasks = st.execTasks || {};
+    st.applyStart = st.applyStart || Date.now();
+    st.execErr = '';
+    if(!ok && data && !Array.isArray(data.log)) st.execErr = agentErrText(data) || '执行失败';
     var log = data.log || [];
     // 每步状态直接更新到时间线卡片
     log.forEach(function(r, i){
@@ -5450,6 +5457,7 @@ function renderAgentApplyResult(card, data, ok){
         }
     }
     agentPlanSetBusy(card, false, undefined);
+    agentExecAttach(card); // 执行详情：挂载 [查看执行详情] 按钮 + 面板骨架
 }
 // ── 生成任务轮询：出图后自动落到画布节点 + 步骤卡状态更新 ──
 var agentGenPolls = {};
@@ -5459,10 +5467,12 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card, kind){
     kind = kind || 'image';
     var stateEl = stepEl ? stepEl.querySelector('.agent-step-state') : null;
     if(stateEl) stateEl.innerHTML = agentStepStateHtml('spin');
+    agentExecTaskSet(card, taskId, kind, null); // 执行详情：登记任务段（排队中）
     var maxTicks = 160; // ~8 分钟 @3s（视频生成更久）
     var tick = 0;
     function finalizeSucceeded(task){
         delete agentGenPolls[taskId];
+        agentExecTaskSet(card, taskId, kind, task); // 执行详情：任务段 → 成功
         if(stepEl){
             stepEl.classList.add('ok');
             if(stateEl) stateEl.innerHTML = agentStepStateHtml('ok');
@@ -5520,6 +5530,7 @@ function agentPollGenerateTask(nodeId, taskId, stepEl, card, kind){
         fetch('/api/tasks/' + encodeURIComponent(taskId))
             .then(function(r){ return r.json(); })
             .then(function(task){
+                agentExecTaskSet(card, taskId, kind, task); // 执行详情：任务段状态/耗时实时联动
                 if(task.status === 'succeeded'){ finalizeSucceeded(task); return; }
                 if(task.status === 'failed' || task.status === 'cancelled'){
                     delete agentGenPolls[taskId];
@@ -5581,6 +5592,7 @@ function agentRetryGenerate(btn, taskId, nodeId, stepEl, card){
                 if(s && s.tool === 'generate_video') kind = 'video';
             }
             delete agentGenPolls[taskId]; // 重置防重入，允许重新轮询
+            agentExecTaskSet(card, taskId, kind, {status:'queued'}); // 执行详情：任务段回到排队中
             agentPollGenerateTask(nodeId, taskId, stepEl, card, kind);
         })
         .catch(function(e){
@@ -5590,6 +5602,228 @@ function agentRetryGenerate(btn, taskId, nodeId, stepEl, card){
         });
 }
 window.agentRetryGenerate = agentRetryGenerate;
+// ── 执行详情（Coze 式）：[查看执行详情] 按钮 + 执行链面板 ──
+var AGENT_EXEC_BADGES = {
+    ok:      ['ok',    '✓ 成功'],
+    fail:    ['fail',  '✗ 失败'],
+    spin:    ['spin',  '⏳ 执行中'],
+    queued:  ['queued','⏳ 排队中'],
+    running: ['spin',  '⏳ 执行中'],
+    provider_processing: ['spin', '⏳ 生成中'],
+    succeeded: ['ok',  '✓ 成功'],
+    failed:   ['fail', '✗ 失败'],
+    cancelled:['fail', '✗ 已取消'],
+    skip:     ['skip',  '未执行']
+};
+function agentExecBadgeFor(state){
+    var b = AGENT_EXEC_BADGES[state] || AGENT_EXEC_BADGES.spin;
+    return '<span class="agent-exec-badge ' + b[0] + '">' + b[1] + '</span>';
+}
+function agentFmtDur(ms){
+    if(ms === null || ms === undefined || isNaN(ms) || ms < 0) return '—';
+    if(ms < 1000) return Math.max(0, Math.round(ms)) + 'ms';
+    return (ms / 1000).toFixed(1) + 's';
+}
+// 任务 timing 四段耗时（排队/准备/生成/总计；缺端点的进行中段用当前时间实时估算）
+function agentExecTaskTiming(t){
+    var ti = (t && t.timing) || {};
+    var now = Date.now() / 1000;
+    function seg(a, b){
+        if(typeof a !== 'number' || !isFinite(a)) return null;
+        if(typeof b === 'number' && isFinite(b)) return Math.max(0, (b - a) * 1000);
+        return Math.max(0, (now - a) * 1000);
+    }
+    return {
+        queue:   seg(ti.created, ti.started),
+        prepare: seg(ti.started, ti.provider_submitted),
+        gen:     seg(ti.provider_submitted, ti.completed),
+        total:   seg(ti.created, ti.completed)
+    };
+}
+// 单步执行耗时：相邻 at 差值（首步用 applyStart 估算，异常值置空）
+function agentExecStepDurs(log, applyStart){
+    var durs = [];
+    for(var i = 0; i < log.length; i++){
+        var e = log[i];
+        if(typeof e.at !== 'number'){ durs.push(null); continue; }
+        if(i === 0){
+            if(typeof applyStart === 'number'){
+                var d = e.at * 1000 - applyStart;
+                durs.push(d >= 0 && d < 3600000 ? d : null);
+            } else durs.push(null);
+        } else {
+            var p = log[i - 1];
+            durs.push(typeof p.at === 'number' ? Math.max(0, (e.at - p.at) * 1000) : null);
+        }
+    }
+    return durs;
+}
+// 面板整体耗时：applyStart → 最后一步完成 / 最后任务完成（进行中任务实时估算）
+function agentExecOverallMs(card){
+    var st = card._agentPlan || {};
+    var log = st.execLog || [];
+    var start = 0;
+    if(typeof st.applyStart === 'number') start = st.applyStart;
+    else if(log.length && typeof log[0].at === 'number') start = log[0].at * 1000;
+    else return null;
+    var end = start;
+    log.forEach(function(e){ if(typeof e.at === 'number') end = Math.max(end, e.at * 1000); });
+    Object.keys(st.execTasks || {}).forEach(function(id){
+        var t = ((st.execTasks[id] || {}).latest || {}).timing || {};
+        [t.completed, t.provider_submitted, t.started, t.created].forEach(function(p){
+            if(typeof p === 'number') end = Math.max(end, p * 1000);
+        });
+    });
+    return Math.max(0, end - start);
+}
+// 面板总状态：ok 全部成功 / fail 有失败 / spin 仍在执行
+function agentExecOverallState(card){
+    var st = card._agentPlan || {};
+    var log = st.execLog || [];
+    if(!log.length) return st.execErr ? 'fail' : 'ok';
+    var anySpin = false;
+    for(var i = 0; i < log.length; i++){
+        var e = log[i];
+        if(!e.ok) return 'fail';
+        if(e.result && e.result.task_id){
+            var rec = (st.execTasks || {})[e.result.task_id];
+            var ts = rec && rec.latest ? (rec.latest.status || 'queued') : 'queued';
+            if(ts === 'failed' || ts === 'cancelled') return 'fail';
+            if(ts !== 'succeeded') anySpin = true;
+        }
+    }
+    return anySpin ? 'spin' : 'ok';
+}
+// 执行链：每步一行 {序号, 工具图标, 工具名, 描述, 耗时, 状态徽章}；失败步骤红框+完整错误；未执行步骤灰色占位
+function agentExecChainHtml(card){
+    var st = card._agentPlan || {};
+    var log = st.execLog || [];
+    var durs = agentExecStepDurs(log, st.applyStart);
+    var html = '';
+    log.forEach(function(e, i){
+        var taskId = (e.ok && e.result && e.result.task_id) ? e.result.task_id : '';
+        var state = e.ok ? 'ok' : 'fail';
+        var badgeState = state;
+        if(taskId){
+            var rec = (st.execTasks || {})[taskId];
+            badgeState = rec && rec.latest ? (rec.latest.status || 'queued') : 'queued';
+            if(badgeState === 'succeeded') state = 'ok';
+            else if(badgeState === 'failed' || badgeState === 'cancelled') state = 'fail';
+            else state = 'spin';
+        }
+        html += '<div class="agent-exec-row ' + state + '" data-step="' + i + '"' +
+            (taskId ? ' data-task="' + taskId + '"' : '') + '>' +
+            '<span class="agent-exec-idx">' + (i + 1) + '</span>' +
+            '<span class="agent-exec-tool"><i data-lucide="' + agentToolIcon(e.tool) + '"></i>' + escapeHtml(e.tool || '') + '</span>' +
+            '<span class="agent-exec-desc">' + escapeHtml(e.description || '') + '</span>' +
+            '<span class="agent-exec-dur">' + agentFmtDur(durs[i]) + '</span>' +
+            agentExecBadgeFor(badgeState) +
+            '</div>';
+        if(!e.ok && (e.error || e.message)){
+            html += '<div class="agent-exec-fail">' + escapeHtml(String(e.error || e.message)) + '</div>';
+        }
+    });
+    // 计划中但未执行到的步骤（失败即停之后）
+    var planned = st.steps || [];
+    for(var j = log.length; j < planned.length; j++){
+        var p = planned[j];
+        html += '<div class="agent-exec-row skip" data-step="' + j + '">' +
+            '<span class="agent-exec-idx">' + (j + 1) + '</span>' +
+            '<span class="agent-exec-tool"><i data-lucide="' + agentToolIcon(p.tool) + '"></i>' + escapeHtml(p.tool || '') + '</span>' +
+            '<span class="agent-exec-desc">' + escapeHtml(p.description || '') + '</span>' +
+            '<span class="agent-exec-dur">—</span>' +
+            agentExecBadgeFor('skip') +
+            '</div>';
+    }
+    if(!log.length && st.execErr){
+        html = '<div class="agent-exec-fail" style="margin-left:0">' + escapeHtml(st.execErr) + '</div>';
+    }
+    return html;
+}
+// 生成任务段：状态徽章 + timing 四段耗时（排队/准备/生成/总计）+ 失败错误
+function agentExecTaskSegHtml(rec){
+    var t = (rec && rec.latest) || {};
+    var ts = t.status || 'queued';
+    var timing = agentExecTaskTiming(t);
+    var err = ((ts === 'failed' || ts === 'cancelled') && t.error) ? escapeHtml(String(t.error)) : '';
+    return '<div class="agent-exec-task" data-task="' + (rec.taskId || '') + '" data-status="' + ts + '">' +
+        '<div class="agent-exec-task-head">' +
+            '<span class="agent-exec-task-kind"><i data-lucide="' + (rec.kind === 'video' ? 'film' : 'image') + '"></i>' +
+            (rec.kind === 'video' ? '视频生成任务' : '图片生成任务') +
+            '<b class="agent-exec-task-id">#' + (rec.taskId || '') + '</b></span>' +
+            agentExecBadgeFor(ts) +
+        '</div>' +
+        '<div class="agent-exec-task-timing">' +
+            '<div class="agent-exec-ti"><span>排队</span><b>' + agentFmtDur(timing.queue) + '</b></div>' +
+            '<div class="agent-exec-ti"><span>准备</span><b>' + agentFmtDur(timing.prepare) + '</b></div>' +
+            '<div class="agent-exec-ti"><span>生成</span><b>' + agentFmtDur(timing.gen) + '</b></div>' +
+            '<div class="agent-exec-ti"><span>总计</span><b>' + agentFmtDur(timing.total) + '</b></div>' +
+        '</div>' +
+        (err ? '<div class="agent-exec-fail">' + err + '</div>' : '') +
+    '</div>';
+}
+// 重建面板（首次展开 + 轮询期间任务状态联动时增量重建）
+function agentExecRenderPanel(card){
+    var panel = card.querySelector('.agent-exec-panel');
+    if(!panel) return;
+    var st = card._agentPlan || {};
+    var taskIds = Object.keys(st.execTasks || {});
+    var tasksHtml = taskIds.map(function(id){ return agentExecTaskSegHtml(st.execTasks[id]); }).join('');
+    var oState = agentExecOverallState(card);
+    var stepsDone = (st.execLog || []).length;
+    var stepsTotal = (st.steps || []).length || stepsDone;
+    panel.innerHTML =
+        '<div class="agent-exec-head">' +
+            '<span class="agent-exec-total"><i data-lucide="timer"></i>总耗时 <b>' + agentFmtDur(agentExecOverallMs(card)) + '</b></span>' +
+            '<span class="agent-exec-meta"><span class="agent-exec-badge ' + (oState === 'ok' ? 'ok' : (oState === 'fail' ? 'fail' : 'spin')) + '">' +
+            (oState === 'ok' ? '✓ 全部成功' : (oState === 'fail' ? '✗ 有失败' : '⏳ 执行中')) +
+            '</span><b>' + stepsDone + '</b>/' + stepsTotal + ' 步</span>' +
+        '</div>' +
+        '<div class="agent-exec-section">执行链</div>' +
+        '<div class="agent-exec-chain">' + agentExecChainHtml(card) + '</div>' +
+        (tasksHtml ? '<div class="agent-exec-section">生成任务</div><div class="agent-exec-tasks">' + tasksHtml + '</div>' : '');
+    refreshIcons();
+}
+// 任务状态联动：登记最新 task，面板已展开则实时刷新（spin→ok/fail + 耗时）
+function agentExecTaskSet(card, taskId, kind, task){
+    if(!card || !card._agentPlan || !taskId) return;
+    var st = card._agentPlan;
+    st.execTasks = st.execTasks || {};
+    var rec = st.execTasks[taskId] = st.execTasks[taskId] || {taskId: taskId, kind: kind || 'image', latest: null};
+    if(task) rec.latest = task;
+    var panel = card.querySelector('.agent-exec-panel');
+    if(panel && !panel.hidden) agentExecRenderPanel(card);
+}
+// 展开/收起（内联 onclick 入口，window 导出）
+function agentToggleExecDetail(btn){
+    var card = btn ? btn.closest('.agent-plan-card') : null;
+    if(!card) return;
+    var panel = card.querySelector('.agent-exec-panel');
+    if(!panel) return;
+    var open = panel.hidden;
+    panel.hidden = !open;
+    btn.classList.toggle('open', open);
+    var caret = btn.querySelector('.agent-exec-caret');
+    if(caret) caret.setAttribute('data-lucide', open ? 'chevron-up' : 'chevron-down');
+    if(open) agentExecRenderPanel(card);
+    refreshIcons();
+}
+window.agentToggleExecDetail = agentToggleExecDetail;
+// 应用后挂载：[查看执行详情] 按钮 + 面板骨架
+function agentExecAttach(card){
+    if(!card || !card._agentPlan || card.querySelector('.agent-exec-bar')) return;
+    var bar = document.createElement('div');
+    bar.className = 'agent-exec-bar';
+    bar.innerHTML =
+        '<button type="button" class="agent-btn agent-exec-btn" onclick="agentToggleExecDetail(this)">' +
+        '<i data-lucide="search"></i><span>查看执行详情</span><i data-lucide="chevron-down" class="agent-exec-caret"></i></button>';
+    card.appendChild(bar);
+    var panel = document.createElement('div');
+    panel.className = 'agent-exec-panel';
+    panel.hidden = true;
+    card.appendChild(panel);
+    refreshIcons();
+}
 function refreshCanvasAfterAgent(){
     // 应用/回滚后刷新画布状态（复用现有合并机制，不打断用户操作）
     try {

@@ -1,6 +1,7 @@
 import json
 import uuid
 import base64
+import io
 import hashlib
 import hmac
 import datetime
@@ -12213,100 +12214,38 @@ async def video_blur_faces(payload: VideoBlurFacesRequest):
 
 class ImageMattingRequest(BaseModel):
     url: str = ""            # 本地图片 URL（/assets/ 或 /output/ 开头）
-    subject: str = ""        # 可选：AI 分析的主体描述（analyze 步骤返回，用于 mask 精修）
 
 
-_MATTING_SESSION = None
+_MATTING_EDIT_PROMPT = (
+    "图像抠图任务：请把图片的背景完整替换为纯绿色背景（#00FF00，RGB 0,255,0），"
+    "图片主体（{subject}）必须保持完全不变——外观、颜色、材质、纹理、细节与原始图片完全一致，"
+    "不要添加任何新元素，不要改变主体形状。只改背景，主体不能有任何变化。"
+)
+_MATTING_EDIT_PROMPT_NO_SUBJECT = (
+    "图像抠图任务：请把图片的背景完整替换为纯绿色背景（#00FF00，RGB 0,255,0），"
+    "图片中的主体对象必须保持完全不变——外观、颜色、材质、纹理、细节与原始图片完全一致，"
+    "不要添加任何新元素，不要改变主体形状。只改背景，主体不能有任何变化。"
+)
 
 
-def _matting_session():
-    """RMBG-1.4 抠图推理会话（单例缓存，避免每次加载 167MB 模型）。"""
-    global _MATTING_SESSION
-    if _MATTING_SESSION is not None:
-        return _MATTING_SESSION
-    model_path = os.path.join(BASE_DIR, "assets", "models", "rmbg_1.4.onnx")
-    if not os.path.isfile(model_path):
-        raise HTTPException(status_code=400, detail="抠图模型缺失（assets/models/rmbg_1.4.onnx）")
-    try:
-        import onnxruntime
-    except ImportError:
-        raise HTTPException(status_code=400, detail="服务器缺少 onnxruntime，无法抠图")
-    sess = onnxruntime.InferenceSession(model_path, providers=["CPUExecutionProvider"])
-    _MATTING_SESSION = sess
-    return sess
-
-
-_POSITION_REGIONS = {
-    "top-left": (0, 0.5, 0, 0.5), "top-center": (0, 0.5, 0.25, 0.75), "top-right": (0, 0.5, 0.5, 1),
-    "center-left": (0.25, 0.75, 0, 0.5), "center": (0.25, 0.75, 0.25, 0.75), "center-right": (0.25, 0.75, 0.5, 1),
-    "bottom-left": (0.5, 1, 0, 0.5), "bottom-center": (0.5, 1, 0.25, 0.75), "bottom-right": (0.5, 1, 0.5, 1),
-}
-
-
-def _in_position(cx, cy, position):
-    """判断归一化坐标是否落在九宫格位置区域内。"""
-    reg = _POSITION_REGIONS.get(str(position or "").strip().lower())
-    if not reg:
-        return True
-    y0, y1, x0, x1 = reg
-    return x0 <= cx <= x1 and y0 <= cy <= y1
-
-
-def refine_matting_mask(mask_arr, subject):
-    """mask 精修：开运算去噪 → 连通域筛选（按主体位置保留主体块、去碎片）→ 边缘羽化。
-    subject 为空时保留最大块 + 面积 ≥ 最大块 15% 的块（兼容多主体）。"""
-    import numpy as np
-    import cv2
-    binary = (mask_arr > 0.5).astype(np.uint8)
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
-    num, labels, stats, _ = cv2.connectedComponentsWithStats(binary, 8)
-    if num <= 1:
-        return mask_arr
-    h, w = mask_arr.shape
-    comps = [(i, int(stats[i, cv2.CC_STAT_AREA])) for i in range(1, num)]
-    if not comps:
-        return mask_arr
-    comps.sort(key=lambda x: -x[1])
-    max_area = comps[0][1]
-    keep = {comps[0][0]}
-    has_position = bool(subject and subject.get("position"))
-    for idx, area in comps[1:]:
-        if has_position:
-            cx = (stats[idx, cv2.CC_STAT_LEFT] + stats[idx, cv2.CC_STAT_WIDTH] / 2) / w
-            cy = (stats[idx, cv2.CC_STAT_TOP] + stats[idx, cv2.CC_STAT_HEIGHT] / 2) / h
-            if _in_position(cx, cy, subject["position"]) and area >= max_area * 0.05:
-                keep.add(idx)
-        elif area >= max_area * 0.15:
-            keep.add(idx)
-    refined = np.zeros_like(binary, dtype=np.float32)
-    for idx in keep:
-        refined[labels == idx] = 1.0
-    refined = cv2.GaussianBlur(refined, (3, 3), 0)
-    return mask_arr * refined
-
-
-def run_image_matting(src_path: str, out_path: str, subject=None):
-    """本地 RMBG-1.4 抠图：读图 → 1024 推理 → mask 精修 → 透明 PNG。"""
-    import numpy as np
+def chroma_key_to_transparent(img_bytes: bytes) -> bytes:
+    """绿幕转透明：绿色背景像素 → alpha=0，边缘羽化，输出透明 PNG。"""
     from PIL import Image
-    img = Image.open(src_path).convert("RGB")
-    orig_w, orig_h = img.size
-    img_1024 = img.resize((1024, 1024), Image.BILINEAR)
-    arr = np.array(img_1024).astype(np.float32) / 255.0
-    arr = (arr - 0.5) / 0.5
-    arr = arr.transpose(2, 0, 1)[None]
-    sess = _matting_session()
-    out = sess.run(None, {sess.get_inputs()[0].name: arr})[0]
-    mask = out[0, 0]
-    mask = refine_matting_mask(mask, subject)
-    mask_img = Image.fromarray((mask * 255).astype(np.uint8)).resize((orig_w, orig_h), Image.BILINEAR)
-    mask_arr = np.array(mask_img).astype(np.float32) / 255.0
-    orig = np.array(img).astype(np.float32)
-    rgba = np.zeros((orig_h, orig_w, 4), dtype=np.float32)
-    rgba[:, :, :3] = orig
-    rgba[:, :, 3] = mask_arr * 255
-    Image.fromarray(rgba.astype(np.uint8)).save(out_path)
+    import numpy as np
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    arr = np.array(img).astype(np.float32)
+    R, G, B = arr[:, :, 0], arr[:, :, 1], arr[:, :, 2]
+    greenness = G - np.maximum(R, B)
+    # 软阈值：>120 全透明，<40 不透明，中间羽化
+    mask = np.clip((greenness - 40.0) / 80.0, 0.0, 1.0)
+    # 轻微去绿边（spill removal）：半透明区域降低 G
+    spill = np.clip(greenness / 150.0, 0.0, 0.5)[:, :, None]
+    arr[:, :, 1] -= spill[:, :, 0] * arr[:, :, 1] * 0.3
+    alpha = (1.0 - mask) * 255.0
+    rgba = np.dstack([np.clip(arr, 0, 255), alpha]).astype(np.uint8)
+    out = io.BytesIO()
+    Image.fromarray(rgba, "RGBA").save(out, "PNG")
+    return out.getvalue()
 
 
 async def analyze_image_subject(raw_url: str):
@@ -12349,12 +12288,60 @@ async def analyze_image_subject(raw_url: str):
         info = json.loads(m.group(0))
         subject = str(info.get("subject") or "").strip()[:80]
         position = str(info.get("position") or "center").strip().lower()
-        if position not in _POSITION_REGIONS:
+        if position not in {"center", "center-left", "center-right", "top-center", "bottom-center", "top-left", "top-right", "bottom-left", "bottom-right"}:
             position = "center"
         return {"subject": subject, "position": position, "multiple": bool(info.get("multiple"))}
     except Exception as exc:
-        print(f"[Matting] 主体分析失败（降级为纯抠图）: {exc}")
+        print(f"[Matting] 主体分析失败（降级为通用抠图）: {exc}")
         return None
+
+
+async def _api_matting(raw_url: str, subject: str):
+    """API 抠图：复用生图编辑链路（灵境 gpt-image-2 优先 → Modelscope Qwen-Image-Edit 备选），动态不写死。"""
+    src_path = output_file_from_url(raw_url)
+    from PIL import Image as PILImage
+    try:
+        with PILImage.open(src_path) as im:
+            w, h = im.size
+    except Exception:
+        w, h = 1024, 1024
+    # 尺寸：按原图比例选标准尺寸（上限 1536 内）
+    ratio = w / max(h, 1)
+    if ratio > 1.4:
+        size = "1536x1024"
+    elif ratio < 0.72:
+        size = "1024x1536"
+    else:
+        size = "1024x1024"
+    prompt = _MATTING_EDIT_PROMPT.format(subject=subject) if subject else _MATTING_EDIT_PROMPT_NO_SUBJECT
+    candidates = [
+        ("lingjing", "gemini-3.1-flash-image-preview"),
+        ("lingjing", "gpt-image-2"),
+        ("modelscope", "Qwen/Qwen-Image-Edit"),
+    ]
+    last_err = ""
+    for pid, mdl in candidates:
+        prov = get_api_provider(pid)
+        if not prov or not (prov.get("image_models") or []):
+            continue
+        try:
+            result = await build_online_image_result(OnlineImageRequest(
+                prompt=prompt,
+                provider_id=pid,
+                model=mdl,
+                size=size,
+                quality="high",
+                n=1,
+                reference_images=[{"url": raw_url}],
+            ))
+            urls = _agent_result_media_urls(result)
+            if urls:
+                return urls[0], pid
+        except Exception as exc:
+            last_err = str(getattr(exc, "detail", exc))[:200]
+            print(f"[Matting] {pid}/{mdl} 抠图失败: {last_err}")
+            continue
+    raise HTTPException(status_code=502, detail=f"抠图失败（所有可用平台均失败）：{last_err or '无可用生图平台'}")
 
 
 @app.post("/api/image/matting/analyze")
@@ -12372,7 +12359,7 @@ async def image_matting_analyze(payload: ImageMattingRequest):
 
 @app.post("/api/image/matting")
 async def image_matting(payload: ImageMattingRequest):
-    """图片抠图（RMBG-1.4 本地推理 + 主体分析精修，免费离线）。返回透明 PNG。"""
+    """图片抠图（AI 先分析主体 → 生图 API 编辑抠图，透明 PNG）。"""
     raw_url = (payload.url or "").strip()
     if not raw_url:
         raise HTTPException(status_code=400, detail="缺少图片 URL")
@@ -12384,27 +12371,42 @@ async def image_matting(payload: ImageMattingRequest):
     ext = os.path.splitext(src_path)[1].lower()
     if ext not in (".png", ".jpg", ".jpeg", ".webp", ".bmp"):
         raise HTTPException(status_code=400, detail="仅支持 png/jpg/webp 图片抠图")
-    # 主体分析（失败不影响抠图主流程）
-    subject = None
+    # 第一步：主体分析（失败不影响）
+    subject = ""
     try:
-        subject = await analyze_image_subject(raw_url)
+        info = await analyze_image_subject(raw_url)
+        if info and info.get("subject"):
+            subject = info["subject"]
     except Exception:
-        subject = None
-    out_filename = f"matting_{uuid.uuid4().hex}.png"
-    out_path = os.path.join(ASSETS_DIR, "output", out_filename)
+        subject = ""
+    # 第二步：API 抠图（绿幕 → 本地转透明）
+    result_url, used_provider = await _api_matting(raw_url, subject)
+    # 结果下载 → 绿幕转透明 → 存 output/
     try:
-        await asyncio.to_thread(run_image_matting, src_path, out_path, subject)
-    except HTTPException:
-        raise
+        if str(result_url).startswith(("/output/", "/assets/")):
+            result_path = output_file_from_url(result_url)
+            with open(result_path, "rb") as f:
+                img_bytes = f.read()
+        else:
+            async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV, timeout=httpx.Timeout(connect=20.0, read=120.0, write=60.0, pool=20.0)) as client:
+                resp = await client.get(result_url)
+                resp.raise_for_status()
+                img_bytes = resp.content
+        transparent_bytes = await asyncio.to_thread(chroma_key_to_transparent, img_bytes)
+        out_filename = f"matting_{uuid.uuid4().hex}.png"
+        out_path = os.path.join(ASSETS_DIR, "output", out_filename)
+        with open(out_path, "wb") as f:
+            f.write(transparent_bytes)
+        result_url = output_url_for(out_filename, "output")
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"抠图失败：{exc}")
+        print(f"[Matting] 绿幕转透明失败（返回原图）: {exc}")
     return {
-        "url": output_url_for(out_filename, "output"),
+        "url": result_url,
         "name": f"抠图_{uuid.uuid4().hex[:6]}.png",
         "kind": "image",
         "mime": "image/png",
-        "subject": subject.get("subject", "") if subject else "",
-        "position": subject.get("position", "center") if subject else "center",
+        "subject": subject,
+        "provider": used_provider,
     }
 
 

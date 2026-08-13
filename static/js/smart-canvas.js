@@ -5093,9 +5093,9 @@ async function sendChatMessage(){
 }
 // ── Agent 计划卡片渲染与操作（时间线卡片流）──
 var AGENT_TOOL_ICONS = {
-    'create_node': 'square-plus', 'delete_node': 'trash-2', 'connect_nodes': 'link-2',
-    'update_node': 'pencil-line', 'run_generation': 'play', 'generate_image': 'image-plus',
-    'generate_video': 'clapperboard', 'check_task': 'search-check', 'create_matrix': 'grid-3x3',
+    'create_node': 'plus', 'delete_node': 'trash-2', 'connect_nodes': 'link',
+    'update_node': 'pencil', 'run_generation': 'play', 'generate_image': 'image-plus',
+    'generate_video': 'clapperboard', 'check_task': 'check-circle-2', 'create_matrix': 'grid-3x3',
     'list_canvases': 'list', 'get_canvas': 'scan', 'use_asset': 'image-plus'
 };
 function agentToolIcon(tool){ return AGENT_TOOL_ICONS[tool] || 'zap'; }

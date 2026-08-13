@@ -22324,6 +22324,15 @@ def _agent_node_text(node):
 
 def _agent_node_summary(node, max_text=120):
     text = _agent_node_text(node)
+    # 素材 URL 带进摘要：LLM 计划时可直接引用画布上的图/视频（动作迁移等场景必需）
+    urls = []
+    imgs = node.get("images")
+    if isinstance(imgs, list):
+        urls = [str(x.get("url") or "") for x in imgs[:6] if isinstance(x, dict) and x.get("url")]
+    elif node.get("url"):
+        urls = [str(node["url"])]
+    image_urls = [u for u in urls if is_image_reference_value(u)][:3]
+    video_urls = [u for u in urls if is_video_reference_value(u)][:2]
     return {
         "id": node.get("id"),
         "type": node.get("type"),
@@ -22331,6 +22340,8 @@ def _agent_node_summary(node, max_text=120):
         "x": node.get("x"),
         "y": node.get("y"),
         "images": len(node.get("images") or []) if isinstance(node.get("images"), list) else (1 if node.get("url") else 0),
+        "image_urls": image_urls,
+        "video_urls": video_urls,
         "text": (text[:max_text] + "…") if len(text) > max_text else text,
         "task_id": node.get("task_id") or node.get("lastTaskId") or "",
     }
@@ -22993,6 +23004,25 @@ def _agent_tool_generate_video_validate(args):
                 norm_vids.append({"url": v.strip()})
             elif isinstance(v, dict) and str(v.get("url") or "").strip():
                 norm_vids.append({"url": str(v["url"]).strip()})
+    motion_transfer = bool(args.get("motion_transfer"))
+    if motion_transfer:
+        # 动作迁移：参考视频=动作骨架，参考图=外观；火山编辑任务强制 duration=-1 / ratio=adaptive
+        if not norm_vids:
+            raise AgentToolError("动作迁移需要 reference_video（动作参考视频，至少 1 个）", code="invalid_args")
+        if not norm_refs:
+            raise AgentToolError("动作迁移需要 reference_urls（角色图/外观参考，至少 1 张）", code="invalid_args")
+        return {
+            "canvas_id": canvas_id,
+            "prompt": prompt,
+            "reference_urls": norm_refs,
+            "reference_video": norm_vids,
+            "motion_transfer": True,
+            "provider": _agent_pick_video_provider(str(args.get("provider") or "").strip()),
+            "model": str(args.get("model") or "").strip(),
+            "duration": -1,
+            "ratio": "adaptive",
+            "title": str(args.get("title") or "")[:120],
+        }
     duration = int(args.get("duration") or 5)
     if duration < 1:
         duration = 5
@@ -23004,6 +23034,7 @@ def _agent_tool_generate_video_validate(args):
         "prompt": prompt,
         "reference_urls": norm_refs,
         "reference_video": norm_vids,
+        "motion_transfer": False,
         "provider": _agent_pick_video_provider(str(args.get("provider") or "").strip()),
         "model": str(args.get("model") or "").strip(),
         "duration": duration,
@@ -23014,15 +23045,28 @@ def _agent_tool_generate_video_validate(args):
 
 async def _agent_tool_generate_video_run(args):
     """建「提示词节点 → 视频节点」完整工作流（含连线，ComfyUI 式管线）
-    → 真实视频生成任务（Task Engine）→ 结果自动落画布视频节点。"""
+    → 真实视频生成任务（Task Engine）→ 结果自动落画布视频节点。
+    motion_transfer=true 时自动组装动作迁移提示词（参考视频=动作骨架，参考图=外观）。"""
     canvas_id = args["canvas_id"]
+    # 动作迁移：按模板组装提示词，明确编辑边界（只换动作，其余保持不变）
+    eff_prompt = args["prompt"]
+    if args.get("motion_transfer"):
+        user_note = eff_prompt.strip()
+        if len(user_note) > 200:
+            user_note = user_note[:200]
+        eff_prompt = (
+            f"动作迁移：让画面中的主体严格按照参考视频的动作骨架表演，"
+            f"外观保持参考图一致（身份、服装、造型、材质等不变）。"
+            f"场景、镜头、光影、构图等其他一切内容保持不变，仅替换动作。"
+            f"用户补充：{user_note}"
+        )
     count = len(load_canvas(canvas_id).get("nodes") or [])
     rx = 220 + (count % 5) * 70
     ry = 160 + (count % 4) * 70
     # 1) 建提示词节点（结果节点左侧，作为工作流起点）
     prompt_args = _agent_tool_create_node_validate({
         "canvas_id": canvas_id, "type": "prompt",
-        "prompt": args["prompt"],
+        "prompt": eff_prompt,
         "title": (args["title"] or "Video") + " 提示词",
         "x": rx - 280, "y": ry,
     })
@@ -23031,7 +23075,7 @@ async def _agent_tool_generate_video_run(args):
     # 2) 建视频结果节点（复用 create_node 工具，保证节点结构与画布类型一致 smart-video / video）
     node_args = _agent_tool_create_node_validate({
         "canvas_id": canvas_id, "type": "video",
-        "prompt": args["prompt"],
+        "prompt": eff_prompt,
         "title": args["title"] or "Video",
         "x": rx, "y": ry,
     })
@@ -23050,7 +23094,7 @@ async def _agent_tool_generate_video_run(args):
         if n is not None:
             n["images"] = [{"url": r["url"], "name": f"ref-{i + 1}.png", "kind": "image"}
                            for i, r in enumerate(refs)]
-            n["text"] = args["prompt"]
+            n["text"] = eff_prompt
             n["duration"] = args["duration"]
             n["aspectRatio"] = args["ratio"]
         return None
@@ -23058,7 +23102,7 @@ async def _agent_tool_generate_video_run(args):
     _agent_mutate_canvas(canvas_id, _attach)
     # 真实生成：进 Task Engine（run_canvas_video_task runner）
     payload = {
-        "prompt": args["prompt"],
+        "prompt": eff_prompt,
         "provider_id": args["provider"],
         "model": args["model"],
         "duration": args["duration"],
@@ -23084,6 +23128,7 @@ async def _agent_tool_generate_video_run(args):
         _agent_mutate_canvas(canvas_id, _mark)
     except Exception as exc:
         print(f"[Agent] 记录 task_id 到节点失败（不影响任务）: {exc}")
+    mode_note = "动作迁移（参考视频=动作骨架，参考图=外观，duration=-1/adaptive）" if args.get("motion_transfer") else f"duration={args['duration']}s，ratio={args['ratio']}"
     return {
         "prompt_node_id": prompt_node_id,
         "node_id": node_id,
@@ -23093,14 +23138,18 @@ async def _agent_tool_generate_video_run(args):
         "model": args["model"],
         "duration": args["duration"],
         "reference_count": len(refs) + len(vids),
-        "prompt": args["prompt"][:160] + ("…" if len(args["prompt"]) > 160 else ""),
-        "message": f"已在画布创建提示词节点+视频节点并连线（{args['provider']}，duration={args['duration']}s，ratio={args['ratio']}），生成任务已提交，完成后自动落到视频节点",
+        "motion_transfer": bool(args.get("motion_transfer")),
+        "prompt": eff_prompt[:160] + ("…" if len(eff_prompt) > 160 else ""),
+        "message": f"已在画布创建提示词节点+视频节点并连线（{args['provider']}，{mode_note}），生成任务已提交，完成后自动落到视频节点",
     }
 
 
 def _agent_tool_generate_video_preview(args, canvas):
     refs = args.get("reference_urls") or []
     vids = args.get("reference_video") or []
+    if args.get("motion_transfer"):
+        return f"【动作迁移】参考视频 {len(vids)} 个提供动作骨架 + 参考图 {len(refs)} 张提供外观，时长/比例按编辑任务强制（duration=-1、ratio=adaptive），" + \
+               f"提示词：{str(args.get('prompt') or '')[:40]}…"
     return f"将在画布创建提示词节点 + 视频节点并连线，立即发起真实视频生成（provider={args.get('provider') or 'comfly'}, " + \
            f"model={args.get('model') or '默认'}, {args.get('duration') or 5}s，参考 {len(refs)} 图 + {len(vids)} 视频）" + \
            f"，提示词：{str(args.get('prompt') or '')[:40]}…"
@@ -23186,7 +23235,7 @@ def _agent_tool_use_asset_run(args):
                     hits.append({"url": url, "name": fn[:120], "kind": item_kind, "category": "上传素材"})
         except Exception as exc:
             print(f"[Agent] use_asset 扫描上传素材失败: {exc}")
-    return {"total": len(hits), "items": hits, "query": args["query"], "kind": args["kind"]}
+    return {"total": len(hits), "items": hits, "results": hits, "query": args["query"], "kind": args["kind"]}
 
 
 def _agent_tool_use_asset_preview(args, canvas):
@@ -23396,16 +23445,18 @@ AGENT_TOOLS = {
         "mutates_canvas": True,
     },
     "generate_video": {
-        "description": "一句话生成视频：在画布创建「提示词节点 → 视频节点」完整工作流并连线（ComfyUI 式管线，用户可见），立即发起真实视频生成任务（进 Task Engine），完成后结果自动落到视频节点。返回 node_id（视频节点）、prompt_node_id（提示词节点）与 task_id。",
+        "description": "一句话生成视频：在画布创建「提示词节点 → 视频节点」完整工作流并连线（ComfyUI 式管线，用户可见），立即发起真实视频生成任务（进 Task Engine），完成后结果自动落到视频节点。返回 node_id（视频节点）、prompt_node_id（提示词节点）与 task_id。动作迁移场景（让照片/角色图按参考视频的动作表演）请用 motion_transfer=true。",
         "schema": {"type": "object", "properties": {
             "canvas_id": {"type": "string"},
             "prompt": {"type": "string", "description": "视频提示词（必填），描述画面内容/运镜/动作"},
             "reference_urls": {"type": "array", "items": {"type": "string"},
-                               "description": "参考图 URL 列表（首图优先作外观参考）"},
+                               "description": "参考图 URL 列表（首图优先作外观参考；动作迁移时=角色图/主体外观）"},
             "reference_video": {"type": "array", "items": {"type": "string"},
-                                "description": "参考视频 URL 列表（作动作骨架/编辑源）"},
+                                "description": "参考视频 URL 列表（作动作骨架/编辑源；动作迁移时=动作参考视频）"},
+            "motion_transfer": {"type": "boolean", "default": False,
+                                "description": "动作迁移模式：true 时参考视频提供动作骨架、参考图提供外观，自动使用动作迁移提示词模板，时长/比例由系统按编辑任务强制（duration=-1、ratio=adaptive）"},
             "provider": {"type": "string", "default": "comfly"}, "model": {"type": "string"},
-            "duration": {"type": "integer", "default": 5, "description": "时长秒数 1-15（默认 5）"},
+            "duration": {"type": "integer", "default": 5, "description": "时长秒数 1-15（默认 5；motion_transfer 时忽略）"},
             "ratio": {"type": "string", "default": "adaptive", "description": "画面比例 adaptive/16:9/9:16/1:1（默认 adaptive）"},
             "title": {"type": "string", "description": "节点标题（可选）"}},
             "required": ["canvas_id", "prompt"]},
@@ -23489,10 +23540,13 @@ async def agent_execute_step(tool_name, args):
 
 
 def _agent_resolve_step_refs(args, results):
-    """把 args 里的 {stepN.path} 引用替换为前序步骤结果值（计划状态机的轻量实现）。"""
+    """把 args 里的 {stepN.path} 引用替换为前序步骤结果值（计划状态机的轻量实现）。
+    容错：① 路径中 result/results 键跳过（兼容 {stepN.results[0].url} 与 {stepN.result.items[0].url}）；
+    ② 方括号下标先拆成点路径（{step0.results[0].url} → step0.results.0.url）。"""
     if isinstance(args, str):
         if args.startswith("{step") and args.endswith("}"):
-            path = args[1:-1].split(".")
+            raw = args[1:-1].replace("[", ".").replace("]", "")
+            path = [p for p in raw.split(".") if p]
             try:
                 idx = int(path[0][4:])
             except (ValueError, IndexError):
@@ -23500,6 +23554,8 @@ def _agent_resolve_step_refs(args, results):
             if idx < len(results) and results[idx].get("ok"):
                 cur = results[idx].get("result")
                 for part in path[1:]:
+                    if part in ("result", "results") and isinstance(cur, dict) and part not in cur:
+                        continue  # 兼容：跳过结果包装键
                     if isinstance(cur, dict):
                         cur = cur.get(part)
                     elif isinstance(cur, list) and part.isdigit() and int(part) < len(cur):
@@ -23604,10 +23660,15 @@ _AGENT_PLAN_SYSTEM_PROMPT = (
     "2. 格式：{{\"intent\": \"一句话意图\", \"steps\": [{{\"tool\": \"工具名\", \"args\": {{...}}, \"description\": \"这一步做什么\"}}], \"expected_output\": \"预期结果描述\"}}\n"
     "3. steps 至少 1 步；tool 必须是清单中的工具名；args 必须符合该工具的 JSON Schema。\n"
     "4. 多步计划中，后续步骤需要引用前面步骤创建节点的 ID 时，用 {{stepN.node_id}} 占位符"
-    "（N 从 0 开始，如 {{step0.node_id}}）。\n"
+    "（N 从 0 开始，如 {{step0.node_id}}）；引用 use_asset 检索到的素材 URL 用 {{stepN.results[0].url}}"
+    "（results 是检索结果数组，每项有 url/name/kind）。\n"
     "5. 用户直接要求生成图片时（如「生成一张…的图」）：用 generate_image 一步完成（建节点+真实生成+结果落画布）；"
     "上下文或素材库有参考图 URL 时，填入 generate_image 的 reference_urls。"
     "仅当用户明确要求「先建节点、稍后再生成」时，才拆成 create_node + run_generation。\n"
+    "5.5 动作迁移（用户说「让照片/角色图做这个视频里的动作」「动作模仿/动作迁移」「让画面里的人按视频动作表演」等）："
+    "用 generate_video 一步完成，motion_transfer=true，reference_urls 填角色图/外观参考（首图=主体外观），"
+    "reference_video 填动作参考视频（1 个），prompt 简述用户要求即可（系统会自动套动作迁移模板，时长/比例自动按编辑任务处理）。"
+    "画布摘要或素材库中有角色图 URL 与视频 URL 时直接填入。\n"
     "6. 删除操作不要擅自使用 force=true。"
 )
 

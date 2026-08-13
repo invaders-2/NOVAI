@@ -12210,6 +12210,83 @@ async def video_blur_faces(payload: VideoBlurFacesRequest):
         "faces_detected": faces_total,
     }
 
+
+class ImageMattingRequest(BaseModel):
+    url: str = ""            # 本地图片 URL（/assets/ 或 /output/ 开头）
+
+
+_MATTING_SESSION = None
+
+
+def _matting_session():
+    """RMBG-1.4 抠图推理会话（单例缓存，避免每次加载 167MB 模型）。"""
+    global _MATTING_SESSION
+    if _MATTING_SESSION is not None:
+        return _MATTING_SESSION
+    model_path = os.path.join(BASE_DIR, "assets", "models", "rmbg_1.4.onnx")
+    if not os.path.isfile(model_path):
+        raise HTTPException(status_code=400, detail="抠图模型缺失（assets/models/rmbg_1.4.onnx）")
+    try:
+        import onnxruntime
+    except ImportError:
+        raise HTTPException(status_code=400, detail="服务器缺少 onnxruntime，无法抠图")
+    sess = onnxruntime.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+    _MATTING_SESSION = sess
+    return sess
+
+
+def run_image_matting(src_path: str, out_path: str):
+    """本地 RMBG-1.4 抠图：读图 → 1024 推理 → mask 回放 → 透明 PNG。"""
+    import numpy as np
+    from PIL import Image
+    img = Image.open(src_path).convert("RGB")
+    orig_w, orig_h = img.size
+    img_1024 = img.resize((1024, 1024), Image.BILINEAR)
+    arr = np.array(img_1024).astype(np.float32) / 255.0
+    arr = (arr - 0.5) / 0.5
+    arr = arr.transpose(2, 0, 1)[None]
+    sess = _matting_session()
+    out = sess.run(None, {sess.get_inputs()[0].name: arr})[0]
+    mask = out[0, 0]
+    mask_img = Image.fromarray((mask * 255).astype(np.uint8)).resize((orig_w, orig_h), Image.BILINEAR)
+    mask_arr = np.array(mask_img).astype(np.float32) / 255.0
+    orig = np.array(img).astype(np.float32)
+    rgba = np.zeros((orig_h, orig_w, 4), dtype=np.float32)
+    rgba[:, :, :3] = orig
+    rgba[:, :, 3] = mask_arr * 255
+    Image.fromarray(rgba.astype(np.uint8)).save(out_path)
+
+
+@app.post("/api/image/matting")
+async def image_matting(payload: ImageMattingRequest):
+    """图片抠图（RMBG-1.4 本地推理，免费离线）。返回透明 PNG。"""
+    raw_url = (payload.url or "").strip()
+    if not raw_url:
+        raise HTTPException(status_code=400, detail="缺少图片 URL")
+    src_path = output_file_from_url(raw_url)
+    if not src_path or not os.path.isfile(src_path):
+        raise HTTPException(status_code=400, detail="图片文件不存在")
+    if os.path.getsize(src_path) > 100 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="图片超过 100MB，请先压缩")
+    ext = os.path.splitext(src_path)[1].lower()
+    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".bmp"):
+        raise HTTPException(status_code=400, detail="仅支持 png/jpg/webp 图片抠图")
+    out_filename = f"matting_{uuid.uuid4().hex}.png"
+    out_path = os.path.join(ASSETS_DIR, "output", out_filename)
+    try:
+        await asyncio.to_thread(run_image_matting, src_path, out_path)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"抠图失败：{exc}")
+    return {
+        "url": output_url_for(out_filename, "output"),
+        "name": f"抠图_{uuid.uuid4().hex[:6]}.png",
+        "kind": "image",
+        "mime": "image/png",
+    }
+
+
 class Base64UploadRequest(BaseModel):
     data: str = ""            # 纯 base64 或 data:URL
     name: str = ""

@@ -9096,6 +9096,7 @@ function smartNodeToolbarHtml(node){
         {key:'mask', icon:'brush', label:'遮罩', enabled:canEditImage},
         {key:'brush', icon:'paintbrush', label:'画笔', enabled:canEditImage},
         {key:'grid', icon:'grid-3x3', label:gridLabel, enabled:canEditImage},
+        {key:'matting', icon:'scissors', label:'抠图', enabled:canEditImage},
         {key:'blurfaces', icon:'user-round', label:'人脸模糊', enabled:kind === 'video'},
         {key:'download', icon:'download', label:'下载', enabled:true}
     ];
@@ -9135,6 +9136,10 @@ function runSmartNodeToolbarAction(nodeId, action){
     }
     if(action === 'blurfaces'){
         blurFacesForSmartNode(node, index);
+        return;
+    }
+    if(action === 'matting'){
+        mattingForSmartNode(node, index);
         return;
     }
     if(action === 'canvas'){
@@ -9186,6 +9191,39 @@ async function blurFacesForSmartNode(node, index){
         toast(data.faces_detected > 0 ? `已模糊 ${data.faces_detected} 处人脸` : '处理完成（未检测到人脸）');
     }catch(err){
         toast('人脸模糊失败：' + (err?.message || err));
+    }
+}
+async function mattingForSmartNode(node, index){
+    const item = imageForDisplay(node?.images?.[index]);
+    if(!item?.url){
+        toast('没有可抠图的图片');
+        return;
+    }
+    toast('抠图中…（本地 AI 推理，约 3-5 秒）');
+    try{
+        const resp = await fetch('/api/image/matting', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url: item.url}),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if(!resp.ok){
+            toast(data.detail || '抠图失败');
+            return;
+        }
+        // 抠图结果落到原节点旁的新图片节点（透明 PNG 可叠加）
+        pushUndo();
+        const rect = nodeRect(node);
+        const point = {x: rect.x + rect.width + 240, y: rect.y + rect.height / 2};
+        const newItem = {url: data.url, name: data.name || '抠图.png', kind: 'image', mime: 'image/png'};
+        const newNode = createImageNodeAt(point, [newItem], {select: true, skipUndo: true});
+        selectedIds = [];
+        selectedImage = {nodeId: newNode.id, index: 0};
+        render();
+        scheduleSave();
+        toast('抠图完成，透明底已落画布');
+    }catch(err){
+        toast('抠图失败：' + (err?.message || err));
     }
 }
 // 智能分组顶部小菜单：整理排列 / 预览（整组左右切换）/ 宫格拼接 / 批量下载 / 解散分组。

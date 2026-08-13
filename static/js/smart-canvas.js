@@ -9199,6 +9199,26 @@ async function mattingForSmartNode(node, index){
         toast('没有可抠图的图片');
         return;
     }
+    // 第一步：AI 分析主体
+    toast('AI 正在分析主体…');
+    let subject = '';
+    try{
+        const respA = await fetch('/api/image/matting/analyze', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url: item.url}),
+        });
+        const dataA = await respA.json().catch(() => ({}));
+        if(respA.ok && dataA.subject){
+            subject = dataA.subject;
+            toast(`主体识别：${dataA.subject}`, '✓');
+        } else {
+            toast('主体分析跳过（无视觉模型），直接抠图');
+        }
+    }catch(err){
+        toast('主体分析失败，直接抠图');
+    }
+    // 第二步：抠图（后端内部还会再分析一次用于精修）
     toast('抠图中…（本地 AI 推理，约 3-5 秒）');
     try{
         const resp = await fetch('/api/image/matting', {
@@ -9221,7 +9241,8 @@ async function mattingForSmartNode(node, index){
         selectedImage = {nodeId: newNode.id, index: 0};
         render();
         scheduleSave();
-        toast('抠图完成，透明底已落画布');
+        const finalSubject = data.subject || subject;
+        toast(finalSubject ? `抠图完成（主体：${finalSubject}）` : '抠图完成，透明底已落画布');
     }catch(err){
         toast('抠图失败：' + (err?.message || err));
     }

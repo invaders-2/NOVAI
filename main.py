@@ -12213,6 +12213,7 @@ async def video_blur_faces(payload: VideoBlurFacesRequest):
 
 class ImageMattingRequest(BaseModel):
     url: str = ""            # 本地图片 URL（/assets/ 或 /output/ 开头）
+    subject: str = ""        # 可选：AI 分析的主体描述（analyze 步骤返回，用于 mask 精修）
 
 
 _MATTING_SESSION = None
@@ -12235,8 +12236,58 @@ def _matting_session():
     return sess
 
 
-def run_image_matting(src_path: str, out_path: str):
-    """本地 RMBG-1.4 抠图：读图 → 1024 推理 → mask 回放 → 透明 PNG。"""
+_POSITION_REGIONS = {
+    "top-left": (0, 0.5, 0, 0.5), "top-center": (0, 0.5, 0.25, 0.75), "top-right": (0, 0.5, 0.5, 1),
+    "center-left": (0.25, 0.75, 0, 0.5), "center": (0.25, 0.75, 0.25, 0.75), "center-right": (0.25, 0.75, 0.5, 1),
+    "bottom-left": (0.5, 1, 0, 0.5), "bottom-center": (0.5, 1, 0.25, 0.75), "bottom-right": (0.5, 1, 0.5, 1),
+}
+
+
+def _in_position(cx, cy, position):
+    """判断归一化坐标是否落在九宫格位置区域内。"""
+    reg = _POSITION_REGIONS.get(str(position or "").strip().lower())
+    if not reg:
+        return True
+    y0, y1, x0, x1 = reg
+    return x0 <= cx <= x1 and y0 <= cy <= y1
+
+
+def refine_matting_mask(mask_arr, subject):
+    """mask 精修：开运算去噪 → 连通域筛选（按主体位置保留主体块、去碎片）→ 边缘羽化。
+    subject 为空时保留最大块 + 面积 ≥ 最大块 15% 的块（兼容多主体）。"""
+    import numpy as np
+    import cv2
+    binary = (mask_arr > 0.5).astype(np.uint8)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel)
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(binary, 8)
+    if num <= 1:
+        return mask_arr
+    h, w = mask_arr.shape
+    comps = [(i, int(stats[i, cv2.CC_STAT_AREA])) for i in range(1, num)]
+    if not comps:
+        return mask_arr
+    comps.sort(key=lambda x: -x[1])
+    max_area = comps[0][1]
+    keep = {comps[0][0]}
+    has_position = bool(subject and subject.get("position"))
+    for idx, area in comps[1:]:
+        if has_position:
+            cx = (stats[idx, cv2.CC_STAT_LEFT] + stats[idx, cv2.CC_STAT_WIDTH] / 2) / w
+            cy = (stats[idx, cv2.CC_STAT_TOP] + stats[idx, cv2.CC_STAT_HEIGHT] / 2) / h
+            if _in_position(cx, cy, subject["position"]) and area >= max_area * 0.05:
+                keep.add(idx)
+        elif area >= max_area * 0.15:
+            keep.add(idx)
+    refined = np.zeros_like(binary, dtype=np.float32)
+    for idx in keep:
+        refined[labels == idx] = 1.0
+    refined = cv2.GaussianBlur(refined, (3, 3), 0)
+    return mask_arr * refined
+
+
+def run_image_matting(src_path: str, out_path: str, subject=None):
+    """本地 RMBG-1.4 抠图：读图 → 1024 推理 → mask 精修 → 透明 PNG。"""
     import numpy as np
     from PIL import Image
     img = Image.open(src_path).convert("RGB")
@@ -12248,6 +12299,7 @@ def run_image_matting(src_path: str, out_path: str):
     sess = _matting_session()
     out = sess.run(None, {sess.get_inputs()[0].name: arr})[0]
     mask = out[0, 0]
+    mask = refine_matting_mask(mask, subject)
     mask_img = Image.fromarray((mask * 255).astype(np.uint8)).resize((orig_w, orig_h), Image.BILINEAR)
     mask_arr = np.array(mask_img).astype(np.float32) / 255.0
     orig = np.array(img).astype(np.float32)
@@ -12257,9 +12309,70 @@ def run_image_matting(src_path: str, out_path: str):
     Image.fromarray(rgba.astype(np.uint8)).save(out_path)
 
 
+async def analyze_image_subject(raw_url: str):
+    """视觉模型分析图片主体：返回 {subject, position, multiple}。任何失败返回 None（不阻断抠图）。"""
+    src_path = output_file_from_url(raw_url)
+    if not src_path or not os.path.isfile(src_path):
+        return None
+    try:
+        provider_id = "modelscope"
+        vl_model = "Qwen/Qwen3-VL-235B-A22B-Instruct"
+        chat_base, chat_hdrs, mdl = resolve_chat_provider(provider_id, vl_model, vl_model)
+        ref_url = media_reference_to_url(raw_url, max_image_size=1024)
+        if not ref_url:
+            return None
+        sys_p = ("你是图片主体分析助手。分析图片中的主体（抠图目标），返回 JSON 对象（不要任何其他文字），"
+                 "字段：subject=主体简短描述（中文，如：一只红色的陶瓷杯子）；"
+                 "position=主体在画面中的位置（九宫格，取值：center/center-left/center-right/top-center/bottom-center/top-left/top-right/bottom-left/bottom-right）；"
+                 "multiple=是否多个主体（true/false）。")
+        content = [
+            {"type": "text", "text": "分析这张图片的主体，只返回 JSON。"},
+            {"type": "image_url", "image_url": {"url": ref_url}},
+        ]
+        async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV, timeout=AI_REQUEST_TIMEOUT) as client:
+            response = await client.post(
+                f"{chat_base}/chat/completions",
+                headers=chat_hdrs,
+                json={"model": mdl, "messages": [
+                    {"role": "system", "content": sys_p},
+                    {"role": "user", "content": content},
+                ]},
+            )
+            response.raise_for_status()
+            raw = response.json()
+        text = text_from_chat_response(raw) or ""
+        text = text.strip()
+        # 提取 JSON（模型可能包裹 ```json ... ```）
+        m = re.search(r"\{[^{}]*\}", text, re.S)
+        if not m:
+            return None
+        info = json.loads(m.group(0))
+        subject = str(info.get("subject") or "").strip()[:80]
+        position = str(info.get("position") or "center").strip().lower()
+        if position not in _POSITION_REGIONS:
+            position = "center"
+        return {"subject": subject, "position": position, "multiple": bool(info.get("multiple"))}
+    except Exception as exc:
+        print(f"[Matting] 主体分析失败（降级为纯抠图）: {exc}")
+        return None
+
+
+@app.post("/api/image/matting/analyze")
+async def image_matting_analyze(payload: ImageMattingRequest):
+    """抠图第一步：AI 分析图片主体（返回主体描述与位置）。无视觉模型时返回空 subject（前端跳过）。"""
+    raw_url = (payload.url or "").strip()
+    if not raw_url:
+        raise HTTPException(status_code=400, detail="缺少图片 URL")
+    src_path = output_file_from_url(raw_url)
+    if not src_path or not os.path.isfile(src_path):
+        raise HTTPException(status_code=400, detail="图片文件不存在")
+    info = await analyze_image_subject(raw_url)
+    return {"subject": info.get("subject", "") if info else "", "position": info.get("position", "center") if info else "center", "multiple": info.get("multiple", False) if info else False, "analyzed": bool(info)}
+
+
 @app.post("/api/image/matting")
 async def image_matting(payload: ImageMattingRequest):
-    """图片抠图（RMBG-1.4 本地推理，免费离线）。返回透明 PNG。"""
+    """图片抠图（RMBG-1.4 本地推理 + 主体分析精修，免费离线）。返回透明 PNG。"""
     raw_url = (payload.url or "").strip()
     if not raw_url:
         raise HTTPException(status_code=400, detail="缺少图片 URL")
@@ -12271,10 +12384,16 @@ async def image_matting(payload: ImageMattingRequest):
     ext = os.path.splitext(src_path)[1].lower()
     if ext not in (".png", ".jpg", ".jpeg", ".webp", ".bmp"):
         raise HTTPException(status_code=400, detail="仅支持 png/jpg/webp 图片抠图")
+    # 主体分析（失败不影响抠图主流程）
+    subject = None
+    try:
+        subject = await analyze_image_subject(raw_url)
+    except Exception:
+        subject = None
     out_filename = f"matting_{uuid.uuid4().hex}.png"
     out_path = os.path.join(ASSETS_DIR, "output", out_filename)
     try:
-        await asyncio.to_thread(run_image_matting, src_path, out_path)
+        await asyncio.to_thread(run_image_matting, src_path, out_path, subject)
     except HTTPException:
         raise
     except Exception as exc:
@@ -12284,6 +12403,8 @@ async def image_matting(payload: ImageMattingRequest):
         "name": f"抠图_{uuid.uuid4().hex[:6]}.png",
         "kind": "image",
         "mime": "image/png",
+        "subject": subject.get("subject", "") if subject else "",
+        "position": subject.get("position", "center") if subject else "center",
     }
 
 

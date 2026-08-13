@@ -1,7 +1,11 @@
 {
-  "version": "1.0.109",
-  "updated_at": "2026-08-13T11:15:11+08:00",
+  "version": "1.0.110",
+  "updated_at": "2026-08-13T11:44:17+08:00",
   "items": [
+    {
+      "type": "feature",
+      "text": "Agent 动作迁移：一句话「让照片里的人做视频里的动作」→ 自动识别画布角色图+参考视频 → motion_transfer 工作流（参考视频=动作骨架、参考图=外观，其余保持）→ 真实视频生成落画布；计划步骤引用解析增强"
+    },
     {
       "type": "feature",
       "text": "Prompt Intelligence：LLM 节点新增「反推」开关(OFF/ON)——Universal Intent 理解 + 四层锁定(Intent/Editable/Preserve/Reference) + 定向分析/完整反推(图片+视频关键帧) + Prompt 优化与漂移审计 + Nano Banana Pro / Seedance 2.0 / Seedance 2.5 独立 Compiler；失败自动降级原流程，旧工作流零影响"

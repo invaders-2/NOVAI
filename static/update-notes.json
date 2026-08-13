@@ -1,7 +1,11 @@
 {
-  "version": "1.0.108",
-  "updated_at": "2026-08-11T19:30:00+08:00",
+  "version": "1.0.109",
+  "updated_at": "2026-08-13T11:15:11+08:00",
   "items": [
+    {
+      "type": "feature",
+      "text": "Prompt Intelligence：LLM 节点新增「反推」开关(OFF/ON)——Universal Intent 理解 + 四层锁定(Intent/Editable/Preserve/Reference) + 定向分析/完整反推(图片+视频关键帧) + Prompt 优化与漂移审计 + Nano Banana Pro / Seedance 2.0 / Seedance 2.5 独立 Compiler；失败自动降级原流程，旧工作流零影响"
+    },
     {
       "type": "fix",
       "text": "人脸检测模型入仓并加入在线更新白名单，/api/video/blur-faces 首次使用不再报模型缺失"

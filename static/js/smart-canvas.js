@@ -5096,7 +5096,7 @@ var AGENT_TOOL_ICONS = {
     'create_node': 'square-plus', 'delete_node': 'trash-2', 'connect_nodes': 'link-2',
     'update_node': 'pencil-line', 'run_generation': 'play', 'generate_image': 'image-plus',
     'generate_video': 'clapperboard', 'check_task': 'search-check', 'create_matrix': 'grid-3x3',
-    'list_canvases': 'list', 'get_canvas': 'scan-eye', 'use_asset': 'image-plus'
+    'list_canvases': 'list', 'get_canvas': 'scan', 'use_asset': 'image-plus'
 };
 function agentToolIcon(tool){ return AGENT_TOOL_ICONS[tool] || 'zap'; }
 function agentArgsChips(args){
@@ -8806,8 +8806,8 @@ function promptNodeBodyHtml(node){
             ${upstreamPromptHtml}
             <div class="prompt-node-llm-actions">
                 <button class="prompt-node-run prompt-node-control" type="button" ${node.running ? 'disabled' : ''}><i data-lucide="${node.running ? 'loader-2' : 'play'}"></i><span>${node.running ? escapeHtml(tr('common.running')) : escapeHtml(tr('common.run'))}</span></button>
-                <button class="prompt-node-pill prompt-node-control prompt-system-toggle ${node.llmSystemEnabled ? 'active' : ''}" type="button"><i data-lucide="${node.llmSystemEnabled ? 'toggle-right' : 'toggle-left'}"></i><span>${escapeHtml(node.llmSystemEnabled ? tr('smart.promptLlmDisableSystem') : tr('smart.promptLlmEnableSystem'))}</span></button>
-                <button class="prompt-node-pill prompt-node-control prompt-reverse-toggle ${node.reverse ? 'active' : ''}" type="button" title="${escapeHtml(tr('smart.promptReverseTitle'))}"><i data-lucide="scan-eye"></i><span>${escapeHtml(tr('smart.promptReverse'))}</span></button>
+                <button class="prompt-node-pill prompt-node-control prompt-system-toggle ${node.llmSystemEnabled ? 'active' : ''}" type="button"><i data-lucide="${node.llmSystemEnabled ? 'check-circle-2' : 'circle'}"></i><span>${escapeHtml(node.llmSystemEnabled ? tr('smart.promptLlmDisableSystem') : tr('smart.promptLlmEnableSystem'))}</span></button>
+                <button class="prompt-node-pill prompt-node-control prompt-reverse-toggle ${node.reverse ? 'active' : ''}" type="button" title="${escapeHtml(tr('smart.promptReverseTitle'))}"><i data-lucide="scan"></i><span>${escapeHtml(tr('smart.promptReverse'))}</span></button>
             </div>
             ${node.llmSystemEnabled ? `<textarea class="prompt-node-control prompt-llm-system" placeholder="${escapeHtml(tr('smart.promptLlmSystemPlaceholder'))}">${escapeHtml(systemPrompt || 'You are a helpful prompt assistant.')}</textarea>` : ''}
         </div>` : '';

@@ -2752,6 +2752,7 @@ function addLLMNode(point){
         model:resolveChatModel('', providerId),
         mode:'node',
         systemPrompt:'You are a helpful assistant. Rewrite the input into a concise image prompt.',
+        reverse:false,
         chatInput:'',
         messages:[],
         outputText:'',
@@ -8225,6 +8226,7 @@ function renderLLMBody(node){
             <select class="select-lite llm-model">${modelOpts}</select>
             <div class="llm-mode"><button data-mode="node">${tr('canvas.nodeMode')}</button><button data-mode="chat">${tr('canvas.chatMode')}</button></div>
             <button class="llm-sys-toggle ${node.showSystem ? 'active' : ''}" type="button">System</button>
+            <button class="llm-sys-toggle llm-reverse-toggle ${node.reverse ? 'active' : ''}" type="button" title="${tr('canvas.reverseTitle')}">${tr('canvas.reverse')}</button>
         </div>
         ${imgBadge}
         ${node.showSystem ? `<textarea class="llm-system" placeholder="${tr('canvas.systemPrompt')}">${escapeHtml(node.systemPrompt || '')}</textarea>` : ''}
@@ -8254,7 +8256,9 @@ function renderLLMBody(node){
         if((node.llmProvider||'comfly') === 'modelscope') node.llmMsModel = e.target.value;
         scheduleSave();
     };
-    wrap.querySelector('.llm-sys-toggle').onclick = e => { e.stopPropagation(); node.showSystem = !node.showSystem; render(); scheduleSave(); };
+    wrap.querySelector('.llm-sys-toggle:not(.llm-reverse-toggle)').onclick = e => { e.stopPropagation(); node.showSystem = !node.showSystem; render(); scheduleSave(); };
+    const reverseToggle = wrap.querySelector('.llm-reverse-toggle');
+    if(reverseToggle) reverseToggle.onclick = e => { e.stopPropagation(); node.reverse = !node.reverse; render(); scheduleSave(); };
     const sysEl = wrap.querySelector('.llm-system');
     if(sysEl){ sysEl.oninput = e => { node.systemPrompt = e.target.value; scheduleSave(); }; bindScrollableText(sysEl); }
     wrap.querySelectorAll('[data-mode]').forEach(btn => {
@@ -13036,6 +13040,7 @@ async function callCanvasLLM(node, message, messages=[], options={}){
     const model = resolveChatModel(node.model || node.llmMsModel, llmProv);
     const images = llmInputImages(node);
     const videos = llmInputVideos(node);
+    const target = llmDownstreamTarget(node);
     const result = await cascadeFetch('/api/canvas-llm', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -13048,6 +13053,9 @@ async function callCanvasLLM(node, message, messages=[], options={}){
             messages,
             images,
             videos,
+            reverse:Boolean(node.reverse),
+            target_type:target.target_type,
+            target_model:target.target_model,
         })
     }, options).then(async r => {
         if(!r.ok){
@@ -13056,6 +13064,27 @@ async function callCanvasLLM(node, message, messages=[], options={}){
         return r.json();
     });
     return result.text || '';
+}
+// Prompt Intelligence：探测 LLM 节点下游最近的生成节点（经 Output 中转也算），
+// 把目标产出类型/模型带给后端，用于模型专用 Compiler。
+function llmDownstreamTarget(node){
+    const seen = new Set();
+    const queue = [node.id];
+    while(queue.length){
+        const id = queue.shift();
+        if(seen.has(id)) continue;
+        seen.add(id);
+        for(const c of connections.filter(cc => cc.from === id)){
+            const target = nodes.find(n => n.id === c.to);
+            if(!target) continue;
+            if(target.type === 'generator') return {target_type:'image', target_model:target.model || ''};
+            if(target.type === 'video') return {target_type:'video', target_model:target.model || ''};
+            if(target.type === 'msgen') return {target_type:'image', target_model:target.msgenModel || ''};
+            if(target.type === 'comfy') return {target_type:'image', target_model:'comfy'};
+            if(target.type === 'output'){ queue.push(target.id); }
+        }
+    }
+    return {target_type:'', target_model:''};
 }
 async function runLLMNode(nodeId, opts={}){
     const node = nodes.find(n => n.id === nodeId);

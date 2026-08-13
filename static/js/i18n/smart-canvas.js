@@ -197,6 +197,8 @@
         "smart.promptLlmInstructionPlaceholder": { zh: "输入给 LLM 的文本，运行后会写入上方提示词", en: "Text sent to the LLM. The result will be written into the prompt above." },
         "smart.promptLlmSystemPlaceholder": { zh: "系统提示词开启后会随请求一起发送", en: "System prompt sent with the LLM request when enabled" },
         "smart.promptLlmEnableSystem": { zh: "启用系统提示词", en: "Enable system prompt" },
+        "smart.promptReverse": { zh: "反推", en: "Reverse" },
+        "smart.promptReverseTitle": { zh: "反推 ON：对参考图片/视频执行完整逆向分析（仍服从保留与编辑约束）；OFF：仅做完成任务必需的定向分析", en: "ON: full reverse analysis of reference media (still obeys preserve/edit locks). OFF: targeted analysis only" },
         "smart.promptLlmDisableSystem": { zh: "关闭系统提示词", en: "Disable system prompt" },
         "smart.promptLlmNeedText": { zh: "请先输入给 LLM 的文本", en: "Enter text for the LLM first" },
         "smart.promptLlmFailed": { zh: "LLM 运行失败", en: "LLM run failed" },

@@ -231,6 +231,8 @@
         "canvas.resize": { zh: "调整大小", en: "Resize" },
         "canvas.nodeMode": { zh: "节点", en: "Node" },
         "canvas.chatMode": { zh: "聊天", en: "Chat" },
+        "canvas.reverse": { zh: "反推", en: "Reverse" },
+        "canvas.reverseTitle": { zh: "反推 ON 时对参考素材执行完整逆向分析（必须服从保留/编辑约束）；OFF 仅做任务必需的定向分析", en: "ON: full reverse analysis of references (still obeys preserve/edit locks). OFF: targeted analysis only" },
         "canvas.systemPrompt": { zh: "系统提示词...", en: "System prompt..." },
         "canvas.llmInputEmpty": { zh: "把 Prompt 连到 LLM 输入点", en: "Connect a Prompt to the LLM input" },
         "canvas.llmOutputEmpty": { zh: "运行后会输出文本，可连到生成卡片", en: "Run to output text. It can connect to a generation card." },

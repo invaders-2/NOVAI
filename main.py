@@ -28,6 +28,7 @@ import functools
 import html
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any, Optional, Tuple
+from types import SimpleNamespace
 from threading import Lock, Thread
 import httpx
 import ssl
@@ -3435,6 +3436,10 @@ class CanvasLLMRequest(BaseModel):
     ms_model: str = ""
     images: List[str] = []   # 可以是 /output/*.png、/assets/*.png 本地路径 或 http(s) URL 或 data URL
     videos: List[str] = []   # 可以是 /output/*.mp4、/assets/*.mp4 本地路径 或 http(s) URL 或 data URL
+    # —— Prompt Intelligence（v1）：默认关闭，旧 Workflow 无此字段自动 false ——
+    reverse: bool = False    # 反推开关：OFF 仅允许必要定向分析；ON 允许完整 Reverse Analysis
+    target_type: str = ""    # 下游生成类型：image / video / ""（未知）
+    target_model: str = ""   # 下游生成模型（如 nano-banana-pro / doubao-seedance-2-0-260128），用于模型专用 Compiler
 
 class ConversationCreateRequest(BaseModel):
     title: str = "新对话"
@@ -16150,9 +16155,104 @@ async def canvas_video_run(payload: CanvasVideoRequest):
 
 # --- Canvas LLM ---
 
+# —— Prompt Intelligence（v1）：独立模块，失败自动降级，绝不破坏原流程 ——
+PromptIntelligence = None  # type: ignore[assignment]  # 下方 try 内真实导入
+HAS_PROMPT_INTELLIGENCE = False
+try:
+    from prompt_intelligence import PromptIntelligence
+    HAS_PROMPT_INTELLIGENCE = True
+except Exception as _pi_import_err:
+    print(f"[prompt-intelligence] module import failed, feature disabled: {_pi_import_err}")
+
+
+async def _pi_llm_call(payload, message, system_prompt, images, videos):
+    """Prompt Intelligence 内部 LLM 调用：与 /api/canvas-llm 使用同一 Provider 分支逻辑，
+    保证普通画布/智能画布/Codex/Gemini CLI 行为一致。"""
+    fake = SimpleNamespace(
+        message=message,
+        model=payload.model or "",
+        ms_model=payload.ms_model or "",
+        provider=payload.provider,
+        system_prompt=system_prompt or "",
+        messages=[],
+        images=images or [],
+        videos=videos or [],
+        reference_images=[],
+    )
+    prov = get_api_provider(payload.provider)
+    if is_codex_provider(prov):
+        text, _raw = await codex_chat_text(fake, [])
+        return text
+    if is_gemini_cli_provider(prov):
+        text, _raw = await gemini_cli_chat_text(fake, [])
+        return text
+    chat_base, chat_hdrs, mdl = resolve_chat_provider(payload.provider, payload.model, payload.ms_model)
+    content_parts: list = [{"type": "text", "text": message}]
+    for img in (images or [])[:8]:
+        ref_url = media_reference_to_url(img, max_image_size=1024)
+        if ref_url:
+            content_parts.append({"type": "image_url", "image_url": {"url": ref_url}})
+    for video in (videos or [])[:3]:
+        frame_urls = await video_reference_to_frame_data_urls(video, max_frames=6, max_size=768)
+        if frame_urls:
+            content_parts.append({"type": "text", "text": "视频关键帧(按时间顺序):"})
+            for frame_url in frame_urls:
+                content_parts.append({"type": "image_url", "image_url": {"url": frame_url}})
+        else:
+            ref_url = media_reference_to_url(video)
+            if ref_url:
+                content_parts.append({"type": "video_url", "video_url": {"url": ref_url}})
+    upstream_messages = [{"role": "system", "content": system_prompt}] if system_prompt else []
+    upstream_messages.append({"role": "user", "content": content_parts})
+    async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV, timeout=AI_REQUEST_TIMEOUT) as client:
+        response = await client.post(
+            f"{chat_base}/chat/completions",
+            headers=chat_hdrs,
+            json={"model": mdl, "messages": upstream_messages},
+        )
+        response.raise_for_status()
+        raw = response.json()
+    return text_from_chat_response(raw) or ""
+
+
+async def _run_prompt_intelligence(payload):
+    """Prompt Intelligence 调度入口：任何异常都返回 None（走原流程）。"""
+    if not HAS_PROMPT_INTELLIGENCE:
+        return None
+    images = [img for img in (payload.images or []) if is_image_reference_value(img)]
+    videos = [v for v in (payload.videos or []) if is_video_reference_value(v)]
+    pi = PromptIntelligence(  # type: ignore[call-overload]  # HAS_PROMPT_INTELLIGENCE 已保证非 None
+        llm_call=lambda text, sys_p, imgs, vids: _pi_llm_call(payload, text, sys_p, imgs, vids),
+        message=payload.message,
+        images=images,
+        videos=videos,
+        reverse=bool(getattr(payload, "reverse", False)),
+        target_type=str(getattr(payload, "target_type", "") or ""),
+        target_model=str(getattr(payload, "target_model", "") or ""),
+        provider=payload.provider,
+        model=payload.model,
+    )
+    pi.video_frames_cb = lambda vid: video_reference_to_frame_data_urls(vid, max_frames=6, max_size=768)
+    return await pi.run()
+
+
 @app.post("/api/canvas-llm")
 async def canvas_llm(payload: CanvasLLMRequest):
     _provider = get_api_provider(payload.provider)
+    # —— Prompt Intelligence（v1）：有参考素材或反推 ON 时启用；失败自动回退原流程 ——
+    if HAS_PROMPT_INTELLIGENCE and (payload.reverse or payload.images or payload.videos):
+        try:
+            _pi_result = await _run_prompt_intelligence(payload)
+            if _pi_result and _pi_result.get("ok") and _pi_result.get("final_prompt"):
+                payload.message = _pi_result["final_prompt"]
+                print(
+                    f"[prompt-intelligence] applied reverse={payload.reverse} "
+                    f"steps={_pi_result.get('steps_used')} compiler={_pi_result.get('compiler')}"
+                )
+            elif _pi_result and not _pi_result.get("ok"):
+                print(f"[prompt-intelligence] skipped: {_pi_result.get('reason')}")
+        except Exception as exc:
+            print(f"[prompt-intelligence] dispatch failed, fallback to original flow: {exc}")
     if is_codex_provider(_provider):
         model = selected_model(payload.model, (_provider.get("chat_models") or CODEX_DEFAULT_CHAT_MODELS)[0])
         payload.model = model

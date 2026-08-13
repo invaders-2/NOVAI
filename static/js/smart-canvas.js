@@ -7712,6 +7712,7 @@ function createPromptNode(x, y, options={}){
         llmSystemEnabled:false,
         llmSystemPrompt:'You are a helpful prompt assistant.',
         llmInstruction:'',
+        reverse:false,
         created_at:Date.now()
     };
     nodes.push(node);
@@ -8806,6 +8807,7 @@ function promptNodeBodyHtml(node){
             <div class="prompt-node-llm-actions">
                 <button class="prompt-node-run prompt-node-control" type="button" ${node.running ? 'disabled' : ''}><i data-lucide="${node.running ? 'loader-2' : 'play'}"></i><span>${node.running ? escapeHtml(tr('common.running')) : escapeHtml(tr('common.run'))}</span></button>
                 <button class="prompt-node-pill prompt-node-control prompt-system-toggle ${node.llmSystemEnabled ? 'active' : ''}" type="button"><i data-lucide="${node.llmSystemEnabled ? 'toggle-right' : 'toggle-left'}"></i><span>${escapeHtml(node.llmSystemEnabled ? tr('smart.promptLlmDisableSystem') : tr('smart.promptLlmEnableSystem'))}</span></button>
+                <button class="prompt-node-pill prompt-node-control prompt-reverse-toggle ${node.reverse ? 'active' : ''}" type="button" title="${escapeHtml(tr('smart.promptReverseTitle'))}"><i data-lucide="scan-eye"></i><span>${escapeHtml(tr('smart.promptReverse'))}</span></button>
             </div>
             ${node.llmSystemEnabled ? `<textarea class="prompt-node-control prompt-llm-system" placeholder="${escapeHtml(tr('smart.promptLlmSystemPlaceholder'))}">${escapeHtml(systemPrompt || 'You are a helpful prompt assistant.')}</textarea>` : ''}
         </div>` : '';
@@ -9625,6 +9627,14 @@ function bindPromptNodeControls(el, node){
         node.llmSystemEnabled = !node.llmSystemEnabled;
         if(node.llmSystemEnabled) node.h = Math.max(prevHeight, promptNodeExpandedHeight(node));
         else if(prevHeight <= 364) node.h = promptNodeExpandedHeight(node);
+        render();
+        scheduleSave();
+    };
+    const reverseToggleEl = el.querySelector('.prompt-reverse-toggle');
+    if(reverseToggleEl) reverseToggleEl.onclick = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        node.reverse = !node.reverse;
         render();
         scheduleSave();
     };
@@ -16695,6 +16705,11 @@ async function runGeneration(){
         render();
     }
 }
+// Prompt Intelligence：智能画布目标产出来自全局运行设置（图片模型 / 视频模型）
+function smartLLMTarget(){
+    if(settings?.apiKind === 'video') return {target_type:'video', target_model:settings.videoModel || ''};
+    return {target_type:'image', target_model:settings.model || ''};
+}
 async function runPromptLLMNode(nodeId){
     const node = nodes.find(n => n.id === nodeId);
     if(!node || node.type !== 'smart-prompt') return;
@@ -16710,6 +16725,7 @@ async function runPromptLLMNode(nodeId){
         const mediaRefs = promptNodeInputMediaForLLM(node);
         const images = imageRefsOnly(mediaRefs).map(img => img.url).filter(Boolean);
         const videos = videoRefsOnly(mediaRefs).map(video => video.url).filter(Boolean);
+        const target = smartLLMTarget();
         const result = await fetch('/api/canvas-llm', {
             method:'POST',
             headers:{'Content-Type':'application/json'},
@@ -16721,7 +16737,10 @@ async function runPromptLLMNode(nodeId){
                 model,
                 provider,
                 ms_model: provider === 'modelscope' ? model : '',
-                system_prompt:node.llmSystemEnabled ? (systemPrompt || 'You are a helpful prompt assistant.') : ''
+                system_prompt:node.llmSystemEnabled ? (systemPrompt || 'You are a helpful prompt assistant.') : '',
+                reverse:Boolean(node.reverse),
+                target_type:target.target_type,
+                target_model:target.target_model,
             })
         }).then(async r => {
             if(!r.ok) throw new Error(await r.text());

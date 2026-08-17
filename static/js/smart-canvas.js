@@ -9097,11 +9097,12 @@ function smartNodeToolbarHtml(node){
         {key:'brush', icon:'paintbrush', label:'画笔', enabled:canEditImage},
         {key:'grid', icon:'grid-3x3', label:gridLabel, enabled:canEditImage},
         {key:'matting', icon:'scissors', label:'抠图', enabled:canEditImage},
+        {key:'matting-hq', icon:'wand-sparkles', label:'高质量抠图', tip:'高质量抠图（本地AI，首次需下载349MB模型）', enabled:canEditImage},
         {key:'blurfaces', icon:'user-round', label:'人脸模糊', enabled:kind === 'video'},
         {key:'download', icon:'download', label:'下载', enabled:true}
     ];
     return `<div class="smart-node-floating-menu" data-smart-node-menu="1">${actions.map(action => `
-        <button type="button" data-smart-node-action="${escapeAttr(action.key)}" data-node-id="${escapeAttr(node.id)}" ${action.enabled ? '' : 'disabled'} title="${escapeAttr(action.label)}">
+        <button type="button" data-smart-node-action="${escapeAttr(action.key)}" data-node-id="${escapeAttr(node.id)}" ${action.enabled ? '' : 'disabled'} title="${escapeAttr(action.tip || action.label)}">
             <i data-lucide="${escapeAttr(action.icon)}"></i><span>${escapeHtml(action.label)}</span>
         </button>`).join('')}</div>`;
 }
@@ -9140,6 +9141,10 @@ function runSmartNodeToolbarAction(nodeId, action){
     }
     if(action === 'matting'){
         mattingForSmartNode(node, index);
+        return;
+    }
+    if(action === 'matting-hq'){
+        hqMattingForSmartNode(node, index);
         return;
     }
     if(action === 'canvas'){
@@ -9247,6 +9252,203 @@ async function mattingForSmartNode(node, index){
         toast('抠图失败：' + (err?.message || err));
     }
 }
+// ===== 高质量抠图（本地模型，未下载时引导下载） =====
+const MATTING_MODEL_BTN_PRIMARY = 'padding:6px 14px;border:0;border-radius:8px;background:var(--accent);color:var(--panel);font-size:12px;font-weight:600;cursor:pointer';
+const MATTING_MODEL_BTN_GHOST = 'padding:6px 14px;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--text);font-size:12px;cursor:pointer';
+let mattingModelDialog = null;
+let mattingModelPollSeq = 0;
+async function fetchMattingModelStatus(){
+    const resp = await fetch('/api/matting/model/status');
+    const data = await resp.json().catch(() => ({}));
+    if(!resp.ok) throw new Error(data.detail || '模型状态查询失败');
+    return data;
+}
+async function hqMattingForSmartNode(node, index){
+    const item = imageForDisplay(node?.images?.[index]);
+    if(!item?.url){
+        toast('没有可抠图的图片');
+        return;
+    }
+    let status;
+    try{
+        status = await fetchMattingModelStatus();
+    }catch(err){
+        toast('模型状态查询失败：' + (err?.message || err));
+        return;
+    }
+    if(status.downloaded){
+        runLocalMatting(node, index);
+        return;
+    }
+    openMattingModelDialog();
+    if(status.downloading){
+        renderMattingModelProgress(status.progress);
+        pollMattingModelDownload(node, index);
+    } else {
+        renderMattingModelConfirm(node, index, status);
+    }
+}
+function openMattingModelDialog(){
+    closeMattingModelDialog();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.32);display:flex;align-items:center;justify-content:center';
+    overlay.innerHTML = `<div data-matting-model-panel style="width:340px;padding:18px 20px;border-radius:12px;background:var(--panel);border:1px solid var(--line);box-shadow:0 12px 32px var(--shadow);font-size:12px;color:var(--text)"></div>`;
+    overlay.addEventListener('mousedown', e => {
+        if(e.target === overlay && overlay.dataset.state !== 'downloading') closeMattingModelDialog();
+    });
+    document.body.appendChild(overlay);
+    mattingModelDialog = overlay;
+}
+function closeMattingModelDialog(){
+    mattingModelPollSeq++;
+    mattingModelDialog?.remove();
+    mattingModelDialog = null;
+}
+function renderMattingModelConfirm(node, index, status){
+    const panel = mattingModelDialog?.querySelector('[data-matting-model-panel]');
+    if(!panel) return;
+    mattingModelDialog.dataset.state = 'confirm';
+    const sizeMb = Math.round(Number(status?.model_size_mb) || 349);
+    panel.innerHTML = `
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px">高质量抠图</div>
+        <div style="color:var(--muted);line-height:1.7;margin-bottom:14px">高质量抠图需要下载本地 AI 模型（${sizeMb}MB，仅首次需要），下载后可离线免费使用。现在下载？</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+            <button type="button" data-matting-model-cancel style="${MATTING_MODEL_BTN_GHOST}">取消</button>
+            <button type="button" data-matting-model-start style="${MATTING_MODEL_BTN_PRIMARY}">下载并抠图</button>
+        </div>`;
+    panel.querySelector('[data-matting-model-cancel]').onclick = () => closeMattingModelDialog();
+    panel.querySelector('[data-matting-model-start]').onclick = () => startMattingModelDownload(node, index);
+}
+function renderMattingModelProgress(progress){
+    const panel = mattingModelDialog?.querySelector('[data-matting-model-panel]');
+    if(!panel) return;
+    mattingModelDialog.dataset.state = 'downloading';
+    const pct = Math.max(0, Math.min(100, Math.round(Number(progress) || 0)));
+    panel.innerHTML = `
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px">正在下载抠图模型</div>
+        <div style="height:8px;border-radius:6px;background:var(--soft);overflow:hidden;margin-bottom:8px"><div style="height:100%;width:${pct}%;background:var(--accent);border-radius:6px;transition:width .3s ease"></div></div>
+        <div style="color:var(--muted)">${pct}%</div>`;
+}
+function renderMattingModelError(node, index, message){
+    const panel = mattingModelDialog?.querySelector('[data-matting-model-panel]');
+    if(!panel) return;
+    mattingModelDialog.dataset.state = 'error';
+    panel.innerHTML = `
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px">模型下载失败</div>
+        <div style="color:var(--muted);line-height:1.7;margin-bottom:14px">${escapeHtml(message || '未知错误')}</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+            <button type="button" data-matting-model-cancel style="${MATTING_MODEL_BTN_GHOST}">取消</button>
+            <button type="button" data-matting-model-retry style="${MATTING_MODEL_BTN_PRIMARY}">重试</button>
+        </div>`;
+    panel.querySelector('[data-matting-model-cancel]').onclick = () => closeMattingModelDialog();
+    panel.querySelector('[data-matting-model-retry]').onclick = () => startMattingModelDownload(node, index);
+}
+async function startMattingModelDownload(node, index){
+    renderMattingModelProgress(0);
+    try{
+        const resp = await fetch('/api/matting/model/download', {method: 'POST'});
+        const data = await resp.json().catch(() => ({}));
+        if(!resp.ok || data.ok === false){
+            renderMattingModelError(node, index, data.detail || '模型下载启动失败');
+            return;
+        }
+        if(data.downloaded){
+            finishMattingModelDownload(node, index);
+            return;
+        }
+    }catch(err){
+        renderMattingModelError(node, index, err?.message || String(err));
+        return;
+    }
+    pollMattingModelDownload(node, index);
+}
+async function pollMattingModelDownload(node, index){
+    const seq = ++mattingModelPollSeq;
+    let lastPct = -1;
+    while(mattingModelDialog && seq === mattingModelPollSeq){
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        if(!mattingModelDialog || seq !== mattingModelPollSeq) return;
+        let status;
+        try{
+            status = await fetchMattingModelStatus();
+        }catch(err){
+            renderMattingModelError(node, index, err?.message || String(err));
+            return;
+        }
+        if(status.downloaded){
+            finishMattingModelDownload(node, index);
+            return;
+        }
+        if(!status.downloading){
+            renderMattingModelError(node, index, '模型下载中断，请重试');
+            return;
+        }
+        const pct = Math.max(0, Math.min(100, Math.round(Number(status.progress) || 0)));
+        if(pct !== lastPct){
+            lastPct = pct;
+            renderMattingModelProgress(pct);
+        }
+    }
+}
+function finishMattingModelDownload(node, index){
+    closeMattingModelDialog();
+    toast('模型已就绪，开始高质量抠图');
+    runLocalMatting(node, index);
+}
+async function runLocalMatting(node, index){
+    const item = imageForDisplay(node?.images?.[index]);
+    if(!item?.url){
+        toast('没有可抠图的图片');
+        return;
+    }
+    toast('高质量抠图中…（本地 AI 推理，约 3-5 秒）');
+    try{
+        const resp = await fetch('/api/image/matting', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url: item.url, mode: 'local'}),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if(!resp.ok){
+            if(resp.status === 400 && String(data.detail || '').includes('未下载')){
+                hqMattingForSmartNode(node, index);
+                return;
+            }
+            showLocalMattingFallback(node, index, data.detail || '抠图失败');
+            return;
+        }
+        pushUndo();
+        const rect = nodeRect(node);
+        const point = {x: rect.x + rect.width + 240, y: rect.y + rect.height / 2};
+        const newItem = {url: data.url, name: data.name || '抠图.png', kind: 'image', mime: 'image/png'};
+        const newNode = createImageNodeAt(point, [newItem], {select: true, skipUndo: true});
+        selectedIds = [];
+        selectedImage = {nodeId: newNode.id, index: 0};
+        render();
+        scheduleSave();
+        toast('高质量抠图完成，透明底已落画布');
+    }catch(err){
+        showLocalMattingFallback(node, index, err?.message || String(err));
+    }
+}
+function showLocalMattingFallback(node, index, message){
+    openMattingModelDialog();
+    const panel = mattingModelDialog?.querySelector('[data-matting-model-panel]');
+    if(!panel) return;
+    mattingModelDialog.dataset.state = 'fallback';
+    panel.innerHTML = `
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px">本地抠图失败</div>
+        <div style="color:var(--muted);line-height:1.7;margin-bottom:14px">${escapeHtml(message)}</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+            <button type="button" data-matting-model-cancel style="${MATTING_MODEL_BTN_GHOST}">取消</button>
+            <button type="button" data-matting-model-online style="${MATTING_MODEL_BTN_PRIMARY}">使用在线抠图</button>
+        </div>`;
+    panel.querySelector('[data-matting-model-cancel]').onclick = () => closeMattingModelDialog();
+    panel.querySelector('[data-matting-model-online]').onclick = () => {
+        closeMattingModelDialog();
+        mattingForSmartNode(node, index);
+    };
+}
 // 智能分组顶部小菜单：整理排列 / 预览（整组左右切换）/ 宫格拼接 / 批量下载 / 解散分组。
 // 与多图节点的 smart-node-floating-menu 同款样式与定位（选中分组时浮在卡片上方）。
 function smartGroupToolbarHtml(node){
@@ -9261,7 +9463,7 @@ function smartGroupToolbarHtml(node){
         {key:'ungroup', icon:'ungroup', label:'解散分组', enabled:true}
     ];
     return `<div class="smart-node-floating-menu" data-smart-group-menu="1">${actions.map(action => `
-        <button type="button" data-smart-group-action="${escapeAttr(action.key)}" data-node-id="${escapeAttr(node.id)}" ${action.enabled ? '' : 'disabled'} title="${escapeAttr(action.label)}">
+        <button type="button" data-smart-group-action="${escapeAttr(action.key)}" data-node-id="${escapeAttr(node.id)}" ${action.enabled ? '' : 'disabled'} title="${escapeAttr(action.tip || action.label)}">
             <i data-lucide="${escapeAttr(action.icon)}"></i><span>${escapeHtml(action.label)}</span>
         </button>`).join('')}</div>`;
 }

@@ -12214,6 +12214,153 @@ async def video_blur_faces(payload: VideoBlurFacesRequest):
 
 class ImageMattingRequest(BaseModel):
     url: str = ""            # 本地图片 URL（/assets/ 或 /output/ 开头）
+    mode: str = "api"        # api=生图API绿幕抠图（默认）；local=本地 RMBG-2.0 推理
+
+
+_MATTING_MODEL_PATH = os.path.join(BASE_DIR, "assets", "models", "rmbg_2.0.onnx")
+_MATTING_MODEL_URL = "https://modelscope.cn/models/briaai/RMBG-2.0/resolve/master/onnx/model_quantized.onnx"
+_MATTING_MODEL_SIZE = 366087549  # 量化版约 349MB，用于无 Content-Length 时的进度估算
+_OLD_MATTING_MODEL_PATH = os.path.join(BASE_DIR, "assets", "models", "rmbg_1.4.onnx")
+_MATTING_SESSION = None
+_MODEL_DOWNLOAD_TASKS = {}
+
+
+def _cleanup_old_matting_model():
+    if os.path.isfile(_OLD_MATTING_MODEL_PATH):
+        try:
+            os.remove(_OLD_MATTING_MODEL_PATH)
+            print(f"[Matting] 已删除旧版 RMBG-1.4 模型：{_OLD_MATTING_MODEL_PATH}")
+        except OSError:
+            pass
+
+
+def _matting_session():
+    """RMBG-2.0 抠图推理会话（单例缓存）。模型未下载时返回 None，由接口层决定报 400。"""
+    global _MATTING_SESSION
+    if _MATTING_SESSION is not None:
+        return _MATTING_SESSION
+    if not os.path.isfile(_MATTING_MODEL_PATH):
+        return None
+    try:
+        import onnxruntime
+    except ImportError:
+        return None
+    sess = onnxruntime.InferenceSession(_MATTING_MODEL_PATH, providers=["CPUExecutionProvider"])
+    _MATTING_SESSION = sess
+    _cleanup_old_matting_model()
+    return sess
+
+
+def run_image_matting(src_path: str, out_path: str):
+    """本地 RMBG-2.0 抠图：读图 → 1024 推理 → mask 回放 → alpha 拉伸/腐蚀/羽化 + 边缘去边 → 透明 PNG。"""
+    import numpy as np
+    import cv2
+    img = Image.open(src_path).convert("RGB")
+    orig_w, orig_h = img.size
+    img_1024 = img.resize((1024, 1024), Image.BILINEAR)
+    arr = np.array(img_1024).astype(np.float32) / 255.0
+    arr = (arr - np.array([0.485, 0.456, 0.406], np.float32)) / np.array([0.229, 0.224, 0.225], np.float32)
+    arr = arr.transpose(2, 0, 1)[None]
+    sess = _matting_session()
+    if sess is None:
+        raise RuntimeError("本地抠图模型未下载")
+    out = sess.run(None, {sess.get_inputs()[0].name: arr})[-1]
+    mask = out[0, 0]  # 此 ONNX 导出已内置 sigmoid（实测输出 ∈ [0,1]），勿再重复加
+    # 回放原尺寸（LANCZOS 保留更多细节）
+    mask_img = Image.fromarray((mask * 255).astype(np.uint8)).resize((orig_w, orig_h), Image.LANCZOS)
+    alpha = np.array(mask_img).astype(np.float32) / 255.0
+    # 1) alpha 拉伸：低阈值保留弱响应细节（鞋头/鞋带/反光），主体顶到 1，消除"纱感"与大面积半透明
+    alpha = np.clip((alpha - 0.12) / 0.70, 0.0, 1.0)
+    # 2) 轻微腐蚀 + 高斯羽化：边缘向主体内收缩，去掉背景残留圈（腐蚀仅1次，避免啃掉主体细节）
+    a8 = (alpha * 255).astype(np.uint8)
+    a8 = cv2.erode(a8, np.ones((3, 3), np.uint8), iterations=1)
+    a_blur = cv2.GaussianBlur(a8.astype(np.float32), (0, 0), 0.8)
+    alpha = np.clip(a_blur / 255.0, 0.0, 1.0)
+    # 3) 颜色反污染 defringe（方案A）：对半透明带 alpha 0.02~0.98 统一反推前景真实色
+    #    F=(I-(1-a)*B)/a，B 为背景色估计；消除背景色光晕（黑底白边/灰边），覆盖主体侧过渡带
+    rgb_u8 = np.array(img).astype(np.uint8)
+    edge = (alpha > 0.02) & (alpha < 0.98)
+    if edge.any():
+        # 3a) 背景色估计图：把主体区域(alpha>0.5)抹掉，用周围背景 inpaint 填充，得到逐像素背景色 B
+        body_mask = ((alpha > 0.5) * 255).astype(np.uint8)
+        bg_est = cv2.inpaint(rgb_u8, body_mask, 15, cv2.INPAINT_TELEA).astype(np.float32)
+        # 3b) 颜色反污染：反推前景真实色，clip 后轻微中值平滑去噪
+        a_e = np.clip(alpha[edge], 1e-6, 1.0)[:, None]
+        F = (rgb_u8.astype(np.float32)[edge] - (1.0 - a_e) * bg_est[edge]) / a_e
+        F_u8 = np.clip(F, 0, 255).astype(np.uint8)
+        F_u8 = cv2.medianBlur(F_u8, 3)
+        rgb_u8[edge] = F_u8
+    rgb = rgb_u8.astype(np.float32)
+    rgba = np.zeros((orig_h, orig_w, 4), dtype=np.float32)
+    rgba[:, :, :3] = rgb
+    rgba[:, :, 3] = alpha * 255.0
+    Image.fromarray(rgba.astype(np.uint8)).save(out_path)
+
+
+def _matting_model_downloaded() -> bool:
+    return os.path.isfile(_MATTING_MODEL_PATH) and os.path.getsize(_MATTING_MODEL_PATH) > 300 * 1024 * 1024
+
+
+def _download_matting_model(task_id: str):
+    """后台下载 RMBG-2.0 模型：流式写 .tmp，下完 rename（防半截文件），进度写入 _MODEL_DOWNLOAD_TASKS。"""
+    task = _MODEL_DOWNLOAD_TASKS[task_id]
+    tmp_path = _MATTING_MODEL_PATH + ".tmp"
+    for attempt in (1, 2):
+        try:
+            with requests.get(_MATTING_MODEL_URL, stream=True, timeout=(30, 120)) as resp:
+                resp.raise_for_status()
+                total = int(resp.headers.get("Content-Length") or 0) or _MATTING_MODEL_SIZE
+                downloaded = 0
+                os.makedirs(os.path.dirname(_MATTING_MODEL_PATH), exist_ok=True)
+                with open(tmp_path, "wb") as f:
+                    for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            task["progress"] = min(99, int(downloaded * 100 / total))
+            if os.path.getsize(tmp_path) <= 300 * 1024 * 1024:
+                raise RuntimeError("模型文件不完整")
+            os.replace(tmp_path, _MATTING_MODEL_PATH)
+            _cleanup_old_matting_model()
+            task.update({"downloading": False, "progress": 100, "done": True})
+            print(f"[Matting] 本地抠图模型下载完成：{_MATTING_MODEL_PATH}")
+            return
+        except Exception as exc:
+            task["error"] = str(exc)[:200]
+            print(f"[Matting] 模型下载失败（第 {attempt} 次）: {exc}")
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+    task["downloading"] = False
+
+
+@app.get("/api/matting/model/status")
+async def matting_model_status():
+    """本地抠图模型状态：是否已下载、下载进度。"""
+    task = _MODEL_DOWNLOAD_TASKS.get("matting_model_download") or {}
+    downloaded = _matting_model_downloaded()
+    return {
+        "downloaded": downloaded,
+        "model_size_mb": 349,
+        "downloading": bool(task.get("downloading")),
+        "progress": 100 if downloaded else int(task.get("progress") or 0),
+        "error": task.get("error") or "",
+    }
+
+
+@app.post("/api/matting/model/download")
+async def matting_model_download():
+    """下载本地抠图模型（RMBG-2.0 量化版，约 349MB）。已在下载/已下载时直接返回，不重复下载。"""
+    task_id = "matting_model_download"
+    task = _MODEL_DOWNLOAD_TASKS.get(task_id)
+    if task and task.get("downloading"):
+        return {"ok": True, "task_id": task_id, "already": True}
+    if _matting_model_downloaded():
+        return {"ok": True, "downloaded": True}
+    _MODEL_DOWNLOAD_TASKS[task_id] = {"downloading": True, "progress": 0, "error": "", "done": False}
+    Thread(target=_download_matting_model, args=(task_id,), daemon=True).start()
+    return {"ok": True, "task_id": task_id}
 
 
 _MATTING_EDIT_PROMPT = (
@@ -12359,7 +12506,7 @@ async def image_matting_analyze(payload: ImageMattingRequest):
 
 @app.post("/api/image/matting")
 async def image_matting(payload: ImageMattingRequest):
-    """图片抠图（AI 先分析主体 → 生图 API 编辑抠图，透明 PNG）。"""
+    """图片抠图（透明 PNG）。mode=api（默认）：AI 分析主体 → 生图 API 绿幕 → 转透明；mode=local：本地 RMBG-2.0 推理。"""
     raw_url = (payload.url or "").strip()
     if not raw_url:
         raise HTTPException(status_code=400, detail="缺少图片 URL")
@@ -12371,6 +12518,21 @@ async def image_matting(payload: ImageMattingRequest):
     ext = os.path.splitext(src_path)[1].lower()
     if ext not in (".png", ".jpg", ".jpeg", ".webp", ".bmp"):
         raise HTTPException(status_code=400, detail="仅支持 png/jpg/webp 图片抠图")
+    if payload.mode == "local":
+        if not _matting_model_downloaded():
+            raise HTTPException(status_code=400, detail="本地抠图模型未下载")
+        out_filename = f"matting_{uuid.uuid4().hex}.png"
+        out_path = os.path.join(ASSETS_DIR, "output", out_filename)
+        try:
+            await asyncio.to_thread(run_image_matting, src_path, out_path)
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"抠图失败：{exc}")
+        return {
+            "url": output_url_for(out_filename, "output"),
+            "name": f"抠图_{uuid.uuid4().hex[:6]}.png",
+            "kind": "image",
+            "mime": "image/png",
+        }
     # 第一步：主体分析（失败不影响）
     subject = ""
     try:

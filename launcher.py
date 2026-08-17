@@ -550,7 +550,7 @@ def main():
                 movableByWindowBackground 又够不到盖满窗口的 webview 区域，只能桥到原生层挪窗口。
                 """
                 if os.name == 'nt':
-                    return
+                    return self._start_windows_drag()
                 try:
                     from Cocoa import NSObject
 
@@ -573,6 +573,39 @@ def main():
                     )
                 except Exception as e:
                     log(f"start_window_drag error: {e}")
+
+            def _start_windows_drag(self):
+                """Windows 无边框：前端标题栏 mousedown 桥到这里，模拟标题栏命中拖动。
+
+                WebView2 子窗口吞掉顶层窗口的 WM_NCHITTEST，_enable_frameless_resize
+                里的 HTCAPTION 分支实际失效；改由前端显式调桥，WM_NCLBUTTONDOWN +
+                HTCAPTION 让系统接管拖动循环（对无 WS_CAPTION 窗口同样有效）。"""
+                try:
+                    import ctypes
+                    from ctypes import wintypes
+                    user32 = ctypes.windll.user32
+
+                    wins = webview.windows
+                    if not wins:
+                        return
+                    w = wins[0]
+                    native = getattr(w, 'native', None)
+                    if native is None:
+                        return
+                    hwnd = int(native.Handle.ToInt32())
+
+                    # 64 位兼容：SendMessageW 返回 LRESULT，句柄/参数均按指针宽传递，
+                    # 防止 64 位 hwnd 被 ctypes 默认的 c_int 截断（同 _enable_frameless_resize 写法）
+                    user32.SendMessageW.restype = ctypes.c_longlong
+                    user32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+
+                    # 先释放鼠标捕获，再发模拟标题栏按下，系统接管拖动循环
+                    WM_NCLBUTTONDOWN = 0x00A1
+                    HTCAPTION = 2
+                    user32.ReleaseCapture()
+                    user32.SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0)
+                except Exception as e:
+                    log(f"_start_windows_drag error: {e}")
 
             def get_lan_url(self) -> dict:
                 """动态获取当前局域网访问地址"""

@@ -1,133 +1,151 @@
 {
-  "version": "1.0.110",
-  "updated_at": "2026-08-13T11:44:17+08:00",
+  "version": "1.0.111",
+  "updated_at": "2026-08-17T09:28:05+08:00",
   "items": [
     {
       "type": "feature",
-      "text": "Agent 动作迁移：一句话「让照片里的人做视频里的动作」→ 自动识别画布角色图+参考视频 → motion_transfer 工作流（参考视频=动作骨架、参考图=外观，其余保持）→ 真实视频生成落画布；计划步骤引用解析增强"
-    },
-    {
-      "type": "feature",
-      "text": "Prompt Intelligence：LLM 节点新增「反推」开关(OFF/ON)——Universal Intent 理解 + 四层锁定(Intent/Editable/Preserve/Reference) + 定向分析/完整反推(图片+视频关键帧) + Prompt 优化与漂移审计 + Nano Banana Pro / Seedance 2.0 / Seedance 2.5 独立 Compiler；失败自动降级原流程，旧工作流零影响"
+      "text": "本地高质量抠图：图片节点新增「高质量抠图」——首次使用引导下载 RMBG-2.0 本地模型（349MB，仅一次），下载后离线免费抠图；边缘精修（alpha拉伸+腐蚀羽化+去背景色边）；本地失败可一键降级为在线抠图，旧链路不受影响"
     },
     {
       "type": "fix",
-      "text": "人脸检测模型入仓并加入在线更新白名单，/api/video/blur-faces 首次使用不再报模型缺失"
+      "text": "Windows 桌面端标题栏拖动修复：无边框窗口顶部标题栏恢复可拖动移动窗口（此前 WebView2 吞掉命中导致拖不动）"
     },
     {
       "type": "fix",
-      "text": "assets/models/ 加入在线更新白名单，后续模型文件可通过客户端自动更新下发"
-    },
-    {
-      "type": "fix",
-      "text": "智能画布视频节点交互彻底修复：点击视频画面选中节点并打开编辑器、播放预览后编辑器同步显示、节点拖动排除播放器区域"
-    },
-    {
-      "type": "fix",
-      "text": "视频控制条交互修复：mousedown去掉preventDefault确保手势激活、全屏超时自动CSS降级并挂body铺满视口"
-    },
-    {
-      "type": "feature",
-      "text": "新增人脸模糊接口 /api/video/blur-faces：自动检测视频人脸并高斯模糊，规避平台真人审核拦截"
-    },
-    {
-      "type": "feature",
-      "text": "生成接口返回canvas_meta自动落位元数据：视频/图片生成完成后自动带节点参数，方便前端一键摆放"
-    },
-    {
-      "type": "fix",
-      "text": "修复视频播放：播放按钮mousedown不再拦截手势、全屏350ms超时自动CSS降级并挂body铺满视口、传统画布同步"
-    },
-    {
-      "type": "fix",
-      "text": "修复视频全屏(无原生全屏时CSS降级铺满视口)+播放后节点编辑器保持显示"
-    },
-    {
-      "type": "fix",
-      "text": "修复视频控制条点击无效(WebKit实测)：mousedown拦截手势致play被拒、控制条常显可点、点击视频本体可播放暂停"
-    },
-    {
-      "type": "fix",
-      "text": "修复视频控制条点击无反应：控制条常显可点+播放失败自动静音降级+事件双绑定(桌面端WKWebView)"
-    },
-    {
-      "type": "fix",
-      "text": "修复视频节点黑屏：封面生成失败时直接渲染视频首帧；播放后显示完整控制条（暂停/进度/全屏）"
-    },
-    {
-      "type": "fix",
-      "text": "修复桌面端视频节点黑屏/无控制条：静态资源强制 no-cache，更新后不再吃到旧缓存"
-    },
-    {
-      "type": "feature",
-      "text": "API设置保存成功toast反馈 + 模型选择器改窗口弹窗（可点遮罩关闭）"
-    },
-    {
-      "type": "feature",
-      "text": "视频播放自绘控制条（播放/暂停/进度/全屏），普通画布与智能画布统一"
-    },
-    {
-      "type": "feature",
-      "text": "视频播放新增自绘控制条（播放/暂停/进度/全屏）——修复桌面端视频无法暂停、无全屏按钮的问题"
-    },
-    {
-      "type": "fix",
-      "text": "修复视频节点封面显示为黑——封面图改回填满节点框(cover)，播放仍按视频比例完整显示"
-    },
-    {
-      "type": "feature",
-      "text": "火山 Seedance 局部替换修复：编辑任务参考图全部保留提交，参考视频自动截取≤15.2s、带音轨自动静音规避版权拦截"
-    },
-    {
-      "type": "feature",
-      "text": "智能画布视频节点按视频比例完整显示（不再裁剪放大），拖动缩放保持视频宽高比"
-    },
-    {
-      "type": "feature",
-      "text": "Jimeng 5.0Pro/4.7 图生视频模型支持，分辨率自适应策略重构(1k/2k/4k)"
-    },
-    {
-      "type": "feature",
-      "text": "Jimeng seedance2.0mini/seedance1.5pro 视频模型支持，CLI 分辨率参数规范化"
-    },
-    {
-      "type": "feature",
-      "text": "Gitee 更新链路正式接入：支持一键从 Gitee 源检查/下载更新，三源兜底 gitee→modelscope→github"
-    },
-    {
-      "type": "feature",
-      "text": "即梦（Jimeng）CLI 面板集成：画布即梦节点支持 CLI 安装按钮与状态追踪"
-    },
-    {
-      "type": "feature",
-      "text": "多视频模型扩展：Lingjing/土豆/Grok/Agnes/玉璃 等多视频生成供应商接入"
-    },
-    {
-      "type": "feature",
-      "text": "HuggingFace/ModelScope 模型源支持，hf-mirror.com 国内镜像路由"
-    },
-    {
-      "type": "fix",
-      "text": "SSL 绕过修复：60+ 处 httpx.AsyncClient 补全 http2=False / verify=_SSL_CONTEXT / trust_env=_TRUST_ENV"
-    },
-    {
-      "type": "fix",
-      "text": "Jimeng 视频生成分辨率修复（seedance2.0 原先强制变 2K 问题）"
-    },
-    {
-      "type": "fix",
-      "text": "Windows 下载/保存弹窗兼容性修复，NovaUtils.downloadBlob 三层降级方案"
-    },
-    {
-      "type": "improvement",
-      "text": "FHL provider 识别接入，扩展 API 源兼容性"
-    },
-    {
-      "type": "improvement",
-      "text": "Windows 下载弹窗 SAVE_DIALOG 兼容性修复（launcher.py 双层 fallback）"
+      "text": "旧版 RMBG-1.4 模型自动清理：升级后自动删除残留的 44MB 旧模型文件，释放磁盘空间"
     }
   ],
   "history": [
+    {
+      "version": "1.0.110",
+      "updated_at": "2026-08-13T11:44:17+08:00",
+      "items": [
+        {
+          "type": "feature",
+          "text": "Agent 动作迁移：一句话「让照片里的人做视频里的动作」→ 自动识别画布角色图+参考视频 → motion_transfer 工作流（参考视频=动作骨架、参考图=外观，其余保持）→ 真实视频生成落画布；计划步骤引用解析增强"
+        },
+        {
+          "type": "feature",
+          "text": "Prompt Intelligence：LLM 节点新增「反推」开关(OFF/ON)——Universal Intent 理解 + 四层锁定(Intent/Editable/Preserve/Reference) + 定向分析/完整反推(图片+视频关键帧) + Prompt 优化与漂移审计 + Nano Banana Pro / Seedance 2.0 / Seedance 2.5 独立 Compiler；失败自动降级原流程，旧工作流零影响"
+        },
+        {
+          "type": "fix",
+          "text": "人脸检测模型入仓并加入在线更新白名单，/api/video/blur-faces 首次使用不再报模型缺失"
+        },
+        {
+          "type": "fix",
+          "text": "assets/models/ 加入在线更新白名单，后续模型文件可通过客户端自动更新下发"
+        },
+        {
+          "type": "fix",
+          "text": "智能画布视频节点交互彻底修复：点击视频画面选中节点并打开编辑器、播放预览后编辑器同步显示、节点拖动排除播放器区域"
+        },
+        {
+          "type": "fix",
+          "text": "视频控制条交互修复：mousedown去掉preventDefault确保手势激活、全屏超时自动CSS降级并挂body铺满视口"
+        },
+        {
+          "type": "feature",
+          "text": "新增人脸模糊接口 /api/video/blur-faces：自动检测视频人脸并高斯模糊，规避平台真人审核拦截"
+        },
+        {
+          "type": "feature",
+          "text": "生成接口返回canvas_meta自动落位元数据：视频/图片生成完成后自动带节点参数，方便前端一键摆放"
+        },
+        {
+          "type": "fix",
+          "text": "修复视频播放：播放按钮mousedown不再拦截手势、全屏350ms超时自动CSS降级并挂body铺满视口、传统画布同步"
+        },
+        {
+          "type": "fix",
+          "text": "修复视频全屏(无原生全屏时CSS降级铺满视口)+播放后节点编辑器保持显示"
+        },
+        {
+          "type": "fix",
+          "text": "修复视频控制条点击无效(WebKit实测)：mousedown拦截手势致play被拒、控制条常显可点、点击视频本体可播放暂停"
+        },
+        {
+          "type": "fix",
+          "text": "修复视频控制条点击无反应：控制条常显可点+播放失败自动静音降级+事件双绑定(桌面端WKWebView)"
+        },
+        {
+          "type": "fix",
+          "text": "修复视频节点黑屏：封面生成失败时直接渲染视频首帧；播放后显示完整控制条（暂停/进度/全屏）"
+        },
+        {
+          "type": "fix",
+          "text": "修复桌面端视频节点黑屏/无控制条：静态资源强制 no-cache，更新后不再吃到旧缓存"
+        },
+        {
+          "type": "feature",
+          "text": "API设置保存成功toast反馈 + 模型选择器改窗口弹窗（可点遮罩关闭）"
+        },
+        {
+          "type": "feature",
+          "text": "视频播放自绘控制条（播放/暂停/进度/全屏），普通画布与智能画布统一"
+        },
+        {
+          "type": "feature",
+          "text": "视频播放新增自绘控制条（播放/暂停/进度/全屏）——修复桌面端视频无法暂停、无全屏按钮的问题"
+        },
+        {
+          "type": "fix",
+          "text": "修复视频节点封面显示为黑——封面图改回填满节点框(cover)，播放仍按视频比例完整显示"
+        },
+        {
+          "type": "feature",
+          "text": "火山 Seedance 局部替换修复：编辑任务参考图全部保留提交，参考视频自动截取≤15.2s、带音轨自动静音规避版权拦截"
+        },
+        {
+          "type": "feature",
+          "text": "智能画布视频节点按视频比例完整显示（不再裁剪放大），拖动缩放保持视频宽高比"
+        },
+        {
+          "type": "feature",
+          "text": "Jimeng 5.0Pro/4.7 图生视频模型支持，分辨率自适应策略重构(1k/2k/4k)"
+        },
+        {
+          "type": "feature",
+          "text": "Jimeng seedance2.0mini/seedance1.5pro 视频模型支持，CLI 分辨率参数规范化"
+        },
+        {
+          "type": "feature",
+          "text": "Gitee 更新链路正式接入：支持一键从 Gitee 源检查/下载更新，三源兜底 gitee→modelscope→github"
+        },
+        {
+          "type": "feature",
+          "text": "即梦（Jimeng）CLI 面板集成：画布即梦节点支持 CLI 安装按钮与状态追踪"
+        },
+        {
+          "type": "feature",
+          "text": "多视频模型扩展：Lingjing/土豆/Grok/Agnes/玉璃 等多视频生成供应商接入"
+        },
+        {
+          "type": "feature",
+          "text": "HuggingFace/ModelScope 模型源支持，hf-mirror.com 国内镜像路由"
+        },
+        {
+          "type": "fix",
+          "text": "SSL 绕过修复：60+ 处 httpx.AsyncClient 补全 http2=False / verify=_SSL_CONTEXT / trust_env=_TRUST_ENV"
+        },
+        {
+          "type": "fix",
+          "text": "Jimeng 视频生成分辨率修复（seedance2.0 原先强制变 2K 问题）"
+        },
+        {
+          "type": "fix",
+          "text": "Windows 下载/保存弹窗兼容性修复，NovaUtils.downloadBlob 三层降级方案"
+        },
+        {
+          "type": "improvement",
+          "text": "FHL provider 识别接入，扩展 API 源兼容性"
+        },
+        {
+          "type": "improvement",
+          "text": "Windows 下载弹窗 SAVE_DIALOG 兼容性修复（launcher.py 双层 fallback）"
+        }
+      ]
+    },
     {
       "version": "1.0.88",
       "updated_at": "2026-07-25T23:59:00+08:00",

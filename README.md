@@ -107,6 +107,7 @@ python main.py
 - 🤖 **生成自动落画布** — AI 生成结果自动创建节点，无需手动导入
 - 💡 **快捷建议条** — 生成完成自动弹出「换衣服 / 换场景 / 加运镜」一键继续编辑
 - 🔍 **@ 引用素材** — 输入框 @ 一下即可把画布节点作为参考素材
+- ✂️ **本地高质量抠图** — RMBG-2.0 按需下载，离线免费抠图 + 边缘精修，失败可降级在线
 - 👤 **人脸模糊** — 一键模糊视频中全部人脸，规避平台真人审核（YuNet 检测）
 - 🔌 **插件系统** — Photoshop 面板、Chrome 扩展
 - 🌐 **多仓库更新** — GitHub / Gitee / ModelScope 三源
@@ -153,7 +154,18 @@ NOVAI 的视频编辑基于火山引擎 Seedance 2.0。平台对**未经授权�
 
 项目启动后会自动检查三个源的最新版本，推送更新通知，一键升级。
 
+> **Gitee 安装包说明**：Gitee 免费版附件有 100MB 单文件限制，安装包已分卷上传（`.part00`/`.part01`），下载后需先合并再安装：
+> - Windows（CMD）：`copy /b NOVAI-Setup-*.exe.part00 + NOVAI-Setup-*.exe.part01 NOVAI-Setup-*.exe`
+> - macOS（终端）：`cat NOVAI-Setup-*.dmg.part00 NOVAI-Setup-*.dmg.part01 > NOVAI-Setup-*.dmg`
+> - 或直接到 [GitHub Releases](https://github.com/invaders-2/NOVAI/releases) 下载免合并的完整安装包
+
 ---
+
+### v1.0.111
+
+- **本地高质量抠图**：图片节点新增「高质量抠图」——RMBG-2.0 本地模型按需下载（349MB，仅首次），下载后离线免费抠图；边缘精修（alpha 拉伸 + 腐蚀羽化 + 去背景色边）；本地失败可一键降级在线抠图
+- **Windows 标题栏拖动修复**：无边框窗口顶部标题栏恢复可拖动移动窗口
+- **旧模型自动清理**：升级后自动删除残留的 RMBG-1.4 旧模型，释放磁盘空间
 
 ### v1.0.108
 

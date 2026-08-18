@@ -62,8 +62,10 @@ jobs:
           else
             cp dist/NOVAI desktop/resources/backend/NOVAI
           fi
-          cp desktop/.version desktop/resources/backend/VERSION
-          cp requirements.txt desktop/resources/backend/requirements.txt
+          # 注意：resources/backend 里只能放后端二进制本身。
+          # VERSION/requirements.txt 已由 package.json 的 extraResources 从
+          # .version / ../requirements.txt 拷到同一目标路径，再拷一份会因
+          # 目标重名（EEXIST hard link 冲突）导致 mac/linux 打包失败。
 
       - name: Install Electron deps
         working-directory: desktop

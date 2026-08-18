@@ -74,3 +74,6 @@ novai_startup.log
 data/*.bak
 output/
 *.bak_minimax
+# Electron 桌面端构建产物
+desktop/release/
+desktop/dist/

@@ -3,7 +3,11 @@
   "version": "1.0.112-beta.1",
   "description": "NOVAI 无限画布 AI 创作平台 — 桌面客户端 (Electron)",
   "main": "main.js",
-  "author": "NOVAI",
+  "homepage": "https://github.com/invaders-2/NOVAI",
+  "author": {
+    "name": "NOVAI",
+    "email": "271007236+invaders-2@users.noreply.github.com"
+  },
   "license": "MIT",
   "scripts": {
     "start": "electron .",

@@ -1,25 +1,35 @@
 {
-  "version": "1.0.112-beta.1",
-  "updated_at": "2026-08-18T11:15:17+08:00",
+  "version": "1.0.112-beta.2",
+  "updated_at": "2026-08-18T17:46:55+08:00",
   "items": [
     {
       "type": "feature",
-      "text": "【测试版】Electron 桌面客户端：自带 Chromium 内核，跨平台行为一致；与正式版共用 3000 端口和同一份数据目录（画布/配置/对话完全互通，无需重新下载）；支持窗口托盘、原生对话框"
-    },
-    {
-      "type": "feature",
-      "text": "一键更新实时进度条：下载/校验/备份/替换各阶段百分比 + 当前文件名实时可见，更新结果 Toast 轻提示"
-    },
-    {
-      "type": "feature",
-      "text": "桌面端自动更新三仓库通道：GitHub Releases 为主，国内用户检查失败自动切换 ModelScope 镜像，Gitee Release 提供人工下载兜底"
-    },
-    {
-      "type": "fix",
-      "text": "桌面端侧边栏闪烁修复：Chromium 下 hover 展开不再反复开关（禁用 drag 区域冲突 + 实色背景替代毛玻璃）"
+      "text": "素材默认存储位置跟随安装目录——Windows 安装到可写目录（如 D 盘）时默认写入「安装目录\\assets」，安装到 Program Files 等只读位置时自动回落系统数据目录；Mac/Linux 因 app 包只读同样回落；老用户已有素材则保持原路径不迁移；设置页显示与实际写入路径统一"
     }
   ],
   "history": [
+    {
+      "version": "1.0.112-beta.1",
+      "updated_at": "2026-08-18T11:15:17+08:00",
+      "items": [
+        {
+          "type": "feature",
+          "text": "【测试版】Electron 桌面客户端：自带 Chromium 内核，跨平台行为一致；与正式版共用 3000 端口和同一份数据目录（画布/配置/对话完全互通，无需重新下载）；支持窗口托盘、原生对话框"
+        },
+        {
+          "type": "feature",
+          "text": "一键更新实时进度条：下载/校验/备份/替换各阶段百分比 + 当前文件名实时可见，更新结果 Toast 轻提示"
+        },
+        {
+          "type": "feature",
+          "text": "桌面端自动更新三仓库通道：GitHub Releases 为主，国内用户检查失败自动切换 ModelScope 镜像，Gitee Release 提供人工下载兜底"
+        },
+        {
+          "type": "fix",
+          "text": "桌面端侧边栏闪烁修复：Chromium 下 hover 展开不再反复开关（禁用 drag 区域冲突 + 实色背景替代毛玻璃）"
+        }
+      ]
+    },
     {
       "version": "1.0.111",
       "updated_at": "2026-08-17T09:28:05+08:00",

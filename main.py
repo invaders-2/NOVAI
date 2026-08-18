@@ -303,7 +303,42 @@ else:
     _DATA_ROOT = BASE_DIR
 
 OUTPUT_DIR = os.path.join(_DATA_ROOT, "output")
-ASSETS_DIR = os.path.join(_DATA_ROOT, "assets")
+
+def _dir_writable(path: str) -> bool:
+    """探测目录是否可写（创建试探文件后立即删除）。"""
+    try:
+        os.makedirs(path, exist_ok=True)
+        probe = os.path.join(path, ".write_test")
+        with open(probe, "w", encoding="utf-8") as f:
+            f.write("ok")
+        os.remove(probe)
+        return True
+    except Exception:
+        return False
+
+def resolve_default_assets_dir() -> str:
+    """默认素材目录：跟随安装目录（安装时选了大容量盘符的用户，素材随之过去）。
+    兜底规则：
+    - 安装目录不可写（C:\\Program Files 需管理员权限 / macOS .app 包内只读 /
+      Linux AppImage 挂载只读）→ 回落到数据目录（APPDATA/NOVAI/assets）；
+    - 老用户数据目录里已有素材、安装目录下还没有 assets → 继续用数据目录，
+      避免升级后素材库"消失"（不搬动、不隐藏存量素材）。
+    """
+    fallback = os.path.join(_DATA_ROOT, "assets")
+    install_root = os.environ.get("NOVAI_INSTALL_DIR") or os.environ.get("NOVAI_APP_DIR", "")
+    if not install_root:
+        return fallback
+    candidate = os.path.join(install_root, "assets")
+    try:
+        if (not os.path.isdir(candidate)) and os.path.isdir(fallback) and os.listdir(fallback):
+            return fallback
+    except Exception:
+        pass
+    if _dir_writable(candidate):
+        return candidate
+    return fallback
+
+ASSETS_DIR = resolve_default_assets_dir()
 
 # 启动时从 config.json 读自定义素材路径，覆盖 ASSETS_DIR
 def _load_startup_storage_path():
@@ -20248,13 +20283,10 @@ def _save_novai_config(config):
 @app.get("/api/config/storage")
 async def get_storage_path():
     config = _load_novai_config()
-    # 默认路径优先用安装目录下的 assets，避免指向系统盘 APPDATA
-    app_dir = os.environ.get("NOVAI_APP_DIR", "")
-    if app_dir:
-        default_path = os.path.join(app_dir, "assets")
-    else:
-        default_path = os.path.join(os.environ.get("NOVAI_DATA_DIR", os.path.expanduser("~/.NOVAI")), "assets")
-    return {"path": config.get("storage_path", default_path)}
+    # 显示与实际写入保持一致：默认跟随安装目录（不可写时回落数据目录，
+    # 老用户存量素材目录优先），由 resolve_default_assets_dir 统一决策
+    custom = str(config.get("storage_path", "")).strip()
+    return {"path": custom or ASSETS_DIR}
 
 @app.post("/api/config/storage")
 async def set_storage_path(data: dict):

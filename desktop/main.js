@@ -170,6 +170,12 @@ function startBackend(port) {
         ? path.dirname(mainPy || binary || '')
         : path.dirname(mainPy || ''),
     });
+    // Win 安装根目录传给后端：素材默认跟随安装目录（用户安装时选的大容量盘）。
+    // 仅 win32 设置——mac 的 .app 包内只读、linux AppImage 挂载只读，
+    // 后端写探测失败会自动回落到数据目录（~/NOVAI 或 APPDATA/NOVAI）。
+    if (app.isPackaged && process.platform === 'win32') {
+      backendEnv.NOVAI_INSTALL_DIR = path.dirname(process.execPath);
+    }
     if (app.isPackaged) {
       try { fs.mkdirSync(backendEnv.NOVAI_DATA_DIR, { recursive: true }); } catch (_) {}
     }

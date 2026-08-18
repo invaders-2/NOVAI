@@ -28,7 +28,7 @@ import shlex
 import functools
 import html
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Callable
 from types import SimpleNamespace
 from threading import Lock, Thread
 import httpx
@@ -378,6 +378,17 @@ LOAD_LOCK = Lock()
 RUNNINGHUB_WORKFLOW_LOCK = Lock()
 NEXT_TASK_ID = 1
 UPDATE_LOCK = Lock()
+# 更新任务实时进度，供前端 /api/update-progress 轮询展示进度条
+UPDATE_PROGRESS: Dict[str, Any] = {
+    "running": False,
+    "stage": "",
+    "percent": 0,
+    "current_file": "",
+    "files_done": 0,
+    "files_total": 0,
+    "message": "",
+    "error": "",
+}
 JIMENG_LOGIN_SESSION = {
     "proc": None,
     "stdout": "",
@@ -2144,7 +2155,7 @@ def github_bytes(url: str) -> bytes:
     resp = github_get(url, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=60)
     return resp.content
 
-def download_github_update_files(files: List[str], staging_root: str) -> None:
+def download_github_update_files(files: List[str], staging_root: str, progress_cb: Optional[Callable[[str, int, int], None]] = None) -> None:
     staging_root_abs = os.path.abspath(staging_root)
     from concurrent.futures import ThreadPoolExecutor, as_completed
     def _download_one(rel):
@@ -2158,6 +2169,8 @@ def download_github_update_files(files: List[str], staging_root: str) -> None:
         with open(stage_path, "wb") as f:
             f.write(data)
         return rel
+    total = len(files)
+    done = 0
     with ThreadPoolExecutor(max_workers=6) as executor:
         futures = {executor.submit(_download_one, rel): rel for rel in files}
         for future in as_completed(futures):
@@ -2166,6 +2179,9 @@ def download_github_update_files(files: List[str], staging_root: str) -> None:
                 future.result()
             except Exception as e:
                 raise RuntimeError(f"下载文件 {rel} 失败: {e}") from e
+            if progress_cb:
+                done += 1
+                progress_cb(rel, done, total)
 
 def modelscope_update_file_list() -> List[str]:
     """通过 ModelScope 仓库文件 API 列出所有允许更新的文件（不依赖 git）。"""
@@ -2188,7 +2204,7 @@ def modelscope_file_bytes(rel: str) -> bytes:
     resp = github_get(url, headers={"User-Agent": "Infinite-Canvas-Updater"}, timeout=60)
     return resp.content
 
-def download_modelscope_update_files(staging_root: str) -> List[str]:
+def download_modelscope_update_files(staging_root: str, progress_cb: Optional[Callable[[str, int, int], None]] = None) -> List[str]:
     # 用 HTTP 仓库文件 API 下载（与 GitHub raw 同样思路），不依赖本机安装 Git。
     # 之前用 git clone 会要求目标机装 Git for Windows，很多用户没装 → 一键更新失败。
     files = modelscope_update_file_list()
@@ -2210,6 +2226,8 @@ def download_modelscope_update_files(staging_root: str) -> List[str]:
         with open(stage_path, "wb") as f:
             f.write(data)
         return rel
+    total = len(files)
+    done = 0
     with ThreadPoolExecutor(max_workers=6) as executor:
         futures = {executor.submit(_download_one, rel): rel for rel in files}
         for future in as_completed(futures):
@@ -2218,6 +2236,9 @@ def download_modelscope_update_files(staging_root: str) -> List[str]:
                 future.result()
             except Exception as e:
                 raise RuntimeError(f"下载文件 {rel} 失败: {e}") from e
+            if progress_cb:
+                done += 1
+                progress_cb(rel, done, total)
     return files
 
 def gitee_json(url: str, *, timeout: int = 30, use_etag_cache: bool = False) -> Any:
@@ -2257,7 +2278,7 @@ def gitee_update_file_list() -> Tuple[List[str], List[str], List[str]]:
         raise RuntimeError("Gitee 未返回 static 文件，已取消更新")
     return root_files, static_files, files
 
-def download_gitee_update_files(files: List[str], staging_root: str) -> None:
+def download_gitee_update_files(files: List[str], staging_root: str, progress_cb: Optional[Callable[[str, int, int], None]] = None) -> None:
     staging_root_abs = os.path.abspath(staging_root)
     from concurrent.futures import ThreadPoolExecutor, as_completed
     def _download_one(rel):
@@ -2273,6 +2294,8 @@ def download_gitee_update_files(files: List[str], staging_root: str) -> None:
         with open(stage_path, "wb") as f:
             f.write(data)
         return rel
+    total = len(files)
+    done = 0
     with ThreadPoolExecutor(max_workers=6) as executor:
         futures = {executor.submit(_download_one, rel): rel for rel in files}
         for future in as_completed(futures):
@@ -2281,6 +2304,9 @@ def download_gitee_update_files(files: List[str], staging_root: str) -> None:
                 future.result()
             except Exception as e:
                 raise RuntimeError(f"下载文件 {rel} 失败: {e}") from e
+            if progress_cb:
+                done += 1
+                progress_cb(rel, done, total)
 
 def safe_update_target(path: str) -> str:
     rel = str(path or "").replace("\\", "/").lstrip("/")
@@ -2361,17 +2387,28 @@ def schedule_self_restart(delay_seconds: int = 3) -> bool:
                 close_fds=True,
             )
         else:
+            # 桌面版优先：PyInstaller 打包 launcher.py 生成的 NOVAI 二进制与 main.py 同目录
+            # （onedir 布局下位于 .app/Contents/MacOS/NOVAI），否则回退到启动脚本
+            desktop_bin = os.path.join(BASE_DIR, "NOVAI")
             launcher = os.path.join(BASE_DIR, "mac-启动服务.command")
             if not os.path.exists(launcher):
                 launcher = os.path.join(BASE_DIR, "start.sh")
             sh_path = os.path.join(BASE_DIR, "_self_restart.sh")
+            log_path = os.path.join(BASE_DIR, "_self_restart.log")
             script = (
                 "#!/bin/sh\n"
                 f"sleep {delay}\n"
+                f"echo \"[$(date '+%Y-%m-%d %H:%M:%S')] stopping old pid {pid}\" >> \"{log_path}\"\n"
                 f"kill -9 {pid} 2>/dev/null\n"
                 f"cd \"{BASE_DIR}\"\n"
-                f"if [ -x \"{launcher}\" ]; then nohup \"{launcher}\" >/dev/null 2>&1 &\n"
-                f"elif [ -f \"{launcher}\" ]; then nohup /bin/sh \"{launcher}\" >/dev/null 2>&1 &\n"
+                f"if [ -x \"{desktop_bin}\" ]; then\n"
+                f"  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] starting NOVAI binary\" >> \"{log_path}\"\n"
+                f"  nohup \"{desktop_bin}\" >/dev/null 2>&1 &\n"
+                f"elif [ -x \"{launcher}\" ]; then\n"
+                f"  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] starting launcher {launcher}\" >> \"{log_path}\"\n"
+                f"  nohup \"{launcher}\" >/dev/null 2>&1 &\n"
+                f"elif [ -f \"{launcher}\" ]; then\n"
+                f"  nohup /bin/sh \"{launcher}\" >/dev/null 2>&1 &\n"
                 "fi\n"
                 "rm -- \"$0\"\n"
             )
@@ -2452,17 +2489,17 @@ def normalize_update_source(value: str) -> str:
         return "gitee"
     return source
 
-def stage_update_from_source(source: str, staging_root: str) -> Tuple[List[str], List[str], List[str]]:
+def stage_update_from_source(source: str, staging_root: str, progress_cb: Optional[Callable[[str, int, int], None]] = None) -> Tuple[List[str], List[str], List[str]]:
     """下载指定源的更新文件到 staging，返回 (root_files, static_files, files)。失败抛异常。"""
     if source == "gitee":
         root_files, static_files, files = gitee_update_file_list()
-        download_gitee_update_files(files, staging_root)
+        download_gitee_update_files(files, staging_root, progress_cb=progress_cb)
         return root_files, static_files, files
     if source == "modelscope":
-        download_modelscope_update_files(staging_root)
+        download_modelscope_update_files(staging_root, progress_cb=progress_cb)
         return staged_update_file_list(staging_root)
     root_files, static_files, files = github_update_file_list()
-    download_github_update_files(files, staging_root)
+    download_github_update_files(files, staging_root, progress_cb=progress_cb)
     return root_files, static_files, files
 
 @app.post("/api/update-from-github")
@@ -2476,6 +2513,19 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
     if req.fallback:
         source_order.extend(s for s in FALLBACK_SOURCES if s != requested_source)
     try:
+        # 实时进度回调：每下载完一个文件上报一次（由下载函数在 as_completed 循环里调用）
+        def _report_download(rel: str, done: int, total: int) -> None:
+            UPDATE_PROGRESS.update(
+                stage="downloading",
+                percent=int(done / max(1, total) * 80),  # 下载阶段占 0-80%
+                current_file=rel,
+                files_done=done,
+                files_total=total,
+                message=f"下载中 {done}/{total} 个文件",
+                error="",
+            )
+
+        UPDATE_PROGRESS.update(running=True, stage="downloading", percent=0, current_file="", files_done=0, files_total=0, message="准备下载更新文件", error="")
         backup_root = os.path.join(DATA_DIR, "update_backups", time.strftime("%Y%m%d-%H%M%S"))
 
         # 下载阶段（带兜底切换），任意源成功即停止
@@ -2493,7 +2543,8 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
             label = UPDATE_SOURCE_LABELS.get(candidate, candidate)
             print(f"[update] 尝试下载源 [{idx + 1}/{len(source_order)}] {label}（{candidate}）→ {attempt_staging}")
             try:
-                root_files, static_files, files = stage_update_from_source(candidate, attempt_staging)
+                UPDATE_PROGRESS.update(message=f"尝试下载源 {label}（{candidate}）")
+                root_files, static_files, files = stage_update_from_source(candidate, attempt_staging, progress_cb=_report_download)
                 source = candidate
                 staging_root = attempt_staging
                 fallback_used = idx > 0
@@ -2509,6 +2560,10 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
             detail = "；".join(download_errors) or "未知错误"
             print(f"[update] 所有下载源均失败 → {detail}")
             raise HTTPException(status_code=502, detail=f"所有下载源均失败 → {detail}")
+
+        UPDATE_PROGRESS.update(stage="downloading", percent=80, message=f"下载完成，共 {len(files or [])} 个文件")
+        # 备份阶段
+        UPDATE_PROGRESS.update(stage="backup", percent=88, message="正在备份旧文件")
 
         updated = []
         for rel in root_files:
@@ -2526,6 +2581,8 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
         if os.path.isdir(static_dir):
             os.makedirs(os.path.dirname(backup_static_dir), exist_ok=True)
             shutil.copytree(static_dir, backup_static_dir)
+        # 应用阶段
+        UPDATE_PROGRESS.update(stage="applying", percent=96, message="正在应用新文件")
         # 逐文件覆盖，不整删 static 目录，避免 Win 下部分文件失败导致目录丢失
         os.makedirs(static_dir, exist_ok=True)
         try:
@@ -2589,6 +2646,11 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
                     update_notes = safe_update_notes(json.load(f), new_version)
         except Exception:
             update_notes = {}
+        # 收尾：更新完成或已排定重启
+        if restart_scheduled:
+            UPDATE_PROGRESS.update(stage="restarting", percent=100, message="更新完成，正在重启后端")
+        else:
+            UPDATE_PROGRESS.update(stage="done", percent=100, message="更新完成")
         return {
             "ok": True,
             "source": source,
@@ -2604,14 +2666,22 @@ def update_from_github(req: UpdateRequest = UpdateRequest()):
             "restart_required": True,
             "restart_scheduled": restart_scheduled,
         }
-    except HTTPException:
+    except HTTPException as he:
+        UPDATE_PROGRESS.update(stage="error", error=str(he.detail), message="更新失败")
         raise
     except Exception as exc:
+        UPDATE_PROGRESS.update(stage="error", error=str(exc), message="更新失败")
         raise HTTPException(status_code=500, detail=f"更新失败：{exc}") from exc
     finally:
         if staging_root and os.path.isdir(staging_root):
             shutil.rmtree(staging_root, ignore_errors=True)
+        UPDATE_PROGRESS.update(running=False)
         UPDATE_LOCK.release()
+
+@app.get("/api/update-progress")
+def update_progress():
+    """返回当前更新任务的实时进度快照，供前端轮询展示进度条。"""
+    return dict(UPDATE_PROGRESS)
 
 def list_update_backups() -> List[Dict[str, Any]]:
     root = os.path.join(DATA_DIR, "update_backups")

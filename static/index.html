@@ -33,12 +33,12 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.111.1786930085"></script>
-    <script src="/static/js/theme.js?v=1.0.111.1786930085"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.111.1786930085"></script>
-    <script src="/static/js/i18n.js?v=1.0.111.1786930085"></script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.111.1786930085">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.111.1786930085">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.111.1786930085.1785603211"></script>
+    <script src="/static/js/theme.js?v=1.0.111.1786930085.1786205339"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.111.1786930085.1785603211"></script>
+    <script src="/static/js/i18n.js?v=1.0.111.1786930085.1786205339"></script>
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.111.1786930085.1786205339">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.111.1786930085.1785603211">
     <style>
         /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
         .w-1\.5 { width: 0.375rem; }
@@ -215,6 +215,26 @@
             backdrop-filter: blur(40px) saturate(200%);
             -webkit-backdrop-filter: blur(40px) saturate(200%);
             box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        }
+
+        /* 桌面端（Electron/Chromium）侧边栏：
+           - 保留 hover 折叠交互与动画（与网页版/正式版一致）；
+           - 关键修复：桌面端禁用 sidebar 的 -webkit-app-region: drag。
+             该属性在 Chromium 下会把鼠标事件当作"窗口拖拽候选"，hover 展开时元素
+             尺寸变化导致系统 hit-test 区随之变化，鼠标事件在 drag/no-drag 间反复
+             切换 → "打开又关闭"的连续闪烁。pywebview/WKWebView 不支持 drag region
+             （所以正式版不闪）。移除后侧边栏恢复纯元素行为，折叠流畅不闪。
+           - Chromium 动态大面积 backdrop-filter 仍会重采样闪烁，桌面端 hover 展开
+             用实色背景替代毛玻璃（保留宽度动画，视觉质感不差太多）。 */
+        body.has-native-titlebar .sidebar,
+        body.has-frameless-titlebar .sidebar {
+            -webkit-app-region: no-drag !important;
+        }
+        body.has-native-titlebar .sidebar:hover,
+        body.has-frameless-titlebar .sidebar:hover {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: var(--bg) !important;
         }
 
         /* 侧边栏内所有交互元素禁止拖拽穿透 */
@@ -2107,6 +2127,32 @@
         .update-modal-summary.warn .update-modal-dot { background:#f59e0b; }
         .update-modal-summary.fail .update-modal-dot { background:#ef4444; }
 
+        /* 更新进度条：复用弹窗卡片样式，进度条走绿色强调色 */
+        .update-progress-box { margin:12px 0 0; padding:12px; border:1px solid #e5e5e5; border-radius:8px; background:#f8f8fa; }
+        .update-progress-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+        .update-progress-stage { color:#1c1c1e; font-size:12px; font-weight:950; line-height:1.4; }
+        .update-progress-percent { color:#58585a; font-size:12px; font-weight:900; white-space:nowrap; }
+        .update-progress-track { height:6px; border-radius:99px; background:#e5e5e5; overflow:hidden; }
+        .update-progress-bar { height:100%; border-radius:99px; background:#16a34a; transition:width .25s ease; }
+        .update-progress-files { margin-top:8px; color:#848488; font-size:11px; line-height:1.5; word-break:break-all; }
+        .update-progress-box.is-error .update-progress-bar { background:#dc2626; }
+
+        /* 轻量 Toast 反馈（检查更新结果等），自动消失、可点击触发动作 */
+        .update-toast {
+            position:fixed; left:50%; bottom:48px; transform:translateX(-50%);
+            z-index:99999; max-width:min(480px, calc(100vw - 40px));
+            padding:10px 18px; border-radius:12px;
+            background:rgba(20,20,22,.94); color:#f5f5f7;
+            font-size:13px; font-weight:700; line-height:1.5; text-align:center;
+            box-shadow:0 12px 32px rgba(0,0,0,.18);
+            opacity:0; transition:opacity .18s ease; cursor:default;
+            pointer-events:none;
+        }
+        .update-toast.show { opacity:1; pointer-events:auto; }
+        .update-toast.ok { background:#16a34a; color:#fff; }
+        .update-toast.fail { background:#dc2626; color:#fff; }
+        .update-toast.clickable { cursor:pointer; }
+
         /* 更新弹窗：双卡片需要更宽的面板，避免左右布局被裁剪 */
         #project-update-modal .studio-modal-panel { width:min(880px, 100%); max-height:min(840px, calc(100vh - 48px)); }
         .update-notes-box { margin:2px 0 14px; padding:12px; border:1px solid #e5e5e5; border-radius:8px; background:#f8f8fa; }
@@ -2336,6 +2382,29 @@
         body.theme-dark .update-notes-box {
             background:#0a0a0c;
             border-color:#222224;
+        }
+
+        html.theme-dark .update-progress-box,
+        body.theme-dark .update-progress-box {
+            background:#0a0a0c;
+            border-color:#222224;
+        }
+
+        html.theme-dark .update-progress-stage,
+        body.theme-dark .update-progress-stage {
+            color:#e8e8ea;
+        }
+
+        html.theme-dark .update-progress-percent,
+        body.theme-dark .update-progress-percent,
+        html.theme-dark .update-progress-files,
+        body.theme-dark .update-progress-files {
+            color:#8a8a8c;
+        }
+
+        html.theme-dark .update-progress-track,
+        body.theme-dark .update-progress-track {
+            background:#222224;
         }
 
         html.theme-dark .update-modal-summary strong,
@@ -3265,17 +3334,17 @@
                     <div class="skeleton-card"></div>
                 </div>
             </div>
-            <iframe id="frame-home" src="/static/home.html?v=1.0.111.1786930085" class="active" scrolling="yes"></iframe>
-            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-online" data-src="/static/online.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.111.1786930085" scrolling="yes"></iframe>
+            <iframe id="frame-home" src="/static/home.html?v=1.0.111.1786930085.1786944168" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-zimage" data-src="/static/zimage.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-enhance" data-src="/static/enhance.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-klein" data-src="/static/klein.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-angle" data-src="/static/angle.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-online" data-src="/static/online.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-gpt-chat" data-src="/static/gpt-chat.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=1.0.111.1786930085.1786944168" scrolling="yes"></iframe>
 
         </main>
     </div>
@@ -3357,6 +3426,16 @@
                         <strong id="project-update-summary-title">建议先测试连通性</strong>
                         <span id="project-update-summary-text"></span>
                     </div>
+                </div>
+                <div id="project-update-progress" class="update-progress-box" hidden>
+                    <div class="update-progress-head">
+                        <span id="project-update-progress-stage" class="update-progress-stage"></span>
+                        <span id="project-update-progress-percent" class="update-progress-percent">0%</span>
+                    </div>
+                    <div class="update-progress-track">
+                        <div id="project-update-progress-bar" class="update-progress-bar" style="width:0%"></div>
+                    </div>
+                    <div id="project-update-progress-files" class="update-progress-files"></div>
                 </div>
             </div>
             <div class="studio-modal-actions">
@@ -3596,6 +3675,16 @@
                                     </svg>
                                     <span id="settings-update-now-text">一键更新</span>
                                 </button>
+                                <div id="settings-update-progress" class="update-progress-box" hidden>
+                                    <div class="update-progress-head">
+                                        <span id="settings-update-progress-stage" class="update-progress-stage"></span>
+                                        <span id="settings-update-progress-percent" class="update-progress-percent">0%</span>
+                                    </div>
+                                    <div class="update-progress-track">
+                                        <div id="settings-update-progress-bar" class="update-progress-bar" style="width:0%"></div>
+                                    </div>
+                                    <div id="settings-update-progress-files" class="update-progress-files"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3852,6 +3941,9 @@
         let updateSource = localStorage.getItem('studio_update_source') || 'github';
         let projectUpdateNotes = null;
         let repoUpdateStatus = { github: null, gitee: null, modelscope: null };
+        // 更新进度轮询：seq 用于防竞态（关闭/重开时让在途请求失效）
+        let updateProgressPollTimer = null;
+        let updateProgressPollSeq = 0;
 
         function setSidebarPinned(pinned, options = {}) {
             const sidebar = document.getElementById('studioSidebar');
@@ -5048,6 +5140,115 @@
             }
         }
 
+        // 轻量 Toast：检查更新结果等一次性反馈，自动消失，可点击执行动作
+        let _updateToastEl = null;
+        let _updateToastTimer = null;
+        function showUpdateToast(text, opts = {}) {
+            if(!document.body) return;
+            if(!_updateToastEl) {
+                _updateToastEl = document.createElement('div');
+                _updateToastEl.id = 'update-toast';
+                _updateToastEl.className = 'update-toast';
+                document.body.appendChild(_updateToastEl);
+            }
+            const el = _updateToastEl;
+            el.textContent = text;
+            el.classList.toggle('ok', opts.kind === 'ok');
+            el.classList.toggle('fail', opts.kind === 'fail');
+            el.classList.toggle('clickable', !!opts.onClick);
+            el.onclick = () => {
+                if(typeof opts.onClick === 'function') opts.onClick();
+                hideUpdateToast();
+            };
+            el.classList.add('show');
+            if(_updateToastTimer) clearTimeout(_updateToastTimer);
+            _updateToastTimer = setTimeout(hideUpdateToast, opts.duration || 3500);
+        }
+        function hideUpdateToast() {
+            if(_updateToastEl) _updateToastEl.classList.remove('show');
+            if(_updateToastTimer) { clearTimeout(_updateToastTimer); _updateToastTimer = null; }
+        }
+
+        // 更新进度条：同时渲染更新确认弹窗与设置弹窗里的进度容器
+        function updateStageText(stage, p) {
+            const isEn = window.StudioI18n?.lang?.() === 'en';
+            const done = Number(p?.files_done || 0);
+            const total = Number(p?.files_total || 0);
+            switch(stage) {
+                case 'downloading':
+                    return total > 0
+                        ? (isEn ? `Downloading ${done}/${total} files` : `下载中 ${done}/${total} 个文件`)
+                        : (isEn ? 'Downloading...' : '下载中...');
+                case 'backup': return isEn ? 'Backing up old files' : '备份中';
+                case 'applying': return isEn ? 'Applying new files' : '应用中';
+                case 'restarting': return isEn ? 'Restarting backend' : '重启中';
+                case 'done': return isEn ? 'Update complete' : '更新完成';
+                case 'error': return isEn ? 'Update failed' : '更新失败';
+                default: return isEn ? 'Preparing update' : '准备更新';
+            }
+        }
+        function renderUpdateProgress(data) {
+            if(!data || typeof data !== 'object') return;
+            const pct = Math.max(0, Math.min(100, Math.round(Number(data.percent) || 0)));
+            const stage = data.stage || '';
+            const isError = stage === 'error';
+            const pairs = [
+                ['project-update-progress', 'project'],
+                ['settings-update-progress', 'settings'],
+            ];
+            for(const [boxId, prefix] of pairs) {
+                const box = document.getElementById(boxId);
+                if(!box) continue;
+                const stageEl = document.getElementById(`${prefix}-update-progress-stage`);
+                const pctEl = document.getElementById(`${prefix}-update-progress-percent`);
+                const barEl = document.getElementById(`${prefix}-update-progress-bar`);
+                const filesEl = document.getElementById(`${prefix}-update-progress-files`);
+                if(stageEl) stageEl.textContent = updateStageText(stage, data);
+                if(pctEl) pctEl.textContent = `${pct}%`;
+                if(barEl) barEl.style.width = `${pct}%`;
+                box.classList.toggle('is-error', isError);
+                if(filesEl) {
+                    filesEl.textContent = (stage === 'downloading' && data.current_file)
+                        ? (window.StudioI18n?.lang?.() === 'en' ? `File: ${data.current_file}` : `当前文件：${data.current_file}`)
+                        : '';
+                }
+            }
+        }
+        function showUpdateProgressBoxes(show) {
+            for(const id of ['project-update-progress', 'settings-update-progress']) {
+                const box = document.getElementById(id);
+                if(box) box.hidden = !show;
+            }
+        }
+        function startUpdateProgressPolling() {
+            stopUpdateProgressPolling();
+            showUpdateProgressBoxes(true);
+            renderUpdateProgress({ stage:'', percent:0 });
+            pollUpdateProgress();
+            updateProgressPollTimer = setInterval(pollUpdateProgress, 1000);
+        }
+        function stopUpdateProgressPolling() {
+            updateProgressPollSeq++;
+            if(updateProgressPollTimer) {
+                clearInterval(updateProgressPollTimer);
+                updateProgressPollTimer = null;
+            }
+        }
+        async function pollUpdateProgress() {
+            const mySeq = ++updateProgressPollSeq;
+            try {
+                const res = await fetch('/api/update-progress', { cache:'no-store' });
+                if(!res.ok) return;
+                const data = await res.json();
+                if(mySeq !== updateProgressPollSeq) return; // 已被清理，丢弃过期结果
+                renderUpdateProgress(data);
+                // 后端已完成/失败时停止轮询，进度条保留最终状态
+                if(!data.running && ['done', 'error', 'restarting'].includes(data.stage)) {
+                    stopUpdateProgressPolling();
+                }
+            } catch(e) { /* 后端重启中或短暂不可达，忽略 */ }
+        }
+
         async function confirmProjectUpdate() {
             const isEn = window.StudioI18n?.lang?.() === 'en';
             const btn = document.getElementById('update-now-btn') || document.getElementById('settings-update-now-btn');
@@ -5065,8 +5266,11 @@
             if(confirmText) confirmText.textContent = isEn ? 'Updating...' : '更新中...';
             const sourceName = updateSourceLabel();
             setUpdateSummary('warn', isEn ? 'Updating' : '正在更新', isEn ? `Downloading files from ${sourceName} and creating a local backup.` : `正在从 ${sourceName} 下载文件，并创建本地备份。`);
+            // 开始轮询后端实时进度（进度条展示阶段与百分比）
+            startUpdateProgressPolling();
             // 客户端兜底超时：即使后端异常挂起，UI 也能恢复，不会永远停在「更新中」
             const ac = new AbortController();
+            projectUpdateAbort = ac;  // 让 closeProjectUpdateModal 能真正中止在途请求
             const killer = setTimeout(() => ac.abort(), 300000);
             try {
                 const res = await fetch('/api/update-from-github', {
@@ -5108,6 +5312,9 @@
                 setUpdateSummary('fail', isEn ? 'Update failed' : '更新失败', msg);
             } finally {
                 clearTimeout(killer);
+                projectUpdateAbort = null;
+                stopUpdateProgressPolling();
+                showUpdateProgressBoxes(false);
                 projectUpdateRunning = false;
                 if(btn) btn.disabled = false;
                 if(confirmBtn) confirmBtn.disabled = false;
@@ -5264,16 +5471,35 @@
                 }
                 if(manual) {
                     if(hasUpdate) {
+                        // 发现新版本：弹窗展示更新内容，toast 可点击重新打开
+                        showUpdateToast(
+                            isEn ? `New version ${versionLabel(best.version)} available — click to update.` : `发现新版本 ${versionLabel(best.version)}，点击查看更新。`,
+                            { kind:'ok', onClick:() => openProjectUpdateModal() }
+                        );
                         openProjectUpdateModal();
                     } else if(reachable) {
-                        alert(isEn ? `You are on the latest version (${versionLabel(current)}).` : `已是最新版本（${versionLabel(current)}）。`);
+                        showUpdateToast(
+                            isEn ? `You are on the latest version (${versionLabel(current)}).` : `已是最新版本（${versionLabel(current)}）。`,
+                            { kind:'ok' }
+                        );
                     } else {
-                        alert(isEn ? 'Could not reach GitHub. Check your network/proxy and try again.' : '无法连接 GitHub 更新源，请检查网络或代理后重试。');
+                        showUpdateToast(
+                            isEn ? 'Could not reach the update source. Check your network/proxy and try again.' : '无法连接更新源，请检查网络或代理后重试。',
+                            { kind:'fail' }
+                        );
                     }
                 }
             } catch(e) {
                 // 离线包里没有网络时保持安静，不影响本地使用。
-                if(manual) alert(isEn ? 'Update check failed.' : '检测更新失败。');
+                if(manual) {
+                    const reason = String(e?.message || e || '').trim().slice(0, 160);
+                    showUpdateToast(
+                        reason
+                            ? (isEn ? `Update check failed: ${reason}` : `检测更新失败：${reason}`)
+                            : (isEn ? 'Update check failed.' : '检测更新失败。'),
+                        { kind:'fail' }
+                    );
+                }
             } finally {
                 if(checkBtn) checkBtn.classList.remove('checking');
             }

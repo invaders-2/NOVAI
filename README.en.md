@@ -136,7 +136,32 @@ The app checks all three sources for the latest version on startup, pushes updat
 
 ---
 
+## Desktop Client (Electron · Beta)
+
+> New packaging route: **Electron** with its own Chromium engine (consistent behavior across platforms, no more system WebView differences), with electron-updater auto-update.
+
+- Source & build docs: **desktop/README.md**
+- Reuses the existing frontend through a pywebview compatibility bridge (window.pywebview.api) — native dialogs / window controls / system tray with zero frontend changes
+- **Fully shares data with the official build**: same port 3000 and same data directory (Windows `%APPDATA%/NOVAI`, macOS `~/NOVAI`) — canvases, settings and chat history are shared, **no data re-download or migration needed, just install and run**; if the official build is already running, the Electron app reuses its backend instead of starting a second one
+- **Three-repo update channel**: GitHub Releases as the primary source; if the check fails (common on Chinese networks) it automatically falls back to a ModelScope mirror (`bllack/NOVAI-releases`), with Gitee Releases as a manual-download backup. The cloud pipeline (triggered by pushing a `v*` tag) syncs installers to all three repos automatically
+- **Auto-restart after update**: on Windows the update installs and restarts automatically after user confirmation; on macOS, unsigned builds cannot auto-install (Squirrel requires code signing), so the app falls back to a guided manual download — data is never affected
+
+---
+
 ## Changelog
+
+### v1.0.112-beta.1 (Beta)
+
+- **Electron desktop client**: bundled Chromium engine; shares port 3000 + the same data directory with the official build (full data interop); tray / native dialogs / window controls
+- **Live update progress bar**: per-stage percentage (download / verify / backup / replace) + current file name, with toast notifications for update results
+- **Three-repo update channel**: GitHub primary, automatic ModelScope mirror fallback for Chinese networks, Gitee manual-download backup
+- **Desktop sidebar flicker fix**: hover-expand no longer toggles rapidly under Chromium
+
+### v1.0.111
+
+- **Local high-quality cutout**: image nodes get "High-Quality Cutout" — RMBG-2.0 local model downloads on demand (349MB, first use only), then offline & free; edge refinement (alpha stretch + erode/feather + background-color decontamination); one-click fallback to online cutout
+- **Windows title bar drag fix**: frameless window title bar is draggable again
+- **Old model cleanup**: leftover RMBG-1.4 model is removed automatically after upgrade
 
 ### v1.0.108
 

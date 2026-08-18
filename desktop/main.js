@@ -427,10 +427,25 @@ function setupAutoUpdate() {
         autoUpdater.setFeedURL({ provider: 'generic', url: MIRROR_UPDATE_URL });
         clog('updater', '已切换到国内镜像更新源: ' + MIRROR_UPDATE_URL);
         autoUpdater.checkForUpdates();
+        return;
       } catch (e) {
         clog('updater', '镜像更新源切换失败: ' + (e && e.message || e));
       }
     }
+    // 镜像也失败，或 macOS 未签名构建无法自动安装（Squirrel 要求签名）→
+    // 引导手动下载覆盖安装，数据目录独立不受影响。
+    if (!mainWindow) return;
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: '自动更新不可用',
+      message: '新版本已发布，但自动更新未能完成',
+      detail: '可能是网络无法连接更新服务器，或 macOS 未签名构建不支持自动安装。可前往发布页手动下载最新安装包覆盖安装，数据不会丢失。',
+      buttons: ['前往下载', '稍后'],
+      defaultId: 0,
+      cancelId: 1,
+    }).then(({ response }) => {
+      if (response === 0) shell.openExternal('https://github.com/invaders-2/NOVAI/releases');
+    }).catch(() => {});
   });
   setTimeout(() => { try { autoUpdater.checkForUpdates(); } catch (_) {} }, 8000);
 }

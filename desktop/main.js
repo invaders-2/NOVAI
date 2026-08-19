@@ -393,8 +393,9 @@ function setupAutoUpdate() {
   // 测试版（版本号含 -，如 1.0.112-beta.1）允许接收 prerelease 更新；正式版只看正式 Release。
   autoUpdater.allowPrerelease = app.getVersion().includes('-');
   // 国内用户访问 GitHub Releases 常被阻断：检查失败时自动切换到
-  // ModelScope 国内镜像（generic provider，构建流水线会把安装包同步过去）。
-  const MIRROR_UPDATE_URL = 'https://modelscope.cn/models/bllack/NOVAI-releases/resolve/master/electron-release';
+  // ModelScope 国内镜像（generic provider，构建流水线会把安装包同步到
+  // studio/bllack/NOVAI 的 electron-release/ 目录）。
+  const MIRROR_UPDATE_URL = 'https://modelscope.cn/studios/bllack/NOVAI/resolve/master/electron-release';
   let switchedToMirror = false;
   autoUpdater.on('update-available', (info) => {
     const current = app.getVersion();
@@ -450,7 +451,7 @@ function setupAutoUpdate() {
       defaultId: 0,
       cancelId: 1,
     }).then(({ response }) => {
-      if (response === 0) shell.openExternal('https://github.com/invaders-2/NOVAI/releases');
+      if (response === 0) shell.openExternal('https://gitee.com/invaders/novai/releases');
     }).catch(() => {});
   });
   setTimeout(() => { try { autoUpdater.checkForUpdates(); } catch (_) {} }, 8000);

@@ -3,9 +3,11 @@
 #
 # 两个目标：
 #   1) Gitee invaders/novai Release 附件 —— 人工下载镜像（先跑，快且稳）
-#   2) ModelScope 模型仓库 bllack/NOVAI-releases —— 客户端自动更新的国内源
+#   2) ModelScope 工作室仓库 bllack/NOVAI —— 客户端自动更新的国内源
 #      （Electron 端 GitHub 检查失败时自动切换到该 generic 更新地址：
-#        https://modelscope.cn/models/bllack/NOVAI-releases/resolve/master/electron-release）
+#        https://modelscope.cn/studios/bllack/NOVAI/resolve/master/electron-release）
+#      注：用户实际拥有的是 studio 仓（models 命名空间的 NOVAI-releases 并不存在），
+#      因此产物推到 studio/bllack/NOVAI 的 electron-release/ 子目录，URL 也用 studios/。
 #
 # 所需环境变量：
 #   GITEE_TOKEN       Gitee 私人令牌（缺失则跳过 Gitee 同步）
@@ -27,7 +29,7 @@ set -u
 cd "${GITHUB_WORKSPACE:-$(pwd)}"
 
 RELEASE_DIR="desktop/release"
-MS_REPO="models/bllack/NOVAI-releases"
+MS_REPO="studio/bllack/NOVAI"
 MS_BRANCH="master"
 GITEE_OWNER="invaders"
 GITEE_REPO="novai"
@@ -69,14 +71,17 @@ sync_gitee() {
   local release_id
 
   echo "== Gitee: 创建/获取 Release ${RELEASE_TAG} =="
-  release_id=$(curl -sS --max-time 60 -X POST "${api}/releases" \
+  # 用 python 稳妥解析顶层 id（旧版贪婪 sed 会误抓 JSON 末尾 author.id，
+  # 导致附件上传静默 404 / 二进制缺失）。
+  local body
+  body=$(curl -sS --max-time 60 -X POST "${api}/releases" \
     -H "Content-Type: application/json" \
-    -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${RELEASE_TAG}\",\"name\":\"NOVAI ${RELEASE_TAG}\",\"body\":\"国内下载镜像（与 GitHub Release 相同内容）。\",\"target_commitish\":\"main\",\"prerelease\":true}" \
-    | sed -n 's/.*"id":\([0-9]*\).*/\1/p' | head -1)
+    -d "{\"access_token\":\"${GITEE_TOKEN}\",\"tag_name\":\"${RELEASE_TAG}\",\"name\":\"NOVAI ${RELEASE_TAG}\",\"body\":\"国内下载镜像（与 GitHub Release 相同内容）。\",\"target_commitish\":\"main\",\"prerelease\":true}")
+  release_id=$(printf '%s' "$body" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
 
   if [ -z "$release_id" ]; then
     release_id=$(curl -sS --max-time 60 "${api}/releases/tags/${RELEASE_TAG}?access_token=${GITEE_TOKEN}" \
-      | sed -n 's/.*"id":\([0-9]*\).*/\1/p' | head -1)
+      | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null)
   fi
   if [ -z "$release_id" ]; then
     echo "::warning::Gitee Release 创建/查询失败（tag 是否已推送到 gitee？），跳过附件上传"

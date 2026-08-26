@@ -77,6 +77,41 @@
             gap: 40px;
         }
 
+        /* ===== 工作台布局对比器 ===== */
+        .layout-switcher {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 8px;
+            border: 1px solid rgba(127, 127, 127, 0.18);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.38);
+            backdrop-filter: blur(28px) saturate(160%);
+            -webkit-backdrop-filter: blur(28px) saturate(160%);
+        }
+        .theme-dark .layout-switcher { background: rgba(255, 255, 255, 0.06); }
+        .layout-switcher-label { padding-left: 10px; font-size: 11px; color: var(--v4-muted); letter-spacing: .08em; text-transform: uppercase; }
+        .layout-switcher-tabs { display: flex; gap: 4px; }
+        .layout-tab { border: 0; border-radius: 10px; padding: 9px 12px; background: transparent; color: var(--v4-muted); font: 500 12px inherit; cursor: pointer; transition: .2s ease; }
+        .layout-tab:hover { color: var(--v4-text); }
+        .layout-tab.is-active { background: var(--v4-btn-bg); color: var(--v4-btn-text); box-shadow: 0 4px 14px var(--v4-card-shadow); }
+        .layout-caption { display: none; font-size: 12px; color: var(--v4-muted); }
+        .home-container.layout-canvas .layout-caption[data-caption="canvas"], .home-container.layout-console .layout-caption[data-caption="console"] { display: block; }
+        .home-container.layout-canvas .hero, .home-container.layout-console .hero { display: none; }
+        .home-container.layout-canvas .cards-grid { grid-template-columns: repeat(4, 1fr); }
+        .home-container.layout-canvas .feature-card { min-height: 104px; flex-direction: row; align-items: center; padding: 16px; }
+        .home-container.layout-canvas .cta-section { grid-column: 1 / -1; order: -1; }
+        .home-container.layout-canvas .recent-section { grid-column: 1 / -1; }
+        .home-container.layout-console { max-width: 1120px; display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; align-content: start; }
+        .home-container.layout-console .layout-switcher, .home-container.layout-console .lan-notice { grid-column: 1 / -1; }
+        .home-container.layout-console .cards-grid { grid-template-columns: repeat(2, 1fr); grid-column: 1; grid-row: span 2; }
+        .home-container.layout-console .feature-card { min-height: 148px; }
+        .home-container.layout-console .recent-section { grid-column: 2; grid-row: 3 / span 2; }
+        .home-container.layout-console .status-bar { grid-column: 1 / -1; }
+        .home-container.layout-console .cta-section { grid-column: 1; }
+        @media (max-width: 760px) { .layout-switcher-label { display: none; } .layout-tab { padding: 8px 9px; } .home-container.layout-console { display: flex; } .home-container.layout-console .recent-section, .home-container.layout-console .cards-grid { width: 100%; } }
+
         /* ===== Hero 区 ===== */
         .hero {
             text-align: center;
@@ -693,6 +728,18 @@
             </div>
         </div>
 
+        <!-- 工作台布局对比：可即时切换三种首页方案 -->
+        <div class="layout-switcher" role="tablist" aria-label="首页布局方案">
+            <span class="layout-switcher-label">Workbench preview</span>
+            <span class="layout-caption" data-caption="canvas">画布中心：直接进入创作</span>
+            <span class="layout-caption" data-caption="console">控制台：项目与状态并览</span>
+            <div class="layout-switcher-tabs">
+                <button class="layout-tab is-active" type="button" data-layout="tri" role="tab" aria-selected="true">三栏工作台</button>
+                <button class="layout-tab" type="button" data-layout="canvas" role="tab" aria-selected="false">画布中心</button>
+                <button class="layout-tab" type="button" data-layout="console" role="tab" aria-selected="false">控制台</button>
+            </div>
+        </div>
+
         <!-- Hero 区 -->
         <section class="hero">
             <h1 class="hero-title">NOVAI</h1>
@@ -815,6 +862,25 @@
     </div>
 
     <script>
+        // 首页布局对比切换
+        (function initLayoutSwitcher() {
+            var container = document.querySelector('.home-container');
+            var tabs = document.querySelectorAll('.layout-tab');
+            if (!container || !tabs.length) return;
+            tabs.forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    var layout = tab.getAttribute('data-layout');
+                    container.classList.remove('layout-canvas', 'layout-console');
+                    if (layout !== 'tri') container.classList.add('layout-' + layout);
+                    tabs.forEach(function(item) {
+                        var active = item === tab;
+                        item.classList.toggle('is-active', active);
+                        item.setAttribute('aria-selected', active ? 'true' : 'false');
+                    });
+                });
+            });
+        })();
+
         // Listen for theme changes from parent
         window.addEventListener('message', function(e) {
             if (e.data && e.data.type === 'studio-theme') {

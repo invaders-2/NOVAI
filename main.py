@@ -715,7 +715,7 @@ IMAGE_POLL_INTERVAL = float(os.getenv("IMAGE_POLL_INTERVAL", "2"))
 IMAGE_TASK_TIMEOUT = float(os.getenv("IMAGE_TASK_TIMEOUT", str(AI_REQUEST_TIMEOUT)))
 COMFYUI_HISTORY_TIMEOUT = int(float(os.getenv("COMFYUI_HISTORY_TIMEOUT", "1800")))
 # 下载 ComfyUI 产物的 socket 超时（秒，作用于连接和每次 read）。没有它时一次网络卡顿会让 urlopen 永久挂起，
-# 导致 generate() 不返回、画布卡片一直转圈拿不到结果。给得足够大以容纳大视频/大图的正常下载。
+# 导致 generate() 不返回、画布卡片一直转圈拿不到结果。给得足够大以容���大视频/大图的正常下载。
 COMFYUI_DOWNLOAD_TIMEOUT = float(os.getenv("COMFYUI_DOWNLOAD_TIMEOUT", "120"))
 APIMART_IMAGE_TASK_TIMEOUT = float(os.getenv("APIMART_IMAGE_TASK_TIMEOUT", "1800"))
 APIMART_IMAGE_POLL_INTERVAL = float(os.getenv("APIMART_IMAGE_POLL_INTERVAL", "3"))
@@ -749,7 +749,7 @@ def friendly_validation_error(errors):
             parts.append(f"{label}不能为空。")
         else:
             parts.append(f"{label}格式不正确：{msg}")
-    return "\n".join(parts) or "请求参数不正确。"
+    return "\n".join(parts) or "请求参数不���确。"
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -2141,7 +2141,7 @@ def update_allowed_file(path: str) -> bool:
         or path.startswith("assets/models/")
     )
 
-# 缓存 GitHub Tree API 响应（含 ETag），减少 60 次/h 限流压力
+# ���存 GitHub Tree API 响应（含 ETag），减少 60 次/h 限流压力
 GITHUB_TREE_CACHE: Dict[str, Any] = {"etag": "", "data": None, "expires_at": 0.0}
 
 def github_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 30) -> requests.Response:
@@ -4201,7 +4201,7 @@ def load_canvas_any(canvas_id):
 def canvas_versions_dir(canvas_id):
     cleaned = re.sub(r"[^a-zA-Z0-9_-]", "", canvas_id or "")
     if not cleaned:
-        raise HTTPException(status_code=400, detail="无效的画布 ID")
+        raise HTTPException(status_code=400, detail="无效的���布 ID")
     return os.path.join(CANVAS_VERSIONS_DIR, cleaned)
 
 def list_canvas_versions(canvas_id):
@@ -4813,7 +4813,7 @@ def api_headers(json_body=True, provider=None, model=""):
     else:
         api_key = AI_API_KEY
         if not api_key:
-            raise HTTPException(status_code=400, detail="未配置 COMFLY_API_KEY，请在 API/.env 中填写。")
+            raise HTTPException(status_code=400, detail="未配置 COMFLY_API_KEY，请在 API/.env 中填写���")
     if provider and effective_protocol(provider, model) == "gemini":
         headers = {"Accept": "application/json", "x-goog-api-key": api_key}
     else:
@@ -6533,7 +6533,7 @@ async def run_jimeng_cli(args, timeout=120, raw_text=False):
     if proc.returncode != 0:
         message = clean_err_text or out_text or f"exit={proc.returncode}"
         if not message.strip() or message == f"exit={proc.returncode}":
-            message = "CLI 无响应（可能未登录、会员不含 CLI 权限、或 CLI 版本不兼容）。请在 API 设置中检查即梦账户状态，或尝试开启 WSL 模式。"
+            message = "CLI 无响应（可能未登录、会员不含 CLI 权��、或 CLI 版本不兼容）。请在 API 设置中检查即梦账户状态，或尝试开启 WSL 模式。"
         raise HTTPException(status_code=502, detail=f"即梦 CLI 调用失败：{message[:1000]}")
     # 帮助等纯文本输出不应被 JSON 提取吞掉（如 [0.5, 8] 会被误判为结果）
     if raw_text:
@@ -9185,7 +9185,7 @@ def apply_trusted_asset_prompt_index(prompt: str, image_count: int, video_count:
 
 def public_base_url() -> str:
     # 实时读 API/.env 且文件优先：公网隧道重启后地址会变，隧道脚本只改 .env；
-    # 启动时 load_env_file 会把旧值复制进 os.environ，若 env 优先会永远读到过期地址
+    # 启动时 load_env_file 会把旧值复制进 os.environ，若 env 优先���永远读到过期地址
     value = (
         read_api_env_value("PUBLIC_MEDIA_BASE_URL") or
         os.getenv("PUBLIC_MEDIA_BASE_URL") or
@@ -10299,7 +10299,7 @@ def friendly_chat_error_detail(text, model="", provider=None):
             provider_name = provider.get("name") or provider.get("id") or "火山方舟"
             return (
                 f"{provider_name} 当前不接受模型名「{model_name or '未指定'}」直接调用聊天接口，"
-                f"请在火山方舟控制台创建并使用推理接入点 ID（形如 `ep-...`）作为聊天模型。\n\n"
+                f"请在火山方舟控制台创建并使用推���接入点 ID（形如 `ep-...`）作为聊天模型。\n\n"
                 f"补充说明：`/api/v3/models` 能拉到公开模型列表，但你的账号未必能直接用这些模型名调用 `/chat/completions`；"
                 f"很多账号只允许传自己已开通的 `ep-...` 接入点。"
             )
@@ -13693,7 +13693,7 @@ async def runninghub_upload_asset(payload: RunningHubUploadAssetRequest):
         raise HTTPException(status_code=response.status_code, detail=json.dumps(raw, ensure_ascii=False)[:800])
     if isinstance(raw, dict) and raw.get("code") in (0, "0") and isinstance(raw.get("data"), dict) and raw["data"].get("fileName"):
         return {"success": True, "data": {"fileName": raw["data"]["fileName"], "fileType": raw["data"].get("fileType") or content_type}}
-    raise HTTPException(status_code=400, detail=(raw.get("msg") if isinstance(raw, dict) else "") or f"RunningHub 上传失败：{raw}")
+    raise HTTPException(status_code=400, detail=(raw.get("msg") if isinstance(raw, dict) else "") or f"RunningHub 上���失败：{raw}")
 
 @app.get("/api/codex/status")
 async def codex_status():
@@ -16421,7 +16421,7 @@ async def canvas_video_run(payload: CanvasVideoRequest):
                         if duration is not None and (duration < 1.8 or duration > 15.2):
                             raise HTTPException(
                                 status_code=400,
-                                detail=f"参考音频时长 {duration:.2f} 秒超出范围：方舟 Seedance 参考音频要求在 1.8 ~ 15.2 秒之间，请裁剪后再插入。"
+                                detail=f"参考音频时长 {duration:.2f} 秒超出范围：方舟 Seedance 参考音频要求在 1.8 ~ 15.2 秒之间，��裁剪后再插入。"
                             )
                         audio_url = volcengine_media_reference_url(url, max_image_size=None)
                         if not audio_url:
@@ -17872,7 +17872,7 @@ async def rename_prompt_library_category(category_id: str, payload: PromptLibrar
     # 这样画布与素材库管理共用同一份分组数据，重命名两端实时同步。
     name = sanitize_asset_name(payload.name, "")
     if not name:
-        raise HTTPException(status_code=400, detail="分组名称不能为空")
+        raise HTTPException(status_code=400, detail="分组名称���能为空")
     data = load_prompt_libraries()
     updated = False
     for library in data.get("libraries", []) or []:
@@ -22310,7 +22310,7 @@ async def delete_matrix(matrix_id: str):
 #     参考图/参考视频(visual)/提示词(prompt)/运镜(camera)/动作(motion)/时长
 #     (duration)/转场(transition)/音频(audio)。拖拽排序由前端维护，后端按
 #     order 存储并在渲染时按 order 顺序生成连续片段。
-#   * 渲染：每个 scene 转成真实视频生成任务进 Task Engine——复用 task_create +
+#   * 渲染：每个 scene 转成真实视频生成任务进 Task Engine——复��� task_create +
 #     TASK_RUNNERS["run_canvas_video_task"]，payload 组装参考图/参考视频/提示词
 #     （scene.prompt + 运镜 + 动作）/duration，scene 关联 task_id。
 #   * 状态真实：scene.status 跟随对应 Task 状态（queued/running/success/failed），
@@ -22615,7 +22615,7 @@ async def delete_storyboard(storyboard_id: str):
 async def render_storyboard_scene(storyboard_id: str, scene_id: str = Query(""),
                                   provider_id: str = Query(""), model: str = Query("")):
     """渲染单个 scene：转成真实视频生成任务进 Task Engine（task_create + run_canvas_video_task）。
-    平台/模型优先取 URL 参数 > 分镜 video_config > 默认值；scene 关联 task_id，状态跟随任务。"""
+    平台/模型优先取 URL 参数 > 分镜 video_config > 默认值��scene 关联 task_id，状态跟随任务。"""
     sb = storyboard_get(storyboard_id)
     if not sb:
         raise HTTPException(status_code=404, detail="分镜不存在")
@@ -22659,7 +22659,7 @@ async def render_storyboard_scene(storyboard_id: str, scene_id: str = Query(""),
 @app.post("/api/storyboards/{storyboard_id}/render-all")
 async def render_storyboard_all(storyboard_id: str, provider_id: str = Query(""), model: str = Query("")):
     """一键渲染全部 scenes：按 order 顺序生成连续片段，每个 scene 创建真实任务进 Task Engine。
-    已有关联且未结束的任务跳过；已结束（成功/失败）的 scene 重新创建任务。"""
+    已有关联且��结束的任务跳过；已结束（成功/失败）的 scene 重新创建任务。"""
     sb = storyboard_get(storyboard_id)
     if not sb:
         raise HTTPException(status_code=404, detail="分镜不存在")
@@ -23519,7 +23519,7 @@ async def _agent_tool_generate_video_run(args):
         if len(user_note) > 200:
             user_note = user_note[:200]
         eff_prompt = (
-            f"动作迁移：让画面中的主体严格按照参考视频的动作骨架表演，"
+            f"动作迁��：让画面中的主体严格按照参考视频的动作骨架表演，"
             f"外观保持参考图一致（身份、服装、造型、材质等不变）。"
             f"场景、镜头、光影、构图等其他一切内容保持不变，仅替换动作。"
             f"用户补充：{user_note}"
@@ -23842,7 +23842,7 @@ AGENT_TOOLS = {
         "mutates_canvas": True,
     },
     "delete_node": {
-        "description": "删除画布上的节点。若节点被连线引用：需 force=true 才会连同关联连线一起删除，否则返回引用警告清单。",
+        "description": "删除画布上的节点。若节��被连线引用：需 force=true 才会连同关联连线一起删除，否则返回引用警告清单。",
         "schema": {"type": "object", "properties": {
             "canvas_id": {"type": "string"}, "node_id": {"type": "string"},
             "force": {"type": "boolean", "description": "节点被连线引用时是否强制删除（连同连线）"}},
@@ -23942,7 +23942,7 @@ AGENT_TOOLS = {
         "mutates_canvas": False,
     },
     "check_task": {
-        "description": "查询任务状态（queued/running/provider_processing/succeeded/failed/cancelled…）与结果 URL。只读。",
+        "description": "查询任务状态（queued/running/provider_processing/succeeded/failed/cancelled…）与结果 URL��只读。",
         "schema": {"type": "object", "properties": {"task_id": {"type": "string"}}, "required": ["task_id"]},
         "validate": _agent_tool_check_task_validate,
         "run": _agent_tool_check_task_run,
@@ -24115,7 +24115,7 @@ def _agent_new_session(canvas_id, instruction, context, plan):
 # ---------------------------------------------------------------------------
 
 _AGENT_PLAN_SYSTEM_PROMPT = (
-    "你是 NOVAI 无限画布 Agent 的计划生成器。用户用自然语言给出操作指令，你要把它拆解为"
+    "你��� NOVAI 无限画布 Agent 的计划生成器。用户用自然语言给出操作指令，你要把它拆解为"
     "「按顺序执行」的工具步骤序列。\n"
     "可用工具清单（JSON Schema）：\n{tools_json}\n"
     "当前画布快照摘要：\n{canvas_summary}\n"
@@ -24551,7 +24551,7 @@ async def agent_session_get(session_id: str):
     return {"session": session}
 if __name__ == "__main__":
     import uvicorn
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3000))
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 7682))
     # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
     # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。

@@ -1,0 +1,8 @@
+{
+  "name": "novai",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "start": "sh -c 'python main.py \"${PORT:-7682}\"'"
+  }
+}

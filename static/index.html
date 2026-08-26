@@ -178,9 +178,10 @@
             display: flex;
             width: 100%;
             height: 100vh;
-            padding: 0;
+            padding: 0 !important;
+            gap: 0 !important;
             box-sizing: border-box;
-            background: var(--bg);
+            background: var(--bg) !important;
             position: relative;
             transition: background 0.3s;
         }
@@ -563,17 +564,17 @@
 
         /* 主舞台区 - flex 自适应 + 侧边栏间距 */
         .stage {
-        flex: 1;
-        min-width: 0;
-        background: transparent !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        border-radius: 0 !important;
-        overflow: hidden;
-        position: relative;
-        transition: background 0.3s var(--ease-out);
-        box-shadow: none !important;
+            flex: 1;
+            min-width: 0;
+            background: transparent !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            overflow: hidden;
+            position: relative;
+            transition: background 0.3s var(--ease-out);
+            box-shadow: none !important;
         }
 
         html.theme-dark .stage,
@@ -1536,7 +1537,7 @@
             background: var(--nav-hover-bg);
         }
 
-        /* Pill 选项组 */
+        /* Pill 选项�� */
         .settings-pill-group {
             display: inline-flex;
             gap: 8px;
@@ -3050,7 +3051,7 @@
             background: transparent;
         }
 
-        /* ═══ 标题栏 Logo 只在 Windows frameless 模式随标题栏显示（.frameless-titlebar 其余模式 display:none�������，Mac 原生标题栏不渲染整个标题栏 ═══ */
+        /* ═══ 标题栏 Logo 只在 Windows frameless 模式随标题栏显示（.frameless-titlebar 其余模式 display:none�������，Mac ��生标题栏不渲染整个标题栏 ═══ */
 
         /* ═══ 全局隐藏滚动条，hover 时显示 ═══ */
         html, body {
@@ -3171,6 +3172,26 @@
   .sidebar:hover { background: var(--glass-bg) !important; }
   .nav-item.active { background: var(--text) !important; color: var(--bg) !important; }
 </style>
+    <style id="novai-no-content-frame">
+        /* 内容区无外框：覆盖共享玻璃层，避免页面四周出现白色底框 */
+        html body .app-shell,
+        html body .stage {
+            background: transparent !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+            gap: 0 !important;
+        }
+        html body .stage {
+            inset: 0 !important;
+            margin: 0 !important;
+        }
+        html body .stage iframe {
+            border: 0 !important;
+            outline: 0 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -3656,7 +3677,7 @@
                                 <hr class="settings-divider">
                                 <div class="settings-toggle-row">
                                     <div>
-                                        <div class="settings-toggle-label">恢复上次窗口状态</div>
+                                        <div class="settings-toggle-label">恢复上次窗口状��</div>
                                         <div class="settings-toggle-desc">启动时恢复上次关闭时的窗口大小和位置</div>
                                     </div>
                                     <label class="settings-toggle-switch">
@@ -3842,7 +3863,7 @@
             header.addEventListener('mousedown', function(e){
                 if (e.button !== 0) return;
                 // 红绿灯区域不发起拖拽：三灯在 Header 带内（红灯左缘实测 15 / 中心 y 36，
-                // 与 launcher.py applyTrafficLights_ 的灯位常数一致），三灯 widget 跨度
+                // 与 launcher.py applyTrafficLights_ 的灯��常数一致），三灯 widget 跨度
                 // 15..67 × 30..42，外放 6px 余量；命中说明点的是灯，必须留给原生按钮处理
                 if (e.clientX >= 9 && e.clientX <= 73 && e.clientY >= 24 && e.clientY <= 48) return;
                 var api = window.pywebview && window.pywebview.api;
@@ -4175,7 +4196,7 @@
                 document.documentElement.classList.remove('studio-route-booting');
             }
         }
-        // 兜底：3 ��后强制解除启动遮罩，防止任何异常导致永久白屏
+        // 兜底：3 ��后强制解除启���遮罩，防止任何异常导致永久白屏
         setTimeout(function(){ document.documentElement.classList.remove('studio-route-booting'); }, 3000);
         if (document.readyState !== 'loading') { restoreActivePage(); }
         else { document.addEventListener('DOMContentLoaded', restoreActivePage, { once:true }); }

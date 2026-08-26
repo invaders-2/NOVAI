@@ -749,7 +749,7 @@ def friendly_validation_error(errors):
             parts.append(f"{label}不能为空。")
         else:
             parts.append(f"{label}格式不正确：{msg}")
-    return "\n".join(parts) or "请求参数不���确。"
+    return "\n".join(parts) or "请求参���不���确。"
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -2814,7 +2814,7 @@ def rollback_update(req: RollbackRequest):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"回滚失败：{exc}") from exc
+        raise HTTPException(status_code=500, detail=f"回滚��败：{exc}") from exc
     finally:
         UPDATE_LOCK.release()
 
@@ -4813,7 +4813,7 @@ def api_headers(json_body=True, provider=None, model=""):
     else:
         api_key = AI_API_KEY
         if not api_key:
-            raise HTTPException(status_code=400, detail="未配置 COMFLY_API_KEY，请在 API/.env 中填写���")
+            raise HTTPException(status_code=400, detail="未配置 COMFLY_API_KEY，��在 API/.env 中填写���")
     if provider and effective_protocol(provider, model) == "gemini":
         headers = {"Accept": "application/json", "x-goog-api-key": api_key}
     else:
@@ -6533,7 +6533,7 @@ async def run_jimeng_cli(args, timeout=120, raw_text=False):
     if proc.returncode != 0:
         message = clean_err_text or out_text or f"exit={proc.returncode}"
         if not message.strip() or message == f"exit={proc.returncode}":
-            message = "CLI 无响应（可能未登录、会员不含 CLI 权��、或 CLI 版本不兼容）。请在 API 设置中检查即梦账户状态，或尝试开启 WSL 模式。"
+            message = "CLI 无响应（可能未���录、会员不含 CLI 权��、或 CLI 版本不兼容）。请在 API 设置中检查即梦账户状态，或尝试开启 WSL 模式。"
         raise HTTPException(status_code=502, detail=f"即梦 CLI 调用失败：{message[:1000]}")
     # 帮助等纯文本输出不应被 JSON 提取吞掉（如 [0.5, 8] 会被误判为结果）
     if raw_text:
@@ -7560,7 +7560,7 @@ def normalize_local_image_path(value):
     if text.lower().startswith("file:"):
         parsed = urllib.parse.urlparse(text)
         if parsed.scheme.lower() != "file":
-            raise HTTPException(status_code=400, detail="只支持本地图片路径")
+            raise HTTPException(status_code=400, detail="只支持本���图片路径")
         if parsed.netloc and re.match(r"^[a-zA-Z]:$", parsed.netloc) and os.name == "nt":
             path = f"{parsed.netloc}{urllib.request.url2pathname(parsed.path or '')}"
         elif parsed.netloc and parsed.netloc.lower() not in ("localhost",):
@@ -8339,7 +8339,7 @@ def normalize_prompt_libraries(data):
             # 非系统库不保留任何内置分组（视角/分镜等），仅保留用户自建分组
             builtin_ids = {"view", "storyboard", "character", "product", "ecommerce", "lighting", "custom"}
             raw_categories = [c for c in raw_categories if isinstance(c, dict) and normalize_prompt_category_id(c.get("id") or c.get("name") or "") not in builtin_ids]
-        # 系统库始终使用最新的内置预设，确保代码更新后新预设能自动同步
+        # 系统库始终使用最新的内置预��，确保代码更新后新预设能自动同步
         if is_system:
             items = builtin_prompt_templates()
         libraries.append({
@@ -9185,7 +9185,7 @@ def apply_trusted_asset_prompt_index(prompt: str, image_count: int, video_count:
 
 def public_base_url() -> str:
     # 实时读 API/.env 且文件优先：公网隧道重启后地址会变，隧道脚本只改 .env；
-    # 启动时 load_env_file 会把旧值复制进 os.environ，若 env 优先���永远读到过期地址
+    # 启动时 load_env_file 会把旧值复��进 os.environ，若 env 优先���永远读到过期地址
     value = (
         read_api_env_value("PUBLIC_MEDIA_BASE_URL") or
         os.getenv("PUBLIC_MEDIA_BASE_URL") or
@@ -10264,7 +10264,7 @@ def friendly_image_error_detail(text, size="", model=""):
     if "inputtextsensitivecontentdetected" in lower_text or "policyviolation" in lower_text or "copyright restrictions" in lower_text:
         return "上游内容安全拦截了这段提示词，原因偏向版权/敏感内容限制。请改写提示词，避免直接出现具体 IP、角色名、品牌名、影视/动漫作品名，改成风格特征描述再试。"
     if "rejected by the safety system" in lower_text or "image_generation_user_error" in lower_text or "safety system" in lower_text or "content_policy_violation" in lower_text or "content policy" in lower_text:
-        return "上游（Azure/OpenAI 系）内容安全系统拒绝了本次生图请求。可能是提示词或参考图触发了内容审核。请改写提示词、避免敏感/暴力/成人/名人/版权角色等描述；若使用了人物参考图，可换一张图再试。这是上游平台的审核策略，并非本系统报错。"
+        return "上游（Azure/OpenAI 系）内容安全系统拒绝了本次生图请求。可能是提示词或参考图触发了内容审核。请改写提示词、避免敏感/暴力/成人/名人/版权角色等描述；若使用了人物参考图，可换一张图再试。这是上游平台的审核策略，并非本���统报错。"
     if "rate limit" in lower_text or "429" in lower_text:
         return "请求过于频繁，已被上游限流，请稍后再试。"
     if "unauthorized" in lower_text or "401" in lower_text:
@@ -10299,7 +10299,7 @@ def friendly_chat_error_detail(text, model="", provider=None):
             provider_name = provider.get("name") or provider.get("id") or "火山方舟"
             return (
                 f"{provider_name} 当前不接受模型名「{model_name or '未指定'}」直接调用聊天接口，"
-                f"请在火山方舟控制台创建并使用推���接入点 ID（形如 `ep-...`）作为聊天模型。\n\n"
+                f"请在火���方舟控制台创建并使用推���接入点 ID（形如 `ep-...`）作为聊天模型。\n\n"
                 f"补充说明：`/api/v3/models` 能拉到公开模型列表，但你的账号未必能直接用这些模型名调用 `/chat/completions`；"
                 f"很多账号只允许传自己已开通的 `ep-...` 接入点。"
             )
@@ -16536,7 +16536,7 @@ async def canvas_video_run(payload: CanvasVideoRequest):
                     if not is_last:
                         continue
                     resp_text = response.text[:500]
-                    raise HTTPException(status_code=502, detail=f"上游视频接口返回非 JSON 响应（状态 {response.status_code}）：{resp_text}")
+                    raise HTTPException(status_code=502, detail=f"上��视频接口返回非 JSON 响应（状态 {response.status_code}）：{resp_text}")
             if raw is None:
                 resp = html_response or last_response
                 status_code = getattr(resp, "status_code", 200)
@@ -20244,7 +20244,7 @@ def run_workflow(name: str, payload: WorkflowRunRequest):
             elif field.type == "boolean":
                 value = bool(value)
             elif field.type == "dropdown":
-                # 下拉值如果看起来是数字（如 "1024" / "2048" / "0.8"），自动转成 int/float
+                # 下拉值如果��起来是数字（如 "1024" / "2048" / "0.8"），自动转成 int/float
                 if isinstance(value, str):
                     s = value.strip()
                     try:
@@ -24550,10 +24550,33 @@ async def agent_session_get(session_id: str):
         raise HTTPException(status_code=404, detail="会话不存在")
     return {"session": session}
 if __name__ == "__main__":
+    import socket
     import uvicorn
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 7682))
-    # 关闭服务端协议级 WebSocket ping：部分客户端（如 PS UXP 面板）不会自动回 pong，
-    # 默认 20s ping/20s 超时会把这些连接每隔一会儿就踢掉造成"频繁断连"。
+
+    requested_port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 7682))
+    port = requested_port
+
+    # 预览环境可能已有旧进程占用默认端口。优先使用平台注入的端口，
+    # 端口冲突时自动选择可用端口，避免服务直接退出。
+    def port_is_available(candidate: int) -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            try:
+                probe.bind(("0.0.0.0", candidate))
+                return True
+            except OSError:
+                return False
+
+    if not port_is_available(port):
+        for candidate in range(8000, 8101):
+            if port_is_available(candidate):
+                port = candidate
+                break
+        else:
+            raise RuntimeError(f"没有可用端口（请求端口: {requested_port}）")
+        print(f"[NOVAI] 端口 {requested_port} 已被占用，改用 {port}", flush=True)
+
+    # 关闭服务端协议级 WebSocket ping：部分客户端不会自动回 pong，
     # 客户端有自己的应用层心跳 + 断线重连兜底，这里禁用协议 ping 更稳。
     uvicorn.run(app, host="0.0.0.0", port=port,
                 ws_ping_interval=None, ws_ping_timeout=None)

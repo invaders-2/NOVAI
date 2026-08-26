@@ -3048,7 +3048,7 @@
             background: transparent;
         }
 
-        /* ═══ 标题栏 Logo 只在 Windows frameless 模式随标题栏显示（.frameless-titlebar 其余模式 display:none���，Mac 原生标题栏不渲染整个标题栏 ═══ */
+        /* ═══ 标题栏 Logo 只在 Windows frameless 模式随标题栏显示（.frameless-titlebar 其余模式 display:none�����，Mac 原生标题栏不渲染整个标题栏 ═══ */
 
         /* ═══ 全局隐藏滚动条，hover 时显示 ═══ */
         html, body {
@@ -3142,9 +3142,33 @@
             .app-shell { padding: 8px; gap: 8px; }
             .sidebar { width: 56px; min-width: 56px; border-radius: 14px; }
             .sidebar:hover { width: min(220px, calc(100vw - 16px)); min-width: min(220px, calc(100vw - 16px)); }
-            .stage { border-radius: 14px; }
-        }
-    </style>
+  .stage { border-radius: 14px; }
+  }
+
+  /* Monochrome Apple glass shell */
+  :root {
+    --accent: #111111;
+    --accent-hover: #000000;
+    --accent-text: #ffffff;
+    --glass-bg: rgba(255,255,255,.72);
+  }
+  html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark {
+    --accent: #f5f5f5;
+    --accent-hover: #ffffff;
+    --accent-text: #0a0a0a;
+    --glass-bg: rgba(28,28,30,.72);
+  }
+  .app-shell { gap: 12px; }
+  .stage {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--card-shadow-md);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+  }
+  .sidebar:hover { background: var(--glass-bg) !important; }
+  .nav-item.active { background: var(--text) !important; color: var(--bg) !important; }
+</style>
 </head>
 
 <body>
@@ -4657,7 +4681,7 @@
             if(versionDisplay) {
                 versionDisplay.title = window.StudioI18n?.lang?.() === 'en'
                     ? `Current version: ${full}`
-                    : `当前版本：${full}`;
+                    : `当前版本��${full}`;
                 const text = versionDisplay.querySelector('.version-text');
                 if(text) text.textContent = full;
             }

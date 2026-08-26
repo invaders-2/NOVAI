@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "dev": "sh -c 'python main.py \"${PORT:-7682}\"'",
     "start": "sh -c 'python main.py \"${PORT:-7682}\"'"
   }
 }

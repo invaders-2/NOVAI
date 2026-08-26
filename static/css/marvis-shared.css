@@ -3,15 +3,15 @@
 
 :root {
     /* ── 字体 ── */
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    --font-sans: 'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
     /* ── 背景层 ── */
-    --bg: #f5f5f7;
+    --bg: #f4f6fb;
     --surface: #ffffff;
-    --surface-2: #fafafa;
+    --surface-2: #f8f9fd;
     --elevated: #ffffff;
-    --overlay: rgba(255, 255, 255, 0.72);
+    --overlay: rgba(255, 255, 255, 0.86);
     --canvas-bg: #f5f5f7;
     --panel-bg: rgba(255, 255, 255, 0.92);
     --sidebar-bg: rgba(245, 245, 247, 0.72);
@@ -22,8 +22,8 @@
     --text-2: #6e6e73;
     --text-3: #86868b;
     --text-on-accent: #ffffff;
-    --accent: #1d1d1f;
-    --accent-hover: #000000;
+    --accent: #6658d9;
+    --accent-hover: #5749ca;
     --accent-text: #ffffff;
 
     /* ── 语义色 ── */
@@ -81,11 +81,11 @@ html.studio-theme-dark,
 body.theme-dark,
 body.studio-theme-dark {
     /* 背景层 */
-    --bg: #0d0d0d;
-    --surface: #141414;
-    --surface-2: #1a1a1a;
-    --elevated: #1c1c1c;
-    --overlay: rgba(13, 13, 13, 0.78);
+    --bg: #0b0d12;
+    --surface: #121621;
+    --surface-2: #181d29;
+    --elevated: #202737;
+    --overlay: rgba(11, 13, 18, 0.88);
     --canvas-bg: #0d0d0d;
     --panel-bg: rgba(20, 20, 20, 0.92);
     --sidebar-bg: rgba(13, 13, 13, 0.78);
@@ -251,4 +251,105 @@ html.settings-embed *::-webkit-scrollbar {
 }
 .ios-switch .ios-slider:before {
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* NOVAI Studio refresh: shared workbench language */
+:where(.theme-dark, .studio-theme-dark) {
+    --accent: #8b7cff;
+    --accent-hover: #a69bff;
+    --accent-text: #ffffff;
+    --info: #69a7ff;
+    --border: rgba(154, 169, 206, 0.16);
+    --border-2: rgba(154, 169, 206, 0.26);
+    --divider: rgba(154, 169, 206, 0.12);
+    --nav-hover-bg: rgba(139, 124, 255, 0.12);
+    --grid-color: rgba(154, 169, 206, 0.12);
+}
+
+body,
+button,
+input,
+textarea,
+select {
+    font-family: var(--font-sans);
+}
+
+button,
+input,
+textarea,
+select {
+    border-radius: var(--radius-sm);
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+:where(.theme-dark, .studio-theme-dark) body {
+    background: var(--bg);
+}
+
+:where(.theme-dark, .studio-theme-dark) .card,
+:where(.theme-dark, .studio-theme-dark) .panel,
+:where(.theme-dark, .studio-theme-dark) .console-card,
+:where(.theme-dark, .studio-theme-dark) .work-panel,
+:where(.theme-dark, .studio-theme-dark) .tool-panel,
+:where(.theme-dark, .studio-theme-dark) .control-panel,
+:where(.theme-dark, .studio-theme-dark) .setting-row,
+:where(.theme-dark, .studio-theme-dark) .composer,
+:where(.theme-dark, .studio-theme-dark) .thread-item {
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
+:where(.theme-dark, .studio-theme-dark) .btn-primary,
+:where(.theme-dark, .studio-theme-dark) button.primary,
+:where(.theme-dark, .studio-theme-dark) .primary-btn {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+}
+
+:where(.theme-dark, .studio-theme-dark) .btn-primary:hover,
+:where(.theme-dark, .studio-theme-dark) button.primary:hover,
+:where(.theme-dark, .studio-theme-dark) .primary-btn:hover {
+    background: var(--accent-hover);
+}
+
+@media (max-width: 760px) {
+    .page-container,
+    .content-container,
+    .settings-container,
+    .home-container {
+        padding-inline: 16px !important;
+    }
+}
+
+/* Keep every iframe page on the same surface hierarchy */
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) .bg-white,
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) .bg-gray-50,
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) .bg-slate-50 {
+    background-color: var(--surface) !important;
+    color: var(--text) !important;
+}
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) .bg-gray-100,
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) .bg-slate-100 {
+    background-color: var(--surface-2) !important;
+}
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) input,
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) textarea,
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) select {
+    background-color: var(--surface-2);
+    border: 1px solid var(--border-2);
+}
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) input:focus,
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) textarea:focus,
+:where(html.theme-dark, html.studio-theme-dark, body.theme-dark, body.studio-theme-dark) select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(139, 124, 255, 0.16);
 }

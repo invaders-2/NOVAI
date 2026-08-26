@@ -580,6 +580,75 @@
             .lan-notice { flex-direction: column; align-items: stretch; }
             .lan-notice-actions { justify-content: flex-end; }
         }
+
+        /* 首页创作驾驶舱：更紧凑的 Apple 工作台布局 */
+        .home-container {
+            max-width: 960px;
+            padding: 52px 24px 40px;
+            gap: 32px;
+        }
+        .hero {
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .hero-title {
+            font-size: clamp(48px, 7vw, 76px);
+            font-weight: 600;
+            letter-spacing: -0.055em;
+            margin-bottom: 14px;
+        }
+        .hero-subtitle {
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        .hero-desc {
+            max-width: 520px;
+            margin: 0;
+            font-size: 14px;
+        }
+        .cards-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .feature-card {
+            min-height: 164px;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 18px;
+            border-radius: 18px;
+        }
+        .feature-card-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+        }
+        .feature-card-title { font-size: 14px; }
+        .feature-card-desc { font-size: 11px; }
+        .cta-section { text-align: left; }
+        .cta-button {
+            border-radius: 999px;
+            padding: 13px 24px;
+        }
+        .recent-grid { grid-template-columns: repeat(3, 1fr); }
+        .status-bar { text-align: left; }
+        .status-indicator { padding-left: 4px; }
+        .lan-notice { margin-bottom: 0; }
+        @media (max-width: 760px) {
+            .home-container { padding: 36px 18px 32px; }
+            .cards-grid { grid-template-columns: repeat(2, 1fr); }
+            .recent-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .home-container { padding: 28px 14px 24px; gap: 26px; }
+            .hero-title { font-size: 48px; }
+            .hero-subtitle { font-size: 17px; }
+            .cards-grid, .recent-grid { grid-template-columns: 1fr; }
+            .feature-card { min-height: 132px; flex-direction: row; }
+        }
     </style>
 </head>
 <body>

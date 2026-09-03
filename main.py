@@ -319,23 +319,34 @@ def _dir_writable(path: str) -> bool:
         return False
 
 def resolve_default_assets_dir() -> str:
-    """默认素材目录：跟随安装目录（安装时选了大容量盘符的用户，素材随之过去）。
-    兜底规则：
-    - 安装目录不可写（C:\\Program Files 需管理员权限 / macOS .app 包内只读 /
-      Linux AppImage 挂载只读）→ 回落到数据目录（APPDATA/NOVAI/assets）；
-    - 老用户数据目录里已有素材、安装目录下还没有 assets → 继续用数据目录，
-      避免升级后素材库"消失"（不搬动、不隐藏存量素材）。
+    """默认素材目录：优先数据目录（APPDATA/NOVAI/assets），仅 Windows/Linux
+    安装目录可写且确需随安装盘存储时才跟随安装目录。
+    兜底规则（避免升级后素材库"消失"）：
+    - macOS .app 包内不承载用户素材（升级会被整体替换、包内可能被打进空壳目录），
+      只要数据目录存在即一律回落数据目录；
+    - Windows/Linux：安装目录不可写（C:\\Program Files 需管理员权限 /
+      AppImage 挂载只读）→ 回落数据目录；
+    - 老用户数据目录里已有素材、安装目录下还没有 assets（或只有空壳）→
+      继续用数据目录（不搬动、不隐藏存量素材）。
     """
     fallback = os.path.join(_DATA_ROOT, "assets")
     install_root = os.environ.get("NOVAI_INSTALL_DIR") or os.environ.get("NOVAI_APP_DIR", "")
     if not install_root:
         return fallback
+    try:
+        fallback_has_data = os.path.isdir(fallback) and bool(os.listdir(fallback))
+    except Exception:
+        fallback_has_data = False
+    # macOS .app 包内不承载用户素材
+    if sys.platform == "darwin" and fallback_has_data:
+        return fallback
     candidate = os.path.join(install_root, "assets")
     try:
-        if (not os.path.isdir(candidate)) and os.path.isdir(fallback) and os.listdir(fallback):
-            return fallback
+        candidate_empty = (not os.path.isdir(candidate)) or (not os.listdir(candidate))
     except Exception:
-        pass
+        candidate_empty = False
+    if candidate_empty and fallback_has_data:
+        return fallback
     if _dir_writable(candidate):
         return candidate
     return fallback

@@ -279,7 +279,7 @@ window.addEventListener('pageshow', () => {
 function renderList(){
     listEl.innerHTML = workflows.map(w => `
         <button class="workflow-card ${w.name===selectedName?'active':''}" type="button" onclick="selectWorkflow('${escapeHtml(w.name)}')">
-            <span class="workflow-icon"><i data-lucide="${w.builtin?'package':'file-json-2'}" class="w-3.5 h-3.5"></i></span>
+            <span class="workflow-icon"><i data-icon="${w.builtin?'package':'fileJson'}" class="w-3.5 h-3.5"></i></span>
             <span class="min-w-0" style="flex:1">
                 <div class="workflow-name">${escapeHtml(w.title)}</div>
                 <div class="workflow-meta">${trf('comfy.fieldCount', {count:w.field_count})}</div>

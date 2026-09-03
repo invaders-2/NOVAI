@@ -1,24 +1,25 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="/static/images/logo.png" type="image/png">
+<html lang="zh-CN" data-page-node-id="Xpn2yfwCS9THLobeIMpLRp">
+<head data-page-node-id="IeUbY8aEuqZZGzJIMggP90">
+    <meta charset="UTF-8" data-page-node-id="tSqiXznBF54oRQwseoEI0h">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="zrc3SMmzAP5ceqwIpze446">
+    <link rel="icon" href="/static/images/logo.png" type="image/png" data-page-node-id="d2lTaxgg4dwHWvOR7TLKCK">
     <title>GPT 对话</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.111.1786930085.1785603211"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/theme.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/i18n.js?v=1.0.111.1786930085.1786205339"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.111.1786930085.1786205339">
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.111.1786930085.1786205339">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.112-beta.2.1787122934"></script>
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.112-beta.2.1787122934"></script>
+    <script defer src="/static/js/shared/icons.js?v=1.0.112-beta.2.1788315411"></script>
+    <script src="/static/js/theme.js?v=1.0.112-beta.2.1788416878"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/i18n.js?v=1.0.112-beta.2.1787122934"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.112-beta.2.1787639828" data-page-node-id="JTGvAal8uI6j7wTHI5wwho">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.112-beta.2.1787122934" data-page-node-id="sBSjKrFOadAKo0d0aaQqPR">
     <style>
         :root {
             --ease:cubic-bezier(.4,0,.2,1);
             /* ═══ V4-aligned color system ═══ */
             --chat-bg:#f5f5f7;
-            --chat-panel:rgba(255,255,255,0.72);
+            --chat-panel:rgba(255,255,255,0.6);
             --chat-panel-2:rgba(255,255,255,0.55);
             --chat-soft:rgba(0,0,0,0.04);
             --chat-line:rgba(0,0,0,0.06);
@@ -69,7 +70,7 @@
         button,input,select,textarea { font:inherit; }
         button { border:0; cursor:pointer; }
         .chat-shell { height:calc(100vh / var(--studio-ui-scale, 1)); min-width:0; display:block; background:var(--chat-bg); }
-        .chat-rail { position:absolute; top:52px; right:0; width:min(360px,calc(100vw - 36px)); max-height:min(520px,calc(100vh - 92px)); display:none; flex-direction:column; gap:10px; padding:12px; background:var(--chat-panel); border:1px solid transparent; border-radius:16px; color:var(--chat-text); overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--chat-shadow); backdrop-filter:blur(40px) saturate(200%); -webkit-backdrop-filter:blur(40px) saturate(200%); z-index:70; }
+        .chat-rail { position:absolute; top:52px; right:0; width:min(360px,calc(100vw - 36px)); max-height:min(520px,calc(100vh - 92px)); display:none; flex-direction:column; gap:10px; padding:12px; background:var(--chat-panel); border:1px solid transparent; border-radius:16px; color:var(--chat-text); overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--chat-shadow); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); z-index:70; }
         .chat-rail.open { display:flex; animation:popIn .16s var(--ease); }
         .rail-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:2px 2px 4px; }
         .rail-kicker { display:none; }
@@ -97,7 +98,7 @@
         .thread-item.active + .thread-delete { color:var(--chat-active-text); opacity:.58; }
         .thread-item.active + .thread-delete:hover { background:rgba(88,88,88,.14); color:var(--chat-active-text); opacity:1; }
         .chat-main { width:100%; height:100%; min-width:0; min-height:0; position:relative; display:grid; grid-template-rows:auto minmax(0,1fr) auto; overflow:hidden; }
-        .topbar { min-height:74px; padding:0 30px; border-bottom:0; background:var(--chat-panel); backdrop-filter:blur(40px) saturate(200%); -webkit-backdrop-filter:blur(40px) saturate(200%); z-index:5; }
+        .topbar { min-height:74px; padding:0 30px; border-bottom:0; background:var(--chat-panel); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); z-index:5; }
         .topbar-inner { height:100%; max-width:var(--chat-width); margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:18px; }
         .title-block { min-width:0; display:flex; flex-direction:column; gap:6px; }
         .title-block h1 { margin:0; color:var(--chat-text); font-size:18px; line-height:1.2; font-weight:950; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -107,7 +108,7 @@
         .action-btn:hover { background:var(--chat-soft); color:var(--chat-text); border-color:transparent; }
         .action-btn i,.action-btn svg { width:16px; height:16px; }
         .history-toggle { display:flex; }
-        .system-prompt-popover { position:absolute; top:52px; right:0; width:min(430px,calc(100vw - 36px)); display:none; flex-direction:column; gap:10px; padding:12px; background:var(--chat-panel); border:1px solid transparent; border-radius:16px; color:var(--chat-text); box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--chat-shadow); backdrop-filter:blur(40px) saturate(200%); -webkit-backdrop-filter:blur(40px) saturate(200%); z-index:72; }
+        .system-prompt-popover { position:absolute; top:52px; right:0; width:min(430px,calc(100vw - 36px)); display:none; flex-direction:column; gap:10px; padding:12px; background:var(--chat-panel); border:1px solid transparent; border-radius:16px; color:var(--chat-text); box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--chat-shadow); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); z-index:72; }
         .system-prompt-popover.open { display:flex; animation:popIn .16s var(--ease); }
         .system-prompt-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:2px 2px 0; }
         .system-prompt-head .rail-close { display:flex; }
@@ -119,6 +120,61 @@
         .system-prompt-actions button:hover { background:var(--chat-soft); color:var(--chat-text); border-color:transparent; }
         .system-prompt-actions .primary { background:var(--chat-strong); color:var(--chat-strong-text); border-color:transparent; }
         .system-prompt-actions .primary:hover { background:var(--chat-strong); color:var(--chat-strong-text); opacity:.92; }
+        /* 系统角色库（persona）· 角色选择区
+           配色走 color-mix(--text) 中性灰阶，与 V20.1 去框风格一致，不依赖主题色变量。
+           选择器统一挂在 .system-prompt-popover 下提高特异性，
+           避免被 V14 的 html:not(.theme-dark) body:not(.theme-dark) 浅色特化规则压过。 */
+        .system-prompt-popover .persona-bar { display:flex; flex-direction:column; gap:7px; }
+        .system-prompt-popover .persona-chips { display:flex; flex-wrap:wrap; gap:6px; max-height:96px; overflow-y:auto; padding:1px; }
+        .system-prompt-popover .persona-chips::-webkit-scrollbar { width:0; height:0; }
+        .system-prompt-popover .persona-chip { display:inline-flex; align-items:center; height:26px; padding:0 10px; border:0; border-radius:999px; background:color-mix(in srgb, var(--text) 6%, transparent); color:color-mix(in srgb, var(--text) 62%, transparent); font-size:11px; font-weight:750; line-height:1; cursor:pointer; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; transition:background .15s var(--ease), color .15s var(--ease); }
+        .system-prompt-popover .persona-chip:hover { background:color-mix(in srgb, var(--text) 12%, transparent); color:var(--text); }
+        .system-prompt-popover .persona-chip.active { background:var(--text); color:var(--bg); }
+        .system-prompt-popover .persona-chip.builtin::after { content:""; width:4px; height:4px; border-radius:50%; margin-left:5px; background:currentColor; opacity:.42; }
+        .system-prompt-popover .persona-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        .system-prompt-popover .persona-status { font-size:10px; font-weight:750; color:color-mix(in srgb, var(--text) 42%, transparent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .system-prompt-popover .persona-foot-actions { display:flex; align-items:center; gap:6px; flex:0 0 auto; }
+        .system-prompt-popover .persona-mini-btn { display:none; align-items:center; gap:4px; height:24px; padding:0 9px; border:0; border-radius:8px; background:color-mix(in srgb, var(--text) 6%, transparent); color:color-mix(in srgb, var(--text) 58%, transparent); font-size:10px; font-weight:800; line-height:1; cursor:pointer; transition:background .15s var(--ease), color .15s var(--ease); }
+        .system-prompt-popover .persona-mini-btn.show { display:inline-flex; }
+        .system-prompt-popover .persona-mini-btn:hover { background:color-mix(in srgb, var(--text) 13%, transparent); color:var(--text); }
+        .system-prompt-popover .persona-mini-btn.primary { background:var(--text); color:var(--bg); }
+        .system-prompt-popover .persona-mini-btn.danger:hover { background:color-mix(in srgb, #ff4d4f 15%, transparent); color:#ff4d4f; }
+        /* createIcons() 会把 <i> 替换成 <svg>，所以不用 i:first-child，靠 gap 控制间距 */
+        .system-prompt-popover .persona-mini-btn > :first-child { width:11px; height:11px; flex:0 0 auto; }
+        .system-prompt-popover .persona-savebox { display:none; align-items:center; gap:6px; }
+        .system-prompt-popover .persona-savebox.open { display:flex; }
+        .system-prompt-popover .persona-name-input { flex:1 1 auto; min-width:0; height:26px; padding:0 9px; border:0; border-radius:8px; background:color-mix(in srgb, var(--text) 6%, transparent); color:var(--text); font-size:11px; font-weight:700; outline:none; }
+        .system-prompt-popover .persona-name-input::placeholder { color:color-mix(in srgb, var(--text) 34%, transparent); }
+        .system-prompt-popover .persona-hint { font-size:10px; font-weight:700; color:color-mix(in srgb, var(--text) 34%, transparent); }
+        /* 长期记忆库（memory）· 列表管理区，配色同上走 color-mix(--text) 中性灰阶 */
+        .system-prompt-popover .memory-bar { display:flex; flex-direction:column; gap:7px; padding-top:10px; border-top:1px solid color-mix(in srgb, var(--text) 10%, transparent); }
+        .system-prompt-popover .memory-head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        .system-prompt-popover .memory-title { font-size:11px; font-weight:850; color:color-mix(in srgb, var(--text) 72%, transparent); }
+        .system-prompt-popover .memory-status { font-size:10px; font-weight:750; color:color-mix(in srgb, var(--text) 42%, transparent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .system-prompt-popover .memory-list { display:flex; flex-direction:column; gap:5px; max-height:140px; overflow-y:auto; padding:1px; }
+        .system-prompt-popover .memory-list::-webkit-scrollbar { width:0; height:0; }
+        .system-prompt-popover .memory-row { display:flex; align-items:center; gap:7px; padding:5px 7px; border:0; border-radius:9px; background:color-mix(in srgb, var(--text) 5%, transparent); }
+        .system-prompt-popover .memory-toggle { flex:0 0 auto; width:28px; height:18px; padding:0; border:0; border-radius:999px; background:color-mix(in srgb, var(--text) 18%, transparent); cursor:pointer; position:relative; transition:background .15s var(--ease); }
+        .system-prompt-popover .memory-toggle.on { background:var(--text); }
+        .system-prompt-popover .memory-toggle::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--bg); transition:left .15s var(--ease); }
+        .system-prompt-popover .memory-toggle.on::after { left:12px; }
+        .system-prompt-popover .memory-text { flex:1 1 auto; min-width:0; font-size:11px; font-weight:700; color:color-mix(in srgb, var(--text) 78%, transparent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:default; }
+        .system-prompt-popover .memory-row.disabled .memory-text { color:color-mix(in srgb, var(--text) 38%, transparent); text-decoration:line-through; }
+        .system-prompt-popover .memory-del { flex:0 0 auto; width:20px; height:20px; padding:0; border:0; border-radius:6px; background:transparent; color:color-mix(in srgb, var(--text) 40%, transparent); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:color .15s var(--ease), background .15s var(--ease); }
+        .system-prompt-popover .memory-del:hover { color:#ff4d4f; background:color-mix(in srgb, #ff4d4f 12%, transparent); }
+        .system-prompt-popover .memory-del > :first-child { width:12px; height:12px; }
+        .system-prompt-popover .memory-addbox { display:flex; align-items:center; gap:6px; }
+        .system-prompt-popover .memory-input { flex:1 1 auto; min-width:0; height:28px; padding:0 9px; border:0; border-radius:8px; background:color-mix(in srgb, var(--text) 6%, transparent); color:var(--text); font-size:11px; font-weight:700; outline:none; }
+        .system-prompt-popover .memory-input::placeholder { color:color-mix(in srgb, var(--text) 34%, transparent); }
+        .system-prompt-popover .memory-add-btn { flex:0 0 auto; height:28px; padding:0 12px; border:0; border-radius:8px; background:var(--text); color:var(--bg); font-size:11px; font-weight:850; cursor:pointer; }
+        .system-prompt-popover .memory-hint { font-size:10px; font-weight:700; color:color-mix(in srgb, var(--text) 34%, transparent); }
+        .system-prompt-popover .memory-scope { flex:0 0 auto; display:inline-flex; align-items:center; gap:0; padding:1px; border:0; border-radius:8px; background:color-mix(in srgb, var(--text) 6%, transparent); }
+        .system-prompt-popover .scope-btn { height:26px; padding:0 9px; border:0; border-radius:7px; background:transparent; color:color-mix(in srgb, var(--text) 55%, transparent); font-size:10px; font-weight:800; line-height:1; cursor:pointer; transition:background .15s var(--ease), color .15s var(--ease); }
+        .system-prompt-popover .scope-btn.active { background:var(--text); color:var(--bg); }
+        .system-prompt-popover .memory-tag { flex:0 0 auto; height:16px; padding:0 6px; border:0; border-radius:5px; background:color-mix(in srgb, var(--text) 8%, transparent); color:color-mix(in srgb, var(--text) 55%, transparent); font-family:inherit; font-size:9px; font-weight:850; line-height:16px; white-space:nowrap; cursor:pointer; transition:background .15s var(--ease), color .15s var(--ease); }
+        .system-prompt-popover .memory-tag:hover { background:color-mix(in srgb, var(--text) 16%, transparent); color:color-mix(in srgb, var(--text) 82%, transparent); }
+        .system-prompt-popover .memory-tag.global { background:transparent; color:color-mix(in srgb, var(--text) 42%, transparent); }
+        .system-prompt-popover .memory-tag.global:hover { background:color-mix(in srgb, var(--text) 10%, transparent); color:color-mix(in srgb, var(--text) 70%, transparent); }
         .messages { width:min(var(--chat-width),calc(100% - 60px)); min-height:0; margin:0 auto; overflow-y:auto; overflow-x:hidden; padding:24px 0 18px; display:flex; flex-direction:column; align-items:center; gap:16px; scroll-behavior:smooth; scrollbar-gutter:stable; }
         .empty-state { margin:auto; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--chat-faint); text-align:center; }
         .empty-state i,.empty-state svg { width:54px; height:54px; stroke-width:1.2; }
@@ -147,7 +203,7 @@
         .thumb-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .assistant .thumb { border-color:transparent; }
         .composer-wrap { min-height:0; padding:10px 30px 18px; background:linear-gradient(to top,var(--chat-bg) 82%,rgba(238,242,246,0)); border-top:0; z-index:6; }
-        .composer { width:min(var(--chat-width),calc(100% - 60px)); margin:0 auto; min-height:0; max-height:min(34vh,310px); background:var(--chat-panel); border:1px solid transparent; border-radius:18px; box-shadow:0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--chat-shadow); padding:8px; display:flex; flex-direction:column; gap:8px; backdrop-filter:blur(40px) saturate(200%); -webkit-backdrop-filter:blur(40px) saturate(200%); overflow:hidden; }
+        .composer { width:min(var(--chat-width),calc(100% - 60px)); margin:0 auto; min-height:0; max-height:min(34vh,310px); background:var(--chat-panel); border:1px solid transparent; border-radius:18px; box-shadow:0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--chat-shadow); padding:8px; display:flex; flex-direction:column; gap:8px; backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); overflow:hidden; }
         .mode-switch { display:none; }
         .mode-switch button { height:30px; min-width:72px; border-radius:10px; display:flex; align-items:center; justify-content:center; gap:5px; color:var(--chat-muted); background:transparent; font-size:11px; font-weight:800; transition:background .16s var(--ease), color .16s var(--ease), box-shadow .16s var(--ease); }
         .mode-switch button.active { background:var(--chat-panel); color:var(--chat-text); box-shadow:0 1px 3px rgba(28,28,28,.08); }
@@ -160,7 +216,7 @@
         .model-picker-provider { flex:0 0 auto; max-width:34%; color:var(--chat-muted); font-size:10px; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .model-picker-model { min-width:0; color:var(--chat-text); font-size:11px; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .model-picker-dot { width:3px; height:3px; border-radius:50%; background:var(--chat-faint); flex:0 0 auto; opacity:.72; }
-        .model-picker-popover { position:fixed; left:0; top:auto; bottom:auto; width:var(--model-picker-width,320px); min-width:260px; max-width:min(360px,calc(100vw - 40px)); max-height:var(--model-picker-max-height,min(420px,68vh)); display:none; grid-template-rows:auto minmax(0,1fr); overflow:hidden; border:1px solid transparent; border-radius:12px; background:var(--chat-panel); box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--chat-shadow); backdrop-filter:blur(40px) saturate(200%); -webkit-backdrop-filter:blur(40px) saturate(200%); z-index:9999; transform-origin:center bottom; }
+        .model-picker-popover { position:fixed; left:0; top:auto; bottom:auto; width:var(--model-picker-width,320px); min-width:260px; max-width:min(360px,calc(100vw - 40px)); max-height:var(--model-picker-max-height,min(420px,68vh)); display:none; grid-template-rows:auto minmax(0,1fr); overflow:hidden; border:1px solid transparent; border-radius:12px; background:var(--chat-panel); box-shadow:0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--chat-shadow); backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%); z-index:9999; transform-origin:center bottom; }
         .model-picker-popover.open { display:grid; animation:popIn .16s var(--ease); }
         .model-picker-popover.above { transform-origin:center bottom; }
         .model-picker-popover.below { transform-origin:center top; }
@@ -193,6 +249,13 @@
         .model-picker-model-btn span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .model-picker-model-btn i,.model-picker-model-btn svg { width:11px; height:11px; flex:0 0 auto; }
         .model-picker-empty { padding:10px 8px; color:var(--chat-faint); font-size:10px; font-weight:800; text-align:center; }
+        /* ── 思考强度 chip（复用 model-picker 视觉）── */
+        .think-picker { width:auto; min-width:0; max-width:none; flex:0 0 auto; }
+        .think-chip-btn { width:auto; min-width:0; padding:0 10px; grid-template-columns:15px auto 14px; }
+        .think-chip-labels { gap:5px; }
+        .think-chip-level { font-size:11px; font-weight:900; color:var(--chat-text); }
+        .think-popover { --model-picker-width:200px; min-width:180px; }
+        .think-list { padding:4px 6px; }
         .image-controls { width:auto; display:flex; align-items:center; justify-content:flex-end; gap:6px; min-width:0; }
         .image-controls.hidden { display:none; }
         .resolution-picker { position:relative; z-index:24; width:238px; min-width:210px; max-width:270px; flex:0 0 238px; }
@@ -346,7 +409,11 @@
         html.studio-theme-dark body .model-picker-popover,
         body.studio-theme-dark .model-picker-popover,
         html.theme-dark body .model-picker-popover,
-        body.theme-dark .model-picker-popover { background:var(--chat-panel) !important; border:0 !important; box-shadow:0 14px 36px var(--chat-shadow) !important; color:var(--chat-text) !important; }
+        body.theme-dark .model-picker-popover,
+        html.studio-theme-dark body .model-picker-submenu,
+        body.studio-theme-dark .model-picker-submenu,
+        html.theme-dark body .model-picker-submenu,
+        body.theme-dark .model-picker-submenu { background:var(--chat-panel) !important; border:0 !important; box-shadow:0 14px 36px var(--chat-shadow) !important; color:var(--chat-text) !important; }
         html.studio-theme-dark body .model-picker-head,
         body.studio-theme-dark .model-picker-head,
         html.theme-dark body .model-picker-head,
@@ -432,9 +499,11 @@
             textarea { min-height:36px; max-height:84px; }
             .inline-controls { align-items:stretch; flex-direction:column; flex:1; }
             .model-picker { width:100%; min-width:0; max-width:none; flex-basis:auto; }
-            .model-picker-popover { left:0; right:0; width:100%; max-height:var(--model-picker-max-height,min(420px,64vh)); }
+            .model-picker-popover { left:0 !important; right:0 !important; width:auto !important; max-width:min(300px, calc(100vw - 24px)) !important; max-height:var(--model-picker-max-height,min(260px,55vh)); }
             .model-picker-body { grid-template-columns:1fr; }
             .model-picker-models { border-left:0; border-top:0; }
+            .model-picker-provider-btn { min-height:34px !important; padding:6px 10px !important; font-size:14px !important; }
+            .model-picker-model-btn { min-height:34px !important; padding:6px 10px !important; font-size:14px !important; }
             .image-controls { align-items:stretch; flex-direction:column; gap:5px; }
             .resolution-picker { width:100%; min-width:0; max-width:none; flex-basis:auto; }
             .resolution-picker-popover { left:0; right:0; width:100%; max-height:360px; }
@@ -467,7 +536,7 @@
             background:transparent !important;
         }
     </style>
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.111.1786930085.1785603211">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.112-beta.2.1787644934" data-page-node-id="lND75BMHLe1XsRqMwb55T7">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
         html body,
@@ -482,7 +551,7 @@
         .composer-wrap { background: linear-gradient(to top, var(--bg) 82%, transparent) !important; }
         .bubble.assistant { background: var(--stage-bg) !important; border: 0 !important; color: var(--text) !important; }
         .bubble.user { background: var(--text) !important; color: var(--bg) !important; }
-        .chat-rail, .system-prompt-popover, .model-picker-popover, .resolution-picker-popover { background: var(--stage-bg) !important; border: 0 !important; box-shadow: var(--shadow-xl) !important; }
+        .chat-rail, .system-prompt-popover, .model-picker-popover, .model-picker-submenu, .resolution-picker-popover { background: var(--stage-bg) !important; border: 0 !important; box-shadow: var(--shadow-xl) !important; }
         .model-picker-button, .upload-btn { background: var(--stage-bg) !important; border: 0 !important; box-shadow: var(--shadow-sm) !important; }
         .action-btn { background: var(--stage-bg) !important; border: 0 !important; color: var(--muted) !important; }
         .action-btn:hover { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
@@ -493,132 +562,929 @@
         html.theme-dark .composer-wrap { background: linear-gradient(to top, var(--bg) 82%, transparent) !important; }
 </style>
 
+    <style>
+    /* ═══ V10C drawer：右侧快捷面板，默认隐藏，点顶栏按钮滑出 ═══ */
+    .v10-rail {
+        position:fixed; top:0; right:0; bottom:0; width:320px; z-index:95;
+        display:flex; flex-direction:column; min-height:0; overflow:hidden;
+        transform:translateX(100%);
+        border-left:1px solid color-mix(in srgb, var(--text) 8%, transparent);
+        box-shadow:inset 1px 0 0 color-mix(in srgb, var(--text) 4%, transparent), -14px 0 44px rgba(0,0,0,.10);
+        background:color-mix(in srgb, var(--elevated) 72%, transparent);
+        backdrop-filter:blur(28px) saturate(180%);
+        -webkit-backdrop-filter:blur(28px) saturate(180%);
+        color:var(--text);
+        transition:transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    .v10-rail.open { transform:translateX(0); }
+    .v10-rail-inner { display:flex; flex-direction:column; min-height:0; flex:1; padding:14px 14px 16px; gap:14px; }
+    .v10-rail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:2px 2px 0; }
+    .v10-rail-title { font-size:13px; font-weight:950; letter-spacing:0; color:var(--text); }
+    .v10-rail-kicker { font-size:10px; font-weight:800; letter-spacing:.22em; text-transform:uppercase; color:var(--faint); }
+    .v10-rail-scroll { flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:12px; padding:2px; scrollbar-width:thin; scrollbar-color:rgba(132,132,132,.18) transparent; }
+
+    /* 分组玻璃卡（online 左面板语言） */
+    .v10-group {
+        background:color-mix(in srgb, var(--elevated) 55%, transparent);
+        border:1px solid color-mix(in srgb, var(--text) 7%, transparent);
+        border-radius:var(--radius-lg);
+        box-shadow:inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent), var(--shadow-sm);
+        padding:12px; display:flex; flex-direction:column; gap:10px;
+    }
+    .v10-group-title { margin:0; font-size:10px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; color:var(--faint); }
+    .v10-row { display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }
+    .v10-label { font-size:11px; font-weight:850; color:var(--muted); }
+    .v10-value { font-size:11px; font-weight:850; color:var(--text); }
+    .v10-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .v10-img-demo {
+        aspect-ratio:4/3; border-radius:var(--radius-md);
+        border:1px solid color-mix(in srgb, var(--text) 6%, transparent);
+        background:linear-gradient(135deg, color-mix(in srgb, var(--text) 9%, var(--bg)), color-mix(in srgb, var(--text) 24%, var(--bg)));
+        display:flex; align-items:center; justify-content:center;
+        color:var(--faint); font-size:10px; font-weight:850; letter-spacing:.08em;
+    }
+    .v10-quick { display:flex; flex-direction:column; gap:6px; }
+    .v10-quick-btn {
+        height:36px; border-radius:var(--radius-md);
+        border:1px solid color-mix(in srgb, var(--text) 8%, transparent);
+        background:color-mix(in srgb, var(--elevated) 55%, transparent);
+        color:var(--text); font-size:11px; font-weight:850;
+        display:flex; align-items:center; justify-content:center; gap:7px;
+        transition:background .16s var(--ease), transform .16s var(--ease);
+    }
+    .v10-quick-btn:hover { background:color-mix(in srgb, var(--elevated) 72%, transparent); transform:translateY(-1px); }
+
+    /* 顶栏折叠按钮 */
+    .v10-rail-toggle svg { transition:transform .22s var(--ease); }
+    .v10-rail-toggle.closed svg { transform:rotate(180deg); }
+
+    @media (max-width:900px){
+        .v10-rail {
+            position:fixed; top:52px; right:0; bottom:0; width:min(320px,calc(100vw - 28px)); z-index:96;
+            transform:translateX(100%); transition:transform .26s var(--ease);
+            border-left:1px solid color-mix(in srgb, var(--text) 8%, transparent);
+            box-shadow:inset 1px 0 0 color-mix(in srgb, var(--text) 4%, transparent), -14px 0 44px rgba(0,0,0,.14);
+        }
+        .v10-rail.open { transform:translateX(0); }
+    }
+    </style>
+    <style>
+/* ═══════════════════════════════════════════
+   V11 · Online 设计语言覆盖层（整体视觉升级）
+   延续 online.html：nv-card 玻璃磨砂卡片 + nv-beam 柠檬绿光束
+   仅引用 marvis-shared.css token（不新造色值/圆角/字号/字体）
+   纯黑白灰 · 禁蓝 · 柠檬绿仅用于光束/发送/状态
+   ═══════════════════════════════════════════ */
+
+/* ── 单栏画布背景 ── */
+.chat-shell { background: var(--bg) !important; }
+
+/* ── topbar：玻璃磨砂（online nv-card 同款） ── */
+.topbar {
+    background: color-mix(in srgb, var(--elevated) 55%, transparent) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border-bottom: 1px solid color-mix(in srgb, var(--text) 7%, transparent) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent) !important;
+}
+html.theme-dark .topbar, html.studio-theme-dark .topbar {
+    border-bottom-color: color-mix(in srgb, var(--text) 14%, transparent) !important;
+}
+
+/* ── 顶部操作按钮：玻璃胶囊 ── */
+.action-btn {
+    background: color-mix(in srgb, var(--elevated) 55%, transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--text) 7%, transparent) !important;
+    border-radius: var(--radius-md) !important;
+    color: var(--muted) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent), var(--shadow-sm) !important;
+}
+.action-btn:hover { background: var(--soft) !important; color: var(--text) !important; }
+
+/* ── 右侧弹层：玻璃浮层（online nv-select-menu 同款 68% + blur28） ── */
+.chat-rail, .system-prompt-popover, .model-picker-popover, .model-picker-submenu, .resolution-picker-popover {
+    background: color-mix(in srgb, var(--elevated) 68%, transparent) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 1px solid color-mix(in srgb, var(--text) 10%, transparent) !important;
+    border-radius: var(--radius-xl) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent), var(--shadow-xl) !important;
+    color: var(--text) !important;
+}
+.model-picker-popover, .model-picker-submenu, .resolution-picker-popover { border-radius: var(--radius-lg) !important; }
+.system-prompt-textarea, .resolution-custom-box {
+    background: var(--stage-bg) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+}
+
+/* ── composer：nv-card 同款玻璃 ── */
+.composer {
+    background: color-mix(in srgb, var(--elevated) 55%, transparent) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 1px solid color-mix(in srgb, var(--text) 7%, transparent) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent), var(--shadow-md) !important;
+}
+.composer-body {
+    background: var(--stage-bg) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+}
+.composer-body.drag-over { box-shadow: inset 0 0 0 1px var(--border-2) !important; background: var(--soft) !important; }
+.composer-wrap { background: linear-gradient(to top, var(--bg) 82%, transparent) !important; }
+
+/* ── 消息气泡：online 同款卡片语言（玻璃磨砂） ── */
+.bubble.assistant {
+    background: color-mix(in srgb, var(--elevated) 55%, transparent) !important;
+    backdrop-filter: blur(28px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(28px) saturate(180%) !important;
+    border: 1px solid color-mix(in srgb, var(--text) 7%, transparent) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent), var(--shadow-md) !important;
+    color: var(--text) !important;
+}
+.bubble.user {
+    background: var(--text) !important;
+    color: var(--bg) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+.bubble-row { flex-direction: column; align-items: flex-start; gap: 5px !important; }
+.bubble-row.user { align-items: flex-end; }
+
+/* ── 时间戳 ── */
+.bubble-time {
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-xs);
+    color: var(--text-3);
+    opacity: .72;
+    padding: 0 4px;
+}
+.bubble.user .bubble-time { color: color-mix(in srgb, var(--bg) 60%, transparent); }
+
+/* ── 日期分组（两侧渐隐分隔线 + 居中日期） ── */
+.date-divider {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    margin: 10px 0 4px;
+    color: var(--text-3);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: var(--tracking-xs);
+    text-transform: uppercase;
+}
+.date-divider::before, .date-divider::after { content: ''; flex: 1; height: 1px; background: var(--divider); }
+
+/* ── Markdown 元素（消息正文排版节奏） ── */
+.bubble-text h1, .bubble-text h2, .bubble-text h3, .bubble-text h4 {
+    margin: .7em 0 .35em; font-weight: 800; line-height: 1.3;
+    letter-spacing: var(--tracking-sm); color: var(--text);
+}
+.bubble-text h1 { font-size: var(--text-xl); }
+.bubble-text h2 { font-size: var(--text-lg); }
+.bubble-text h3, .bubble-text h4 { font-size: var(--text-base); }
+.bubble-text p { margin: .45em 0; }
+.bubble-text ul, .bubble-text ol { margin: .5em 0; padding-left: 1.5em; }
+.bubble-text li { margin: .22em 0; }
+.bubble-text code {
+    font-family: var(--font-mono); font-size: .9em;
+    background: var(--soft); border: 1px solid var(--border);
+    padding: .12em .4em; border-radius: var(--radius-sm);
+}
+.bubble-text pre {
+    background: var(--stage-bg); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 12px 14px; overflow-x: auto; margin: .6em 0;
+}
+.bubble-text pre code { background: transparent; border: 0; padding: 0; }
+.bubble-text blockquote {
+    border-left: 3px solid var(--border-2); padding-left: 12px;
+    color: var(--text-2); margin: .6em 0;
+}
+.bubble-text a { color: var(--text); text-decoration: underline; text-decoration-color: var(--border-2); text-underline-offset: 2px; }
+.bubble-text hr { border: 0; height: 1px; background: var(--divider); margin: .9em 0; }
+.bubble-text table { border-collapse: collapse; margin: .6em 0; font-size: var(--text-sm); }
+.bubble-text th, .bubble-text td { border: 1px solid var(--border-2); padding: 6px 10px; text-align: left; }
+.bubble-text th { background: var(--soft); font-weight: 800; }
+
+/* 用户气泡（深底浅字）内 Markdown 适配 */
+.bubble.user .bubble-text h1, .bubble.user .bubble-text h2,
+.bubble.user .bubble-text h3, .bubble.user .bubble-text h4 { color: inherit; }
+.bubble.user .bubble-text code { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.18); }
+.bubble.user .bubble-text pre { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); }
+.bubble.user .bubble-text blockquote { border-color: rgba(255,255,255,.4); color: rgba(255,255,255,.8); }
+.bubble.user .bubble-text a { color: inherit; }
+.bubble.user .bubble-text th { background: rgba(255,255,255,.12); }
+.bubble.user .bubble-text th, .bubble.user .bubble-text td { border-color: rgba(255,255,255,.22); }
+
+/* ── nv-beam 动态光束（延续 online.html 定稿） ── */
+@property --beam-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.nv-beam {
+    position: relative;
+    isolation: isolate;
+    --beam-core: rgba(180,255,60,.95);
+    --beam-mid: rgba(180,255,60,.45);
+    --beam-glow: rgba(180,255,60,.55);
+}
+.nv-beam::before {
+    content: '';
+    position: absolute; inset: 0; border-radius: inherit; padding: 2px;
+    background: conic-gradient(from var(--beam-angle), transparent 0deg, var(--beam-core) 28deg, var(--beam-mid) 70deg, transparent 115deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none; z-index: 2;
+    animation: nv-beam-spin 2.6s linear infinite;
+}
+.nv-beam::after {
+    content: '';
+    position: absolute; inset: 0; border-radius: inherit; padding: 5px;
+    background: conic-gradient(from var(--beam-angle), transparent 0deg, var(--beam-glow) 45deg, transparent 120deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    filter: blur(8px); opacity: .4; pointer-events: none; z-index: 1;
+    animation: nv-beam-spin 2.6s linear infinite;
+}
+@keyframes nv-beam-spin { to { --beam-angle: 360deg; } }
+/* 深色主题通用白光（同 online.html），发送按钮下方覆盖回柠檬绿 */
+html.theme-dark .nv-beam, html.studio-theme-dark .nv-beam {
+    --beam-core: rgba(255,255,255,.6);
+    --beam-mid: rgba(255,255,255,.26);
+    --beam-glow: rgba(255,255,255,.4);
+}
+
+/* ── 发送按钮：深底白字 + nv-beam 柠檬绿光束（延续 online genBtn 定稿） ── */
+#sendBtn.nv-beam,
+html.theme-dark #sendBtn.nv-beam,
+html.studio-theme-dark #sendBtn.nv-beam {
+    --beam-core: rgba(180,255,60,.95);
+    --beam-mid: rgba(180,255,60,.45);
+    --beam-glow: rgba(180,255,60,.55);
+}
+#sendBtn.nv-beam {
+    background: #1d1d1f !important;
+    color: #ffffff !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), var(--shadow-md) !important;
+}
+#sendBtn.nv-beam:hover { transform: scale(1.08); }
+#sendBtn.nv-beam:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── 状态强调：streaming 光标柠檬绿 ── */
+.bubble.assistant.streaming::after { background: rgba(180,255,60,.95); }
+
+/* ── 禁蓝：清理原 slate 蓝灰残留，统一玻璃灰 ── */
+.model-picker-button, .upload-btn, .image-preview-close {
+    background: color-mix(in srgb, var(--elevated) 60%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid color-mix(in srgb, var(--text) 8%, transparent) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 10%, transparent), var(--shadow-sm) !important;
+}
+    </style>
+    <style>
+    /* ═══════════════════════════════════════════
+       V12 · 框感增强 + 浅色玻璃分层
+       （修复"什么框都没有、很丑"：空对话页无结构、浅色玻璃不可见）
+       1) 画布加径向光斑，让磨砂有内容可模糊
+       2) 消息区整体玻璃容器框，空对话也有结构
+       3) 空状态占位玻璃卡
+       4) 浅色下顶栏/气泡/输入区边框加深、不透明度降低，玻璃分层可见
+       5) 发送按钮光束加粗
+       ═══════════════════════════════════════════ */
+
+    /* 1) 画布光斑背景 */
+    .chat-shell {
+        background:
+            radial-gradient(1100px 560px at 82% -12%, color-mix(in srgb, var(--text) 8%, transparent), transparent 62%),
+            radial-gradient(900px 520px at 6% 110%, color-mix(in srgb, var(--text) 6%, transparent), transparent 55%),
+            var(--bg) !important;
+    }
+
+    /* 2) 消息区：透明无容器框（V15 回归轻量首页风格，"开始新的对话"上方不再有背景框） */
+    .messages {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        padding: 24px 0 18px !important;
+        margin: 0 auto !important;
+    }
+
+    /* 3) 空状态：玻璃占位卡 */
+    .empty-state {
+        background: color-mix(in srgb, var(--elevated) 42%, transparent) !important;
+        backdrop-filter: blur(20px) saturate(150%) !important;
+        -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+        border: 1px dashed color-mix(in srgb, var(--text) 18%, transparent) !important;
+        border-radius: var(--radius-xl) !important;
+        box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 8%, transparent), var(--shadow-sm) !important;
+        padding: 38px 52px !important;
+        gap: 12px !important;
+    }
+    .empty-state i, .empty-state svg { color: var(--text-2); }
+    .empty-state-text { color: var(--text-2); }
+
+    /* 4) 浅色玻璃分层增强（深色主题不动） */
+    html:not(.theme-dark):not(.studio-theme-dark) body:not(.theme-dark):not(.studio-theme-dark) .topbar {
+        background: color-mix(in srgb, var(--elevated) 38%, transparent) !important;
+        border-bottom-color: color-mix(in srgb, var(--text) 14%, transparent) !important;
+    }
+    html:not(.theme-dark):not(.studio-theme-dark) body:not(.theme-dark):not(.studio-theme-dark) .bubble.assistant {
+        background: color-mix(in srgb, var(--elevated) 38%, transparent) !important;
+        border-color: color-mix(in srgb, var(--text) 14%, transparent) !important;
+    }
+    html:not(.theme-dark):not(.studio-theme-dark) body:not(.theme-dark):not(.studio-theme-dark) .composer {
+        background: color-mix(in srgb, var(--elevated) 38%, transparent) !important;
+        border-color: color-mix(in srgb, var(--text) 14%, transparent) !important;
+    }
+
+    /* 5) 光束加粗 */
+    .nv-beam::after { padding: 6px !important; opacity: .5 !important; }
+    </style>
+    <style>
+    /* ═══════════════════════════════════════════
+       V15 · 空态欢迎工作台（home 首页轻量语言）
+       回归首页 hp- 风格：无重框、字重克制、渐变标题、细投影卡片、留白呼吸
+       对齐主流 AI 产品空态共性：内容优先、色调位移、字重克制、强调色≤5%、圆角分层
+       ═══════════════════════════════════════════ */
+    .welcome-deck {
+        width: 100%;
+        max-width: var(--chat-width);
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 4px 0 8px;
+    }
+    .welcome-head { display: flex; flex-direction: column; gap: 8px; padding: 0 4px; margin-bottom: 18px; animation: welcomeFadeUp .7s var(--ease) both; }
+    .welcome-title {
+        margin: 0; font-size: 48px; font-weight: 400; letter-spacing: .02em;
+        line-height: 1.1; color: var(--text);
+        background: linear-gradient(135deg, var(--text) 0%, var(--muted) 100%);
+        -webkit-background-clip: text; background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .welcome-sub {
+        margin: 0; font-size: 13px; font-weight: 400; color: var(--text-2);
+    }
+    @keyframes welcomeFadeUp {
+        from { opacity: 0; transform: translateY(14px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .welcome-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+    .welcome-card {
+        position: relative;
+        display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+        padding: 16px 16px 14px; text-align: left; cursor: pointer;
+        background: color-mix(in srgb, var(--elevated) 55%, transparent);
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid transparent;
+        border-radius: 14px;
+        box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 4px 16px -4px rgba(0,0,0,.06);
+        color: var(--text);
+        transition: transform .26s var(--ease), box-shadow .26s var(--ease), border-color .26s var(--ease);
+        animation: welcomeFadeUp .7s var(--ease) .08s both;
+    }
+    .welcome-card:nth-child(2) { animation-delay: .14s; }
+    .welcome-card:nth-child(3) { animation-delay: .2s; }
+    .welcome-card:hover {
+        transform: translateY(-3px);
+        border-color: color-mix(in srgb, var(--text) 10%, transparent);
+        box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 16px 34px -12px rgba(0,0,0,.1);
+    }
+    .welcome-card:active { transform: translateY(-1px) scale(.99); }
+    .welcome-card-ic {
+        width: 28px; height: 28px; border-radius: 9px;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--text) 7%, transparent);
+        color: var(--muted);
+        border: 0;
+        box-shadow: none;
+        transition: background .26s var(--ease), color .26s var(--ease);
+    }
+    .welcome-card-ic svg { width: 15px; height: 15px; color: var(--muted); stroke-width: 1.8; }
+    .welcome-card:hover .welcome-card-ic { color: var(--text); background: color-mix(in srgb, var(--text) 11%, transparent); }
+    .welcome-card-title { font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+    .welcome-card-desc { font-size: 11.5px; font-weight: 400; color: var(--muted); line-height: 1.5; }
+    .welcome-body { display: flex; flex-direction: column; gap: 7px; }
+    .welcome-recent { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; animation: welcomeFadeUp .7s var(--ease) .26s both; }
+    .welcome-recent-head {
+        display: flex; align-items: center; gap: 8px; padding: 0 4px;
+        font-size: 10.5px; font-weight: 600; letter-spacing: .14em;
+        text-transform: uppercase; color: var(--muted);
+    }
+    .welcome-recent-head::after { content: ''; flex: 1; height: 1px; background: var(--divider); }
+    .welcome-recent-box {
+        display: flex; flex-direction: column;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: hidden;
+    }
+    .welcome-recent-list { display: flex; flex-direction: column; gap: 2px; }
+    .welcome-recent-item {
+        display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 4px;
+        padding: 10px 14px; cursor: pointer;
+        background: transparent;
+        border: 0; border-radius: 10px;
+        color: var(--text);
+        text-align: left !important;
+        transition: background .16s var(--ease);
+    }
+    .welcome-recent-item + .welcome-recent-item { border-top: 0; }
+    .welcome-recent-item:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+    .welcome-recent-title { font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); text-align: left !important; }
+    .welcome-recent-time {
+        font-size: 12px; font-weight: 400; color: var(--muted);
+        white-space: normal !important; overflow: hidden; text-overflow: ellipsis;
+        max-width: 100%; text-align: left !important;
+    }
+    .welcome-empty-hint {
+        padding: 14px 12px; text-align: center;
+        font-size: 12px; font-weight: 400; letter-spacing: .04em;
+        color: var(--muted);
+        background: transparent;
+        border: 0;
+    }
+    @media (max-width: 560px){ .welcome-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    </style>
+    <style>
+    /* ═══ V17 顶栏图标化 + 输入框统一（对齐 gpt-chat-v17-preview 变体 E） ═══ */
+    /* —— 顶栏：去玻璃框、图标化、动态标题 —— */
+    .topbar {
+        min-height: 58px !important;
+        background: transparent !important;
+        border-bottom: 0 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    .topbar-inner { gap: 18px !important; }
+    .topbar-title {
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        letter-spacing: -.005em !important;
+        color: var(--text) !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        padding-right: 16px !important;
+    }
+    .top-actions { gap: 6px !important; }
+    .action-btn {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        padding: 0 !important;
+        border-radius: 10px !important;
+        background: transparent !important;
+        border: 0 !important;
+        color: var(--muted) !important;
+    }
+    .action-btn:hover { background: color-mix(in srgb, var(--text) 7%, transparent) !important; color: var(--text) !important; }
+    .action-btn:active { background: color-mix(in srgb, var(--text) 12%, transparent) !important; }
+    .action-btn i, .action-btn svg { width: 18px !important; height: 18px !important; stroke-width: 1.8 !important; }
+
+    /* —— 输入框：玻璃面板、无嵌套内框、底部工具行 —— */
+    .composer {
+        border-radius: 14px !important;
+        padding: 14px 14px 10px !important;
+        gap: 8px !important;
+        background: color-mix(in srgb, var(--elevated) 55%, transparent) !important;
+        border: 1px solid transparent !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,.03), 0 4px 16px -4px rgba(0,0,0,.08) !important;
+    }
+    .composer-body {
+        background: transparent !important;
+        border: 0 !important;
+        min-height: 0 !important;
+        border-radius: 14px !important;
+        padding: 0 !important;
+        gap: 8px !important;
+    }
+    .composer textarea, #messageInput {
+        font-size: 15px !important;
+        line-height: 1.55 !important;
+        min-height: 44px !important;
+        max-height: 160px !important;
+        padding: 4px 2px !important;
+    }
+    .composer-inside-foot {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 10px !important;
+        padding-top: 2px !important;
+    }
+    .left-tools, .inline-controls { flex: 1 1 auto !important; min-width: 0 !important; }
+    .composer-right { display: flex !important; align-items: center !important; gap: 8px !important; flex: 0 0 auto !important; }
+
+    /* —— 模型选择 / 思考强度：统一为紧凑透明 chip（对齐 V17） —— */
+    .model-picker {
+        width: auto !important; min-width: 0 !important; max-width: none !important; flex: 0 0 auto !important;
+    }
+    .model-picker-button {
+        height: 34px !important;
+        padding: 0 8px 0 10px !important;
+        border-radius: 12px !important;
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        color: var(--muted) !important;
+        /* 图标隐藏后只剩「文案 / 箭头」两个网格项，列数必须同步改成 2 列 */
+        grid-template-columns: minmax(0,1fr) 16px !important;
+        gap: 6px !important;
+    }
+    .model-picker-button:hover { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
+    /* 坑：createIcons() 会把 <i data-icon> replaceChild 成 <svg>，所以必须用 :first-child 而非 i:first-child；
+       且只作用于模型按钮（思考 chip 没有前置图标，它的首个子元素就是文案本身） */
+    #modelPickerBtn.model-picker-button > :first-child { display: none !important; }
+    /* 思考强度 chip：原本 grid-template-columns:15px auto 14px 是 3 列却只有 2 个子元素，
+       导致「极高 / Max」被塞进 15px 列里换行竖排甚至被裁掉 —— 改成 2 列 + 不换行 */
+    .think-chip-btn {
+        width: auto !important;
+        min-width: 0 !important;
+        padding: 0 8px 0 10px !important;
+        grid-template-columns: minmax(0,auto) 14px !important;
+        gap: 6px !important;
+    }
+    .think-chip-labels { gap: 5px !important; }
+    .think-chip-level {
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        color: inherit !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
+    }
+    .model-picker-provider, .model-picker-dot { display: none !important; }
+    .model-picker-model { color: inherit !important; font-size: 14px !important; font-weight: 500 !important; }
+    .model-picker-button i, .model-picker-button svg { width: 14px !important; height: 14px !important; stroke-width: 1.8 !important; }
+
+    /* —— 分辨率选择器（“自动”）：与模型 / 思考 chip 统一（透明紧凑 + 子菜单弹窗一致） —— */
+    .resolution-picker { width: auto !important; min-width: 0 !important; max-width: none !important; flex: 0 0 auto !important; }
+    .resolution-picker.auto-mode, .resolution-picker.custom-mode { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; }
+    .resolution-picker-button {
+        display: grid !important; grid-template-columns: minmax(0,1fr) 16px !important; gap: 6px !important;
+        height: 34px !important; padding: 0 8px 0 10px !important; border-radius: 12px !important;
+        background: transparent !important; border: 0 !important; box-shadow: none !important; color: var(--muted) !important;
+    }
+    .resolution-picker-button:hover { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
+    .resolution-picker-button > :first-child { display: none !important; }
+    .resolution-picker-type { display: none !important; }
+    .resolution-picker-button i, .resolution-picker-button svg { width: 14px !important; height: 14px !important; stroke-width: 1.8 !important; }
+    .resolution-picker-value { color: inherit !important; font-size: 14px !important; font-weight: 500 !important; }
+    .resolution-picker-popover { border-radius: 14px !important; background: var(--chat-panel) !important; box-shadow: 0 14px 36px var(--chat-shadow) !important; }
+
+    /* —— 附件按钮：V17 "+" 图标按钮（去掉"选择文件"文字） —— */
+    .upload-btn.attach-btn {
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        height: 34px !important; width: auto !important; min-width: 30px !important; padding: 0 6px !important;
+        border-radius: 10px !important; background: transparent !important; border: 0 !important;
+        /* V10C 的「禁蓝」玻璃浮层块（L788）把 backdrop-filter / box-shadow 整个粘过来了，
+           配合 width:36px + 内容仅 13px 的差距，看起来就是一个带阴影的浅灰圆角方框 —— 一并清掉 */
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        box-shadow: none !important;
+        color: var(--muted) !important; font-size: 14px !important; font-weight: 500 !important;
+    }
+    .upload-btn.attach-btn:hover { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
+    /* “+”：纯字形，去掉背后的圆形底框 */
+    .attach-plus {
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        width: auto !important; height: auto !important;
+        border-radius: 0 !important; background: transparent !important; border: 0 !important;
+        color: var(--text-2) !important;
+        font-size: 20px !important; font-weight: 300 !important; line-height: 1 !important;
+    }
+    .upload-btn.attach-btn:hover .attach-plus { color: var(--text) !important; }
+    .upload-btn.attach-btn i, .upload-btn.attach-btn svg { width: 14px !important; height: 14px !important; }
+
+    /* —— 发送：V17 圆形 —— */
+    .send-btn {
+        width: 36px !important; height: 36px !important; border-radius: 50% !important;
+        background: var(--text) !important; color: var(--bg) !important;
+    }
+    .send-btn svg { width: 16px !important; height: 16px !important; stroke-width: 2 !important; }
+    .send-btn:hover { transform: scale(1.08) !important; }
+    .send-btn:active { transform: scale(.94) !important; }
+
+    /* —— 模型选择弹窗（V20）：单栏供应商 + 悬停飞出子菜单，整体更小 —— */
+    .model-picker-popover { --model-picker-width: 200px; min-width: 168px !important; max-width: min(200px, calc(100vw - 24px)) !important; }
+    .model-picker-head { padding: 8px 8px 6px !important; gap: 8px !important; }
+    .model-picker-scope { padding: 2px !important; border-radius: 8px !important; background: color-mix(in srgb, var(--text) 5%, transparent) !important; box-shadow: none !important; }
+    .model-picker-scope button { height: 24px !important; min-width: 0 !important; padding: 0 8px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 500 !important; color: var(--muted) !important; }
+    .model-picker-scope button.active { background: var(--nav-hover-bg) !important; color: var(--text) !important; box-shadow: none !important; }
+    .model-picker-body { display: block !important; min-height: 0 !important; overflow: hidden !important; }
+    .model-picker-providers { display: flex !important; flex-direction: column !important; gap: 2px !important; padding: 4px 4px 6px !important; height: 100% !important; overflow-y: auto !important; }
+    /* 供应商条目：名称 + 右侧指示（选中=勾 / 其它=箭头，表示有子菜单） */
+    .model-picker-provider-btn { font-size: 13px !important; font-weight: 500 !important; min-height: 32px !important; padding: 5px 8px !important; border-radius: 8px !important; color: var(--text) !important; gap: 8px !important; cursor: pointer !important; }
+    .model-picker-provider-btn:hover, .model-picker-provider-btn.hovered { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
+    .model-picker-provider-btn.active { color: var(--text) !important; font-weight: 600 !important; }
+    .model-picker-provider-btn .p-name { flex: 1 1 auto !important; min-width: 0; }
+    .model-picker-provider-btn .p-count { display: none !important; }
+    .model-picker-provider-btn .p-check,
+    .model-picker-provider-btn .p-arrow { width: 13px !important; height: 13px !important; flex: 0 0 auto !important; stroke-width: 1.8 !important; }
+    .model-picker-provider-btn .p-arrow { color: var(--muted) !important; opacity: .55 !important; }
+    .model-picker-provider-btn:hover .p-arrow,
+    .model-picker-provider-btn.hovered .p-arrow { opacity: 1 !important; color: var(--text) !important; }
+    /* 子菜单：悬停供应商时飞出，样式与弹窗一致 */
+    .model-picker-submenu {
+        position: fixed; z-index: 10000; display: none; flex-direction: column; gap: 2px;
+        width: var(--submenu-width, 212px); max-height: var(--submenu-max-height, min(320px, 60vh));
+        padding: 5px; overflow-y: auto;
+        scrollbar-width: thin; scrollbar-color: rgba(132,132,132,.2) transparent;
+    }
+    .model-picker-submenu.open { display: flex; animation: submenuIn .14s var(--ease); }
+    .model-picker-submenu::-webkit-scrollbar { width: 5px; height: 5px; }
+    .model-picker-submenu::-webkit-scrollbar-track { background: transparent; }
+    .model-picker-submenu::-webkit-scrollbar-thumb { background: rgba(132,132,132,.18); border-radius: 999px; }
+    @keyframes submenuIn { from { opacity: 0; transform: translateX(-3px); } to { opacity: 1; transform: none; } }
+    /* 模型条目 */
+    .model-picker-model-btn { font-size: 13px !important; font-weight: 500 !important; min-height: 32px !important; padding: 5px 8px !important; border-radius: 8px !important; color: var(--text) !important; }
+    .model-picker-model-btn:hover { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
+    .model-picker-model-btn.active { background: var(--nav-hover-bg) !important; color: var(--text) !important; font-weight: 600 !important; }
+    .model-picker-model-btn i, .model-picker-model-btn svg { width: 13px !important; height: 13px !important; stroke-width: 1.8 !important; }
+    .model-picker-model-btn span { flex: 1 1 auto !important; }
+    .model-picker-empty { padding: 14px 8px !important; font-size: 12px !important; font-weight: 500 !important; color: var(--faint) !important; }
+    .model-picker-title { font-size: 12px !important; font-weight: 500 !important; color: var(--muted) !important; }
+
+    /* —— 思考强度弹窗：宽度自适应，不裁切 —— */
+    .think-popover { --model-picker-width: 168px; min-width: 150px !important; max-width: min(240px, calc(100vw - 24px)) !important; }
+    .think-list { padding: 4px 5px 6px !important; }
+    .think-list .model-picker-model-btn { min-height: 30px !important; }
+    .think-list .model-picker-model-btn span {
+        white-space: nowrap !important; overflow: visible !important; text-overflow: clip !important;
+    }
+
+    /* —— 尺寸选择弹窗：更紧凑 —— */
+    .resolution-picker-popover { border-radius: var(--radius-lg) !important; }
+    .resolution-picker-head { padding: 8px 8px 6px !important; gap: 8px !important; }
+    .resolution-picker-title { font-size: 12px !important; font-weight: 500 !important; color: var(--muted) !important; }
+    .resolution-picker-scope { padding: 2px !important; border-radius: 8px !important; background: color-mix(in srgb, var(--text) 5%, transparent) !important; box-shadow: none !important; }
+    .resolution-picker-scope button { height: 24px !important; min-width: 0 !important; padding: 0 8px !important; border-radius: 6px !important; font-size: 11px !important; font-weight: 500 !important; color: var(--muted) !important; }
+    .resolution-picker-scope button.active { background: var(--nav-hover-bg) !important; color: var(--text) !important; box-shadow: none !important; }
+    .resolution-picker-pane.preset { grid-template-columns: minmax(96px,.9fr) minmax(0,1.1fr) !important; }
+    .resolution-picker-list { padding: 6px !important; gap: 3px !important; }
+    .resolution-picker-option { min-height: 32px !important; padding: 5px 8px !important; border-radius: 8px !important; }
+    .resolution-picker-option:hover { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
+    .resolution-picker-option.active { background: var(--nav-hover-bg) !important; color: var(--text) !important; }
+    .resolution-picker-option span { font-size: 12px !important; font-weight: 500 !important; }
+    .resolution-picker-option small { font-size: 10px !important; font-weight: 500 !important; opacity: .6 !important; }
+    .resolution-picker-pane.custom { padding: 8px !important; }
+    .resolution-custom-box { padding: 8px !important; border-radius: var(--radius-md) !important; }
+    .resolution-custom-title { margin-bottom: 6px !important; font-size: 12px !important; font-weight: 500 !important; }
+    .resolution-custom-row { gap: 5px !important; }
+    .resolution-custom-row input { height: 28px !important; font-size: 12px !important; }
+    .resolution-custom-row button { height: 28px !important; min-width: 42px !important; font-size: 11px !important; font-weight: 500 !important; }
+    .resolution-custom-hint { margin-top: 5px !important; font-size: 11px !important; }
+
+    /* ═══════════ V20.1 · 去框统一（对齐 V17/V20 无框语言） ═══════════ */
+
+    /* —— 1) 点击弹窗统一：去边框、统一圆角 14 与单一投影 —— */
+    .chat-rail, .system-prompt-popover, .model-picker-popover,
+    .model-picker-submenu, .resolution-picker-popover {
+        border: 0 !important;
+        border-radius: 14px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,.05), 0 18px 44px -14px rgba(0,0,0,.22) !important;
+    }
+    .chat-rail, .system-prompt-popover { border-radius: 16px !important; }
+    .system-prompt-textarea, .resolution-custom-box {
+        border: 0 !important;
+        background: color-mix(in srgb, var(--text) 5%, transparent) !important;
+        box-shadow: none !important;
+    }
+
+    /* —— 6) 消息区风格统一：气泡无边框、无毛玻璃、同圆角，仅靠底色与对齐区分角色 —— */
+    .bubble:not(.image-bubble) {
+        border-radius: 14px !important;
+        padding: 12px 15px !important;
+        box-shadow: none !important;
+        border: 0 !important;
+    }
+    .bubble.assistant {
+        background: color-mix(in srgb, var(--text) 7%, transparent) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 0 !important;
+        color: var(--text) !important;
+        border-bottom-left-radius: 14px !important;
+        border-bottom-right-radius: 14px !important;
+    }
+    .bubble.user {
+        background: var(--text) !important;
+        color: var(--bg) !important;
+        border: 0 !important;
+        border-bottom-left-radius: 14px !important;
+        border-bottom-right-radius: 14px !important;
+    }
+    .empty-state {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+
+    /* —— 2.b 顶栏三个 action 按钮去掉玻璃胶囊底（V20.1.b），仅 hover 出底 —— */
+    .action-btn {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* —— 1.a 「正在思考」占位：文案呼吸 + 三个圆点跳动 —— */
+    .bubble.thinking .bubble-text {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        animation: thinking-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes thinking-pulse {
+        0%, 100% { opacity: .5; }
+        50% { opacity: 1; }
+    }
+    .thinking-dots {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: 2px;
+        vertical-align: middle;
+        line-height: 1;
+    }
+    .thinking-dots i {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        display: inline-block;
+        animation: thinking-bounce 1.05s infinite ease-in-out;
+        will-change: transform, opacity;
+    }
+    .thinking-dots i:nth-child(2) { animation-delay: .13s; }
+    .thinking-dots i:nth-child(3) { animation-delay: .26s; }
+    @keyframes thinking-bounce {
+        0%   { transform: translateY(0) scale(.75); opacity: .3; }
+        35%  { transform: translateY(-7px) scale(1.15); opacity: 1; }
+        70%  { transform: translateY(0) scale(.75); opacity: .3; }
+        100% { transform: translateY(0) scale(.75); opacity: .3; }
+    }
+
+    /* —— 7) 去掉右侧边栏 —— */
+    .v10-rail { display: none !important; }
+
+    /* —— 8) 页面背景：去掉径向光斑，回到纯色 —— */
+    .chat-shell { background: var(--bg) !important; }
+
+    /* —— 顶部那条线：V11 给顶栏加了 inset 0 1px 0 高光，看似顶栏下边缘线 —— */
+    .topbar { box-shadow: none !important; }
+
+    </style>
 </head>
-<body>
-    <div class="chat-shell">
-        <main class="chat-main">
-            <header class="topbar">
-                <div class="topbar-inner">
-                    <div class="title-block">
-                        <h1 id="chatTitle" data-i18n="chat.newConversation">新对话</h1>
-                    </div>
-                    <div class="top-actions">
-                        <button onclick="event.stopPropagation();newConversation()" class="action-btn" title="新建对话" data-i18n-title="chat.newConversation"><i data-lucide="plus"></i><span data-i18n="chat.new">新建</span></button>
-                        <button onclick="event.stopPropagation();toggleSystemPrompt()" class="action-btn" title="系统提示词"><i data-lucide="sliders-horizontal"></i><span>系统</span></button>
-                        <aside id="systemPromptPopover" class="system-prompt-popover" onclick="event.stopPropagation()">
-                            <div class="system-prompt-head">
-                                <div class="system-prompt-title">系统提示词</div>
-                                <button onclick="event.stopPropagation();toggleSystemPrompt(false)" class="rail-close" title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+<body data-page-node-id="B0FSrTLRPPotTcEryWhCSp">
+    <div class="chat-shell" data-page-node-id="MRDi657CZfPyLahTJpQS7R">
+        <main class="chat-main" data-page-node-id="vvG09c7fxIzPAyIvsarGmp">
+            <header class="topbar" data-page-node-id="BmDZXo29AD65D27AejTzDM">
+                <div class="topbar-inner" data-page-node-id="nKrmeYiyU6SwY6np7jhq5k">
+                    <div class="topbar-title" id="chatTitle" data-i18n="chat.newConversation" data-page-node-id="wCbJbVm2rs5CC1RLMd4RWw">新对话</div>
+                    <div class="top-actions" data-page-node-id="m0RUBZCO1FOnH0aifhYkDS">
+                        <button onclick="event.stopPropagation();newConversation()" class="action-btn" title="新建对话" data-i18n-title="chat.newConversation" data-page-node-id="DSJ9vH9F29xiHZq85QdOAg"><i data-icon="newChat" data-page-node-id="rxhhTMiyLFlfYNEF3ehrzx"></i></button>
+                        <button onclick="event.stopPropagation();toggleSystemPrompt()" class="action-btn" title="系统提示词" data-page-node-id="IfWhloGrFo4ePyCDM6R05M"><i data-icon="system" data-page-node-id="meKvgzK08S8QtGS1e2Vx0l"></i></button>
+                        <aside id="systemPromptPopover" class="system-prompt-popover" onclick="event.stopPropagation()" data-page-node-id="EmLVMWwnnjfOJ91YpwQB15">
+                            <div class="system-prompt-head" data-page-node-id="1sEX721BojolMdiYe3wckd">
+                                <div class="system-prompt-title" data-page-node-id="W7P5o2YHwPo7dP9CzPBUkA">系统提示词</div>
+                                <button onclick="event.stopPropagation();toggleSystemPrompt(false)" class="rail-close" title="关闭" aria-label="关闭" data-page-node-id="oDXB9cFqeOT6PkuE83InvT"><i data-icon="close" data-page-node-id="pit7lzUBWIHqGKgDx41ElR"></i></button>
                             </div>
-                            <textarea id="systemPromptInput" class="system-prompt-textarea" placeholder="例如：你是一个专业图片创作助手，回答要简洁，并优先给出可执行步骤。"></textarea>
-                            <div class="system-prompt-actions">
-                                <button type="button" onclick="clearSystemPrompt()">清空</button>
-                                <button type="button" class="primary" onclick="saveSystemPromptFromUI()">保存</button>
+                            <!-- 系统角色库（persona）：快捷填充，选中后把角色 content 写进下面的 textarea -->
+                            <div class="persona-bar" data-page-node-id="PrS0naBar000000000000001">
+                                <div class="persona-chips" id="personaChips" data-page-node-id="PrS0naBar000000000000002"></div>
+                                <div class="persona-foot" data-page-node-id="PrS0naBar000000000000003">
+                                    <span class="persona-status" id="personaStatus" data-page-node-id="PrS0naBar000000000000004">未选择角色</span>
+                                    <div class="persona-foot-actions" data-page-node-id="PrS0naBar000000000000005">
+                                        <button type="button" class="persona-mini-btn show" id="personaSaveBtn" title="把当前内容另存为角色" onclick="event.stopPropagation();togglePersonaSaveBox()" data-page-node-id="PrS0naBar000000000000006"><i data-icon="save" data-page-node-id="PrS0naBar000000000000007"></i><span>另存为</span></button>
+                                        <button type="button" class="persona-mini-btn danger" id="personaDeleteBtn" title="删除当前角色" onclick="event.stopPropagation();deleteActivePersona()" data-page-node-id="PrS0naBar000000000000008"><i data-icon="trash" data-page-node-id="PrS0naBar000000000000009"></i><span>删除</span></button>
+                                    </div>
+                                </div>
+                                <div class="persona-savebox" id="personaSaveBox" data-page-node-id="PrS0naBar00000000000000a">
+                                    <input type="text" id="personaNameInput" class="persona-name-input" placeholder="角色名称" maxlength="40" data-page-node-id="PrS0naBar00000000000000b" />
+                                    <button type="button" class="persona-mini-btn primary show" id="personaSaveConfirmBtn" onclick="event.stopPropagation();submitPersonaSave()" data-page-node-id="PrS0naBar00000000000000c">保存</button>
+                                    <button type="button" class="persona-mini-btn show" id="personaSaveCancelBtn" onclick="event.stopPropagation();togglePersonaSaveBox(false)" data-page-node-id="PrS0naBar00000000000000d">取消</button>
+                                </div>
+                            </div>
+                            <!-- 长期记忆库（memory）：服务端自动注入，开关/添加/删除即生效，不参与 textarea -->
+                            <div class="memory-bar" data-page-node-id="Mem0ryBar0000000000000001">
+                                <div class="memory-head" data-page-node-id="Mem0ryBar0000000000000002">
+                                    <span class="memory-title" data-page-node-id="Mem0ryBar0000000000000003">记忆库</span>
+                                    <span class="memory-status" id="memoryStatus" data-page-node-id="Mem0ryBar0000000000000004">0 条已启用</span>
+                                </div>
+                                <div class="memory-list" id="memoryList" data-page-node-id="Mem0ryBar0000000000000005"></div>
+                                <div class="memory-addbox" data-page-node-id="Mem0ryBar0000000000000006">
+                                    <div class="memory-scope" id="memoryScope" data-page-node-id="Mem0ryBar0000000000000009">
+                                        <button type="button" class="scope-btn active" data-scope="global" onclick="event.stopPropagation();setMemoryScope('global')">全局</button>
+                                        <button type="button" class="scope-btn" data-scope="conversation" onclick="event.stopPropagation();setMemoryScope('conversation')">本对话</button>
+                                    </div>
+                                    <input type="text" id="memoryInput" class="memory-input" placeholder="添加长期记忆，例如：回答用中文、少用术语" maxlength="1000" data-page-node-id="Mem0ryBar0000000000000007" />
+                                    <button type="button" class="memory-add-btn" id="memoryAddBtn" onclick="event.stopPropagation();submitMemoryAdd()" data-page-node-id="Mem0ryBar0000000000000008">添加</button>
+                                </div>
+                            </div>
+                            <textarea id="systemPromptInput" class="system-prompt-textarea" placeholder="例如：你是一个专业图片创作助手，回答要简洁，并优先给出可执行步骤。" oninput="handleSystemPromptInput()"></textarea>
+                            <div class="system-prompt-actions" data-page-node-id="w4HtGSjxUODVQaZnE3oTCe">
+                                <button type="button" onclick="clearSystemPrompt()" data-page-node-id="vMdZ5bX0vJO7Nxclgp3uZl">清空</button>
+                                <button type="button" class="primary" onclick="saveSystemPromptFromUI()" data-page-node-id="kf7OIYCdLbEDytt7XRdDro">保存</button>
                             </div>
                         </aside>
-                        <button onclick="event.stopPropagation();toggleHistory()" class="action-btn history-toggle" title="历史对话" data-i18n-title="chat.history"><i data-lucide="history"></i><span data-i18n="chat.history">历史</span></button>
-                        <aside id="historyPopover" class="chat-rail">
-                            <div class="rail-head">
-                                <div>
-                                    <div class="rail-kicker" data-i18n="chat.historyTitle">Conversations</div>
-                                    <div class="rail-title" data-i18n="chat.history">历史</div>
+                        <button onclick="event.stopPropagation();toggleHistory()" class="action-btn history-toggle" title="历史对话" data-i18n-title="chat.history" data-page-node-id="qa30VSIIPRdCFYfMY1q0N1"><i data-icon="history" data-page-node-id="gAPjGHrqqiDPHLaU2OzEIZ"></i></button>
+                        <aside id="historyPopover" class="chat-rail" data-page-node-id="8NCtBnyfkzDkdKN3inBkX6">
+                            <div class="rail-head" data-page-node-id="oMwqCTz86SIbeM9fBwS72J">
+                                <div data-page-node-id="mkrpWCk0jHIDX2n7N0UKFl">
+                                    <div class="rail-kicker" data-i18n="chat.historyTitle" data-page-node-id="mOpON9AbBZHkeEZGiNjgBp">Conversations</div>
+                                    <div class="rail-title" data-i18n="chat.history" data-page-node-id="ybBSNUrA0zb5VF6PXRDmPN">历史</div>
                                 </div>
-                                <button onclick="event.stopPropagation();toggleHistory(false)" class="rail-close" title="关闭" aria-label="关闭"><i data-lucide="x"></i></button>
+                                <button onclick="event.stopPropagation();toggleHistory(false)" class="rail-close" title="关闭" aria-label="关闭" data-page-node-id="IO6ZGHcGYwHGvQizO65HSt"><i data-icon="close" data-page-node-id="5sEEP44GbioMR8yE7tWvNb"></i></button>
                             </div>
-                            <button onclick="event.stopPropagation();newConversation()" class="rail-new" title="新建对话" data-i18n-title="chat.newConversation"><i data-lucide="plus"></i><span data-i18n="chat.new">新建</span></button>
-                            <div id="threadList" class="thread-list"></div>
+                            <button onclick="event.stopPropagation();newConversation()" class="rail-new" title="新建对话" data-i18n-title="chat.newConversation" data-page-node-id="ZVVn9w9inEBx4iUGyxdkbh"><i data-icon="newChat" data-page-node-id="AIiGOnEyKpHqLbbtg4hrHD"></i><span data-i18n="chat.new" data-page-node-id="u4bhLnZVR55Wfykr0YWc9Q">新建</span></button>
+                            <div id="threadList" class="thread-list" data-page-node-id="PtKQHt9YD51awACCno6hFc"></div>
                         </aside>
                     </div>
                 </div>
             </header>
 
-            <section id="messages" class="messages"></section>
+            <section id="messages" class="messages" data-page-node-id="meu056EqqXRKGVkSngKCLZ"></section>
 
-            <div class="composer-wrap">
-                <div class="composer">
-                    <div id="composerBody" class="composer-body">
-                        <textarea id="messageInput" rows="4" placeholder="输入消息，Enter 发送..." data-i18n-placeholder="chat.inputPlaceholder" oninput="autoGrow(this)" onkeydown="handleKey(event)"></textarea>
-                        <div id="refStrip" class="ref-strip"></div>
-                        <div class="composer-inside-foot">
-                            <div class="left-tools">
-                                <div class="inline-controls">
-                                    <input id="attachmentInput" class="file-input" type="file" multiple onchange="uploadFiles(this.files); this.value='';">
-                                    <button type="button" class="upload-btn" onclick="document.getElementById('attachmentInput')?.click()" title="上传附件" aria-label="上传附件">
-                                        <i data-lucide="paperclip"></i>
+            <div class="composer-wrap" data-page-node-id="RPrVA7sqGmn90bfUxhQ48b">
+                <div class="composer" data-page-node-id="eFkwI3RSkkkGXF8nJwcfvE">
+                    <div id="composerBody" class="composer-body" data-page-node-id="dECPZGQDxFwS1INrdKvS62">
+                        <textarea id="messageInput" rows="1" placeholder="请输入任务，交给我来帮你完成" data-i18n-placeholder="chat.inputPlaceholder" oninput="autoGrow(this)" onkeydown="handleKey(event)"></textarea>
+                        <div id="refStrip" class="ref-strip" data-page-node-id="uW3B9D3buoGwRunzYt3xnv"></div>
+                        <div class="composer-inside-foot" data-page-node-id="LlHkBVgHVAT8EneUKAmqid">
+                            <div class="left-tools" data-page-node-id="abIAKbgMVHlEIvo0fLngMD">
+                                <div class="inline-controls" data-page-node-id="NVXHYQszx5NS8DspBlSMfR">
+                                    <input id="attachmentInput" class="file-input" type="file" multiple onchange="uploadFiles(this.files); this.value='';" data-page-node-id="WjU4Yp52tlzYlvVu01hRC7">
+                                    <button type="button" class="upload-btn attach-btn" onclick="document.getElementById('attachmentInput')?.click()" title="选择文件" aria-label="选择文件" data-page-node-id="Ksf9fbW9AOuawmMIeRQgur">
+                                        <span class="attach-plus">+</span>
                                     </button>
-                                    <div id="modelPicker" class="model-picker">
-                                        <button id="modelPickerBtn" class="model-picker-button" onclick="event.stopPropagation();toggleModelPicker()" title="选择平台和模型">
-                                            <i data-lucide="boxes"></i>
-                                            <span class="model-picker-labels">
-                                                <span id="modelPickerProvider" class="model-picker-provider">API</span>
-                                                <span class="model-picker-dot"></span>
-                                                <span id="modelPickerModel" class="model-picker-model">Model</span>
-                                            </span>
-                                            <i data-lucide="chevron-down" class="picker-chevron"></i>
-                                        </button>
-                                        <div id="modelPickerPopover" class="model-picker-popover" onclick="event.stopPropagation()">
-                                            <div class="model-picker-head">
-                                                <div id="modelPickerTitle" class="model-picker-title">模型选择</div>
-                                                <div id="modelPickerScope" class="model-picker-scope"></div>
-                                            </div>
-                                            <div class="model-picker-body">
-                                                <div id="modelProviderList" class="model-picker-providers"></div>
-                                                <div id="modelList" class="model-picker-models"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div id="imageControls" class="image-controls hidden">
-                                        <div id="resolutionPicker" class="resolution-picker" title="比例和分辨率">
-                                            <button id="resolutionPickerBtn" class="resolution-picker-button" onclick="event.stopPropagation();toggleResolutionPicker()" title="比例和分辨率">
-                                                <i data-lucide="ruler"></i>
-                                                <span class="resolution-picker-labels">
-                                                    <span id="resolutionPickerType" class="resolution-picker-type">尺寸</span>
-                                                    <span class="resolution-picker-dot"></span>
-                                                    <span id="resolutionPickerValue" class="resolution-picker-value">自动</span>
+                                    <div id="imageControls" class="image-controls hidden" data-page-node-id="jF9VzGylH9xAvlUPqYpbZR">
+                                        <div id="resolutionPicker" class="resolution-picker" title="比例和分辨率" data-page-node-id="N4lhNaFDCPbh7EUuHcKmQR">
+                                            <button id="resolutionPickerBtn" class="resolution-picker-button" onclick="event.stopPropagation();toggleResolutionPicker()" title="比例和分辨率" data-page-node-id="EdcQ0nTFFtPtCliPnZPu3i">
+                                                <i data-icon="resolution" data-page-node-id="EnPPM1f9CZCxPxKQf2lczw"></i>
+                                                <span class="resolution-picker-labels" data-page-node-id="EmBa2n9qkSoFTw3kjWv5gu">
+                                                    <span id="resolutionPickerType" class="resolution-picker-type" data-page-node-id="1MkOxUFLao1yDq6A1uxeaM">尺寸</span>
+                                                    <span class="resolution-picker-dot" data-page-node-id="8sZcl2gkskFWqv7DikFjvs"></span>
+                                                    <span id="resolutionPickerValue" class="resolution-picker-value" data-page-node-id="pBxEIoZRHBBrW8u8VSHfct">自动</span>
                                                 </span>
-                                                <i data-lucide="chevron-up"></i>
+                                                <i data-icon="chevronUp" data-page-node-id="Hsa4m0bhTFgKG5qYjPVoap"></i>
                                             </button>
-                                            <div id="resolutionPickerPopover" class="resolution-picker-popover" onclick="event.stopPropagation()">
-                                                <div class="resolution-picker-head">
-                                                    <div class="resolution-picker-title">尺寸选择</div>
-                                                    <div id="resolutionPickerScope" class="resolution-picker-scope">
-                                                        <button id="resolutionScopeAuto" type="button" class="active" onclick="setResolutionPickerScope('auto')">自动</button>
-                                                        <button id="resolutionScopePreset" type="button" onclick="setResolutionPickerScope('preset')">内置尺寸</button>
-                                                        <button id="resolutionScopeCustom" type="button" onclick="setResolutionPickerScope('custom')">自定义</button>
+                                            <div id="resolutionPickerPopover" class="resolution-picker-popover" onclick="event.stopPropagation()" data-page-node-id="DX3i503GlWdIH2jifcCcXD">
+                                                <div class="resolution-picker-head" data-page-node-id="nxYGaHrlFNPEHGUzmr0DUp">
+                                                    <div class="resolution-picker-title" data-page-node-id="Fnrq9CkTHaa3iIvEzNCvA3">尺寸选择</div>
+                                                    <div id="resolutionPickerScope" class="resolution-picker-scope" data-page-node-id="ZnGnqXpIHex1NgAKVhahAc">
+                                                        <button id="resolutionScopeAuto" type="button" class="active" onclick="setResolutionPickerScope('auto')" data-page-node-id="2eV1Elfk94WPqgki0UN0LD">自动</button>
+                                                        <button id="resolutionScopePreset" type="button" onclick="setResolutionPickerScope('preset')" data-page-node-id="wYolmqfKZeynTrkNKP02wZ">内置尺寸</button>
+                                                        <button id="resolutionScopeCustom" type="button" onclick="setResolutionPickerScope('custom')" data-page-node-id="jzSo7c0SdxSk2i7pgkmIF4">自定义</button>
                                                     </div>
                                                 </div>
-                                                <div id="resolutionAutoPane" class="resolution-picker-pane custom">
-                                                    <div class="resolution-custom-box">
-                                                        <div class="resolution-custom-title">自动尺寸</div>
-                                                        <div class="resolution-custom-hint">默认 1024x1024；提示词包含比例或明确尺寸时自动匹配。</div>
+                                                <div id="resolutionAutoPane" class="resolution-picker-pane custom" data-page-node-id="k8ubKsrI9wYb4AaYQ1DAgL">
+                                                    <div class="resolution-custom-box" data-page-node-id="AU2DPLYYqALAMHvSlPc5B9">
+                                                        <div class="resolution-custom-title" data-page-node-id="AyBSxoWAUlyeRFXay2oXkv">自动尺寸</div>
+                                                        <div class="resolution-custom-hint" data-page-node-id="qdPeO4yRIHKJtJs3Y66WBu">默认 1024x1024；提示词包含比例或明确尺寸时自动匹配。</div>
                                                     </div>
                                                 </div>
-                                                <div id="resolutionPresetPane" class="resolution-picker-pane preset hidden">
-                                                    <div id="resolutionRatioList" class="resolution-picker-list">
-                                                        <button id="chat-ratio-square" type="button" class="resolution-picker-option active" onclick="selectBuiltInRatio('square')"><span>1:1</span><small>正方形</small></button>
-                                                        <button id="chat-ratio-portrait" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('portrait')"><span>2:3</span><small>竖图</small></button>
-                                                        <button id="chat-ratio-landscape" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('landscape')"><span>3:2</span><small>横图</small></button>
-                                                        <button id="chat-ratio-portrait43" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('portrait43')"><span>3:4</span><small>竖图</small></button>
-                                                        <button id="chat-ratio-landscape43" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('landscape43')"><span>4:3</span><small>横图</small></button>
-                                                        <button id="chat-ratio-story" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('story')"><span>9:16</span><small>竖屏</small></button>
-                                                        <button id="chat-ratio-wide" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('wide')"><span>16:9</span><small>宽屏</small></button>
+                                                <div id="resolutionPresetPane" class="resolution-picker-pane preset hidden" data-page-node-id="UscvcoeOiA5JN1k7P7bZjc">
+                                                    <div id="resolutionRatioList" class="resolution-picker-list" data-page-node-id="0x9STTk3XWAWAl40R6ZTYK">
+                                                        <button id="chat-ratio-square" type="button" class="resolution-picker-option active" onclick="selectBuiltInRatio('square')" data-page-node-id="iTfl3CFBD8Viny5W1CgrDL"><span data-page-node-id="RUmJ1xn3UzHKE72yn3Hfhs">1:1</span><small data-page-node-id="eoppyQBS1OvBseh5ybk5Go">正方形</small></button>
+                                                        <button id="chat-ratio-portrait" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('portrait')" data-page-node-id="Ocstb2xIv1IDCuOZOwGtXS"><span data-page-node-id="pDDzdRWgUm9G8E2YVpNa9W">2:3</span><small data-page-node-id="XYom3Lw3mJH0yRRbkBpGio">竖图</small></button>
+                                                        <button id="chat-ratio-landscape" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('landscape')" data-page-node-id="Y7EpwjzwwWEhrTJSG2Xt1T"><span data-page-node-id="ZAzWlBmOvTSKpZODkEU0Vm">3:2</span><small data-page-node-id="E7NEJO06fTIRO3nCel9CtH">横图</small></button>
+                                                        <button id="chat-ratio-portrait43" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('portrait43')" data-page-node-id="DrRL0nBySy0CNpvsuDakaj"><span data-page-node-id="zNVDjJKCgcRoGFnOXDKd3S">3:4</span><small data-page-node-id="ERroPtGdVkaj5EZl4Elp20">竖图</small></button>
+                                                        <button id="chat-ratio-landscape43" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('landscape43')" data-page-node-id="BHV0NoWlR7Co9u5MZfs2Js"><span data-page-node-id="ve3wDCBt7d484GFZMqeBQB">4:3</span><small data-page-node-id="D8dNJ3IAxTlWvkHpGCTLR6">横图</small></button>
+                                                        <button id="chat-ratio-story" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('story')" data-page-node-id="GRJa6LzaFqApZTUxYGhNYL"><span data-page-node-id="vEouNzAxA4WVyU9TbttQtx">9:16</span><small data-page-node-id="cEIa9snNqu0BZ53EYeZsOG">竖屏</small></button>
+                                                        <button id="chat-ratio-wide" type="button" class="resolution-picker-option" onclick="selectBuiltInRatio('wide')" data-page-node-id="t5BJjIIwDUfShUVoNK8iP5"><span data-page-node-id="kAXS34rwvjyW1OvyVyZRBj">16:9</span><small data-page-node-id="IBd8DA3YAT1IFXk6jOIN5c">宽屏</small></button>
                                                     </div>
-                                                    <div id="resolutionLevelList" class="resolution-picker-list">
-                                                        <button type="button" class="resolution-picker-option" data-resolution="1k" onclick="selectResolutionPreset('1k')"><span>1K</span><small id="resolutionPreset1k">1024x1024</small></button>
-                                                        <button type="button" class="resolution-picker-option" data-resolution="2k" onclick="selectResolutionPreset('2k')"><span>2K</span><small id="resolutionPreset2k">1536x1536</small></button>
-                                                        <button type="button" class="resolution-picker-option" data-resolution="4k" onclick="selectResolutionPreset('4k')"><span>4K</span><small id="resolutionPreset4k">2048x2048</small></button>
+                                                    <div id="resolutionLevelList" class="resolution-picker-list" data-page-node-id="NhRWe7EYGet1qJwPXtPtWq">
+                                                        <button type="button" class="resolution-picker-option" data-resolution="1k" onclick="selectResolutionPreset('1k')" data-page-node-id="8EOLoTjFr5K4CiO96G3W3k"><span data-page-node-id="tUp1jC8FUaBcU7JdFWFJ0V">1K</span><small id="resolutionPreset1k" data-page-node-id="m0rpmaPUjgKgfpw5zzhSGz">1024x1024</small></button>
+                                                        <button type="button" class="resolution-picker-option" data-resolution="2k" onclick="selectResolutionPreset('2k')" data-page-node-id="C3Hoz8n3gUoSAueafQG4xG"><span data-page-node-id="NxYi2xbnrSAfL4hDuMaRGY">2K</span><small id="resolutionPreset2k" data-page-node-id="Ks01p80VDdhGH38n0zLjZy">1536x1536</small></button>
+                                                        <button type="button" class="resolution-picker-option" data-resolution="4k" onclick="selectResolutionPreset('4k')" data-page-node-id="Ou8ozT7uOYm566cxzhdyiE"><span data-page-node-id="nnS4G8ddl3ZGKScJNo2oQx">4K</span><small id="resolutionPreset4k" data-page-node-id="ZU3tbY2czkafT6hpBdimpV">2048x2048</small></button>
                                                     </div>
                                                 </div>
-                                                <div id="resolutionCustomPane" class="resolution-picker-pane custom hidden">
-                                                    <div class="resolution-custom-box">
-                                                        <div class="resolution-custom-title">自定义分辨率</div>
-                                                        <div class="resolution-custom-row">
-                                                            <input id="customResolutionWidth" type="number" min="256" max="8192" step="1" placeholder="宽">
-                                                            <span>x</span>
-                                                            <input id="customResolutionHeight" type="number" min="256" max="8192" step="1" placeholder="高">
-                                                            <button type="button" onclick="applyCustomResolution()">应用</button>
+                                                <div id="resolutionCustomPane" class="resolution-picker-pane custom hidden" data-page-node-id="ODhZuPJr1C23q81UMPE2Di">
+                                                    <div class="resolution-custom-box" data-page-node-id="3LXkckbBBJYUBrixfmWAkK">
+                                                        <div class="resolution-custom-title" data-page-node-id="qGAHEBQX8QXDvXiate2rfe">自定义分辨率</div>
+                                                        <div class="resolution-custom-row" data-page-node-id="SbJdvNJQZorSQy5ULD0KgH">
+                                                            <input id="customResolutionWidth" type="number" min="256" max="8192" step="1" placeholder="宽" data-page-node-id="QA7CIUK1rwB7bJy5iMl50t">
+                                                            <span data-page-node-id="oBQmjkM9Neb3bW4cLg8apI">x</span>
+                                                            <input id="customResolutionHeight" type="number" min="256" max="8192" step="1" placeholder="高" data-page-node-id="iunF3RLeJ9Nd6kOqHVOerz">
+                                                            <button type="button" onclick="applyCustomResolution()" data-page-node-id="iuSnwQFhmOeWIjfchUkyRE">应用</button>
                                                         </div>
-                                                        <div id="customResolutionHint" class="resolution-custom-hint">输入 256-8192 之间的宽度和高度</div>
+                                                        <div id="customResolutionHint" class="resolution-custom-hint" data-page-node-id="NSBaCblLZrrTBLGbf50KId">输入 256-8192 之间的宽度和高度</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -626,16 +1492,49 @@
                                     </div>
                                 </div>
                             </div>
-                            <button id="sendBtn" onclick="sendMessage()" class="send-btn" title="发送" data-i18n-title="chat.send"><i data-lucide="send"></i></button>
+                            <div class="composer-right">
+                                <div id="modelPicker" class="model-picker" data-page-node-id="4xm0H4rgneg9iDWdMNKq8X">
+                                    <button id="modelPickerBtn" class="model-picker-button" onclick="event.stopPropagation();toggleModelPicker()" title="选择平台和模型" data-page-node-id="xahxtSpDGgIBdMDpmGxyLS">
+                                        <i data-icon="model" data-page-node-id="c6xNaSlWOQbEzpxADIJxuS"></i>
+                                        <span class="model-picker-labels" data-page-node-id="vNo7krvqicEJi4rnqthw1Q">
+                                            <span id="modelPickerProvider" class="model-picker-provider" data-page-node-id="20z3ton5nfL0G0mdsVAMpt">API</span>
+                                            <span class="model-picker-dot" data-page-node-id="bQyjrFKmbBKB1UTY5bh5TF"></span>
+                                            <span id="modelPickerModel" class="model-picker-model" data-page-node-id="5a2S6hsqEaOBThmQOeXGC6">Model</span>
+                                        </span>
+                                        <i data-icon="chevronDown" class="picker-chevron" data-page-node-id="0ltGwoYIRJvtYGD1staP7j"></i>
+                                    </button>
+                                    <div id="modelPickerPopover" class="model-picker-popover" onclick="event.stopPropagation()" data-page-node-id="6HDUDc1WB2H51Co2JZr8tM">
+                                        <div class="model-picker-head" data-page-node-id="8mJPM4emZQBijBH58qyDrj">
+                                            <div id="modelPickerTitle" class="model-picker-title" data-page-node-id="5OdeLMvdEhlKhcmGlCnpaC">选择模型</div>
+                                            <div id="modelPickerScope" class="model-picker-scope" data-page-node-id="n6jcAYZEnF0DGC2iAEcTb5"></div>
+                                        </div>
+                                        <div class="model-picker-body" data-page-node-id="zE3Eb5BgACEfSI35YagAcZ">
+                                            <div id="modelProviderList" class="model-picker-providers" onmouseleave="scheduleSubmenuClose()" data-page-node-id="2oxDcRAjDHBtX02bVaq7CY"></div>
+                                        </div>
+                                    </div>
+                                    <div id="modelSubmenu" class="model-picker-submenu" onclick="event.stopPropagation()" onmouseenter="cancelSubmenuClose()" onmouseleave="scheduleSubmenuClose()" data-page-node-id="submenuV20"></div>
+                                </div>
+                                <div id="thinkPicker" class="model-picker think-picker" style="display:none" data-page-node-id="Q1BtAISzVtVJJaHwNZD25w">
+                                    <button id="thinkChipBtn" class="model-picker-button think-chip-btn" title="思考强度" aria-label="思考强度" data-page-node-id="IG4ZCI5fD7DW6rdMk6N0La">
+                                        <span class="model-picker-labels think-chip-labels" data-page-node-id="MHstgAsyTgvsON4mpm3yys"><span id="thinkChipLabel" class="think-chip-level" data-page-node-id="ggvcq36BoT2YaLZG8QGxrH">中</span></span>
+                                        <i data-icon="chevronUp" class="picker-chevron" data-page-node-id="oUK3Q0qhtn68saAJBtRmBK"></i>
+                                    </button>
+                                    <div id="thinkPopover" class="model-picker-popover think-popover" onclick="event.stopPropagation()" data-page-node-id="p6vAY1VtLvPcpJjaEvSXmF">
+                                        <div class="model-picker-head" data-page-node-id="E2L8Lw2w5GIFN77GG9aIy2"><div class="model-picker-title" data-page-node-id="ZGBsJC4zv1NyRYskXkTWvy">思考强度</div></div>
+                                        <div id="thinkList" class="model-picker-models think-list" data-page-node-id="R8vMLLSpnaUIuqmxcRt0YC"></div>
+                                    </div>
+                                </div>
+                                <button id="sendBtn" onclick="sendMessage()" class="send-btn" title="发送" data-i18n-title="chat.send" data-page-node-id="tSqhtMteGYAD9isoIMTYXc"><i data-icon="send" data-page-node-id="MigLHY5wYRgvGllwP1nHuh"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
-    <div id="imagePreviewModal" class="image-preview-modal" onclick="closeImagePreview()">
-        <button class="image-preview-close" title="关闭" aria-label="关闭" onclick="event.stopPropagation();closeImagePreview()"><i data-lucide="x"></i></button>
-        <img id="imagePreviewImg" src="" alt="preview" onclick="event.stopPropagation()">
+    <div id="imagePreviewModal" class="image-preview-modal" onclick="closeImagePreview()" data-page-node-id="nVdWDZl3CQFqQ6BTkqSy2J">
+        <button class="image-preview-close" title="关闭" aria-label="关闭" onclick="event.stopPropagation();closeImagePreview()" data-page-node-id="NOM0JVU5CkATrFLQGqjhi6"><i data-icon="close" data-page-node-id="vEE4FnwiCrBxV8iaMPNK2V"></i></button>
+        <img id="imagePreviewImg" src="" alt="preview" onclick="event.stopPropagation()" data-page-node-id="MVlBOFPS6vBHVzSkDs07uk">
     </div>
 
     <script>
@@ -660,7 +1559,7 @@
             renderThreads();
         });
         window.addEventListener('resize', () => {
-            if(document.getElementById('modelPicker')?.classList.contains('open')) positionModelPicker();
+            if(document.getElementById('modelPicker')?.classList.contains('open')){ closeModelSubmenu(); positionModelPicker(); }
             if(document.getElementById('resolutionPicker')?.classList.contains('open')) positionResolutionPicker();
         });
         function uuid(){
@@ -700,6 +1599,16 @@
         let activeImageProvider = savedChatSettings.activeImageProvider || 'comfly';
         let activeImageModel = savedChatSettings.activeImageModel || '';
         let systemPrompt = String(savedChatSettings.systemPrompt || '').trim();
+        /* 系统角色库（persona）：personaLibrary 为后端返回的角色列表，
+           activePersonaId 为当前命中角色的 id（空串 = 自定义 / 未选择）。
+           仅作为快捷填充：真正生效的仍然是 systemPrompt 自由文本。 */
+        let personaLibrary = [];
+        /* 长期记忆库（memory）：memoryLibrary 为后端返回的记忆列表，
+           仅用于「管理」UI 渲染；记忆不参与 textarea，由服务端在请求时自动注入 system prompt。 */
+        let memoryLibrary = [];
+        /* 记忆作用域：global（所有对话生效）/ conversation（仅当前对话生效）。 */
+        let memoryScope = 'global';
+        let activePersonaId = String(savedChatSettings.activePersonaId || '');
         let apiProviders = [];
         let chatProviderModels = isObject(savedChatSettings.chatProviderModels) ? savedChatSettings.chatProviderModels : {};
         let chatRatio = ['square','portrait','portrait43','landscape43','landscape','story','wide'].includes(savedChatSettings.chatRatio) ? savedChatSettings.chatRatio : 'square';
@@ -728,8 +1637,8 @@
             // ── OpenAI ──
             'gpt-image-2': {
                 square: [['1024x1024','1k'], ['2048x2048','2k']],
-                portrait: [['1024x1536','1k']],
-                landscape: [['1536x1024','1k']]
+                portrait: [['1024x1536','1k'], ['2160x3840','4k']],
+                landscape: [['1536x1024','1k'], ['2048x1152','2k'], ['3840x2160','4k']]
             },
             'gpt-image-1': {
                 square: [['1024x1024','1k']],
@@ -904,6 +1813,11 @@
 
         function getSizeOptionsForModel(model) {
             const m = String(model || '').toLowerCase();
+            // Gemini 图模型的官方模型名（gemini-3-pro-image-preview / gemini-3.1-flash-image-preview）
+            // 不含 "nano-banana" 字样，直接匹配会回落通用 SIZE_OPTIONS（square 4K 仅 2048x2048），
+            // 导致 4K 被缩水。这里先按别名映射到对应的 Nano Banana 尺寸表。
+            if (m.includes('gemini-3-pro-image')) return MODEL_SIZE_PRESETS['nano-banana-pro'];
+            if (m.includes('gemini-3.1-flash-image')) return MODEL_SIZE_PRESETS['nano-banana-2'];
             for (const [key, sizes] of Object.entries(MODEL_SIZE_PRESETS)) {
                 if (m.includes(key)) return sizes;
             }
@@ -938,6 +1852,7 @@
                     activeImageProvider,
                     activeImageModel,
                     systemPrompt,
+                    activePersonaId,
                     chatProviderModels,
                     chatRatio,
                     chatResolution,
@@ -952,6 +1867,8 @@
         function syncSystemPromptUI(){
             const input = document.getElementById('systemPromptInput');
             if(input) input.value = systemPrompt || '';
+            /* 角色高亮态由文本反推，保证与 systemPrompt 永远一致（含首次读 localStorage） */
+            if(typeof syncPersonaState === 'function') syncPersonaState();
         }
 
         function toggleSystemPrompt(force){
@@ -969,15 +1886,18 @@
         function saveSystemPromptFromUI(){
             const input = document.getElementById('systemPromptInput');
             systemPrompt = String(input?.value || '').trim();
+            if(typeof syncPersonaState === 'function') syncPersonaState();
             saveChatSettings();
             toggleSystemPrompt(false);
         }
 
         function clearSystemPrompt(){
             systemPrompt = '';
+            if(typeof activePersonaId !== 'undefined') activePersonaId = '';
             const input = document.getElementById('systemPromptInput');
             if(input) input.value = '';
             saveChatSettings();
+            if(typeof renderPersonaChips === 'function') renderPersonaChips();
         }
 
         function currentSystemPrompt(){
@@ -985,6 +1905,376 @@
             const input = document.getElementById('systemPromptInput');
             const value = pop?.classList.contains('open') && input ? input.value : systemPrompt;
             return String(value || '').trim();
+        }
+
+        /* ══════════════════════════════════════════════════════════
+           系统角色库（persona）
+           定位：纯快捷填充。选中角色 = 把该角色的 content 写进
+                 #systemPromptInput 并同步写入 systemPrompt / localStorage。
+                 systemPrompt 始终是唯一生效值，角色库不参与请求构造，
+                 因此不影响 currentSystemPrompt() 与既有生图 / chat / agent 注入。
+           ══════════════════════════════════════════════════════════ */
+
+        function personaById(id){
+            const target = String(id || '');
+            if(!target) return null;
+            return personaLibrary.filter(item => item && item.id === target)[0] || null;
+        }
+
+        /** 反查：给定文本是否正好等于某个角色的 content，是则返回其 id，否则 ''。 */
+        function personaIdForContent(text){
+            const value = String(text || '').trim();
+            if(!value) return '';
+            const hit = personaLibrary.filter(item => item && String(item.content || '').trim() === value)[0];
+            return hit ? hit.id : '';
+        }
+
+        /** 当前弹窗里正在编辑的文本（弹窗开着读 textarea，否则读已保存的 systemPrompt）。 */
+        function personaCurrentText(){
+            const pop = document.getElementById('systemPromptPopover');
+            const input = document.getElementById('systemPromptInput');
+            if(pop?.classList.contains('open') && input) return String(input.value || '');
+            return String(systemPrompt || '');
+        }
+
+        function setPersonaStatus(text){
+            const status = document.getElementById('personaStatus');
+            if(status) status.textContent = String(text || '');
+        }
+
+        /** 状态文案唯一来源：命中角色 → 角色名；有文本未命中 → 自定义；空 → 未选择。 */
+        function personaStatusText(){
+            const active = personaById(activePersonaId);
+            if(active) return '当前角色：' + String(active.name || '');
+            return personaCurrentText().trim() ? '自定义提示词' : '未选择角色';
+        }
+
+        /** 临时提示（如"请填写角色名称"），2s 后自动恢复到正常状态文案。 */
+        function flashPersonaStatus(text){
+            setPersonaStatus(text);
+            setTimeout(() => { renderPersonaChips(); }, 2000);
+        }
+
+        function renderPersonaChips(){
+            const row = document.getElementById('personaChips');
+            if(!row) return;
+            row.textContent = '';
+            const active = personaById(activePersonaId);
+            if(!personaLibrary.length){
+                const tip = document.createElement('span');
+                tip.className = 'persona-hint';
+                tip.textContent = '角色库加载中…';
+                row.appendChild(tip);
+            } else {
+                personaLibrary.forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'persona-chip' + (item.id === activePersonaId ? ' active' : '') + (item.builtin ? ' builtin' : '');
+                    btn.dataset.personaId = String(item.id || '');
+                    btn.textContent = String(item.name || '未命名角色');
+                    btn.title = String(item.description || item.name || '');
+                    btn.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        applyPersona(item.id);
+                    });
+                    row.appendChild(btn);
+                });
+            }
+            setPersonaStatus(personaStatusText());
+
+            const delBtn = document.getElementById('personaDeleteBtn');
+            if(delBtn) delBtn.classList.toggle('show', !!(active && !active.builtin));
+            if(window.lucide && lucide.createIcons) { try { lucide.createIcons(); } catch(e) {} }
+            /* chips 是新建的 DOM 节点，运行时主题注入的「框」还没被兜底过，这里补一次 */
+            if(window.__novaiForcePersonas) { try { window.__novaiForcePersonas(); } catch(e) {} }
+        }
+
+        /** 文本变化后重新推导选中态（编辑过 → 自定义）。不触碰 systemPrompt，安全可重复调用。 */
+        function syncPersonaState(){
+            activePersonaId = personaIdForContent(personaCurrentText());
+            renderPersonaChips();
+        }
+
+        /** #systemPromptInput 的 oninput：同步角色高亮态与状态文案。
+            只在「命中角色 id 变化」或「状态文案变化」时才落盘 + 重绘，避免每敲一个字都重排。 */
+        function handleSystemPromptInput(){
+            const prevId = activePersonaId;
+            const prevStatus = String(document.getElementById('personaStatus')?.textContent || '');
+            activePersonaId = personaIdForContent(personaCurrentText());
+            if(activePersonaId !== prevId || personaStatusText() !== prevStatus){
+                saveChatSettings();
+                renderPersonaChips();
+            }
+        }
+
+        /** 选中角色：把 content 填进 textarea，并立即写入 systemPrompt + localStorage。 */
+        function applyPersona(id){
+            const persona = personaById(id);
+            if(!persona) return;
+            const content = String(persona.content || '');
+            const input = document.getElementById('systemPromptInput');
+            if(input) input.value = content;
+            activePersonaId = persona.id;
+            systemPrompt = content.trim();
+            saveChatSettings();
+            renderPersonaChips();
+        }
+
+        async function loadPersonaLibrary(){
+            try {
+                const data = await fetch('/api/personas').then(r => r.json());
+                personaLibrary = Array.isArray(data?.personas) ? data.personas : [];
+            } catch(e) {
+                personaLibrary = [];
+            }
+            syncPersonaState();
+            return personaLibrary;
+        }
+
+        function togglePersonaSaveBox(force){
+            const box = document.getElementById('personaSaveBox');
+            if(!box) return;
+            const shouldOpen = typeof force === 'boolean' ? force : !box.classList.contains('open');
+            box.classList.toggle('open', shouldOpen);
+            if(shouldOpen){
+                const input = document.getElementById('personaNameInput');
+                if(input){ input.value = String(personaById(activePersonaId)?.name || ''); input.focus(); }
+            }
+        }
+
+        async function submitPersonaSave(){
+            const content = personaCurrentText().trim();
+            if(!content){ flashPersonaStatus('请先填写提示词内容'); return; }
+            const nameInput = document.getElementById('personaNameInput');
+            const name = String(nameInput?.value || '').trim();
+            if(!name){ flashPersonaStatus('请填写角色名称'); if(nameInput) nameInput.focus(); return; }
+            const btn = document.getElementById('personaSaveConfirmBtn');
+            if(btn) btn.disabled = true;
+            try {
+                const res = await fetch('/api/personas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description: '', content })
+                });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data?.detail || '保存失败');
+                personaLibrary = Array.isArray(data?.personas) ? data.personas : personaLibrary;
+                activePersonaId = String(data?.persona?.id || '');
+                /* 必须同步把文本提交给 systemPrompt：否则下一次 syncSystemPromptUI()
+                   （打开弹窗时 input.value = systemPrompt）会把这段刚存成角色的文本冲掉，
+                   角色高亮也随之丢失。存角色 ≡ 认可这段文本，副作用可接受。 */
+                systemPrompt = content;
+                saveChatSettings();
+                togglePersonaSaveBox(false);
+                renderPersonaChips();
+            } catch(e) {
+                flashPersonaStatus(String(e?.message || '保存失败'));
+            } finally {
+                if(btn) btn.disabled = false;
+            }
+        }
+
+        async function deleteActivePersona(){
+            const persona = personaById(activePersonaId);
+            if(!persona || persona.builtin) return;
+            try {
+                const res = await fetch('/api/personas/' + encodeURIComponent(persona.id), { method: 'DELETE' });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data?.detail || '删除失败');
+                personaLibrary = Array.isArray(data?.personas) ? data.personas : personaLibrary;
+                activePersonaId = personaIdForContent(personaCurrentText());
+                saveChatSettings();
+                renderPersonaChips();
+            } catch(e) {
+                flashPersonaStatus(String(e?.message || '删除失败'));
+            }
+        }
+
+        /* ════════════════════════════════════════════════════════════════════════
+           长期记忆库（memory）
+           定位：服务端自动注入。每条记忆带 enabled 开关（默认开），
+                请求构造时由后端 memory_block() 把已启用记忆合并进 system prompt，
+                前端 textarea（currentSystemPrompt）不感知，因此 chat / 生图 / agent 三处行为一致。
+                本模块只负责「管理」UI：列表渲染、开关、添加、删除。
+           ══════════════════════════════════════════════════════════════════════ */
+
+        function memoryById(id){
+            const target = String(id || '');
+            if(!target) return null;
+            return memoryLibrary.filter(item => item && item.id === target)[0] || null;
+        }
+
+        function memoryEnabledCount(){
+            return memoryLibrary.filter(item => item && item.enabled !== false).length;
+        }
+
+        function setMemoryStatus(text){
+            const status = document.getElementById('memoryStatus');
+            if(status) status.textContent = String(text || '');
+        }
+
+        function setMemoryScope(scope){
+            memoryScope = (scope === 'conversation') ? 'conversation' : 'global';
+            document.querySelectorAll('#memoryScope .scope-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-scope') === memoryScope);
+            });
+        }
+
+        function renderMemoryList(){
+            const list = document.getElementById('memoryList');
+            if(!list) return;
+            list.textContent = '';
+            if(!memoryLibrary.length){
+                const tip = document.createElement('span');
+                tip.className = 'memory-hint';
+                tip.textContent = '暂无记忆，在下方添加一条长期使用偏好';
+                list.appendChild(tip);
+            } else {
+                memoryLibrary.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'memory-row' + (item.enabled === false ? ' disabled' : '');
+                    const toggle = document.createElement('button');
+                    toggle.type = 'button';
+                    toggle.className = 'memory-toggle' + (item.enabled === false ? '' : ' on');
+                    toggle.title = item.enabled === false ? '已停用（点击启用）' : '已启用（点击停用）';
+                    toggle.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        toggleMemory(item.id, item.enabled === false);
+                    });
+                    const text = document.createElement('span');
+                    text.className = 'memory-text';
+                    text.textContent = String(item.content || '');
+                    text.title = String(item.content || '');
+                    const del = document.createElement('button');
+                    del.type = 'button';
+                    del.className = 'memory-del';
+                    del.title = '删除';
+                    del.innerHTML = '<i data-icon="trash"></i>';
+                    del.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        deleteMemory(item.id);
+                    });
+                    row.appendChild(toggle);
+                    row.appendChild(text);
+                    const tag = document.createElement('button');
+                    tag.type = 'button';
+                    tag.className = 'memory-tag' + (item.scope === 'conversation' ? '' : ' global');
+                    tag.textContent = item.scope === 'conversation' ? '本对话' : '全局';
+                    tag.title = item.scope === 'conversation' ? '仅当前对话生效 · 点击切为全局' : '全局生效 · 点击切为本对话';
+                    tag.addEventListener('click', (event) => {
+                        event.stopPropagation();
+                        switchMemoryScope(item);
+                    });
+                    row.appendChild(tag);
+                    row.appendChild(del);
+                    list.appendChild(row);
+                });
+            }
+            setMemoryStatus(memoryEnabledCount() + ' 条已启用');
+            if(window.lucide && lucide.createIcons) { try { lucide.createIcons(); } catch(e) {} }
+            /* 记忆行是新建 DOM 节点，运行时主题注入的「框」还没被兜底过，这里补一次 */
+            if(window.__novaiForceMemories) { try { window.__novaiForceMemories(); } catch(e) {} }
+        }
+
+        async function loadMemoryLibrary(){
+            try {
+                const data = await fetch('/api/memories').then(r => r.json());
+                memoryLibrary = Array.isArray(data?.memories) ? data.memories : [];
+            } catch(e) {
+                memoryLibrary = [];
+            }
+            renderMemoryList();
+            return memoryLibrary;
+        }
+
+        async function submitMemoryAdd(){
+            const input = document.getElementById('memoryInput');
+            const content = String(input?.value || '').trim();
+            if(!content){ if(input) input.focus(); return; }
+            const btn = document.getElementById('memoryAddBtn');
+            if(btn) btn.disabled = true;
+            try {
+                let scope = memoryScope;
+                let conversationId = '';
+                let fellBack = false;
+                if(scope === 'conversation'){
+                    conversationId = currentConversation?.id || '';
+                    if(!conversationId){
+                        scope = 'global';
+                        conversationId = '';
+                        fellBack = true;
+                        setMemoryScope('global');
+                    }
+                }
+                const res = await fetch('/api/memories', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content, scope, conversation_id: conversationId })
+                });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data?.detail || '添加失败');
+                memoryLibrary = Array.isArray(data?.memories) ? data.memories : memoryLibrary;
+                if(input) input.value = '';
+                renderMemoryList();
+                if(fellBack) setMemoryStatus(memoryEnabledCount() + ' 条已启用 · 当前对话尚未创建，已存为全局');
+            } catch(e) {
+                setMemoryStatus(String(e?.message || '添加失败'));
+            } finally {
+                if(btn) btn.disabled = false;
+            }
+        }
+
+        async function toggleMemory(id, enabled){
+            try {
+                const res = await fetch('/api/memories/' + encodeURIComponent(id), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data?.detail || '更新失败');
+                memoryLibrary = Array.isArray(data?.memories) ? data.memories : memoryLibrary;
+                renderMemoryList();
+            } catch(e) {
+                setMemoryStatus(String(e?.message || '更新失败'));
+            }
+        }
+
+        async function switchMemoryScope(item){
+            const nextScope = item.scope === 'conversation' ? 'global' : 'conversation';
+            let conversationId = '';
+            if(nextScope === 'conversation'){
+                conversationId = currentConversation?.id || '';
+                if(!conversationId){
+                    setMemoryStatus('当前对话尚未创建，无法切到「本对话」');
+                    return;
+                }
+            }
+            try {
+                const res = await fetch('/api/memories/' + encodeURIComponent(item.id), {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scope: nextScope, conversation_id: conversationId })
+                });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data?.detail || '切换失败');
+                memoryLibrary = Array.isArray(data?.memories) ? data.memories : memoryLibrary;
+                renderMemoryList();
+            } catch(e) {
+                setMemoryStatus(String(e?.message || '切换失败'));
+            }
+        }
+
+        async function deleteMemory(id){
+            try {
+                const res = await fetch('/api/memories/' + encodeURIComponent(id), { method: 'DELETE' });
+                const data = await res.json().catch(() => ({}));
+                if(!res.ok) throw new Error(data?.detail || '删除失败');
+                memoryLibrary = Array.isArray(data?.memories) ? data.memories : memoryLibrary;
+                renderMemoryList();
+            } catch(e) {
+                setMemoryStatus(String(e?.message || '删除失败'));
+            }
         }
 
         function uniqueModels(list){
@@ -1119,6 +2409,11 @@
             picker.classList.toggle('open', shouldOpen);
             pop?.classList.toggle('open', shouldOpen);
             if(!shouldOpen) {
+                closeModelSubmenu();
+                const submenu = document.getElementById('modelSubmenu');
+                if(submenu && submenu.parentElement === document.documentElement){
+                    (document.getElementById('modelPicker') || picker).appendChild(submenu);
+                }
                 if(pop && modelPickerHome && pop.parentElement === document.documentElement) {
                     modelPickerHome.appendChild(pop);
                 }
@@ -1147,10 +2442,10 @@
             if(!chevron) {
                 chevron = document.createElement('i');
                 chevron.className = 'picker-chevron';
-                chevron.setAttribute('data-lucide', isOpen ? 'chevron-up' : 'chevron-down');
+                chevron.setAttribute('data-icon', isOpen ? 'chevronUp' : 'chevronDown');
                 btn.appendChild(chevron);
             }
-            chevron.setAttribute('data-lucide', isOpen ? 'chevron-up' : 'chevron-down');
+            chevron.setAttribute('data-icon', isOpen ? 'chevronUp' : 'chevronDown');
             if(window.lucide?.createIcons) lucide.createIcons({ icons: lucide.icons });
         }
 
@@ -1161,10 +2456,14 @@
             const rect = btn.getBoundingClientRect();
             const viewportW = (window.visualViewport?.width || window.innerWidth);
             const viewportH = (window.visualViewport?.height || window.innerHeight);
-            const width = Math.min(360, Math.max(260, viewportW - 32));
+            const width = viewportW < 720
+                ? Math.min(300, Math.max(220, viewportW - 24))
+                : Math.min(200, Math.max(168, viewportW - 24));
             const safe = 12;
-            const gap = 2;
-            const absoluteMaxH = Math.min(420, Math.round(viewportH * 0.68)); // overall cap
+            const gap = 6;
+            const absoluteMaxH = viewportW < 720
+                ? Math.min(260, Math.round(viewportH * 0.55))
+                : Math.min(340, Math.round(viewportH * 0.62)); // overall cap
             // render popover visible for measurement
             pop.style.visibility = 'hidden';
             pop.style.display = 'grid';
@@ -1227,15 +2526,15 @@
             const rect = btn.getBoundingClientRect();
             const viewportW = (window.visualViewport?.width || window.innerWidth);
             const viewportH = (window.visualViewport?.height || window.innerHeight);
-            const desiredWidth = chatResolution === 'auto' ? 300 : (chatResolution === 'custom' ? 340 : 420);
-            const width = Math.min(desiredWidth, Math.max(260, viewportW - 32));
+            const desiredWidth = chatResolution === 'auto' ? 264 : (chatResolution === 'custom' ? 264 : 312);
+            const width = Math.min(desiredWidth, Math.max(232, viewportW - 24));
             const safeX = 12;
             const safeTop = 12;
             const safeBottom = 18;
-            const gap = 10;
+            const gap = 6;
             const left = Math.min(Math.max(safeX, rect.left + rect.width / 2 - width / 2), Math.max(safeX, viewportW - width - safeX));
             const availableAbove = Math.max(96, rect.top - safeTop - gap);
-            const initialHeight = Math.min(chatResolution === 'auto' ? 220 : 390, availableAbove, viewportH - safeTop - safeBottom);
+            const initialHeight = Math.min(chatResolution === 'auto' ? 180 : 300, availableAbove, viewportH - safeTop - safeBottom);
             const initialTop = Math.max(safeTop, rect.top - initialHeight - gap);
             pop.style.setProperty('--resolution-picker-left', `${Math.round(left)}px`);
             pop.style.setProperty('--resolution-picker-top', `${Math.round(initialTop)}px`);
@@ -1272,60 +2571,131 @@
             const picker = document.getElementById('modelPicker');
             const scope = document.getElementById('modelPickerScope');
             const providerListEl = document.getElementById('modelProviderList');
-            const modelListEl = document.getElementById('modelList');
             const providerLabel = document.getElementById('modelPickerProvider');
             const modelLabel = document.getElementById('modelPickerModel');
             const title = document.getElementById('modelPickerTitle');
-            if(!picker || !scope || !providerListEl || !modelListEl) return;
+            if(!picker || !scope || !providerListEl) return;
             const currentPid = currentProviderId(kind);
             const currentMdl = currentModel(kind);
             providerLabel.textContent = providerNameById(currentPid, kind);
-            if(mode === 'agent') {
-                modelLabel.textContent = `${shortModelName(activeChatModel)} + ${shortModelName(activeImageModel)}`;
-            } else {
-                modelLabel.textContent = shortModelName(currentMdl);
-            }
-            title.textContent = mode === 'agent' ? 'Agent 模型' : (kind === 'image' ? '生图模型' : '对话模型');
+            /* 模型选择 chip 只显示当前作用域的模型本身；agent 模式也要拆成对话/图像两套
+               chip 来选，不再拼接成一个「ChatModel + ImageModel」的长串 */
+            modelLabel.textContent = shortModelName(currentMdl);
+            /* 对话/图像 切换（仅 agent 模式显示） */
+            title.textContent = '选择模型';
             scope.innerHTML = mode === 'agent'
                 ? `<button class="${kind === 'chat' ? 'active' : ''}" onclick="setModelPickerScope('chat')">对话</button><button class="${kind === 'image' ? 'active' : ''}" onclick="setModelPickerScope('image')">图像</button>`
                 : '';
             scope.style.display = mode === 'agent' ? 'flex' : 'none';
+            /* 单栏供应商：悬停 / 点击某供应商 → 飞出该供应商的模型子菜单 */
             const providers = kind === 'image' ? imageProviders() : chatProviders();
             providerListEl.innerHTML = providers.length
                 ? providers.map(p => {
                     const isActive = p.id === currentPid;
-                    const models = uniqueModels(kind === 'image' ? p.image_models : p.chat_models);
-                    return `<button class="model-picker-provider-btn ${isActive ? 'active' : ''}" data-pid="${escapeHtml(p.id)}" onmouseenter="hoverProvider('${escapeHtml(p.id)}','${kind}')" onclick="setProvider('${escapeHtml(p.id)}','${kind}')"><span class="p-name">${escapeHtml(p.name || p.id)}</span><span class="p-count">${models.length}${isActive ? '<i data-lucide="check" class="p-check"></i>' : ''}</span></button>`;
+                    const tail = isActive
+                        ? '<i data-icon="check" class="p-check"></i>'
+                        : '<i data-icon="chevronRight" class="p-arrow"></i>';
+                    return `<button class="model-picker-provider-btn ${isActive ? 'active' : ''}" data-pid="${escapeHtml(p.id)}" onmouseenter="hoverProvider('${escapeHtml(p.id)}','${kind}')" onclick="hoverProvider('${escapeHtml(p.id)}','${kind}')"><span class="p-name">${escapeHtml(p.name || p.id)}</span>${tail}</button>`;
                 }).join('')
                 : `<div class="model-picker-empty">暂无平台</div>`;
-            // render models for current provider by default
-            renderHoveredModels(currentPid, kind);
+            closeModelSubmenu();
             lucide.createIcons();
         }
 
         function renderHoveredModels(pid, kind){
-            const modelListEl = document.getElementById('modelList');
-            if(!modelListEl) return;
+            const submenu = document.getElementById('modelSubmenu');
+            if(!submenu) return;
             const provider = providerById(pid, kind);
+            if(!provider) return;
             const models = uniqueModels(kind === 'image' ? provider.image_models : provider.chat_models);
             const currentMdl = currentModel(kind);
-            // highlight hovered provider on left
+            // 高亮当前悬停的供应商
             document.querySelectorAll('.model-picker-provider-btn').forEach(btn => {
                 btn.classList.toggle('hovered', btn.dataset.pid === pid);
             });
-            modelListEl.innerHTML = models.length
-                ? models.map(m => `<button class="model-picker-model-btn ${m === currentMdl ? 'active' : ''}" onclick="setProvider('${escapeHtml(pid)}','${kind}');setActiveModel('${escapeHtml(m)}','${kind}');toggleModelPicker(false)"><span>${escapeHtml(shortModelName(m))}</span>${m === currentMdl ? '<i data-lucide="check"></i>' : ''}</button>`).join('')
+            submenu.innerHTML = models.length
+                ? models.map(m => `<button class="model-picker-model-btn ${m === currentMdl ? 'active' : ''}" data-model="${escapeHtml(m)}" onclick="setProvider('${escapeHtml(pid)}','${kind}');setActiveModel('${escapeHtml(m)}','${kind}');toggleModelPicker(false)"><span>${escapeHtml(shortModelName(m))}</span>${m === currentMdl ? '<i data-icon="check"></i>' : ''}</button>`).join('')
                 : `<div class="model-picker-empty">暂无模型</div>`;
             lucide.createIcons();
         }
 
+        /* ── 模型子菜单：悬停供应商飞出，位置跟随该供应商条目 ── */
+        let modelSubmenuTimer = null;
+        function cancelSubmenuClose(){
+            if(modelSubmenuTimer){ clearTimeout(modelSubmenuTimer); modelSubmenuTimer = null; }
+        }
+        function scheduleSubmenuClose(){
+            cancelSubmenuClose();
+            modelSubmenuTimer = setTimeout(() => { closeModelSubmenu(); }, 180);
+        }
+        function closeModelSubmenu(){
+            cancelSubmenuClose();
+            const submenu = document.getElementById('modelSubmenu');
+            if(submenu) submenu.classList.remove('open');
+            document.querySelectorAll('.model-picker-provider-btn.hovered').forEach(btn => btn.classList.remove('hovered'));
+        }
+        function positionModelSubmenu(rowEl){
+            const submenu = document.getElementById('modelSubmenu');
+            const pop = document.getElementById('modelPickerPopover');
+            if(!submenu || !pop || !rowEl) return;
+            const viewportW = (window.visualViewport?.width || window.innerWidth);
+            const viewportH = (window.visualViewport?.height || window.innerHeight);
+            const safe = 8, gap = 4;
+            const narrow = viewportW < 720;
+            const width = narrow
+                ? Math.min(360, Math.max(220, Math.round(pop.getBoundingClientRect().width || 240)))
+                : Math.min(212, Math.max(160, viewportW - 24));
+            // 先渲染可见以量高
+            submenu.style.setProperty('--submenu-width', `${Math.round(width)}px`);
+            submenu.style.removeProperty('--submenu-max-height');
+            submenu.style.visibility = 'hidden';
+            submenu.style.display = 'flex';
+            const naturalH = submenu.getBoundingClientRect().height;
+            submenu.style.display = '';
+            submenu.style.visibility = '';
+            const maxH = Math.min(naturalH, viewportH - safe * 2);
+            submenu.style.setProperty('--submenu-max-height', `${Math.round(maxH)}px`);
+            const popRect = pop.getBoundingClientRect();
+            const rowRect = rowEl.getBoundingClientRect();
+            let left, top;
+            if(narrow){
+                // 弹窗下方铺满弹窗宽度（取代原右侧飞出）
+                left = Math.max(safe, Math.min(popRect.left, viewportW - width - safe));
+                let candidate = popRect.bottom + gap;
+                if(candidate + maxH > viewportH - safe){ candidate = Math.max(safe, popRect.top - maxH - gap); }
+                top = candidate;
+            } else {
+                // 优先放右侧，空间不足翻左侧
+                left = popRect.right + gap;
+                if(left + width > viewportW - safe) left = popRect.left - width - gap;
+                if(left < safe) left = Math.max(safe, Math.min(popRect.right + gap, viewportW - width - safe));
+                top = rowRect.top - 5;
+                if(top + maxH > viewportH - safe) top = viewportH - maxH - safe;
+                if(top < safe) top = safe;
+            }
+            submenu.style.left = `${Math.round(left)}px`;
+            submenu.style.top = `${Math.round(top)}px`;
+        }
         function hoverProvider(pid, kind){
+            cancelSubmenuClose();
             renderHoveredModels(pid, kind);
+            const rowEl = document.querySelector(`.model-picker-provider-btn[data-pid="${CSS.escape(String(pid))}"]`);
+            const submenu = document.getElementById('modelSubmenu');
+            if(!submenu || !rowEl) return;
+            if(submenu.parentElement !== document.documentElement) document.documentElement.appendChild(submenu);
+            submenu.classList.add('open');
+            positionModelSubmenu(rowEl);
         }
 
         async function loadConversations(){
-            const data = await fetch('/api/conversations', {headers:{'X-User-ID':userId}}).then(r=>r.json());
+            let data;
+            try {
+                data = await fetch('/api/conversations', {headers:{'X-User-ID':userId}}).then(r=>r.json());
+            } catch(e) { data = {conversations: []}; }
             conversations = data.conversations || [];
+            /* 会话列表刷新后通知空态欢迎台的「最近会话」重新填充
+               （conversations 是 let 声明，不会挂到 window 上，无法被外部直接读取） */
+            try { window.dispatchEvent(new CustomEvent('novai:conversations-loaded', { detail: conversations })); } catch(_){}
             renderThreads();
             if(!currentConversation) {
                 const rememberedId = rememberedConversation();
@@ -1353,7 +2723,7 @@
                 del.className = 'thread-delete';
                 del.title = tr('chat.deleteTitle');
                 del.onclick = (event) => deleteConversation(item.id, event);
-                del.innerHTML = '<i data-lucide="x" class="w-3.5 h-3.5"></i>';
+                del.innerHTML = '<i data-icon="close" class="w-3.5 h-3.5"></i>';
                 row.appendChild(btn);
                 row.appendChild(del);
                 list.appendChild(row);
@@ -1401,14 +2771,26 @@
         document.addEventListener('click', (event) => {
             const picker = document.getElementById('modelPicker');
             const popover = document.getElementById('modelPickerPopover');
-            if(picker?.classList.contains('open') && !picker.contains(event.target) && !popover?.contains(event.target)) toggleModelPicker(false);
+            if(picker?.classList.contains('open')){
+                const submenuEl0 = document.getElementById('modelSubmenu');
+                if(!picker.contains(event.target) && !popover?.contains(event.target) && !submenuEl0?.contains(event.target)) toggleModelPicker(false);
+            }
             const resolutionPicker = document.getElementById('resolutionPicker');
             const resolutionPopover = document.getElementById('resolutionPickerPopover');
             if(resolutionPicker?.classList.contains('open') && !resolutionPicker.contains(event.target) && !resolutionPopover?.contains(event.target)) toggleResolutionPicker(false);
-            if(window.innerWidth > 900) return;
-            const rail = document.getElementById('historyPopover');
-            const actions = document.querySelector('.top-actions');
-            if(rail?.classList.contains('open') && !rail.contains(event.target) && actions && !actions.contains(event.target)) toggleHistory(false);
+            const thinkPickerEl = document.getElementById('thinkPicker');
+            const thinkPopoverEl = document.getElementById('thinkPopover');
+            if(thinkPickerEl?.classList.contains('open') && !thinkPickerEl.contains(event.target) && !thinkPopoverEl?.contains(event.target)) toggleThinkPicker(false);
+            /* V20.1.g · topbar 三个 action-btn 弹窗的 outside-click 关闭
+               原代码：historyPopover 仅在 window.innerWidth ≤ 900 时监听（桌面直接 return），
+                      systemPromptPopover 完全没监听。
+               现状：两个弹窗在桌面尺寸下都关不掉，只能再点一次 trigger。统一改成全尺寸监听。 */
+            const sysPop = document.getElementById('systemPromptPopover');
+            const sysBtn = document.querySelector('[onclick*="toggleSystemPrompt"]');
+            if(sysPop?.classList.contains('open') && !sysPop.contains(event.target) && !sysBtn?.contains(event.target)) toggleSystemPrompt(false);
+            const histPop = document.getElementById('historyPopover');
+            const histBtn = document.querySelector('[onclick*="toggleHistory"]');
+            if(histPop?.classList.contains('open') && !histPop.contains(event.target) && !histBtn?.contains(event.target)) toggleHistory(false);
         });
 
         function setMode(next, persist = true){
@@ -1445,7 +2827,129 @@
             }
             const labelEl = document.getElementById('modelLabel');
             if(labelEl) labelEl.textContent = label;
+            syncThinkToModel();
         }
+
+        /* ── 思考强度（think-level）：仅对支持推理的模型显示，按模型能力裁剪档位 ── */
+        const THINK_LEVELS = [
+            { key:'low',   label:'低' },
+            { key:'mid',   label:'中' },
+            { key:'high',  label:'高' },
+            { key:'xhigh', label:'极高' },
+            { key:'max',   label:'Max' }
+        ];
+        let thinkLevel = (function(){ try { return localStorage.getItem('gpt_chat_think_level') || 'mid'; } catch(e){ return 'mid'; } })();
+        let thinkPickerHome = null;
+        function thinkLevelLabel(k){ for(let i=0;i<THINK_LEVELS.length;i++){ if(THINK_LEVELS[i].key===k) return THINK_LEVELS[i].label; } return '中'; }
+        /* 基于模型名/ID 的推理能力启发式（兜底，后端 model_caps 优先；与 main.py:THINK_MODEL_PATTERN 同步） */
+        function getThinkLevels(modelName){
+            if(!modelName) return null;
+            // 1. 后端下发的 model_caps 优先
+            try {
+                const providers = chatProviders();
+                for(let i=0;i<providers.length;i++){
+                    const caps = providers[i]?.model_caps;
+                    if(caps && caps[modelName] && Array.isArray(caps[modelName].think)) return caps[modelName].think;
+                }
+            } catch(_){}
+            // 2. 兜底正则（未在 THINK_MODEL_PATTERN 注册的模型）
+            return legacyThinkLevels(modelName);
+        }
+        function legacyThinkLevels(modelName){
+            const n = String(modelName).toLowerCase();
+            const patterns = [
+                /thinking/,
+                /qwq/, /qwen3[-_]?(thought|thinking)?/, /qwen3[-_](32b|235b|30b|14b|8b|4b|0\.6b|a22b)[-_]?(thinking)?/,
+                /deepseek[-_]?r1\b/, /deepseek[-_]?reasoner/, /\br1\b/, /reasoner/,
+                /glm[-_]?z1/, /glm[-_]?zero/,
+                /kimi[-_]?(thinking|k2)/, /k2/,
+                /(^|[^a-z0-9])o1([^a-z0-9]|$)/, /(^|[^a-z0-9])o3([^a-z0-9]|$)/, /(^|[^a-z0-9])o4([^a-z0-9]|$)/,
+                /claude[-_]?3[-_]?(7|5)[-_]?sonnet/, /claude[-_]?3[-_]?opus/,
+                /gemini[-_]?2[.-]?(0|5)[-_]?(pro|flash)/, /gemini[-_]?2[.-]?5/
+            ];
+            for(let i=0;i<patterns.length;i++){ if(patterns[i].test(n)) return ['low','mid','high','xhigh','max']; }
+            return null;
+        }
+        function renderThinkChip(){
+            const el = document.getElementById('thinkChipLabel');
+            if(el) el.textContent = thinkLevelLabel(thinkLevel);
+        }
+        function syncThinkToModel(){
+            const levels = getThinkLevels(activeChatModel);
+            const picker = document.getElementById('thinkPicker');
+            if(!levels || levels.length === 0){
+                if(picker) picker.style.display = 'none';
+                closeThinkPopover();
+                return;
+            }
+            if(picker) picker.style.display = '';
+            if(levels.indexOf(thinkLevel) === -1) thinkLevel = levels[0];
+            renderThinkChip();
+        }
+        function openThinkPopover(){
+            const pop = document.getElementById('thinkPopover');
+            const list = document.getElementById('thinkList');
+            const levels = getThinkLevels(activeChatModel) || [];
+            list.innerHTML = THINK_LEVELS.filter(function(t){ return levels.indexOf(t.key) !== -1; }).map(function(t){
+                const active = t.key === thinkLevel ? ' active' : '';
+                return '<button type="button" class="model-picker-model-btn' + active + '" data-key="' + t.key + '"><span>' + t.label + '</span>' + (t.key === thinkLevel ? '<i data-icon="check"></i>' : '') + '</button>';
+            }).join('');
+            pop.classList.add('open');
+            if(window.lucide && lucide.createIcons) lucide.createIcons();
+        }
+        function closeThinkPopover(){
+            const pop = document.getElementById('thinkPopover');
+            if(pop) pop.classList.remove('open');
+        }
+        function positionThinkPicker(){
+            const btn = document.getElementById('thinkChipBtn');
+            const pop = document.getElementById('thinkPopover');
+            if(!btn || !pop) return;
+            const rect = btn.getBoundingClientRect();
+            const viewportW = (window.visualViewport?.width || window.innerWidth);
+            const viewportH = (window.visualViewport?.height || window.innerHeight);
+            const width = Math.min(168, Math.max(150, viewportW - 24));
+            const safe = 12, gap = 6;
+            const absoluteMaxH = Math.min(300, Math.round(viewportH * 0.6));
+            pop.style.visibility = 'hidden'; pop.style.display = 'grid'; pop.style.removeProperty('--model-picker-max-height');
+            const box = pop.getBoundingClientRect(); const naturalH = box.height;
+            pop.style.display = ''; pop.style.visibility = '';
+            let placeAbove = true;
+            const aboveMaxH = Math.max(120, rect.top - safe - gap);
+            const aboveActualH = Math.min(naturalH, absoluteMaxH, aboveMaxH);
+            let top = rect.top - aboveActualH - gap;
+            let chosenMaxH = aboveActualH;
+            if(top < safe){ placeAbove = false; const belowMaxH = Math.max(120, viewportH - rect.bottom - safe - gap); chosenMaxH = Math.min(naturalH, absoluteMaxH, belowMaxH); top = rect.bottom + gap; }
+            pop.style.setProperty('--model-picker-max-height', Math.round(chosenMaxH) + 'px');
+            let left = Math.min(Math.max(safe, rect.left), Math.max(safe, viewportW - width - safe));
+            if(left + width > viewportW - safe) left = Math.max(safe, viewportW - width - safe);
+            pop.style.width = Math.round(width) + 'px';
+            pop.style.left = Math.round(left) + 'px';
+            pop.style.top = Math.round(Math.max(safe, top)) + 'px';
+            pop.style.bottom = 'auto';
+            pop.classList.toggle('above', placeAbove);
+            pop.classList.toggle('below', !placeAbove);
+        }
+        function toggleThinkPicker(force){
+            const picker = document.getElementById('thinkPicker');
+            const pop = document.getElementById('thinkPopover');
+            if(!picker) return;
+            const shouldOpen = typeof force === 'boolean' ? force : !picker.classList.contains('open');
+            picker.classList.toggle('open', shouldOpen);
+            pop.classList.toggle('open', shouldOpen);
+            if(!shouldOpen){ if(pop && thinkPickerHome && pop.parentElement === document.documentElement){ thinkPickerHome.appendChild(pop); } updatePickerChevron(picker, false); return; }
+            toggleModelPicker(false); toggleResolutionPicker(false);
+            if(pop && pop.parentElement !== document.documentElement){ thinkPickerHome = picker; document.documentElement.appendChild(pop); }
+            renderThinkChip(); openThinkPopover();
+            requestAnimationFrame(function(){ positionThinkPicker(); if(window.lucide && lucide.createIcons) lucide.createIcons(); });
+        }
+        document.getElementById('thinkChipBtn').addEventListener('click', function(e){ e.stopPropagation(); toggleThinkPicker(); });
+        document.getElementById('thinkList').addEventListener('click', function(e){
+            const opt = e.target.closest('.model-picker-model-btn'); if(!opt) return;
+            thinkLevel = opt.dataset.key;
+            try { localStorage.setItem('gpt_chat_think_level', thinkLevel); } catch(_){}
+            renderThinkChip(); closeThinkPopover();
+        });
 
         function setChatRatio(next, preferredSize = ''){
             chatRatio = next;
@@ -1600,12 +3104,16 @@
 
         function chatSizeFromPrompt(message, fallbackSize = currentChatSize()){
             const text = String(message || '');
+            // 显式 1k/2k/4k 模式下，提示词里的 4K/高清/超清/16:9 等关键词不再动态改尺寸，
+            // 只保留显式写「1024x1536」这种直接尺寸覆盖。避免用户选了固定分辨率却“有时 4k 有时不是”。
+            const explicitResolution = ['1k','2k','4k'].includes(chatResolution);
             const direct = text.match(/(^|[^\d])([1-9]\d{2,4})\s*[xX×*]\s*([1-9]\d{2,4})(?!\d)/);
             if(direct) {
                 const w = Number(direct[2]);
                 const h = Number(direct[3]);
                 if(w >= 256 && h >= 256) return `${w}x${h}`;
             }
+            if(explicitResolution) return fallbackSize;
             const normalized = text.replace(/[：﹕∶]/g, ':').replace(/比/g, ':').replace(/[／/]/g, ':');
             const match = normalized.match(/(^|[^\d])(1|2|3|4|9|16)\s*:\s*(1|2|3|4|9|16)(?!\d)/);
             if(!match) return fallbackSize;
@@ -1626,7 +3134,7 @@
             const box = document.getElementById('messages');
             box.innerHTML = '';
             if(!messages.length){
-                box.innerHTML = `<div class="empty-state"><i data-lucide="messages-square"></i><div class="empty-state-text">${tr('chat.ready')}</div></div>`;
+                box.innerHTML = `<div class="empty-state"><i data-icon="chat"></i><div class="empty-state-text">${tr('chat.ready')}</div></div>`;
                 lucide.createIcons();
                 return;
             }
@@ -1645,6 +3153,15 @@
             const text = document.createElement('div');
             text.textContent = msg.type === 'image' ? (msg.agent_reply || tr('chat.generated')) : (msg.content || '');
             text.className = 'bubble-text';
+            if(msg.thinking){
+                /* 「正在思考」占位 → 文本末尾追加三个跳动的圆点（动画在 CSS） */
+                bubble.classList.add('thinking');
+                const dots = document.createElement('span');
+                dots.className = 'thinking-dots';
+                dots.innerHTML = '<i></i><i></i><i></i>';
+                text.appendChild(document.createTextNode(' '));
+                text.appendChild(dots);
+            }
             bubble.appendChild(text);
             if(msg.attachments?.length){
                 const thumbs = document.createElement('div');
@@ -1721,7 +3238,7 @@
             const node = document.createElement('div');
             node.className = 'thumb file-thumb';
             node.title = attachmentName(ref);
-            node.innerHTML = `<i data-lucide="file"></i><span class="thumb-name">${escapeHtml(attachmentName(ref))}</span>`;
+            node.innerHTML = `<i data-icon="file"></i><span class="thumb-name">${escapeHtml(attachmentName(ref))}</span>`;
             return node;
         }
 
@@ -1729,7 +3246,7 @@
             if(isImageRef(ref)){
                 return `<div class="ref-chip"><img src="${escapeHtml(ref.url)}" title="${escapeHtml(attachmentName(ref))}"><button onclick="removeRef(${i})">×</button></div>`;
             }
-            return `<div class="ref-chip file"><i data-lucide="file"></i><span class="ref-file-name" title="${escapeHtml(attachmentName(ref))}">${escapeHtml(attachmentName(ref))}</span><button onclick="removeRef(${i})">×</button></div>`;
+            return `<div class="ref-chip file"><i data-icon="file"></i><span class="ref-file-name" title="${escapeHtml(attachmentName(ref))}">${escapeHtml(attachmentName(ref))}</span><button onclick="removeRef(${i})">×</button></div>`;
         }
 
         async function uploadFiles(files){
@@ -1802,15 +3319,18 @@
             renderRefs();
             input.value = '';
             autoGrow(input);
+            /* 首次发送：清掉欢迎台/空态占位，避免与首条气泡共存。
+               只有新会话（currentConversation 为空）才需要补建一个本地占位会话。 */
+            const box = document.getElementById('messages');
+            if(box.querySelector('.welcome-deck') || box.querySelector('.empty-state')) box.innerHTML = '';
             if(!currentConversation){
                 currentConversation = {id:'', title:'新对话', messages:[]};
-                document.getElementById('messages').innerHTML = '';
             }
             addMessageBubble({role:'user', content:message, attachments:pendingRefs});
             const useStreaming = mode === 'chat';
             const pendingText = mode === 'image' ? tr('chat.generatingImage') : (useStreaming ? '' : (mode === 'agent' ? tr('chat.agentWorking') : ''));
-            const assistantBubble = addMessageBubble({role:'assistant', content: pendingText});
-            if(useStreaming || mode === 'agent') assistantBubble.bubble.classList.add('streaming');
+            const assistantBubble = addMessageBubble({role:'assistant', content: pendingText, thinking: mode === 'agent'});
+            if(useStreaming) assistantBubble.bubble.classList.add('streaming');
             scrollBottom();
             try {
                 if(useStreaming) {
@@ -1829,6 +3349,7 @@
                             ms_model: provider === 'modelscope' ? (msModel || activeChatModel) : '',
                             reference_images: pendingRefs,
                             provider,
+                            think_level: thinkLevel,
                         })
                     }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || tr('chat.requestFailed')); return r.json(); });
                     currentConversation = data.conversation;
@@ -1852,6 +3373,7 @@
                             reference_images: pendingRefs,
                             provider,
                             image_provider: activeImageProvider,
+                            think_level: thinkLevel,
                         })
                     }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || tr('chat.requestFailed')); return r.json(); });
                     currentConversation = data.conversation;
@@ -1873,6 +3395,7 @@
                             image_model: activeImageModel || config.image_model,
                             reference_images: pendingRefs,
                             provider: activeImageProvider,
+                            think_level: thinkLevel,
                         })
                     }).then(async r => { if(!r.ok) throw new Error((await r.json()).detail || tr('chat.requestFailed')); return r.json(); });
                     currentConversation = data.conversation;
@@ -1905,7 +3428,8 @@
                     model: currentProvider === 'modelscope' ? currentMsModel : currentChatModel,
                     ms_model: currentProvider === 'modelscope' ? currentMsModel : '',
                     provider: currentProvider,
-                    reference_images: pendingRefs
+                    reference_images: pendingRefs,
+                    think_level: thinkLevel
                 })
             });
             if(!res.ok) throw new Error((await res.json()).detail || tr('chat.requestFailed'));
@@ -1930,6 +3454,9 @@
                     }
                     if(event.type === 'delta'){
                         fullText += event.delta || '';
+                        /* 首个字到达 → 思考占位结束：摘掉 thinking 让 dots 与呼吸动画停止
+                           （非流式分支走 renderMessages 整体重建，无需处理） */
+                        assistantBubble.bubble.classList.remove('thinking');
                         assistantBubble.text.textContent = fullText;
                         scrollBottom();
                     }
@@ -1953,6 +3480,10 @@
         window.onload = async () => {
             applyLanguage();
             syncSystemPromptUI();
+            /* 角色库：拉取失败也不影响既有系统提示词功能（personaLibrary 退化为空数组） */
+            await loadPersonaLibrary().catch(() => {});
+            /* 记忆库：拉取失败也不影响记忆功能（memoryLibrary 退化为空数组，仅 UI 不可用） */
+            await loadMemoryLibrary().catch(() => {});
             setChatRatio(chatRatio);
             setChatResolution(chatResolution);
             await loadConfig();
@@ -1960,5 +3491,319 @@
             updateComposerOverflow();
         };
     </script>
+<script>
+/* ═══ V11 · Online 设计语言装饰层（非破坏性） ═══
+   仅追加渲染增强：日期分组头 / 时间戳 / Markdown 元素样式 / 发送按钮光束。
+   不修改原有任何函数、事件与后端接口。 */
+(function(){
+    'use strict';
+    function pad(n){ return (n<10?'0':'')+n; }
+    function fmtTime(ts){ var d=new Date(ts); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+    function fmtDay(ts){ var d=new Date(ts); var n=new Date();
+        var y = d.getFullYear()===n.getFullYear() ? '' : d.getFullYear()+'年 ';
+        return y+(d.getMonth()+1)+'月 '+d.getDate()+'日'; }
+    function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function md(src){
+        var h = esc(src || '');
+        h = h.replace(/```([\s\S]*?)```/g, function(_, c){ return '<pre><code>'+c.replace(/^\n/,'')+'</code></pre>'; });
+        h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+        h = h.replace(/^### (.*)$/gm, '<h3>$1</h3>');
+        h = h.replace(/^## (.*)$/gm, '<h2>$1</h2>');
+        h = h.replace(/^# (.*)$/gm, '<h1>$1</h1>');
+        h = h.replace(/^---+$/gm, '<hr>');
+        h = h.replace(/^&gt; (.*)$/gm, '<blockquote>$1</blockquote>');
+        h = h.replace(/^[-*] (.*)$/gm, '<li>$1</li>');
+        h = h.replace(/(<li>[\s\S]*?<\/li>)+/g, function(m){ return '<ul>'+m+'</ul>'; });
+        h = h.replace(/^\d+\. (.*)$/gm, '<li>$1</li>');
+        h = h.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        h = h.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        h = h.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+        h = h.split(/\n{2,}/).map(function(p){ p=p.trim(); return p ? '<p>'+p.replace(/\n/g,'<br>')+'</p>' : ''; }).join('');
+        return h;
+    }
+    function decorate(){
+        var box = document.getElementById('messages');
+        if(!box) return;
+        var rows = box.querySelectorAll('.bubble-row');
+        var lastDay = '';
+        rows.forEach(function(row){
+            var ts = Number(row.dataset.ts) || Date.now();
+            var day = fmtDay(ts);
+            var time = row.querySelector('.bubble-time');
+            if(!time){ time = document.createElement('div'); time.className='bubble-time'; row.appendChild(time); }
+            time.textContent = fmtTime(ts);
+            if(day !== lastDay){
+                var prev = row.previousElementSibling;
+                if(!prev || !prev.classList.contains('date-divider') || prev.dataset.day !== day){
+                    var d = document.createElement('div');
+                    d.className='date-divider'; d.dataset.day = day; d.textContent = day;
+                    box.insertBefore(d, row);
+                }
+                lastDay = day;
+            }
+        });
+        box.querySelectorAll('.bubble-text').forEach(function(el){
+            /* 「正在思考」占位气泡里挂着三个跳动的圆点（真实 DOM 节点），
+               下面的 md() 会整体重写 innerHTML 把圆点抹掉 —— 思考态下直接跳过渲染。
+               圆点消失（流式写入 textContent）后 thinking class 也会被摘掉，届时正常渲染。 */
+            if(el.closest('.bubble.thinking')) return;
+            var raw = el.textContent;
+            if(el.dataset.mdRaw === raw) return;
+            el.dataset.mdRaw = raw;
+            el.innerHTML = md(raw);
+        });
+    }
+    var box = document.getElementById('messages');
+    if(box){
+        /* 节流：decorate 会写回 DOM（innerHTML/insertBefore），直接同步 observe 会递归死循环 */
+        var decorating = false;
+        function decorateScheduled(){
+            if(decorating) return;
+            decorating = true;
+            requestAnimationFrame(function(){ decorating = false; decorate(); });
+        }
+        new MutationObserver(decorateScheduled).observe(box, {childList:true, subtree:true, characterData:true});
+        decorate();
+    }
+    /* 发送按钮追加 nv-beam 光束 class（非破坏性，不改原按钮行为） */
+    var sb = document.getElementById('sendBtn');
+    if(sb) sb.classList.add('nv-beam');
+})();
+</script>
+<script>
+/* ═══ V13 · 空态欢迎工作台（非破坏性装饰层） ═══
+   仅当消息区处于空态（.empty-state 存在）时渲染欢迎卡片；
+   点击卡片仅填充输入框、最近会话点击走原 openConversation，
+   不发送请求、不改任何原函数与后端逻辑。 */
+(function(){
+    'use strict';
+    var PROMPTS = [
+        { ic:'deckImage',     title:'生成图片', desc:'一句话描述画面，AI 帮你画' },
+        { ic:'deckWrite',    title:'写文案',   desc:'产品介绍、标题、广告语' },
+        { ic:'deckCode',  title:'写代码',   desc:'修 bug、补注释、转语言' },
+        { ic:'deckDoc', title:'读文档',   desc:'总结、问答、提取要点' },
+        { ic:'deckSearch',    title:'查资料',   desc:'联网检索与整理' },
+        { ic:'deckIdea',  title:'头脑风暴', desc:'开脑洞、列方案、做规划' }
+    ];
+    function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+    /* 读取会话列表：conversations 是主脚本里的 let 声明，存在于全局词法环境
+       但不会挂到 window 上，所以必须按裸标识符读，window.conversations 恒为 undefined */
+    function recentRows(){
+        var rows = null;
+        try { if(typeof conversations !== 'undefined' && conversations && conversations.length) rows = conversations; } catch(e){}
+        if(!rows){ try { if(window.conversations && window.conversations.length) rows = window.conversations; } catch(e){} }
+        if(!rows) return [];
+        return rows.slice(0, 3);
+    }
+
+    function fillRecent(listEl){
+        if(!listEl) return;
+        var rows = recentRows();
+        if(!rows.length){
+            listEl.innerHTML = '<div class="welcome-empty-hint">还没有历史会话，聊点什么吧</div>';
+            return;
+        }
+        listEl.innerHTML = rows.map(function(c){
+            var t = c.last_message ? esc(String(c.last_message).slice(0,40)) : '';
+            return '<button type="button" class="welcome-recent-item" data-id="' + esc(c.id) + '">' +
+                '<span class="welcome-recent-title">' + esc(c.title || '新对话') + '</span>' +
+                '<span class="welcome-recent-time">' + t + '</span>' +
+            '</button>';
+        }).join('');
+    }
+
+    /* 会话列表是异步加载的，空态可能先于数据渲染 —— 监听刷新事件补填一次 */
+    window.addEventListener('novai:conversations-loaded', function(){
+        var list = document.querySelector('.welcome-deck .welcome-recent-list');
+        if(list) fillRecent(list);
+    });
+
+    function renderDeck(){
+        var box = document.getElementById('messages');
+        if(!box) return;
+        if(!box.querySelector('.empty-state')) return;   /* 非空态不渲染 */
+        if(box.querySelector('.welcome-deck')) return;   /* 已渲染 */
+        if(box.querySelector('.bubble-row')) return;     /* 已有任何气泡也不再渲染（防御 sendMessage 没清掉的情况） */
+        var empty = box.querySelector('.empty-state');
+        if(empty) empty.style.display = 'none';          /* 隐藏原空态图标，避免重叠 */
+        var d = document.createElement('div');
+        d.className = 'welcome-deck';
+        d.innerHTML =
+            '<div class="welcome-head">' +
+                '<h2 class="welcome-title">开始新的对话</h2>' +
+                '<p class="welcome-sub">从一句提示词开始，或点下面的快捷入口</p>' +
+            '</div>' +
+            '<div class="welcome-grid">' + PROMPTS.map(function(p){
+                return '<button type="button" class="welcome-card" data-prompt="' + esc(p.title + '：') + '">' +
+                    '<span class="welcome-card-ic"><i data-icon="' + p.ic + '"></i></span>' +
+                    '<span class="welcome-body">' +
+                        '<span class="welcome-card-title">' + esc(p.title) + '</span>' +
+                        '<span class="welcome-card-desc">' + esc(p.desc) + '</span>' +
+                    '</span>' +
+                '</button>';
+            }).join('') + '</div>' +
+            '<div class="welcome-recent">' +
+                '<div class="welcome-recent-head">最近会话</div>' +
+                '<div class="welcome-recent-box"><div class="welcome-recent-list"></div></div>' +
+            '</div>';
+        box.appendChild(d);
+        if(window.lucide && lucide.createIcons) lucide.createIcons();
+        fillRecent(d.querySelector('.welcome-recent-list'));
+        d.addEventListener('click', function(e){
+            var item = e.target.closest('.welcome-recent-item');
+            if(item){ if(window.openConversation) openConversation(item.dataset.id, false); return; }
+            var card = e.target.closest('.welcome-card');
+            if(!card) return;
+            var input = document.getElementById('messageInput');
+            if(input){ input.value = card.dataset.prompt || ''; input.focus(); if(window.autoGrow) autoGrow(input); }
+        });
+    }
+
+    var box = document.getElementById('messages');
+    if(box){
+        var rendering = false;
+        function scheduled(){
+            if(rendering) return;
+            rendering = true;
+            /* 同步渲染：renderDeck 有判等守卫（已渲染则直接 return），不会递归写回；
+               不用 rAF，避免后台标签页暂停 rAF 导致 welcome-deck 永不渲染 */
+            try { renderDeck(); } finally { rendering = false; }
+        }
+        new MutationObserver(scheduled).observe(box, {childList:true, subtree:true});
+        scheduled();
+    }
+})();
+</script>
+<script>
+/* V17 顶栏 + 发送按钮：强制覆盖运行时注入的主题样式。
+   生产 app 会在运行时往 <head> 注入主题 <style>，位于本文件静态 V17 块之后，
+   因此其 .topbar{background:glass} / .send-btn{border-radius:12px} 会覆盖静态规则。
+   此处用内联 !important + 监听 <head> 变化反复重设，确保 V17 视觉始终生效。
+   顶栏与发送按钮均不依赖主题色（透明 / 由 --text、--bg 决定），强制安全。 */
+(function(){
+  function forceTopbar(){
+    var tb = document.querySelector('.topbar');
+    if(!tb) return;
+    tb.style.setProperty('background', 'transparent', 'important');
+    tb.style.setProperty('backdrop-filter', 'none', 'important');
+    tb.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+    tb.style.setProperty('border-bottom', '0', 'important');
+    /* V11 的 inset 0 1px 0 box-shadow 在浅色下会渲染成顶栏底部那条线，一并去掉 */
+    tb.style.setProperty('box-shadow', 'none', 'important');
+  }
+  function forceSend(){
+    var s = document.getElementById('sendBtn');
+    if(!s) return;
+    s.style.setProperty('border-radius', '50%', 'important');
+    s.style.setProperty('width', '36px', 'important');
+    s.style.setProperty('height', '36px', 'important');
+    s.style.setProperty('background', 'var(--text)', 'important');
+    s.style.setProperty('color', 'var(--bg)', 'important');
+  }
+  function forceComposer(){
+    var c = document.querySelector('.composer');
+    if(!c) return;
+    c.style.setProperty('border', '0', 'important');
+    c.style.setProperty('border-top', '0', 'important');
+    c.style.setProperty('border-left', '0', 'important');
+    c.style.setProperty('border-right', '0', 'important');
+    c.style.setProperty('border-bottom', '0', 'important');
+  }
+/* V20.1 · 去框统一：弹窗 / 气泡不依赖主题色，强制安全 */
+function forceNoBorder(selector, props){
+    var list = document.querySelectorAll(selector);
+    for(var i=0;i<list.length;i++){
+        var el = list[i];
+        for(var p in props){ if(Object.prototype.hasOwnProperty.call(props,p)) el.style.setProperty(p, props[p], 'important'); }
+    }
+}
+function forcePopovers(){
+    forceNoBorder('.chat-rail, .system-prompt-popover, .model-picker-popover, .model-picker-submenu, .resolution-picker-popover', {
+        'border': '0',
+        'box-shadow': '0 1px 3px rgba(0,0,0,.05), 0 18px 44px -14px rgba(0,0,0,.22)'
+    });
+}
+function forceBubbles(){
+    /* 背景也要强制：V14 有一条 html:not(.theme-dark) body:not(.theme-dark) .bubble.assistant
+       的浅色特化规则，特异性高于静态 V20.1 块，只能靠内联 !important 压过去 */
+    forceNoBorder('.bubble.assistant:not(.image-bubble)', {
+        'border': '0',
+        'backdrop-filter': 'none',
+        '-webkit-backdrop-filter': 'none',
+        'box-shadow': 'none',
+        'background': 'color-mix(in srgb, var(--text) 7%, transparent)'
+    });
+    forceNoBorder('.bubble.user:not(.image-bubble)', { 'border': '0', 'box-shadow': 'none' });
+}
+function forceShell(){
+    var sh = document.querySelector('.chat-shell');
+    if(sh) sh.style.setProperty('background', 'var(--bg)', 'important');
+    var rail = document.getElementById('v10Rail');
+    if(rail) rail.style.setProperty('display', 'none', 'important');
+}
+function forceActionBtns(){
+    var btns = document.querySelectorAll('.top-actions .action-btn');
+    for(var i=0;i<btns.length;i++){
+        btns[i].style.setProperty('background', 'transparent', 'important');
+        btns[i].style.setProperty('border', '0', 'important');
+        btns[i].style.setProperty('box-shadow', 'none', 'important');
+    }
+}
+function forceAttachBtn(){
+    /* 附件 "+" 按钮：V10C 玻璃浮层（backdrop-filter + box-shadow + width:36px）会被主题注入再写一遍，
+       静态 V20.1 !important 选择器 (0,2,0) 在浅色下能赢，但运行时主题注入若设更复杂选择器或更高特异，
+       会让按钮看起来又带浅灰圆角方框。靠内联 !important 兜底。 */
+    var btns = document.querySelectorAll('.upload-btn.attach-btn');
+    for(var i=0;i<btns.length;i++){
+        var el = btns[i];
+        el.style.setProperty('background', 'transparent', 'important');
+        el.style.setProperty('border', '0', 'important');
+        el.style.setProperty('backdrop-filter', 'none', 'important');
+        el.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
+        el.style.setProperty('box-shadow', 'none', 'important');
+        el.style.setProperty('width', 'auto', 'important');
+        el.style.setProperty('min-width', '30px', 'important');
+    }
+}
+
+/* V20.1 · 系统角色库 chips：与 attach-btn 同样的去框兜底。
+   只强制「框」相关的四个属性（border / backdrop-filter / box-shadow），
+   不碰 background 与 color —— 否则内联 !important 会盖掉 .persona-chip.active 的选中态配色。
+   角色 chips 是动态渲染的，挂到 window 上供 renderPersonaChips() 渲染后回补。 */
+function forcePersonas(){
+    forceNoBorder('.persona-chip, .persona-mini-btn, .persona-name-input', {
+        'border': '0',
+        'backdrop-filter': 'none',
+        '-webkit-backdrop-filter': 'none',
+        'box-shadow': 'none'
+    });
+}
+window.__novaiForcePersonas = forcePersonas;
+
+/* V20.1 · 长期记忆库 rows：与 persona chips 同样的去框兜底，只清「框」相关属性。
+   记忆行是动态渲染的，挂到 window 上供 renderMemoryList() 渲染后回补。 */
+function forceMemories(){
+    forceNoBorder('.memory-row, .memory-toggle, .memory-del, .memory-input, .memory-add-btn, .memory-scope, .scope-btn, .memory-tag', {
+        'border': '0',
+        'backdrop-filter': 'none',
+        '-webkit-backdrop-filter': 'none',
+        'box-shadow': 'none'
+    });
+}
+window.__novaiForceMemories = forceMemories;
+
+  function applyAll(){ forceTopbar(); forceSend(); forceComposer(); forcePopovers(); forceBubbles(); forceShell(); forceActionBtns(); forceAttachBtn(); forcePersonas(); forceMemories(); }
+  applyAll();
+  if(window.MutationObserver){
+    new MutationObserver(applyAll).observe(document.head, {childList:true, subtree:true});
+  }
+  /* 气泡是动态插入的，单独监听消息区 */
+  var msgBox = document.getElementById('messages');
+  if(msgBox && window.MutationObserver) new MutationObserver(forceBubbles).observe(msgBox, {childList:true, subtree:true});
+  document.addEventListener('DOMContentLoaded', applyAll);
+  window.addEventListener('load', applyAll);
+})();
+</script>
 </body>
 </html>

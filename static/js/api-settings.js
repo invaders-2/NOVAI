@@ -79,8 +79,8 @@ const MS_BUILTIN_IMAGE_MODELS = [
 ];
 const MS_DEFAULT_BASE_URL = 'https://api-inference.modelscope.cn/v1';
 const RH_DEFAULT_BASE_URL = 'https://www.runninghub.cn';
-const LINGJING_DEFAULT_BASE_URL = 'https://apistudio.vip';
-const LINGJING_REGISTER_URL = 'https://apistudio.vip/register?aff=g1CT';
+const LINGJING_DEFAULT_BASE_URL = 'https://api.vectorengine.cn';
+const LINGJING_REGISTER_URL = 'https://api.vectorengine.cn/register?aff=g1CT';
 const VIP_GPT_DEFAULT_BASE_URL = 'https://www.vip-gpt.net';
 const VIP_GPT_REGISTER_URL = 'https://www.vip-gpt.net/vip-gpt/register?aff=YGMS7BDKNY5Y';
 const EXAMPLE_BASE_URL = 'https://api.example.com/v1';
@@ -281,7 +281,7 @@ const RECOMMENDED_APIS = [
 ];
 const RECOMMEND_GROUPS = [
     {key:'allround', titleKey:'api.recommendGroupAllround', icon:'blocks'},
-    {key:'value', titleKey:'api.recommendGroupValue', icon:'badge-percent'},
+    {key:'value', titleKey:'api.recommendGroupValue', icon:'badgePercent'},
     {key:'free', titleKey:'api.recommendGroupFree', icon:'gift'}
 ];
 const LOCKED_RECOMMENDED_PROTOCOL_IDS = new Set(['exellome', 'fhl']);
@@ -2334,7 +2334,7 @@ function renderRecommendApi(){
         return `
         <div class="recommend-group">
             <div class="recommend-group-head recommend-group-${escapeAttr(group.key)}">
-                <i data-lucide="${escapeAttr(group.icon)}" class="w-3.5 h-3.5"></i>
+                <i data-icon="${escapeAttr(group.icon)}" class="w-3.5 h-3.5"></i>
                 <span>${escapeHtml(tr(group.titleKey))}</span>
             </div>
             ${items.map(item => recommendCardHtml(item.api, item.index)).join('')}

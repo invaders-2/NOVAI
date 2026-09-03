@@ -292,6 +292,8 @@ _DATA_DIR_OVERRIDE = os.environ.get("NOVAI_DATA_DIR", "")
 WORKFLOW_DIR = os.path.join(BASE_DIR, "workflows")
 WORKFLOW_PATH = os.path.join(WORKFLOW_DIR, "Z-Image.json")
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+# App 根目录：存放符合 novai-app/v1 契约的 App（每个 App 一个子目录 + manifest.json）
+APPS_DIR = os.path.join(BASE_DIR, "apps")
 STATIC_RUNNINGHUB_DIR = os.path.join(STATIC_DIR, "runninghub")
 STATIC_RUNNINGHUB_THUMBNAIL_DIR = os.path.join(STATIC_RUNNINGHUB_DIR, "thumbnails")
 STATIC_RUNNINGHUB_API_PROVIDERS_FILE = os.path.join(STATIC_RUNNINGHUB_DIR, "api_providers.json")
@@ -394,6 +396,11 @@ CANVAS_ASSETS_REGISTRY_PATH = os.path.join(DATA_DIR, "assets_registry.json")
 # 每画布保留最近 N 个版本快照（环境变量可调，默认 20）
 CANVAS_VERSION_LIMIT = max(1, int(os.getenv("NOVAI_CANVAS_VERSION_LIMIT", "20")))
 PROMPT_LIBRARY_PATH = os.path.join(DATA_DIR, "prompt_libraries.json")
+# 系统角色库（persona）：与生图提示词模板库（prompt_libraries.json）完全独立的数据文件。
+# prompt_libraries.json 的 item 是 {name, category, positive, negative}（生图正/负向提示词）；
+# persona_library.json 的 item 是 {id, name, description, content, builtin}，content 即完整 system prompt。
+PERSONA_LIBRARY_PATH = os.path.join(DATA_DIR, "persona_library.json")
+MEMORY_LIBRARY_PATH = os.path.join(DATA_DIR, "memory_library.json")
 API_PROVIDERS_FILE = os.path.join(DATA_DIR, "api_providers.json")
 RUNNINGHUB_WORKFLOW_STORE_FILE = os.path.join(DATA_DIR, "runninghub_workflows.json")
 SHARED_FOLDERS_FILE = os.path.join(DATA_DIR, "shared_folders.json")
@@ -442,7 +449,7 @@ RUNNINGHUB_LLM_BASE_URL = "https://llm.runninghub.cn/v1"
 RUNNINGHUB_FILE_HOST_REWRITES = {
     "rh-images-1252422369.cos.ap-beijing.myqcloud.com": "rh-images.xiaoyaoyou.com",
 }
-LINGJING_DEFAULT_BASE_URL = "https://apistudio.vip"
+LINGJING_DEFAULT_BASE_URL = "https://api.vectorengine.cn"
 RUNNINGHUB_LLM_MODELS_URLS = [
     "https://llm.runninghub.cn/v1/models",
     "https://llm.runninghub.ai/v1/models",
@@ -679,6 +686,26 @@ _MODELSCOPE_CONFIGURED_CHAT_MODELS = [m.strip() for m in os.getenv("MODELSCOPE_C
 MODELSCOPE_CHAT_MODELS = list(dict.fromkeys([m for m in [*MODELSCOPE_DEFAULT_CHAT_MODELS, *_MODELSCOPE_CONFIGURED_CHAT_MODELS] if m]))
 MODELSCOPE_DEFAULT_IMAGE_MODEL = MODELSCOPE_DEFAULT_IMAGE_MODELS[0]
 MODELSCOPE_DEFAULT_CHAT_MODEL = "Qwen/Qwen3-235B-A22B"
+# ── 模型能力：哪些 chat 模型支持思考强度档位（前端 think chip 的真值源） ──
+# 任意子串匹配（不区分大小写），命中即返回 5 档；未命中返回 None。
+# 新增推理模型在这里加一行即可，前端不再依赖正则启发式。
+import re as _re
+_THINK_MODEL_PATTERN = _re.compile(
+    r"(?:thinking|qwq|qwen3|reasoner|\br1\b|deepseek[-_]?r1|deepseek[-_]?reasoner"
+    r"|glm[-_]?z1|glm[-_]?zero|kimi[-_]?(?:thinking|k2)|k2"
+    r"|(?:^|[^a-z0-9])o[1-9](?:[^a-z0-9]|$)"
+    r"|claude[-_]?3[-_]?(?:7|5)[-_]?sonnet|claude[-_]?3[-_]?opus"
+    r"|gemini[-_]?2[.-]?(?:0|5)[-_]?(?:pro|flash)?)",
+    _re.IGNORECASE,
+)
+THINK_LEVELS_FULL = ["low","mid","high","xhigh","max"]
+
+def think_levels_for_model(name):
+    """根据模型名返回支持的思考强度档位；不支持推理返回 None。"""
+    if not name: return None
+    if _THINK_MODEL_PATTERN.search(str(name)):
+        return list(THINK_LEVELS_FULL)
+    return None
 MODELSCOPE_DEFAULT_LORAS = [
     {
         "id": "Daniel8152/film",
@@ -1458,6 +1485,16 @@ def public_provider(provider):
         "key_preview": mask_secret(key),
         "key_env": provider_key_env(provider["id"]),
     }
+    # 把每个 chat 模型的能力（think 档位等）下发到前端，真值源统一在 THINK_MODEL_PATTERN
+    if item.get("chat_models"):
+        caps = {}
+        for m in item["chat_models"]:
+            if not isinstance(m, str): continue
+            levels = think_levels_for_model(m)
+            if levels:
+                caps[m] = {"think": levels}
+        if caps:
+            item["model_caps"] = caps
     if provider.get("id") == "runninghub":
         wallet_key = runninghub_wallet_key_value()
         item.update({
@@ -1596,6 +1633,17 @@ os.makedirs(CANVAS_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/output", StaticFiles(directory=OUTPUT_DIR), name="output")
 
+# --- App 注册表：内核骨架（T02）-----------------------------------------
+# apps/ 下每个 App 一个子目录 + manifest.json，契约见 docs/app-contract.md。
+# 挂载前必须先建目录：StaticFiles 对不存在的目录会直接构造失败、后端起不来。
+os.makedirs(APPS_DIR, exist_ok=True)
+app.mount("/apps", StaticFiles(directory=APPS_DIR), name="apps")
+# 放在此处导入：依赖上面的 APPS_DIR，且避免与 main.py 顶部形成循环导入。
+# install() 内部全 try/except，坏 App 只标记 failed，不会中断启动。
+from server.appRegistry import registry, apps_router  # noqa: E402
+registry.scan(APPS_DIR)
+app.include_router(apps_router)   # GET /api/apps, GET /api/apps/health, POST /api/apps/invoke
+
 # 桌面端（Chromium 系 WebView/Electron）会启发式缓存 HTML/JS/CSS：更新版本号后若页面本身被缓存，
 # 页面里的 ?v= 还是旧值 → 加载旧资源。这里对代码类静态资源强制 no-cache（媒体/输出文件不处理）。
 @app.middleware("http")
@@ -1603,7 +1651,16 @@ async def no_cache_static_middleware(request, call_next):
     response = await call_next(request)
     try:
         path = request.url.path
-        if path.startswith(("/static/", "/output/", "/assets/")):
+        # App 注册表接口：路径不带扩展名，走下面的 endswith 判断会被直接过滤掉，
+        # 必须在这之前单独分支（不参与扩展名判断）。纵深防御：现在无 Last-Modified
+        # 不会真被缓存，但将来有人补上 ETag 就会立刻踩坑。
+        if path.startswith("/api/apps"):
+            response.headers["Cache-Control"] = "no-cache"
+            return response
+        # "/apps/" 是必加项：StaticFiles 会自动带 Last-Modified + ETag，
+        # 缺 Cache-Control 时 Chromium 按启发式缓存，新鲜期 ≈(now-LastModified)×10%，
+        # 30 天前构建的 App 会被当成新鲜约 3 天，用户收不到更新。
+        if path.startswith(("/static/", "/output/", "/assets/", "/apps/")):
             low = path.lower()
             if low.endswith((".html", ".htm", ".js", ".mjs", ".css", ".json")) or low.endswith((".map",)):
                 response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
@@ -2893,7 +2950,7 @@ from fastapi import Query  # noqa: E402
 TASK_DIR = os.path.join(DATA_DIR, "tasks")
 TASK_STORE: Dict[str, Dict[str, Any]] = {}
 TASK_STORE_LOCK = Lock()
-TASK_QUEUE: "asyncio.Queue" = asyncio.Queue()
+TASK_QUEUE = None  # 延迟到 task_engine_start() 在正确事件循环里创建，规避「attached to a different loop」
 TASK_WORKER_COUNT = max(1, int(os.getenv("NOVAI_TASK_WORKERS", "2")))
 TASK_AUTO_RETRY_MAX = 2                       # 网络层自动重试上限（未提交上游时）
 TASK_MAX_PAYLOAD_VALUE_LEN = 200 * 1024       # 单个参数值持久化上限（防超大 workflow JSON 撑爆分片）
@@ -3371,6 +3428,11 @@ def _task_legacy_status(task: dict) -> str:
 
 async def task_engine_start():
     """启动：载入持久化任务 → 恢复（queued 重新排队；运行中/挂起标记中断失败）→ 拉起 worker。"""
+    global TASK_QUEUE
+    if TASK_QUEUE is None:
+        # 必须在运行中的事件循环里创建，否则队列会绑定到导入期 loop，
+        # 导致 worker 的 await TASK_QUEUE.get() 抛 RuntimeError: attached to a different loop。
+        TASK_QUEUE = asyncio.Queue()
     task_load_all()
     requeued = 0
     interrupted = 0
@@ -3517,10 +3579,11 @@ class ChatRequest(BaseModel):
     reference_images: List[AIReference] = []
     provider: str = "comfly"
     ms_model: str = ""
+    think_level: str = ""
 
 def chat_system_prompt(payload):
-    prompt = str(getattr(payload, "system_prompt", "") or "").strip()
-    return prompt or SYSTEM_PROMPT
+    """最终生效的 system prompt = 用户 system_prompt + 已启用记忆（服务端自动注入）。"""
+    return effective_system_prompt(payload)
 
 class MsGenerateRequest(BaseModel):
     prompt: str
@@ -3586,13 +3649,6 @@ class CanvasSaveRequest(BaseModel):
     client_id: str = ""
     base_updated_at: int = 0
 
-class CanvasAssetCheckRequest(BaseModel):
-    urls: List[str] = []
-
-class CanvasAssetDownloadRequest(BaseModel):
-    urls: List[str] = []
-    items: List[Dict[str, Any]] = []
-    filename: str = "canvas-output-images.zip"
 
 class CanvasWorkflowExportRequest(BaseModel):
     nodes: List[Dict[str, Any]] = []
@@ -3618,130 +3674,26 @@ class LocalImageImportRequest(BaseModel):
     path: str = ""
     paths: List[str] = Field(default_factory=list)
 
-class LocalAssetCaptionRequest(BaseModel):
-    names: List[str] = []
-    provider: str = "comfly"
-    model: str = ""
-    ms_model: str = ""
-    prompt: str = "描述图片"
 
-class LocalAssetCaptionSaveRequest(BaseModel):
-    name: str = ""
-    caption: str = ""
 
-class LocalAssetClassifyRequest(BaseModel):
-    names: List[str] = []
-    provider: str = "comfly"
-    model: str = ""
-    ms_model: str = ""
-    prompt: str = ""
 
-class LocalAssetUrlImportItem(BaseModel):
-    url: str = ""
-    name: str = ""
-    data: str = ""          # 可选：base64 / dataURL，由插件在网页上下文里读取（blob: 等无法服务端下载的素材）
-    content_type: str = ""  # 配合 data 使用，用于推断扩展名
+class PersonaRequest(BaseModel):
+    """系统角色库（persona）请求体。content 即完整的 system prompt 文本。"""
+    id: str = ""
+    name: str = "新角色"
+    description: str = ""
+    content: str = ""
 
-class LocalAssetUrlImportRequest(BaseModel):
-    items: List[LocalAssetUrlImportItem] = []
-    folder: str = ""
-    classify: bool = False
-    provider: str = "comfly"
-    model: str = ""
-    ms_model: str = ""
-    prompt: str = ""
 
-class LocalAssetFolderRequest(BaseModel):
-    parent: str = ""
-    path: str = ""
-    name: str = ""
+class MemoryRequest(BaseModel):
+    """长期记忆库（memory）请求体。content 为记忆文本，enabled 为启用开关（None 表示不改动）。
+    scope 为作用域（global 全局 / conversation 仅某对话），conversation_id 仅在 conversation 作用域下有意义。"""
+    id: str = ""
+    content: str = ""
+    enabled: Optional[bool] = None
+    scope: str = "global"
+    conversation_id: str = ""
 
-class LocalAssetRenameRequest(BaseModel):
-    path: str = ""
-    name: str = ""
-
-class AssetLibraryCategoryRequest(BaseModel):
-    name: str = "新文件夹"
-    type: str = "image"
-    library_id: str = ""
-
-class AssetLibraryRequest(BaseModel):
-    name: str = "资产库"
-
-class AssetLibraryAddRequest(BaseModel):
-    category_id: str = ""
-    url: str = ""
-    name: str = ""
-    library_id: str = ""
-
-class AssetLibraryBatchAddRequest(BaseModel):
-    category_id: str = ""
-    library_id: str = ""
-    items: List[AssetLibraryAddRequest] = []
-
-class SharedFolderRegister(BaseModel):
-    path: str = ""
-    name: str = ""
-
-class SharedFolderImport(BaseModel):
-    library_id: str = ""
-    category_id: str = ""
-    folder_id: str = ""
-    paths: List[str] = []
-
-class AssetLibraryRenameRequest(BaseModel):
-    name: str = ""
-    library_id: str = ""
-
-class AssetLibraryBatchDeleteRequest(BaseModel):
-    ids: List[str] = []
-    library_id: str = ""
-
-class AssetLibraryBatchMoveRequest(BaseModel):
-    ids: List[str] = []
-    library_id: str = ""
-    target_library_id: str = ""
-    target_category_id: str = ""
-
-class AssetLibraryBatchCropRequest(BaseModel):
-    ids: List[str] = []
-    library_id: str = ""
-    target_library_id: str = ""
-    target_category_id: str = ""
-    mode: str = "square"
-
-class AssetAvatarRegisterRequest(BaseModel):
-    library_id: str = ""
-    provider_id: str = ""
-    project_name: str = "default"
-    group_name: str = ""
-
-class AssetLibraryClassifyRequest(BaseModel):
-    library_id: str = ""
-    ids: List[str] = []
-    provider: str = "comfly"
-    model: str = ""
-    ms_model: str = ""
-    prompt: str = ""
-
-class PromptLibraryRequest(BaseModel):
-    name: str = "提示词库"
-
-class PromptLibraryItemRequest(BaseModel):
-    library_id: str = ""
-    item_id: str = ""
-    name: str = "提示词"
-    category: str = "custom"
-    positive: str = ""
-    negative: str = ""
-    scene: str = ""
-
-class PromptLibraryBatchDeleteRequest(BaseModel):
-    ids: List[str] = []
-
-class PromptLibraryCategoryRequest(BaseModel):
-    name: str = "新分组"
-    library_id: str = ""
 
 # --- 负载均衡 ---
 
@@ -5984,8 +5936,12 @@ async def generate_codex_provider_image(prompt, size, model, reference_images=No
 def codex_chat_prompt(payload, history_messages=None):
     parts = []
     system_prompt = str(getattr(payload, "system_prompt", "") or "").strip()
-    if system_prompt:
-        parts.append(f"系统要求：\n{system_prompt}")
+    mem = memory_block(getattr(payload, "conversation_id", "") or "")
+    if system_prompt or mem:
+        block = system_prompt
+        if mem:
+            block = (block + "\n\n" + mem).strip() if block else mem
+        parts.append(f"系统要求：\n{block}")
     for item in (history_messages or [])[-MAX_HISTORY_MESSAGES:]:
         role = str(item.get("role") or "").strip()
         content = item.get("content")
@@ -6321,7 +6277,7 @@ def is_yuli_provider(provider):
 def is_lingjing_provider(provider):
     base_url = str((provider or {}).get("base_url") or "").lower()
     provider_id = str((provider or {}).get("id") or "").strip().lower()
-    return provider_id == "lingjing" or "apistudio.vip" in base_url
+    return provider_id == "lingjing" or "vectorengine" in base_url or "apistudio.vip" in base_url
 
 def is_agnes_provider(provider, model=""):
     base_url = str((provider or {}).get("base_url") or "").lower()
@@ -8394,6 +8350,372 @@ def find_prompt_library(data, library_id=""):
     libraries = data.get("libraries") if isinstance(data.get("libraries"), list) else []
     library_id = str(library_id or data.get("active_library_id") or "").strip()
     return next((item for item in libraries if item.get("id") == library_id), None) or (libraries[0] if libraries else None)
+
+# ══════════════════════════════════════════════════════════════════════
+# 系统角色库（persona）
+# ──────────────────────────────────────────────────────────────────────
+# 用途：让用户不必每次手写系统提示词，而是从预置角色里选一个，
+#       选中后把角色的 content 直接填入前端 #systemPromptInput（纯快捷填充）。
+# 注意：与 seed_system_prompt_library() / builtin_prompt_templates()（生图提示词模板库）
+#       是两套互不相干的数据，不要混用。
+# ══════════════════════════════════════════════════════════════════════
+
+PERSONA_CONTENT_MAX = 8000
+PERSONA_DESC_MAX = 200
+MEMORY_CONTENT_MAX = 1000
+# 内置角色的固定时间戳（2025-01-01T00:00:00Z）。
+# 内置角色由代码定义、不入文件时间戳体系；固定值可保证 normalize 结果稳定，
+# 避免 load_persona_library() 每次读取都判定「有变更」而反复重写文件。
+PERSONA_BUILTIN_EPOCH_MS = 1735660800000
+
+def builtin_personas():
+    """预置系统角色。content 是完整的 system prompt 文本，builtin=True 只读。"""
+    return [
+        {
+            "id": "builtin_general",
+            "name": "通用助手",
+            "description": "先给结论再给理由，简洁、准确、有条理",
+            "content": (
+                "你是一个高效、可靠的通用助手，请用简体中文回答。\n"
+                "遵循以下原则：\n"
+                "1. 先给结论，再给理由与依据；\n"
+                "2. 不确定时明确说明不确定的地方，绝不编造事实、数据或出处；\n"
+                "3. 回答保持简洁，能用列表就用列表，避免无意义的铺垫；\n"
+                "4. 当任务需要多步执行时，输出可立即照做的步骤清单。"
+            ),
+        },
+        {
+            "id": "builtin_ecommerce_visual",
+            "name": "电商视觉设计师",
+            "description": "鞋类电商视觉：主图 / 详情页 / 场景图的拍摄与后期方案",
+            "content": (
+                "你是一名资深电商视觉设计师，长期服务鞋类品牌旗舰店（如红蜻蜓），"
+                "精通鞋类电商的主图、详情页、场景图、活动海报的视觉策划与落地。\n\n"
+                "工作方式：\n"
+                "1. 先确认品类（男鞋/女鞋/童鞋）、风格定位、目标人群、投放渠道（天猫/京东/抖音/小红书）与尺寸规范；\n"
+                "2. 输出方案时包含：创意方向、构图与机位、模特与姿态、布光方案、配色与材质表现、道具与场景、后期修图要点；\n"
+                "3. 涉及生图时，直接给出可直接使用的画面描述：主体+材质+光影+镜头+背景+氛围+画质词，"
+                "并同步给出需要规避的负向描述（如变形、多余脚趾、鞋底穿模、logo 糊、文字乱码）；\n"
+                "4. 鞋类专项：重视皮面/织物/橡胶底的材质区分、鞋型比例与侧面线条、鞋带与五金细节、"
+                "上脚图的脚踝与腿部比例、地面投影与接触阴影的真实感；\n"
+                "5. 兼顾电商转化：主图突出卖点与差异化，详情页按「痛点—卖点—细节—场景—尺码—信任」组织信息；\n"
+                "6. 回答优先给可执行结论，避免空泛形容词，必要时给出参数化建议（比例、色值、光位、焦段）。"
+            ),
+        },
+        {
+            "id": "builtin_image_creator",
+            "name": "图片创作助手",
+            "description": "把模糊想法扩写成高质量画面描述与提示词",
+            "content": (
+                "你是一个专业的图片创作助手。你的任务是把用户模糊的想法，"
+                "扩写成可以直接交给图像模型的高质量画面描述。\n\n"
+                "每次输出请包含：\n"
+                "1. 一句话画面概述；\n"
+                "2. 正向描述：主体、姿态与表情、服装与材质、环境背景、构图与机位、镜头焦段、光线方向与色温、整体氛围、画质词；\n"
+                "3. 负向描述：需要规避的畸变、多余肢体、糊边、文字乱码、过曝过锐等；\n"
+                "4. 可选的 2-3 个变体方向（不同光线/机位/色调），供用户挑选。\n\n"
+                "回答保持紧凑，直接给可复制的内容，不做冗长解释。"
+            ),
+        },
+        {
+            "id": "builtin_prompt_optimizer",
+            "name": "提示词优化",
+            "description": "把模糊提示词改写成结构清晰、意图明确的优质提示词",
+            "content": (
+                "你是一名提示词优化专家，擅长把用户模糊、冗长或意图不清的提示词，"
+                "改写成语义清晰、结构完整、可直接使用的优质提示词。\n\n"
+                "优化流程：\n"
+                "1. 先简短复述你对原提示词意图的理解，并指出缺失或歧义的关键信息（角色、目标、约束、格式、受众）；\n"
+                "2. 输出优化后的提示词（放进代码块或清晰标注，方便直接复制）；\n"
+                "3. 简述主要改动与原因：补全了什么、删掉了什么、为什么这样改。\n\n"
+                "优化原则：\n"
+                "1. 角色明确：说明 AI 应扮演的角色与专业背景；\n"
+                "2. 目标具体：把「做好一点」「更好看」转化为可衡量的要求；\n"
+                "3. 约束清晰：明确格式、字数、语气、语言、禁止事项；\n"
+                "4. 分步骤：复杂任务拆成可执行步骤或固定输出结构；\n"
+                "5. 给示例：必要时附上输入/输出示例，减少歧义；\n"
+                "6. 忠实原意：不擅自扩大或偏离用户需求。\n\n"
+                "生图提示词专项：若用户要优化生图提示词，输出「主体 + 材质 + 光影 + 镜头/机位 + 背景 + 氛围 + 画质词」的正向描述，"
+                "并同步给出需要规避的负向描述（如变形、多余肢体、糊边、文字乱码、过曝）。\n\n"
+                "输出保持紧凑、直接可复制，不做冗长铺垫。"
+            ),
+        },
+        {
+            "id": "builtin_copywriter",
+            "name": "文案写手",
+            "description": "卖点提炼、标题与短文案，直接给出可投放版本",
+            "content": (
+                "你是一名资深文案写手，擅长电商、社媒与品牌内容。\n\n"
+                "工作方式：\n"
+                "1. 先问清（或自行假定并注明）：产品、目标人群、核心卖点、投放渠道、期望语气；\n"
+                "2. 输出时按「卖点提炼 → 标题 → 正文/短文案 → CTA」组织；\n"
+                "3. 标题给 5 个备选，覆盖利益点型、场景型、情绪型、数字型、疑问型；\n"
+                "4. 语言干净、具体、有画面感，避免空话套话和过度营销腔；\n"
+                "5. 若涉及合规风险（极限词、功效承诺、医疗用语），主动标注并给出替换表述。"
+            ),
+        },
+        {
+            "id": "builtin_programmer",
+            "name": "程序员",
+            "description": "可直接运行的完整代码 + 关键设计说明",
+            "content": (
+                "你是一名资深软件工程师，代码风格遵循 Google 规范。\n\n"
+                "回答要求：\n"
+                "1. 优先给出可以直接运行的完整代码，不要写占位符、pass 或 TODO；\n"
+                "2. 显式类型标注、完整错误处理、关键分支写清楚；\n"
+                "3. 先说明方案要点与关键取舍，再给代码，最后给使用/验证方式；\n"
+                "4. 修改既有代码时遵循最小变更原则，明确列出改动点与原因；\n"
+                "5. 不确定依赖版本或运行环境时，先说明假设再动手。"
+            ),
+        },
+        {
+            "id": "builtin_translator",
+            "name": "翻译",
+            "description": "忠实通顺的双语互译，保留格式与术语",
+            "content": (
+                "你是一名专业翻译，擅长中英互译，兼顾技术、商业与电商语境。\n\n"
+                "翻译规则：\n"
+                "1. 忠实原文语义，不增删信息；译文符合目标语言的自然表达；\n"
+                "2. 保留原文的段落、列表、代码块与标点结构；\n"
+                "3. 专有名词、品牌名、产品型号、术语保持统一，首次出现时可在括号中保留原文；\n"
+                "4. 存在歧义时，给出主译 + 1 个备选，并简述差异；\n"
+                "5. 只输出译文与必要的术语说明，不做额外发挥。"
+            ),
+        },
+        {
+            "id": "builtin_brainstorm",
+            "name": "头脑风暴搭档",
+            "description": "发散出多种方向，并收敛成可执行的下一步",
+            "content": (
+                "你是我的头脑风暴搭档。目标是先发散、再收敛。\n\n"
+                "流程：\n"
+                "1. 发散：围绕主题给出 8-12 个尽可能不同、甚至有点激进的方向，每个一句话；\n"
+                "2. 追问：提出 3 个能显著改变方向的关键问题（预算、人群、渠道、时间、约束）；\n"
+                "3. 收敛：从候选中挑出 3 个最可行的，按「价值 / 成本 / 风险 / 所需资源」简要对比；\n"
+                "4. 落地：给出下一步的 3 个具体动作，最好是 1 小时内能启动的。\n\n"
+                "不要迎合我，敢于指出想法里的漏洞。"
+            ),
+        },
+        {
+            "id": "builtin_data_analyst",
+            "name": "数据分析师",
+            "description": "从指标口径到结论洞察，讲清数据背后的原因与动作",
+            "content": (
+                "你是一名资深数据分析师。\n\n"
+                "分析要求：\n"
+                "1. 先确认指标口径、时间范围、对比基准与数据来源，口径不清时先提出假设；\n"
+                "2. 按「发生了什么 → 为什么 → 该怎么办」组织结论；\n"
+                "3. 区分相关与因果，说明结论的置信度与可能偏差（样本量、季节性、渠道变更等）；\n"
+                "4. 给出可量化的判断标准与可执行的动作建议，并说明如何验证效果；\n"
+                "5. 需要计算时写出计算过程，不要只给结果。"
+            ),
+        },
+    ]
+
+def normalize_persona_id(raw_id=""):
+    """角色 id 只允许 [A-Za-z0-9_-]，最多 60 字符。"""
+    return re.sub(r"[^A-Za-z0-9_-]+", "_", str(raw_id or ""))[:60].strip("_")
+
+def normalize_persona_item(item, fallback_index=0):
+    """把任意输入规整成合法 persona item；不校验 builtin（由调用方决定）。"""
+    if not isinstance(item, dict):
+        item = {}
+    fallback_name = f"角色{int(fallback_index or 0) + 1}"
+    pid = normalize_persona_id(item.get("id") or "")
+    return {
+        "id": pid or f"persona_{uuid.uuid4().hex[:12]}",
+        "name": sanitize_asset_name(item.get("name") or fallback_name, fallback_name),
+        "description": str(item.get("description") or "").strip()[:PERSONA_DESC_MAX],
+        "content": str(item.get("content") or "").strip()[:PERSONA_CONTENT_MAX],
+        "builtin": bool(item.get("builtin")),
+        "created_at": int(item.get("created_at") or now_ms()),
+        "updated_at": int(item.get("updated_at") or item.get("created_at") or now_ms()),
+    }
+
+def normalize_persona_library(data):
+    """内置角色始终以代码为准（保证新增/修订预置角色能自动同步），用户角色原样保留。"""
+    if not isinstance(data, dict):
+        data = {}
+    raw_items = data.get("personas") if isinstance(data.get("personas"), list) else []
+    personas = []
+    seen_ids = set()
+    builtins = [normalize_persona_item(item, index) for index, item in enumerate(builtin_personas())]
+    for item in builtins:
+        item["builtin"] = True
+        item["created_at"] = PERSONA_BUILTIN_EPOCH_MS
+        item["updated_at"] = PERSONA_BUILTIN_EPOCH_MS
+        seen_ids.add(item["id"])
+        personas.append(item)
+    for index, raw in enumerate(raw_items):
+        if not isinstance(raw, dict):
+            continue
+        item = normalize_persona_item(raw, index)
+        # 内置条目以代码为准，历史文件里的同 id 条目一律忽略；空内容的无效条目也丢弃。
+        if item["builtin"] or item["id"] in seen_ids or not item["content"]:
+            continue
+        item["builtin"] = False
+        seen_ids.add(item["id"])
+        personas.append(item)
+    return {"personas": personas, "updated_at": int(data.get("updated_at") or now_ms())}
+
+def default_persona_library():
+    return normalize_persona_library({})
+
+def save_persona_library(data):
+    data = normalize_persona_library(data)
+    data["updated_at"] = now_ms()
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(PERSONA_LIBRARY_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return data
+
+def load_persona_library():
+    if not os.path.exists(PERSONA_LIBRARY_PATH):
+        return save_persona_library(default_persona_library())
+    try:
+        with open(PERSONA_LIBRARY_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    normalized = normalize_persona_library(data)
+    if normalized.get("personas") != data.get("personas"):
+        return save_persona_library(normalized)
+    return normalized
+
+def public_persona_library(data=None):
+    data = normalize_persona_library(data if data is not None else load_persona_library())
+    return {"personas": data.get("personas") or [], "updated_at": int(data.get("updated_at") or now_ms())}
+
+def find_persona(data, persona_id=""):
+    """按 id 查找角色；找不到返回 None。"""
+    if not isinstance(data, dict):
+        return None
+    for item in (data.get("personas") or []):
+        if isinstance(item, dict) and item.get("id") == persona_id:
+            return item
+    return None
+
+# ── 长期记忆库（memory）· 数据层 ──────────────────────────────────────
+# 记忆全部由用户管理（无内置条目）。每条带 enabled 开关（默认开），
+# 请求构造时由 memory_block() 把已启用记忆合并进 system prompt，
+# 前端 textarea（currentSystemPrompt）不感知，因此 chat / 生图 / agent 三处注入一致。
+
+def normalize_memory_item(item, fallback_index=0):
+    """把任意输入规整成合法 memory item。id 复用角色 id 规整器（安全字符集）。
+    scope 仅接受 global / conversation，其余一律回退 global；conversation 作用域外的 conversation_id 一律清空。"""
+    if not isinstance(item, dict):
+        item = {}
+    mid = normalize_persona_id(item.get("id") or "")
+    scope = str(item.get("scope") or "global").strip()
+    if scope not in ("global", "conversation"):
+        scope = "global"
+    return {
+        "id": mid or f"memory_{uuid.uuid4().hex[:12]}",
+        "content": str(item.get("content") or "").strip()[:MEMORY_CONTENT_MAX],
+        "enabled": bool(item.get("enabled", True)),
+        "scope": scope,
+        "conversation_id": str(item.get("conversation_id") or "").strip() if scope == "conversation" else "",
+        "created_at": int(item.get("created_at") or now_ms()),
+        "updated_at": int(item.get("updated_at") or item.get("created_at") or now_ms()),
+    }
+
+def normalize_memory_library(data):
+    """记忆无内置条目；空/无效内容或重复 id 的条目丢弃。"""
+    if not isinstance(data, dict):
+        data = {}
+    raw_items = data.get("memories") if isinstance(data.get("memories"), list) else []
+    memories = []
+    seen_ids = set()
+    for index, raw in enumerate(raw_items):
+        if not isinstance(raw, dict):
+            continue
+        item = normalize_memory_item(raw, index)
+        if not item["content"] or item["id"] in seen_ids:
+            continue
+        seen_ids.add(item["id"])
+        memories.append(item)
+    return {"memories": memories, "updated_at": int(data.get("updated_at") or now_ms())}
+
+def default_memory_library():
+    return normalize_memory_library({})
+
+def save_memory_library(data):
+    data = normalize_memory_library(data)
+    data["updated_at"] = now_ms()
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(MEMORY_LIBRARY_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return data
+
+def load_memory_library():
+    if not os.path.exists(MEMORY_LIBRARY_PATH):
+        return save_memory_library(default_memory_library())
+    try:
+        with open(MEMORY_LIBRARY_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    normalized = normalize_memory_library(data)
+    if normalized.get("memories") != data.get("memories"):
+        return save_memory_library(normalized)
+    return normalized
+
+def public_memory_library(data=None):
+    data = normalize_memory_library(data if data is not None else load_memory_library())
+    return {"memories": data.get("memories") or [], "updated_at": int(data.get("updated_at") or now_ms())}
+
+def find_memory(data, memory_id=""):
+    """按 id 查找记忆；找不到返回 None。"""
+    if not isinstance(data, dict):
+        return None
+    for item in (data.get("memories") or []):
+        if isinstance(item, dict) and item.get("id") == memory_id:
+            return item
+    return None
+
+def memory_block(conversation_id=""):
+    """返回当前已启用记忆的文本块（含中文标签前缀）；无启用记忆返回空串。
+    scope == "global" 的记忆始终注入；scope == "conversation" 的记忆仅当
+    conversation_id 非空且与请求所属对话一致时注入。
+    供 chat / 生图 / agent 三处注入点统一调用，保证行为一致。"""
+    cid = str(conversation_id or "").strip()
+    try:
+        lib = load_memory_library()
+    except Exception:
+        return ""
+    items = lib.get("memories") if isinstance(lib, dict) else None
+    if not isinstance(items, list):
+        return ""
+    active = []
+    for m in items:
+        if not isinstance(m, dict):
+            continue
+        if not m.get("enabled", True):
+            continue
+        if not (m.get("content") or "").strip():
+            continue
+        scope = str(m.get("scope") or "global")
+        if scope == "conversation":
+            if not cid or (m.get("conversation_id") or "") != cid:
+                continue
+        active.append(m)
+    if not active:
+        return ""
+    lines = "\n".join(f"- {(m.get('content') or '').strip()}" for m in active)
+    return "【长期记忆】以下是用户希望你在本次及后续对话中始终保持的偏好与事实，请主动遵守：\n" + lines
+
+def effective_system_prompt(payload):
+    """合并用户 system_prompt 与已启用记忆，作为最终生效的 system prompt。
+    记忆由服务端在请求时自动注入，前端 textarea 无需感知。"""
+    prompt = str(getattr(payload, "system_prompt", "") or "").strip()
+    mem = memory_block(getattr(payload, "conversation_id", "") or "")
+    if mem:
+        prompt = (prompt + "\n\n" + mem).strip() if prompt else mem
+    return prompt or SYSTEM_PROMPT
 
 def sanitize_asset_name(name, fallback="asset"):
     name = re.sub(r'[\\/:*?"<>|]+', "_", str(name or fallback)).strip()
@@ -11933,6 +12255,7 @@ async def decide_chat_agent_action(payload, conversation, refs):
     chat_base, chat_hdrs, model = resolve_chat_provider(payload.provider, payload.model, payload.ms_model)
     history = conversation["messages"][-MAX_HISTORY_MESSAGES:]
     custom_system_prompt = str(getattr(payload, "system_prompt", "") or "").strip()
+    mem = memory_block(getattr(payload, "conversation_id", "") or "")
     system = (
         "你是图片创作聊天 Agent 的意图路由器。只返回 JSON，不要 Markdown。\n"
         "action 只能是 chat、generate_image、edit_image。\n"
@@ -11947,11 +12270,13 @@ async def decide_chat_agent_action(payload, conversation, refs):
         msg = upstream_message_from_record(item)
         if msg:
             upstream_messages.append(msg)
+    mem_hint = f"用户长期记忆：\n{mem}\n" if mem else ""
     upstream_messages.append({
         "role": "user",
         "content": (
             f"当前用户输入：{payload.message}\n"
             f"用户设置的系统提示词：{custom_system_prompt or '无'}\n"
+            f"{mem_hint}"
             f"本次上传参考图数量：{len(refs)}\n"
             f"对话中是否已有上一张生成图：{'是' if has_previous_image else '否'}\n"
             "请返回 JSON，例如 {\"action\":\"generate_image\",\"prompt\":\"...\",\"reply\":\"...\"}"
@@ -12044,7 +12369,7 @@ async def lan_info():
     import os as _os
     import io as _io
     import base64 as _b64
-    port = 3000
+    port = int(_os.environ.get("NOVAI_PORT", "3000"))
     lan_ip = _os.environ.get("NOVAI_LAN_IP")
     lan_url = _os.environ.get("NOVAI_LAN_URL")
     # dev 模式（直接跑 main.py）下环境变量没设，自己算
@@ -13013,336 +13338,6 @@ def migrate_mislabeled_image_extensions():
     if fixed:
         print(f"纠正图片扩展名(内容与后缀不符): {fixed} 个")
 
-@app.post("/api/local-assets/upload")
-async def upload_local_assets(files: List[UploadFile] = File(...), folder: str = Form("")):
-    uploaded = []
-    folder_rel, folder_abs = _local_upload_safe_folder(folder)
-    os.makedirs(folder_abs, exist_ok=True)
-    for file in files:
-        content = await file.read()
-        if not content:
-            continue
-        kind, ext = _local_upload_kind_ext(file.filename, file.content_type)
-        if kind is None:
-            continue
-        base = os.path.splitext(os.path.basename(file.filename or "file"))[0]
-        base = re.sub(r"[^0-9A-Za-z一-鿿._-]+", "_", base).strip("_") or "file"
-        base = base[:60]
-        filename = f"up_{uuid.uuid4().hex[:12]}_{base}{ext}"
-        rel_name = f"{folder_rel}/{filename}".lstrip("/")
-        path = os.path.join(folder_abs, filename)
-        with open(path, "wb") as f:
-            f.write(content)
-        if kind == "image":
-            classification = await classify_asset_image_best_effort(path)
-            if classification:
-                _write_local_upload_classification(rel_name, classification)
-        uploaded.append(_local_upload_item(rel_name))
-    return {"files": uploaded}
-
-@app.post("/api/local-assets/import-urls")
-async def import_local_assets_from_urls(payload: LocalAssetUrlImportRequest):
-    uploaded = []
-    results = []
-    folder_rel, folder_abs = _local_upload_safe_folder(payload.folder)
-    os.makedirs(folder_abs, exist_ok=True)
-    timeout = httpx.Timeout(connect=20.0, read=120.0, write=30.0, pool=20.0)
-    async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV, timeout=timeout, follow_redirects=True, headers={"User-Agent": "Infinite-Canvas-Asset-Importer/1.0"}) as client:
-        for entry in (payload.items or [])[:200]:
-            src_url = str(entry.url or "").strip()
-            inline_data = str(entry.data or "").strip()
-            result = {"url": src_url, "ok": False, "file": "", "error": ""}
-            if not inline_data and not src_url.startswith(("http://", "https://")):
-                result["error"] = "仅支持 http(s) 素材地址"
-                results.append(result)
-                continue
-            try:
-                if inline_data:
-                    # 插件已在网页上下文里把字节读成 base64（dataURL 形如 data:<ct>;base64,<payload>）
-                    content_type = str(entry.content_type or "").split(";", 1)[0].strip().lower()
-                    b64 = inline_data
-                    if inline_data.startswith("data:"):
-                        header, _, b64 = inline_data.partition(",")
-                        if not content_type:
-                            content_type = header[5:].split(";", 1)[0].strip().lower()
-                    try:
-                        content = base64.b64decode(b64, validate=False)
-                    except Exception:
-                        raise HTTPException(status_code=400, detail="素材数据无法解码")
-                    name_path = urllib.parse.urlparse(src_url).path
-                else:
-                    response = await client.get(src_url)
-                    response.raise_for_status()
-                    content_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
-                    content = response.content
-                    name_path = urllib.parse.urlparse(src_url).path
-                kind, ext = _local_upload_kind_ext(name_path, content_type)
-                if kind == "image":
-                    real = _sniff_image_ext_bytes(content[:16])   # 以真实内容为准，避免 webp 被叫成 .png 等
-                    if real and not (real == ".jpg" and ext == ".jpeg"):
-                        ext = real
-                if kind not in ("image", "video"):
-                    raise HTTPException(status_code=400, detail=f"不是图片或视频资源：{content_type or src_url}")
-                if not content:
-                    raise HTTPException(status_code=400, detail="素材内容为空")
-                # entry.name 可能自带扩展名（采集器常传完整文件名），先 splitext 去掉，否则会和下面拼接的 ext 叠成 .png.png
-                if entry.name:
-                    base = os.path.splitext(entry.name)[0]
-                else:
-                    base = os.path.splitext(os.path.basename(urllib.parse.unquote(name_path)))[0]
-                base = base or ("web-video" if kind == "video" else "web-image")
-                base = re.sub(r"[^0-9A-Za-z一-鿿._-]+", "_", base).strip("_") or ("web-video" if kind == "video" else "web-image")
-                base = base[:60]
-                # 兜底：若 base 末尾已是同一扩展名，去掉一层再拼，杜绝重复后缀
-                if ext and base.lower().endswith(ext.lower()):
-                    base = base[:-len(ext)].rstrip(".") or ("web-video" if kind == "video" else "web-image")
-                filename = f"up_{uuid.uuid4().hex[:12]}_{base}{ext}"
-                rel_name = f"{folder_rel}/{filename}".lstrip("/")
-                path = os.path.join(folder_abs, filename)
-                with open(path, "wb") as f:
-                    f.write(content)
-                if payload.classify and kind == "image":
-                    classification = await classify_asset_image_best_effort(path, payload.provider, payload.model, payload.ms_model, payload.prompt)
-                    if classification:
-                        _write_local_upload_classification(rel_name, classification)
-                item = _local_upload_item(rel_name)
-                uploaded.append(item)
-                result.update({"ok": True, "file": rel_name, "item": item})
-            except HTTPException as exc:
-                result["error"] = str(exc.detail or "导入失败")
-            except Exception as exc:
-                result["error"] = str(exc) or "导入失败"
-            results.append(result)
-    return {"ok": True, "count": len(uploaded), "files": uploaded, "items": results}
-
-@app.get("/api/local-assets")
-async def list_local_assets():
-    tree, items = _local_upload_tree_and_items()
-    return {"items": items, "tree": tree}
-
-@app.post("/api/local-assets/folders")
-async def create_local_asset_folder(payload: LocalAssetFolderRequest, request: Request):
-    ensure_same_origin_request(request)
-    parent_rel, parent_abs = _local_upload_safe_folder(payload.parent)
-    if not os.path.isdir(parent_abs):
-        raise HTTPException(status_code=404, detail="父文件夹不存在")
-    name = _local_upload_safe_folder_name(payload.name)
-    rel = f"{parent_rel}/{name}".lstrip("/")
-    _, abs_path = _local_upload_safe_folder(rel)
-    if os.path.exists(abs_path):
-        raise HTTPException(status_code=400, detail="同名文件夹已存在")
-    os.makedirs(abs_path, exist_ok=False)
-    tree, items = _local_upload_tree_and_items()
-    return {"ok": True, "folder": {"path": rel, "name": name}, "tree": tree, "items": items}
-
-@app.patch("/api/local-assets/folders")
-async def rename_local_asset_folder(payload: LocalAssetFolderRequest, request: Request):
-    ensure_same_origin_request(request)
-    rel, abs_path = _local_upload_safe_folder(payload.path)
-    if not rel:
-        raise HTTPException(status_code=400, detail="根目录不能重命名")
-    if not os.path.isdir(abs_path):
-        raise HTTPException(status_code=404, detail="文件夹不存在")
-    name = _local_upload_safe_folder_name(payload.name)
-    parent = os.path.dirname(rel).replace("\\", "/")
-    new_rel = f"{parent}/{name}".lstrip("/")
-    _, new_abs = _local_upload_safe_folder(new_rel)
-    if os.path.exists(new_abs):
-        raise HTTPException(status_code=400, detail="同名文件夹已存在")
-    os.rename(abs_path, new_abs)
-    tree, items = _local_upload_tree_and_items()
-    return {"ok": True, "folder": {"path": new_rel, "name": name}, "tree": tree, "items": items}
-
-@app.patch("/api/local-assets/items")
-async def rename_local_asset_item(payload: LocalAssetRenameRequest, request: Request):
-    ensure_same_origin_request(request)
-    rel, abs_path = _local_upload_safe_path(payload.path)
-    if not os.path.isfile(abs_path):
-        raise HTTPException(status_code=404, detail="本地素材不存在")
-    kind, ext = _local_upload_kind_ext(rel, "")
-    if kind is None:
-        raise HTTPException(status_code=400, detail="不支持的素材类型")
-    new_stem = _local_upload_safe_file_stem(payload.name)
-    old_ext = os.path.splitext(rel)[1] or ext
-    parent = os.path.dirname(rel).replace("\\", "/")
-    new_rel = f"{parent}/{new_stem}{old_ext}".lstrip("/")
-    if new_rel == rel:
-        tree, items = _local_upload_tree_and_items()
-        return {"ok": True, "item": _local_upload_item(rel), "tree": tree, "items": items}
-    _, new_abs = _local_upload_abs(new_rel)
-    if os.path.exists(new_abs):
-        raise HTTPException(status_code=400, detail="同名素材已存在")
-    os.rename(abs_path, new_abs)
-    old_caption = _local_upload_caption_path(rel)
-    new_caption = _local_upload_caption_path(new_rel)
-    if os.path.isfile(old_caption) and not os.path.exists(new_caption):
-        os.rename(old_caption, new_caption)
-    old_classification = _local_upload_classification_path(rel)
-    new_classification = _local_upload_classification_path(new_rel)
-    if os.path.isfile(old_classification) and not os.path.exists(new_classification):
-        os.rename(old_classification, new_classification)
-    tree, items = _local_upload_tree_and_items()
-    return {"ok": True, "item": _local_upload_item(new_rel), "old_path": rel, "tree": tree, "items": items}
-
-@app.post("/api/local-assets/delete")
-async def delete_local_assets(payload: dict, request: Request):
-    ensure_same_origin_request(request)
-    names = payload.get("names") if isinstance(payload, dict) else None
-    if not isinstance(names, list):
-        names = []
-    deleted = []
-    for name in names:
-        try:
-            rel, path = _local_upload_safe_path(name)
-        except HTTPException:
-            continue
-        if os.path.isfile(path):
-            try:
-                os.remove(path)
-                txt_path = _local_upload_caption_path(rel)
-                if os.path.isfile(txt_path):
-                    os.remove(txt_path)
-                cls_path = _local_upload_classification_path(rel)
-                if os.path.isfile(cls_path):
-                    os.remove(cls_path)
-                deleted.append(rel)
-            except OSError:
-                pass
-    return {"deleted": deleted}
-
-@app.post("/api/local-assets/move")
-async def move_local_assets(payload: dict, request: Request):
-    """把选中的本地素材移动到目标文件夹（folder 为空表示根目录）；连同 .txt / .classification.json 兄弟文件一起搬。"""
-    ensure_same_origin_request(request)
-    names = payload.get("names") if isinstance(payload, dict) else None
-    if not isinstance(names, list) or not names:
-        raise HTTPException(status_code=400, detail="没有选择素材")
-    folder_value = str(payload.get("folder") or "").strip() if isinstance(payload, dict) else ""
-    target_rel, target_abs = _local_upload_safe_folder(folder_value)
-    if target_rel and not os.path.isdir(target_abs):
-        raise HTTPException(status_code=404, detail="目标文件夹不存在")
-    moved = 0
-    for name in names:
-        try:
-            rel, abs_path = _local_upload_safe_path(name)
-        except HTTPException:
-            continue
-        if not os.path.isfile(abs_path):
-            continue
-        base = os.path.basename(rel)
-        new_rel = f"{target_rel}/{base}".lstrip("/") if target_rel else base
-        if new_rel == rel:
-            continue  # 已在目标文件夹，跳过
-        _, new_abs = _local_upload_abs(new_rel)
-        if os.path.exists(new_abs):
-            # 同名冲突：加短随机后缀，避免覆盖已有文件
-            stem, ext = os.path.splitext(base)
-            base = f"{stem}_{uuid.uuid4().hex[:6]}{ext}"
-            new_rel = f"{target_rel}/{base}".lstrip("/") if target_rel else base
-            _, new_abs = _local_upload_abs(new_rel)
-        try:
-            os.makedirs(os.path.dirname(new_abs), exist_ok=True)
-            os.rename(abs_path, new_abs)
-            for src_sib, dst_sib in (
-                (_local_upload_caption_path(rel), _local_upload_caption_path(new_rel)),
-                (_local_upload_classification_path(rel), _local_upload_classification_path(new_rel)),
-            ):
-                if os.path.isfile(src_sib) and not os.path.exists(dst_sib):
-                    os.rename(src_sib, dst_sib)
-            moved += 1
-        except OSError:
-            continue
-    tree, items = _local_upload_tree_and_items()
-    return {"ok": True, "moved": moved, "items": items, "tree": tree}
-
-@app.post("/api/local-assets/caption")
-async def caption_local_assets(payload: LocalAssetCaptionRequest):
-    prompt = (payload.prompt or "描述图片").strip() or "描述图片"
-    items = []
-    ok_count = 0
-    for name in (payload.names or [])[:100]:
-        item = {"name": name, "ok": False, "caption": "", "caption_file": "", "error": ""}
-        try:
-            filename, path = _local_upload_safe_path(name)
-            if not os.path.isfile(path):
-                raise HTTPException(status_code=404, detail="文件不存在")
-            kind, _ = _local_upload_kind_ext(filename, "")
-            if kind != "image":
-                raise HTTPException(status_code=400, detail="仅支持图片素材反推提示词")
-            caption, resolved_model = await caption_image_with_provider(
-                path,
-                prompt,
-                payload.provider,
-                payload.model,
-                payload.ms_model,
-            )
-            txt_path = _local_upload_caption_path(filename)
-            with open(txt_path, "w", encoding="utf-8", newline="") as f:
-                f.write(caption)
-            item.update({
-                "ok": True,
-                "name": filename,
-                "caption": caption,
-                "caption_file": os.path.basename(txt_path),
-                "model": resolved_model,
-            })
-            ok_count += 1
-        except HTTPException as exc:
-            item["error"] = str(exc.detail or "反推失败")
-        except Exception as exc:
-            item["error"] = str(exc) or "反推失败"
-        items.append(item)
-    return {"ok": True, "count": ok_count, "items": items}
-
-@app.post("/api/local-assets/classify")
-async def classify_local_assets(payload: LocalAssetClassifyRequest):
-    items = []
-    ok_count = 0
-    for name in (payload.names or [])[:80]:
-        item = {"name": name, "ok": False, "classification": None, "classification_file": "", "error": ""}
-        try:
-            filename, path = _local_upload_safe_path(name)
-            if not os.path.isfile(path):
-                raise HTTPException(status_code=404, detail="文件不存在")
-            kind, _ = _local_upload_kind_ext(filename, "")
-            if kind != "image":
-                raise HTTPException(status_code=400, detail="仅支持图片素材智能分类")
-            classification = await classify_image_with_provider(
-                path,
-                payload.provider,
-                payload.model,
-                payload.ms_model,
-                payload.prompt,
-            )
-            _write_local_upload_classification(filename, classification)
-            item.update({
-                "ok": True,
-                "name": filename,
-                "classification": classification,
-                "classification_file": os.path.basename(_local_upload_classification_path(filename)),
-                "model": classification.get("model") or "",
-            })
-            ok_count += 1
-        except HTTPException as exc:
-            item["error"] = str(exc.detail or "智能分类失败")
-        except Exception as exc:
-            item["error"] = str(exc) or "智能分类失败"
-        items.append(item)
-    return {"ok": True, "count": ok_count, "items": items}
-
-@app.patch("/api/local-assets/caption")
-async def save_local_asset_caption(payload: LocalAssetCaptionSaveRequest):
-    filename, path = _local_upload_safe_path(payload.name)
-    if not os.path.isfile(path):
-        raise HTTPException(status_code=404, detail="文件不存在")
-    kind, _ = _local_upload_kind_ext(filename, "")
-    if kind != "image":
-        raise HTTPException(status_code=400, detail="仅支持图片素材保存提示词")
-    caption = str(payload.caption or "")[:100000]
-    txt_path = _local_upload_caption_path(filename)
-    with open(txt_path, "w", encoding="utf-8", newline="") as f:
-        f.write(caption)
-    return {"ok": True, "caption": caption, "caption_file": os.path.basename(txt_path)}
 
 @app.post("/api/temp-sh/upload")
 async def temp_sh_upload(payload: TempShUploadRequest, request: Request):
@@ -14109,63 +14104,6 @@ async def get_global_token():
 # 存储路径 / 素材分类 Prompt / 图片检测 / 模型规范化 —— 前端可调用 API
 # ────────────────────────────────────────────────────────────────
 
-@app.get("/api/storage/settings")
-async def api_storage_settings():
-    """返回当前素材存储路径配置，供前端资产管理器显示路径信息和估算磁盘用量。"""
-    return {
-        "data_root": _DATA_ROOT,
-        "output_dir": OUTPUT_DIR,
-        "assets_dir": ASSETS_DIR,
-        "assets_input": OUTPUT_INPUT_DIR,
-        "assets_output": OUTPUT_OUTPUT_DIR,
-        "library_dir": ASSET_LIBRARY_DIR,
-        "uploads_dir": LOCAL_UPLOAD_DIR,
-        "canvas_dir": CANVAS_DIR,
-        "conversation_dir": CONVERSATION_DIR,
-    }
-
-class StoragePathPayload(BaseModel):
-    data_root: str = ""
-
-@app.put("/api/storage/settings")
-async def api_save_storage_settings(payload: StoragePathPayload):
-    """保存自定义素材存储根路径。空字符串表示恢复默认（项目目录）。"""
-    new_root = str(payload.data_root or "").strip()
-    if not new_root:
-        # 恢复默认
-        env_updates = {"NOVAI_DATA_DIR": ""}
-        update_env_values(env_updates)
-        reload_env_globals()
-        return {"data_root": BASE_DIR, "message": "已恢复默认存储路径"}
-    # 验证路径有效
-    expanded = os.path.abspath(os.path.expanduser(new_root))
-    if not os.path.isdir(expanded):
-        try:
-            os.makedirs(expanded, exist_ok=True)
-        except OSError as exc:
-            raise HTTPException(status_code=400, detail=f"无法创建目录 {expanded}：{exc}") from exc
-    env_updates = {"NOVAI_DATA_DIR": expanded}
-    update_env_values(env_updates)
-    reload_env_globals()
-    return {"data_root": expanded, "message": "存储路径已更新"}
-
-@app.post("/api/storage/apply")
-async def api_apply_storage_settings():
-    """将当前存储路径配置应用到实际目录结构，确保所有必要子目录存在。"""
-    dirs_to_ensure = [
-        OUTPUT_DIR, ASSETS_DIR, OUTPUT_INPUT_DIR, OUTPUT_OUTPUT_DIR,
-        ASSET_LIBRARY_DIR, LOCAL_UPLOAD_DIR, STATIC_DIR, WORKFLOW_DIR,
-        CONVERSATION_DIR, CANVAS_DIR, DATA_DIR, MEDIA_PREVIEW_DIR,
-    ]
-    created = []
-    for d in dirs_to_ensure:
-        if not os.path.isdir(d):
-            try:
-                os.makedirs(d, exist_ok=True)
-                created.append(d)
-            except OSError as exc:
-                raise HTTPException(status_code=400, detail=f"无法创建目录 {d}：{exc}") from exc
-    return {"applied": True, "created_dirs": created}
 
 # ── 自定义输出目录（仅影响生成的图片/视频，不影响 API/画布等数据）──
 
@@ -16950,11 +16888,6 @@ async def touch_canvas(canvas_id: str):
     save_canvas(canvas)
     return {"canvas": canvas_record(canvas), "updated_at": canvas.get("updated_at", 0)}
 
-@app.get("/api/canvas-assets")
-async def list_canvas_assets():
-    # canvas_assets_index 会同步遍历并解析所有画布 JSON，放进线程池避免阻塞事件循环
-    # （否则画布多时一次请求就会卡住整个 asyncio loop，连 WebSocket 一起掉线）。
-    return await asyncio.to_thread(canvas_assets_index)
 
 @app.get("/api/smart-canvas/prompt-templates")
 async def smart_canvas_prompt_templates():
@@ -16966,75 +16899,7 @@ async def smart_canvas_prompt_templates():
         print(f"读取提示词模板失败: {e}")
         return {"templates": []}
 
-@app.post("/api/canvas-assets/check")
-async def check_canvas_assets(payload: CanvasAssetCheckRequest):
-    result = {}
-    for url in payload.urls[:3000]:
-        text = str(url or "").strip()
-        if not text:
-            continue
-        if text.startswith("/output/") or text.startswith("/assets/"):
-            result[text] = bool(output_file_from_url(text))
-        else:
-            result[text] = True
-    return {"exists": result}
 
-@app.post("/api/canvas-assets/download")
-async def download_canvas_assets(payload: CanvasAssetDownloadRequest):
-    buffer = BytesIO()
-    used_names = set()
-    count = 0
-    raw_items = payload.items or [{"url": url} for url in payload.urls]
-    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-        for raw in raw_items[:1000]:
-            if isinstance(raw, dict):
-                text = str(raw.get("url") or "").strip()
-                requested_name = str(raw.get("name") or "").strip()
-            else:
-                text = str(raw or "").strip()
-                requested_name = ""
-            if not text:
-                continue
-            path = output_file_from_url(text)
-            content = None
-            content_type = ""
-            if path and os.path.isfile(path):
-                base = sanitize_export_filename(requested_name or os.path.basename(path), os.path.basename(path) or f"image-{count + 1}.png")
-            else:
-                local_by_name = local_media_file_by_basename(filename_from_media_url(text, ""))
-                if local_by_name and os.path.isfile(local_by_name):
-                    path = local_by_name
-                    base = sanitize_export_filename(requested_name or os.path.basename(path), os.path.basename(path) or f"image-{count + 1}.png")
-                else:
-                    try:
-                        remote = fetch_remote_media_bytes(text)
-                    except Exception:
-                        remote = None
-                    if not remote:
-                        continue
-                    content, content_type = remote
-                    base = sanitize_export_filename(requested_name or filename_from_media_url(text, f"image-{count + 1}.bin"), f"image-{count + 1}.bin")
-            name, ext = os.path.splitext(base)
-            archive_name = base
-            suffix = 2
-            while archive_name in used_names:
-                archive_name = f"{name}-{suffix}{ext}"
-                suffix += 1
-            used_names.add(archive_name)
-            if path and os.path.isfile(path):
-                zf.write(path, archive_name)
-            else:
-                zf.writestr(archive_name, content)
-            count += 1
-    if count <= 0:
-        raise HTTPException(status_code=404, detail="没有可下载的本地图片")
-    buffer.seek(0)
-    filename = re.sub(r'[\\/:*?"<>|]+', "_", payload.filename or "canvas-output-images.zip")
-    if not filename.lower().endswith(".zip"):
-        filename += ".zip"
-    encoded = urllib.parse.quote(filename)
-    headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"}
-    return Response(buffer.getvalue(), media_type="application/zip", headers=headers)
 
 def sanitize_export_filename(name: str, fallback: str) -> str:
     base = os.path.basename(str(name or "").strip()) or fallback
@@ -17571,28 +17436,6 @@ async def export_canvas_workflow_to_library(payload: CanvasWorkflowExportRequest
     save_asset_library(lib)
     return {"library": lib, "item": item}
 
-@app.post("/api/asset-library/workflows/upload")
-async def upload_asset_library_workflows(
-    files: List[UploadFile] = File(...),
-    library_id: str = Form(""),
-    category_id: str = Form(""),
-):
-    lib = load_asset_library()
-    _, cat = asset_library_workflow_category(lib, library_id, category_id)
-    added = []
-    for file in files[:100]:
-        raw = await file.read()
-        filename = file.filename or "canvas-workflow.zip"
-        lower = filename.lower()
-        if not (lower.endswith(".json") or lower.endswith(".zip") or raw[:2] == b"PK"):
-            continue
-        item = make_workflow_library_item_from_bytes(raw, filename, os.path.splitext(filename)[0])
-        cat.setdefault("items", []).append(item)
-        added.append(item)
-    if not added:
-        raise HTTPException(status_code=400, detail="没有可上传的工作流文件")
-    save_asset_library(lib)
-    return {"library": lib, "items": added}
 
 @app.post("/api/canvas-workflows/import")
 async def import_canvas_workflow(file: UploadFile = File(...)):
@@ -17719,428 +17562,170 @@ async def export_smart_canvas_group(payload: SmartCanvasGroupExportRequest):
         raise HTTPException(status_code=404, detail="没有可导出的内容")
     return {"ok": True, "folder": target_dir, "count": count}
 
-@app.get("/api/asset-library")
-async def get_asset_library():
-    return {"library": load_asset_library()}
 
-@app.get("/api/prompt-libraries")
-async def get_prompt_libraries():
-    return {"library": public_prompt_libraries()}
-
-@app.post("/api/prompt-libraries")
-async def create_prompt_library(payload: PromptLibraryRequest):
-    data = load_prompt_libraries()
-    library = {
-        "id": f"lib_{uuid.uuid4().hex[:12]}",
-        "name": sanitize_asset_name(payload.name, "提示词库"),
-        "type": "prompt",
-        "categories": [],
-        "items": [],
-    }
-    data.setdefault("libraries", []).append(library)
-    data["active_library_id"] = library["id"]
-    data = save_prompt_libraries(data)
-    new_lib = next((lib for lib in data.get("libraries", []) if lib.get("id") == library["id"]), library)
-    return {"library": public_prompt_libraries(data), "prompt_library": new_lib}
-
-@app.patch("/api/prompt-libraries/{library_id}")
-async def rename_prompt_library(library_id: str, payload: PromptLibraryRequest):
-    data = load_prompt_libraries()
-    library = find_prompt_library(data, library_id)
-    if not library or library.get("id") != library_id:
-        raise HTTPException(status_code=404, detail="提示词库不存在")
-    library["name"] = sanitize_asset_name(payload.name, library.get("name") or "提示词库")
-    data = save_prompt_libraries(data)
-    return {"library": public_prompt_libraries(data), "prompt_library": library}
-
-@app.delete("/api/prompt-libraries/{library_id}")
-async def delete_prompt_library(library_id: str):
-    if library_id == "system":
-        raise HTTPException(status_code=400, detail="系统提示词库不能删除，可以删除其中的提示词")
-    data = load_prompt_libraries()
-    libraries = data.get("libraries", []) or []
-    kept = [lib for lib in libraries if lib.get("id") != library_id]
-    if len(kept) == len(libraries):
-        raise HTTPException(status_code=404, detail="提示词库不存在")
-    data["libraries"] = kept
-    if data.get("active_library_id") == library_id:
-        data["active_library_id"] = "system"
-    data = save_prompt_libraries(data)
-    return {"library": public_prompt_libraries(data)}
-
-@app.post("/api/prompt-libraries/items")
-async def add_prompt_library_item(payload: PromptLibraryItemRequest):
-    data = load_prompt_libraries()
-    library = find_prompt_library(data, payload.library_id)
-    if not library:
-        raise HTTPException(status_code=404, detail="提示词库不存在")
-    if not str(payload.positive or "").strip():
-        raise HTTPException(status_code=400, detail="提示词内容不能为空")
-    item = normalize_prompt_library_item({
-        "id": f"tpl_{uuid.uuid4().hex[:12]}",
-        "name": payload.name,
-        "category": payload.category,
-        "positive": payload.positive,
-        "negative": payload.negative,
-        "scene": payload.scene,
-        "created_at": now_ms(),
-        "updated_at": now_ms(),
-    })
-    library.setdefault("items", []).insert(0, item)
-    data["active_library_id"] = library.get("id") or data.get("active_library_id")
-    data = save_prompt_libraries(data)
-    return {"library": public_prompt_libraries(data), "item": item}
-
-@app.patch("/api/prompt-libraries/items/{item_id}")
-async def update_prompt_library_item(item_id: str, payload: PromptLibraryItemRequest):
-    data = load_prompt_libraries()
-    for library in data.get("libraries", []) or []:
-        if payload.library_id and library.get("id") != payload.library_id:
-            continue
-        for index, item in enumerate(library.get("items", []) or []):
-            if item.get("id") == item_id:
-                next_item = normalize_prompt_library_item({
-                    **item,
-                    "name": payload.name or item.get("name"),
-                    "category": payload.category or item.get("category"),
-                    "positive": payload.positive or item.get("positive"),
-                    "negative": payload.negative,
-                    "scene": payload.scene,
-                    "updated_at": now_ms(),
-                })
-                library["items"][index] = next_item
-                data = save_prompt_libraries(data)
-                return {"library": public_prompt_libraries(data), "item": next_item}
-    raise HTTPException(status_code=404, detail="提示词不存在")
-
-@app.delete("/api/prompt-libraries/items/{item_id}")
-async def delete_prompt_library_item(item_id: str):
-    data = load_prompt_libraries()
-    removed = None
-    for library in data.get("libraries", []) or []:
-        keep = []
-        for item in library.get("items", []) or []:
-            if item.get("id") == item_id:
-                removed = item
-            else:
-                keep.append(item)
-        library["items"] = keep
-    if not removed:
-        raise HTTPException(status_code=404, detail="提示词不存在")
-    data = save_prompt_libraries(data)
-    return {"library": public_prompt_libraries(data), "removed": 1}
-
-@app.post("/api/prompt-libraries/items/delete")
-async def batch_delete_prompt_library_items(payload: PromptLibraryBatchDeleteRequest):
-    ids = {str(item) for item in (payload.ids or []) if str(item)}
-    if not ids:
-        raise HTTPException(status_code=400, detail="没有选择提示词")
-    data = load_prompt_libraries()
-    removed = 0
-    for library in data.get("libraries", []) or []:
-        keep = []
-        for item in library.get("items", []) or []:
-            if item.get("id") in ids:
-                removed += 1
-            else:
-                keep.append(item)
-        library["items"] = keep
-    data = save_prompt_libraries(data)
-    return {"library": public_prompt_libraries(data), "removed": removed}
 
 PROMPT_BUILTIN_CATEGORY_IDS = {"view", "storyboard", "character", "product", "ecommerce", "lighting", "custom"}
 
-@app.post("/api/prompt-libraries/categories")
-async def add_prompt_library_category(payload: PromptLibraryCategoryRequest):
-    data = load_prompt_libraries()
-    library = find_prompt_library(data, payload.library_id) or find_prompt_library(data, "system")
-    if not library:
-        raise HTTPException(status_code=404, detail="提示词库不存在")
-    name = sanitize_asset_name(payload.name, "新分组")
-    existing = {str(c.get("id")) for c in (library.get("categories") or []) if isinstance(c, dict)} | PROMPT_BUILTIN_CATEGORY_IDS
-    cat_id = f"pcat_{uuid.uuid4().hex[:10]}"
-    while cat_id in existing:
-        cat_id = f"pcat_{uuid.uuid4().hex[:10]}"
-    category = {"id": cat_id, "name": name}
-    library.setdefault("categories", []).append(category)
-    data = save_prompt_libraries(data)
-    return {"library": public_prompt_libraries(data), "category": category}
 
-@app.patch("/api/prompt-libraries/categories/{category_id}")
-async def rename_prompt_library_category(category_id: str, payload: PromptLibraryCategoryRequest):
-    # 系统库（内置）分组也允许重命名：分组的 id 不变，只改显示名，
-    # 这样画布与素材库管理共用同一份分组数据，重命名两端实时同步。
-    name = sanitize_asset_name(payload.name, "")
-    if not name:
-        raise HTTPException(status_code=400, detail="分组名称不能为空")
-    data = load_prompt_libraries()
-    updated = False
-    for library in data.get("libraries", []) or []:
-        for cat in library.get("categories") or []:
-            if isinstance(cat, dict) and cat.get("id") == category_id:
-                cat["name"] = name
-                updated = True
-    if not updated:
-        raise HTTPException(status_code=404, detail="分组不存在")
-    data = save_prompt_libraries(data)
-    return {"library": public_prompt_libraries(data)}
+# ── 系统角色库（persona）· CRUD ──────────────────────────────────────
+# 内置角色（builtin=True）只读：不可改名、不可删除，只能「另存为」成新角色。
 
-@app.delete("/api/prompt-libraries/categories/{category_id}")
-async def delete_prompt_library_category(category_id: str):
-    # 系统库（内置）分组也允许删除，与素材库管理/画布保持一致。
-    data = load_prompt_libraries()
-    found = False
-    for library in data.get("libraries", []) or []:
-        cats = library.get("categories") or []
-        kept = [c for c in cats if not (isinstance(c, dict) and c.get("id") == category_id)]
-        if len(kept) != len(cats):
-            found = True
-            library["categories"] = kept
-            # 被删分组下的条目改挂到剩余的第一个分组；若已无分组则归到“未分类”。
-            fallback = next((str(c.get("id")) for c in kept if isinstance(c, dict) and c.get("id")), "")
-            for item in library.get("items", []) or []:
-                if isinstance(item, dict) and item.get("category") == category_id:
-                    item["category"] = fallback
-    if not found:
-        raise HTTPException(status_code=404, detail="分组不存在")
-    data = save_prompt_libraries(data)
-    return {"library": public_prompt_libraries(data)}
+@app.get("/api/personas")
+async def get_personas():
+    """列出全部系统角色（内置 + 用户自建）。"""
+    return public_persona_library()
 
-@app.post("/api/asset-library/libraries")
-async def create_asset_library(payload: AssetLibraryRequest):
-    lib = load_asset_library()
-    library = {"id": f"lib_{uuid.uuid4().hex[:12]}", "name": sanitize_asset_name(payload.name, "资产库"), "type": "asset", "categories": []}
-    library["categories"].append({"id": f"cat_{uuid.uuid4().hex[:12]}", "name": "默认分组", "type": "image", "items": []})
-    library["categories"].append({"id": f"wf_{uuid.uuid4().hex[:12]}", "name": "工作流", "type": "workflow", "items": []})
-    lib.setdefault("libraries", []).append(library)
-    lib["active_library_id"] = library["id"]
-    save_asset_library(lib)
-    return {"library": lib, "asset_library": library}
+@app.post("/api/personas")
+async def create_persona(payload: PersonaRequest):
+    """新建用户角色。"""
+    content = str(payload.content or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="角色提示词内容不能为空")
+    data = load_persona_library()
+    item = normalize_persona_item({
+        "id": f"persona_{uuid.uuid4().hex[:12]}",
+        "name": payload.name,
+        "description": payload.description,
+        "content": content,
+        "builtin": False,
+        "created_at": now_ms(),
+        "updated_at": now_ms(),
+    })
+    item["builtin"] = False
+    data.setdefault("personas", []).append(item)
+    data = save_persona_library(data)
+    result = public_persona_library(data)
+    result["persona"] = item
+    return result
 
-@app.patch("/api/asset-library/libraries/{library_id}")
-async def rename_asset_library(library_id: str, payload: AssetLibraryRenameRequest):
-    lib = load_asset_library()
-    library = find_asset_library(lib, library_id)
-    if not library or library.get("id") != library_id:
-        raise HTTPException(status_code=404, detail="资产库不存在")
-    library["name"] = sanitize_asset_name(payload.name, library.get("name") or "资产库")
-    save_asset_library(lib)
-    return {"library": lib, "asset_library": library}
+@app.patch("/api/personas/{persona_id}")
+async def update_persona(persona_id: str, payload: PersonaRequest):
+    """更新用户自建角色；内置角色拒绝修改（提示改用「另存为」）。"""
+    data = load_persona_library()
+    item = find_persona(data, persona_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="角色不存在")
+    if item.get("builtin"):
+        raise HTTPException(status_code=400, detail="内置角色不可修改，请使用「另存为」创建新角色")
+    next_name = str(payload.name or "").strip() or item.get("name")
+    next_desc = str(payload.description or "").strip() or item.get("description")
+    next_content = str(payload.content or "").strip() or item.get("content")
+    next_item = normalize_persona_item({
+        **item,
+        "id": persona_id,
+        "name": next_name,
+        "description": next_desc,
+        "content": next_content,
+        "builtin": False,
+        "updated_at": now_ms(),
+    })
+    next_item["builtin"] = False
+    personas = data.get("personas") or []
+    for index, existing in enumerate(personas):
+        if isinstance(existing, dict) and existing.get("id") == persona_id:
+            personas[index] = next_item
+            break
+    data["personas"] = personas
+    data = save_persona_library(data)
+    result = public_persona_library(data)
+    result["persona"] = next_item
+    return result
 
-@app.delete("/api/asset-library/libraries/{library_id}")
-async def delete_asset_library(library_id: str):
-    lib = load_asset_library()
-    libraries = lib.get("libraries") or []
-    if len(libraries) <= 1:
-        raise HTTPException(status_code=400, detail="至少保留一个资产库")
-    if not any(item.get("id") == library_id for item in libraries):
-        raise HTTPException(status_code=404, detail="资产库不存在")
-    lib["libraries"] = [item for item in libraries if item.get("id") != library_id]
-    if lib.get("active_library_id") == library_id:
-        lib["active_library_id"] = lib["libraries"][0].get("id")
-    save_asset_library(lib)
-    return {"library": lib}
+@app.delete("/api/personas/{persona_id}")
+async def delete_persona(persona_id: str):
+    """删除用户自建角色；内置角色拒绝删除。"""
+    data = load_persona_library()
+    item = find_persona(data, persona_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="角色不存在")
+    if item.get("builtin"):
+        raise HTTPException(status_code=400, detail="内置角色不可删除")
+    personas = data.get("personas") or []
+    kept = [p for p in personas if not (isinstance(p, dict) and p.get("id") == persona_id)]
+    data["personas"] = kept
+    data = save_persona_library(data)
+    result = public_persona_library(data)
+    result["removed"] = 1
+    return result
 
-@app.post("/api/asset-library/categories")
-async def create_asset_library_category(payload: AssetLibraryCategoryRequest):
-    lib = load_asset_library()
-    library = find_asset_library(lib, payload.library_id)
-    if not library:
-        raise HTTPException(status_code=404, detail="资产库不存在")
-    cat_type = "workflow" if str(payload.type or "").lower() == "workflow" else "image"
-    category = {"id": f"cat_{uuid.uuid4().hex[:12]}", "name": sanitize_asset_name(payload.name, "新文件夹"), "type": cat_type, "items": []}
-    if cat_type == "image":
-        # 图片分组在 library/ 下建一个真实文件夹，之后该分组的资产都存进这个文件夹，便于在磁盘上管理。
-        category["dir"] = unique_asset_category_dir(library, payload.name)
-        try:
-            os.makedirs(os.path.join(ASSET_LIBRARY_DIR, category["dir"]), exist_ok=True)
-        except Exception as exc:
-            print(f"创建分组文件夹失败: {exc}")
-    library.setdefault("categories", []).append(category)
-    lib["active_library_id"] = library.get("id") or lib.get("active_library_id")
-    save_asset_library(lib)
-    return {"library": lib, "category": category}
+# ── 长期记忆库（memory）· CRUD ──────────────────────────────────────────
+# 记忆由服务端在请求时自动注入 system prompt；前端仅做管理 UI，不参与 textarea。
+# 记忆全部由用户管理（无内置条目），每条带 enabled 开关（默认开）。
 
-@app.patch("/api/asset-library/categories/{category_id}")
-async def rename_asset_library_category(category_id: str, payload: AssetLibraryRenameRequest):
-    lib = load_asset_library()
-    _, cat = find_asset_category_with_library(lib, category_id, payload.library_id)
-    if not cat:
-        raise HTTPException(status_code=404, detail="分类不存在")
-    cat["name"] = sanitize_asset_name(payload.name, cat.get("name") or "新文件夹")
-    save_asset_library(lib)
-    return {"library": lib, "category": cat}
+@app.get("/api/memories")
+async def get_memories():
+    """列出全部长期记忆。"""
+    return public_memory_library()
 
-@app.delete("/api/asset-library/categories/{category_id}")
-async def delete_asset_library_category(category_id: str, library_id: str = ""):
-    lib = load_asset_library()
-    library, cat = find_asset_category_with_library(lib, category_id, library_id)
-    if not cat:
-        raise HTTPException(status_code=404, detail="分类不存在")
-    if cat.get("type") == "workflow" and category_id == "workflows" and (library.get("id") or "") == "default":
-        raise HTTPException(status_code=400, detail="默认工作流分类不能删除")
-    # 删除分组时一并清理该分组下的本地文件 + 分组文件夹，避免磁盘残留。
-    for item in (cat.get("items") or []):
-        remove_asset_library_file(item)
-    cat_dir = str(cat.get("dir") or "").strip("/").strip()
-    if cat_dir:
-        try:
-            target = os.path.join(ASSET_LIBRARY_DIR, cat_dir)
-            if os.path.isdir(target) and os.path.abspath(target).startswith(os.path.abspath(ASSET_LIBRARY_DIR) + os.sep):
-                shutil.rmtree(target, ignore_errors=True)
-        except Exception as exc:
-            print(f"删除分组文件夹失败: {exc}")
-    library["categories"] = [c for c in library.get("categories", []) if c.get("id") != category_id]
-    save_asset_library(lib)
-    return {"library": lib}
+@app.post("/api/memories")
+async def create_memory(payload: MemoryRequest):
+    """新增一条长期记忆（默认启用）。"""
+    content = str(payload.content or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="记忆内容不能为空")
+    data = load_memory_library()
+    item = normalize_memory_item({
+        "id": f"memory_{uuid.uuid4().hex[:12]}",
+        "content": content,
+        "enabled": True,
+        "scope": payload.scope,
+        "conversation_id": payload.conversation_id,
+        "created_at": now_ms(),
+        "updated_at": now_ms(),
+    })
+    data.setdefault("memories", []).append(item)
+    data = save_memory_library(data)
+    result = public_memory_library(data)
+    result["memory"] = item
+    return result
 
-@app.post("/api/asset-library/items")
-async def add_asset_library_item(payload: AssetLibraryAddRequest):
-    lib = load_asset_library()
-    cat = find_asset_category_in_library(lib, payload.category_id, payload.library_id)
-    if not cat:
-        raise HTTPException(status_code=404, detail="分类不存在")
-    if cat.get("type") != "image":
-        raise HTTPException(status_code=400, detail="该分类暂不支持添加媒体")
-    src = output_file_from_url(payload.url)
-    if not src:
-        raise HTTPException(status_code=400, detail="只支持保存本地 /assets 或 /output 媒体")
-    _, item = make_asset_library_item(src, payload.name or os.path.basename(src), subdir=cat.get("dir") or "")
-    if item.get("kind") == "image":
-        classification = await classify_asset_image_best_effort(output_file_from_url(item.get("url") or "") or src)
-        if classification:
-            item["classification"] = classification
-    cat.setdefault("items", []).append(item)
-    save_asset_library(lib)
-    return {"library": lib, "item": item}
+@app.patch("/api/memories/{memory_id}")
+async def update_memory(memory_id: str, payload: MemoryRequest):
+    """更新记忆（内容 / 启用开关）。"""
+    data = load_memory_library()
+    item = find_memory(data, memory_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="记忆不存在")
+    next_content = str(payload.content or "").strip() or item.get("content")
+    next_enabled = bool(item.get("enabled", True)) if payload.enabled is None else bool(payload.enabled)
+    next_scope = payload.scope if payload.scope in ("global", "conversation") else item.get("scope", "global")
+    next_conversation_id = payload.conversation_id if payload.scope == "conversation" else item.get("conversation_id", "")
+    next_item = normalize_memory_item({
+        **item,
+        "id": memory_id,
+        "content": next_content,
+        "enabled": next_enabled,
+        "scope": next_scope,
+        "conversation_id": next_conversation_id,
+        "updated_at": now_ms(),
+    })
+    memories = data.get("memories") or []
+    for index, existing in enumerate(memories):
+        if isinstance(existing, dict) and existing.get("id") == memory_id:
+            memories[index] = next_item
+            break
+    data["memories"] = memories
+    data = save_memory_library(data)
+    result = public_memory_library(data)
+    result["memory"] = next_item
+    return result
 
-@app.post("/api/asset-library/items/batch")
-async def batch_add_asset_library_items(payload: AssetLibraryBatchAddRequest):
-    added = []
-    lib = load_asset_library()
-    cat = find_asset_category_in_library(lib, payload.category_id, payload.library_id)
-    if not cat:
-        raise HTTPException(status_code=404, detail="分类不存在")
-    if cat.get("type") != "image":
-        raise HTTPException(status_code=400, detail="该分类暂不支持添加媒体")
-    for entry in (payload.items or [])[:200]:
-        entry.category_id = payload.category_id
-        entry.library_id = payload.library_id
-        src = output_file_from_url(entry.url)
-        if not src:
-            continue
-        _, item = make_asset_library_item(src, entry.name or os.path.basename(src), subdir=cat.get("dir") or "")
-        if item.get("kind") == "image":
-            classification = await classify_asset_image_best_effort(output_file_from_url(item.get("url") or "") or src)
-            if classification:
-                item["classification"] = classification
-        cat.setdefault("items", []).append(item)
-        added.append(item)
-    save_asset_library(lib)
-    return {"library": lib, "items": added}
+@app.delete("/api/memories/{memory_id}")
+async def delete_memory(memory_id: str):
+    """删除一条长期记忆。"""
+    data = load_memory_library()
+    item = find_memory(data, memory_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="记忆不存在")
+    memories = data.get("memories") or []
+    kept = [m for m in memories if not (isinstance(m, dict) and m.get("id") == memory_id)]
+    data["memories"] = kept
+    data = save_memory_library(data)
+    result = public_memory_library(data)
+    result["removed"] = 1
+    return result
 
-@app.get("/api/shared-folders")
-async def list_shared_folders():
-    data = shared_folders_load()
-    folders = []
-    for entry in data.get("folders", []):
-        abs_path = shared_folder_abs(entry)
-        folders.append({
-            "id": entry.get("id"),
-            "name": entry.get("name") or os.path.basename(abs_path) or abs_path,
-            "rel": entry.get("rel") or "",
-            "path": abs_path,
-            "exists": os.path.isdir(abs_path),
-            "created_at": entry.get("created_at"),
-        })
-    return {"folders": folders}
 
-@app.post("/api/shared-folders")
-async def register_shared_folder(payload: SharedFolderRegister):
-    abs_path, rel = shared_resolve_register(payload.path)
-    name = sanitize_asset_name(payload.name or os.path.basename(abs_path), "共享文件夹")
-    with SHARED_FOLDERS_LOCK:
-        data = shared_folders_load()
-        for entry in data.get("folders", []):
-            if os.path.normpath(shared_folder_abs(entry)) == os.path.normpath(abs_path):
-                entry["name"] = name
-                shared_folders_save(data)
-                return {"folder": {**entry, "path": abs_path, "exists": True}}
-        entry = {
-            "id": f"shared_{uuid.uuid4().hex[:12]}",
-            "name": name,
-            "rel": rel,
-            "created_at": now_ms(),
-        }
-        data.setdefault("folders", []).append(entry)
-        shared_folders_save(data)
-    return {"folder": {**entry, "path": abs_path, "exists": True}}
-
-@app.delete("/api/shared-folders/{folder_id}")
-async def unregister_shared_folder(folder_id: str):
-    with SHARED_FOLDERS_LOCK:
-        data = shared_folders_load()
-        before = len(data.get("folders", []))
-        data["folders"] = [f for f in data.get("folders", []) if f.get("id") != folder_id]
-        if len(data["folders"]) == before:
-            raise HTTPException(status_code=404, detail="共享文件夹不存在")
-        shared_folders_save(data)
-    return {"ok": True}
-
-@app.get("/api/shared-folders/{folder_id}/tree")
-async def get_shared_folder_tree(folder_id: str):
-    entry = shared_folder_by_id(folder_id)
-    if not entry:
-        raise HTTPException(status_code=404, detail="共享文件夹不存在")
-    abs_path = shared_folder_abs(entry)
-    if not os.path.isdir(abs_path):
-        raise HTTPException(status_code=404, detail="文件夹已不存在")
-    tree = scan_shared_tree(folder_id, abs_path, "", entry.get("name") or os.path.basename(abs_path))
-    return {"folder": {"id": folder_id, "name": entry.get("name"), "path": abs_path}, "tree": tree}
-
-@app.get("/api/shared-folders/{folder_id}/file")
-async def get_shared_folder_file(folder_id: str, path: str = ""):
-    entry = shared_folder_by_id(folder_id)
-    if not entry:
-        raise HTTPException(status_code=404, detail="共享文件夹不存在")
-    folder_abs = shared_folder_abs(entry)
-    abs_path = shared_child_abs(folder_abs, path)
-    if not os.path.isfile(abs_path):
-        raise HTTPException(status_code=404, detail="文件不存在")
-    ext = os.path.splitext(abs_path)[1].lower()
-    if ext not in SHARED_MEDIA_EXTS:
-        raise HTTPException(status_code=400, detail="不支持的文件类型")
-    return FileResponse(abs_path, media_type=content_type_for_path(abs_path))
-
-@app.post("/api/shared-folders/import")
-async def import_shared_folder_files(payload: SharedFolderImport):
-    entry = shared_folder_by_id(payload.folder_id)
-    if not entry:
-        raise HTTPException(status_code=404, detail="共享文件夹不存在")
-    folder_abs = shared_folder_abs(entry)
-    lib = load_asset_library()
-    cat = find_asset_category_in_library(lib, payload.category_id, payload.library_id)
-    if not cat:
-        raise HTTPException(status_code=404, detail="分类不存在")
-    if cat.get("type") != "image":
-        raise HTTPException(status_code=400, detail="该分类暂不支持添加媒体")
-    added = []
-    for rel in (payload.paths or [])[:200]:
-        abs_path = shared_child_abs(folder_abs, rel)
-        if not os.path.isfile(abs_path):
-            continue
-        ext = os.path.splitext(abs_path)[1].lower()
-        if ext not in SHARED_MEDIA_EXTS:
-            continue
-        _, item = make_asset_library_item(abs_path, os.path.basename(abs_path), subdir=cat.get("dir") or "")
-        if item.get("kind") == "image":
-            classification = await classify_asset_image_best_effort(output_file_from_url(item.get("url") or "") or abs_path)
-            if classification:
-                item["classification"] = classification
-        cat.setdefault("items", []).append(item)
-        added.append(item)
-    save_asset_library(lib)
-    return {"library": lib, "items": added}
 
 async def caption_image_with_provider(abs_path, prompt, provider_id, model, ms_model=""):
     llm_provider = get_api_provider(provider_id) if provider_id not in ("modelscope",) else {}
@@ -18202,17 +17787,6 @@ async def caption_image_with_provider(abs_path, prompt, provider_id, model, ms_m
     text = text_from_chat_response(raw).strip() if isinstance(raw, dict) else ""
     return text or "接口返回了空回复。", resolved_model
 
-@app.patch("/api/asset-library/items/{item_id}")
-async def rename_asset_library_item(item_id: str, payload: AssetLibraryRenameRequest):
-    lib = load_asset_library()
-    for library in lib.get("libraries", []):
-        for cat in library.get("categories", []):
-            for item in cat.get("items", []):
-                if item.get("id") == item_id:
-                    item["name"] = sanitize_asset_name(payload.name, item.get("name") or "asset")
-                    save_asset_library(lib)
-                    return {"library": lib, "item": item}
-    raise HTTPException(status_code=404, detail="资产不存在")
 
 def find_asset_item_in_library(lib, item_id, library_id=""):
     for library in lib.get("libraries", []):
@@ -18224,256 +17798,6 @@ def find_asset_item_in_library(lib, item_id, library_id=""):
                     return item
     return None
 
-@app.post("/api/asset-library/items/classify")
-async def classify_asset_library_items(payload: AssetLibraryClassifyRequest):
-    lib = load_asset_library()
-    results = []
-    changed = False
-    for item_id in (payload.ids or [])[:80]:
-        item = find_asset_item_in_library(lib, item_id, payload.library_id)
-        result = {"id": item_id, "ok": False, "classification": None, "error": ""}
-        if not item:
-            result["error"] = "资产不存在"
-            results.append(result)
-            continue
-        if asset_library_media_kind(item.get("url") or "") != "image" and item.get("kind") != "image":
-            result["error"] = "仅支持图片素材智能分类"
-            results.append(result)
-            continue
-        path = output_file_from_url(item.get("url") or "")
-        if not path or not os.path.isfile(path):
-            result["error"] = "文件不存在"
-            results.append(result)
-            continue
-        try:
-            classification = await classify_image_with_provider(path, payload.provider, payload.model, payload.ms_model, payload.prompt)
-            item["classification"] = classification
-            changed = True
-            result.update({"ok": True, "classification": classification})
-        except Exception as exc:
-            result["error"] = str(getattr(exc, "detail", "") or exc)
-        results.append(result)
-    if changed:
-        save_asset_library(lib)
-    return {"library": lib, "count": sum(1 for item in results if item.get("ok")), "items": results}
-
-@app.post("/api/asset-library/items/{item_id}/register-avatar")
-async def register_asset_library_avatar(item_id: str, payload: AssetAvatarRegisterRequest):
-    lib = load_asset_library()
-    target_item = find_asset_item_in_library(lib, item_id, payload.library_id)
-    if not target_item:
-        raise HTTPException(status_code=404, detail="资产不存在")
-    provider = get_api_provider(payload.provider_id)
-    platform = avatar_platform_for_provider(provider)
-    if platform not in AVATAR_SUPPORTED_PLATFORMS:
-        name = (provider or {}).get("name") or (provider or {}).get("id") or "该平台"
-        raise HTTPException(status_code=400, detail=f"「{name}」暂不支持数字人/真人认证（目前仅 APIMart 可用，火山等平台待接入官方资产 API）。")
-    kind = str(target_item.get("kind") or "image").lower()
-    if kind not in ("image", "video", "audio"):
-        kind = "image"
-    if platform == "apimart":
-        project_name = str(payload.project_name or "default").strip() or "default"
-        async with httpx.AsyncClient(http2=False, verify=_SSL_CONTEXT, trust_env=_TRUST_ENV, timeout=VIDEO_POLL_TIMEOUT) as client:
-            public_url = await upload_media_for_apimart(client, provider, target_item.get("url") or "", kind)
-        if not valid_apimart_video_image_input(public_url):
-            reason = public_url[4:] if isinstance(public_url, str) and public_url.startswith("ERR:") else "无法获取公网可访问地址"
-            raise HTTPException(status_code=400, detail=f"素材无法提交到 APIMart：{reason}\n请配置 PUBLIC_BASE_URL，或确认本地文件存在。")
-        task_id = await submit_apimart_avatar_asset(
-            provider, public_url, target_item.get("name") or "asset", kind,
-            project_name=project_name, group_name=payload.group_name,
-        )
-    elif platform == "volcengine":
-        # 火山以 API 设置里配置的 ProjectName 为准（必须与视频生成 key 的项目一致）
-        project_name = str(provider.get("volcengine_project_name") or VOLCENGINE_DEFAULT_PROJECT_NAME).strip() or VOLCENGINE_DEFAULT_PROJECT_NAME
-        public_url = volcengine_public_asset_url(target_item.get("url") or "")
-        if public_url.startswith("ERR:"):
-            raise HTTPException(status_code=400, detail=public_url[4:])
-        task_id = await submit_volcengine_avatar_asset(
-            public_url, target_item.get("name") or "asset", kind,
-            project_name=project_name, group_name=payload.group_name or "",
-        )
-    else:
-        raise HTTPException(status_code=400, detail="该平台的认证后端尚未接入。")
-    regs = target_item.get("registrations")
-    if not isinstance(regs, dict):
-        regs = {}
-    regs[platform] = {
-        "provider_id": provider["id"],
-        "project_name": project_name,
-        "task_id": task_id,
-        "status": "Processing",
-        "detail": "已提交，审核中",
-        "asset_uri": "",
-        "asset_id": "",
-        "registered_at": now_ms(),
-    }
-    target_item["registrations"] = regs
-    save_asset_library(lib)
-    return {"library": lib, "item": target_item}
-
-@app.post("/api/asset-library/items/{item_id}/avatar-status")
-async def check_asset_library_avatar(item_id: str, payload: AssetAvatarRegisterRequest):
-    lib = load_asset_library()
-    target_item = find_asset_item_in_library(lib, item_id, payload.library_id)
-    if not target_item:
-        raise HTTPException(status_code=404, detail="资产不存在")
-    regs = target_item.get("registrations") if isinstance(target_item.get("registrations"), dict) else {}
-    provider = get_api_provider(payload.provider_id or "")
-    platform = avatar_platform_for_provider(provider)
-    if platform not in AVATAR_SUPPORTED_PLATFORMS:
-        raise HTTPException(status_code=400, detail="该平台暂不支持数字人/真人认证审核。")
-    reg = regs.get(platform) if isinstance(regs.get(platform), dict) else {}
-    task_id = str(reg.get("task_id") or "").strip()
-    if not task_id:
-        raise HTTPException(status_code=400, detail="该素材还没有提交到这个平台的认证审核。")
-    if platform == "apimart":
-        result = await check_apimart_avatar_task(provider, task_id)
-    elif platform == "volcengine":
-        result = await check_volcengine_avatar_task(
-            task_id, str(reg.get("project_name") or VOLCENGINE_DEFAULT_PROJECT_NAME).strip() or VOLCENGINE_DEFAULT_PROJECT_NAME,
-        )
-    else:
-        raise HTTPException(status_code=400, detail="该平台的认证后端尚未接入。")
-    reg["status"] = result["status"]
-    reg["detail"] = result.get("detail") or ""
-    if result["status"] == "Active" and result.get("asset_uri"):
-        reg["asset_uri"] = result["asset_uri"]
-        reg["asset_id"] = result["asset_uri"].replace("asset://", "")
-    regs[platform] = reg
-    target_item["registrations"] = regs
-    save_asset_library(lib)
-    return {"library": lib, "item": target_item}
-
-@app.delete("/api/asset-library/items/{item_id}")
-async def delete_asset_library_item(item_id: str):
-    lib = load_asset_library()
-    removed = None
-    for library in lib.get("libraries", []):
-        for cat in library.get("categories", []):
-            keep = []
-            for item in cat.get("items", []):
-                if item.get("id") == item_id:
-                    removed = item
-                else:
-                    keep.append(item)
-            cat["items"] = keep
-    if not removed:
-        raise HTTPException(status_code=404, detail="资产不存在")
-    remove_asset_library_file(removed)  # 同时删除本地文件，避免磁盘上堆积
-    save_asset_library(lib)
-    return {"library": lib}
-
-@app.post("/api/asset-library/items/delete")
-async def batch_delete_asset_library_items(payload: AssetLibraryBatchDeleteRequest):
-    ids = {str(item) for item in (payload.ids or []) if str(item)}
-    if not ids:
-        raise HTTPException(status_code=400, detail="没有选择资产")
-    lib = load_asset_library()
-    removed = 0
-    removed_items = []
-    for library in lib.get("libraries", []):
-        if payload.library_id and library.get("id") != payload.library_id:
-            continue
-        for cat in library.get("categories", []):
-            keep = []
-            for item in cat.get("items", []):
-                if item.get("id") in ids:
-                    removed += 1
-                    removed_items.append(item)
-                else:
-                    keep.append(item)
-            cat["items"] = keep
-    for item in removed_items:  # 批量删除同时清理本地文件
-        remove_asset_library_file(item)
-    save_asset_library(lib)
-    return {"library": lib, "removed": removed}
-
-@app.post("/api/asset-library/items/move")
-async def batch_move_asset_library_items(payload: AssetLibraryBatchMoveRequest):
-    ids = {str(item) for item in (payload.ids or []) if str(item)}
-    if not ids:
-        raise HTTPException(status_code=400, detail="没有选择资产")
-    lib = load_asset_library()
-    target_cat = find_asset_category_in_library(lib, payload.target_category_id, payload.target_library_id)
-    if not target_cat:
-        raise HTTPException(status_code=404, detail="目标分组不存在")
-    target_type = target_cat.get("type") or "image"
-    moved = []
-    for library in lib.get("libraries", []):
-        if payload.library_id and library.get("id") != payload.library_id:
-            continue
-        for cat in library.get("categories", []):
-            if (cat.get("type") or "image") != target_type:
-                continue
-            keep = []
-            for item in cat.get("items", []):
-                if item.get("id") in ids:
-                    moved.append(item)
-                else:
-                    keep.append(item)
-            cat["items"] = keep
-    existing_ids = {item.get("id") for item in target_cat.get("items", [])}
-    for item in moved:
-        if item.get("id") not in existing_ids:
-            target_cat.setdefault("items", []).append(item)
-            existing_ids.add(item.get("id"))
-    save_asset_library(lib)
-    return {"library": lib, "moved": len(moved)}
-
-@app.post("/api/asset-library/items/crop")
-async def batch_crop_asset_library_items(payload: AssetLibraryBatchCropRequest):
-    ids = {str(item) for item in (payload.ids or []) if str(item)}
-    if not ids:
-        raise HTTPException(status_code=400, detail="没有选择资产")
-    lib = load_asset_library()
-    target_cat = None
-    if payload.target_category_id:
-        target_cat = find_asset_category_in_library(lib, payload.target_category_id, payload.target_library_id)
-        if not target_cat:
-            raise HTTPException(status_code=404, detail="目标分组不存在")
-        if target_cat.get("type") != "image":
-            raise HTTPException(status_code=400, detail="目标分组不支持媒体")
-    added = []
-    for library in lib.get("libraries", []):
-        if payload.library_id and library.get("id") != payload.library_id:
-            continue
-        for cat in library.get("categories", []):
-            if cat.get("type") != "image":
-                continue
-            source_items = [item for item in (cat.get("items", []) or []) if item.get("id") in ids]
-            for item in source_items:
-                src = output_file_from_url(item.get("url") or "")
-                if not src or not os.path.isfile(src):
-                    continue
-                try:
-                    with Image.open(src) as img:
-                        img = img.convert("RGBA")
-                        w, h = img.size
-                        side = min(w, h)
-                        if side <= 0:
-                            continue
-                        left = max(0, (w - side) // 2)
-                        top = max(0, (h - side) // 2)
-                        cropped = img.crop((left, top, left + side, top + side))
-                        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-                        tmp_path = tmp.name
-                        tmp.close()
-                        try:
-                            cropped.save(tmp_path, "PNG")
-                            base_name = os.path.splitext(item.get("name") or "asset")[0] + "_crop.png"
-                            dest_cat = target_cat or cat
-                            _, next_item = make_asset_library_item(tmp_path, base_name, subdir=dest_cat.get("dir") or "")
-                            dest_cat.setdefault("items", []).append(next_item)
-                            added.append(next_item)
-                        finally:
-                            try:
-                                os.remove(tmp_path)
-                            except Exception:
-                                pass
-                except Exception:
-                    continue
-    save_asset_library(lib)
-    return {"library": lib, "added": len(added), "items": added}
 
 @app.put("/api/canvases/{canvas_id}")
 async def update_canvas(canvas_id: str, payload: CanvasSaveRequest):
@@ -18574,53 +17898,6 @@ async def delete_canvas_version_api(canvas_id: str, version: int):
 
 # --- V2 Phase 2: Asset 对象化 API（画布资产注册/查询） ---
 
-class AssetRegisterRequest(BaseModel):
-    url: str = ""
-    name: str = ""
-    kind: str = ""
-    mime: str = ""
-    natural_w: int = 0
-    natural_h: int = 0
-    canvas_id: str = ""
-    source: str = ""
-    asset_id: str = ""
-    created_at: int = 0
-
-@app.post("/api/assets/register")
-async def register_asset_api(payload: AssetRegisterRequest):
-    if not str(payload.url or "").strip():
-        raise HTTPException(status_code=400, detail="url 不能为空")
-    record = register_canvas_asset(
-        url=payload.url,
-        name=payload.name,
-        kind=payload.kind,
-        mime=payload.mime,
-        natural_w=payload.natural_w,
-        natural_h=payload.natural_h,
-        canvas_id=payload.canvas_id,
-        source=payload.source,
-        asset_id_hint=payload.asset_id,
-        created_at=payload.created_at,
-    )
-    return {"asset": record}
-
-@app.get("/api/assets")
-async def list_assets_api(canvas_id: str = ""):
-    if canvas_id:
-        canvas = load_canvas(canvas_id)
-        assets = collect_canvas_assets(canvas)
-        return {"assets": assets, "canvas_id": canvas_id, "total": len(assets)}
-    registry = load_assets_registry()
-    assets = registry.get("assets", [])
-    return {"assets": assets, "total": len(assets)}
-
-@app.get("/api/assets/{asset_id}")
-async def get_asset_api(asset_id: str):
-    registry = load_assets_registry()
-    rec = find_asset_registry_record(registry, asset_id=str(asset_id or ""))
-    if not rec:
-        raise HTTPException(status_code=404, detail="资产不存在")
-    return {"asset": rec}
 
 # --- GPT 对话 ---
 
@@ -21116,72 +20393,6 @@ def storage_file_item(kind, root, path):
         pass
     return item
 
-@app.get("/api/storage-settings")
-async def get_storage_settings():
-    settings = load_storage_settings()
-    return {
-        "dirs": settings["dirs"],
-        "defaults": {key: os.path.abspath(value) for key, value in DEFAULT_STORAGE_DIRS.items()},
-    }
-
-@app.patch("/api/storage-settings")
-async def update_storage_settings(payload: Dict[str, str]):
-    return save_storage_settings(payload or {})
-
-@app.get("/api/storage-files")
-async def list_storage_files(kind: str = "generated", offset: int = 0, limit: int = 80):
-    root = storage_kind_dir(kind)
-    os.makedirs(root, exist_ok=True)
-    offset = max(0, int(offset or 0))
-    limit = max(20, min(200, int(limit or 80)))
-    items = []
-    for current, dirs, files in os.walk(root):
-        dirs[:] = sorted([d for d in dirs if not d.startswith(".") and not d.startswith("._")], key=str.lower)
-        for name in sorted(files, key=str.lower):
-            if name.startswith(".") or name.startswith("._"):
-                continue
-            if os.path.splitext(name)[1].lower() not in STORAGE_IMAGE_EXTS:
-                continue
-            item = storage_file_item(kind, root, os.path.join(current, name))
-            if item:
-                items.append(item)
-    items.sort(key=lambda item: item.get("created_at") or 0, reverse=True)
-    total = len(items)
-    page_items = items[offset:offset + limit]
-    return {
-        "kind": kind,
-        "root": root,
-        "items": page_items,
-        "total": total,
-        "offset": offset,
-        "limit": limit,
-        "has_more": offset + len(page_items) < total,
-    }
-
-@app.get("/api/storage-files/{kind}/{rel_path:path}")
-async def get_storage_file(kind: str, rel_path: str):
-    path = storage_file_path(kind, rel_path)
-    if not path or not os.path.isfile(path):
-        raise HTTPException(status_code=404, detail="文件不存在")
-    return FileResponse(path, media_type=content_type_for_path(path))
-
-@app.post("/api/storage-files/delete")
-async def delete_storage_files(payload: Dict[str, Any]):
-    kind = str((payload or {}).get("kind") or "").strip()
-    rels = [str(item or "").strip() for item in ((payload or {}).get("items") or []) if str(item or "").strip()]
-    if not rels:
-        raise HTTPException(status_code=400, detail="请选择要删除的文件")
-    removed = 0
-    for rel in rels:
-        path = storage_file_path(kind, rel)
-        if not path or not os.path.isfile(path):
-            continue
-        try:
-            os.remove(path)
-            removed += 1
-        except OSError:
-            pass
-    return {"removed": removed}
 
 @app.get("/api/asset-classification-prompt")
 async def get_asset_classification_prompt():
@@ -24549,6 +23760,98 @@ async def agent_session_get(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="会话不存在")
     return {"session": session}
+
+
+# --- T05 素材路由接入（依赖全部定义完后才 bind）---
+from server.routes.deps import deps as _deps
+_deps.bind(
+    # 24 个常量（21 个快照 + 3 个 getter）
+    _DATA_ROOT=_DATA_ROOT, BASE_DIR=BASE_DIR, OUTPUT_DIR=OUTPUT_DIR, ASSETS_DIR=ASSETS_DIR,
+    ASSET_LIBRARY_DIR=ASSET_LIBRARY_DIR, CANVAS_DIR=CANVAS_DIR, CONVERSATION_DIR=CONVERSATION_DIR,
+    STATIC_DIR=STATIC_DIR, WORKFLOW_DIR=WORKFLOW_DIR, DATA_DIR=DATA_DIR, MEDIA_PREVIEW_DIR=MEDIA_PREVIEW_DIR,
+    _SSL_CONTEXT=_SSL_CONTEXT, _TRUST_ENV=_TRUST_ENV, AVATAR_SUPPORTED_PLATFORMS=AVATAR_SUPPORTED_PLATFORMS,
+    VOLCENGINE_DEFAULT_PROJECT_NAME=VOLCENGINE_DEFAULT_PROJECT_NAME, VIDEO_POLL_TIMEOUT=VIDEO_POLL_TIMEOUT,
+    PROMPT_BUILTIN_CATEGORY_IDS=PROMPT_BUILTIN_CATEGORY_IDS, SHARED_FOLDERS_LOCK=SHARED_FOLDERS_LOCK,
+    SHARED_MEDIA_EXTS=SHARED_MEDIA_EXTS, DEFAULT_STORAGE_DIRS=DEFAULT_STORAGE_DIRS, STORAGE_IMAGE_EXTS=STORAGE_IMAGE_EXTS,
+    OUTPUT_INPUT_DIR=(lambda: OUTPUT_INPUT_DIR),
+    OUTPUT_OUTPUT_DIR=(lambda: OUTPUT_OUTPUT_DIR),
+    LOCAL_UPLOAD_DIR=(lambda: LOCAL_UPLOAD_DIR),
+    # 70 个函数对象（名字=名字）
+    _local_upload_safe_folder=_local_upload_safe_folder,
+    _local_upload_kind_ext=_local_upload_kind_ext,
+    _local_upload_item=_local_upload_item,
+    _local_upload_tree_and_items=_local_upload_tree_and_items,
+    _local_upload_safe_folder_name=_local_upload_safe_folder_name,
+    _local_upload_safe_path=_local_upload_safe_path,
+    _local_upload_safe_file_stem=_local_upload_safe_file_stem,
+    _local_upload_abs=_local_upload_abs,
+    _local_upload_caption_path=_local_upload_caption_path,
+    _local_upload_classification_path=_local_upload_classification_path,
+    _write_local_upload_classification=_write_local_upload_classification,
+    _sniff_image_ext_bytes=_sniff_image_ext_bytes,
+    classify_asset_image_best_effort=classify_asset_image_best_effort,
+    classify_image_with_provider=classify_image_with_provider,
+    caption_image_with_provider=caption_image_with_provider,
+    ensure_same_origin_request=ensure_same_origin_request,
+    canvas_assets_index=canvas_assets_index,
+    output_file_from_url=output_file_from_url,
+    sanitize_export_filename=sanitize_export_filename,
+    local_media_file_by_basename=local_media_file_by_basename,
+    filename_from_media_url=filename_from_media_url,
+    fetch_remote_media_bytes=fetch_remote_media_bytes,
+    load_asset_library=load_asset_library,
+    save_asset_library=save_asset_library,
+    find_asset_library=find_asset_library,
+    find_asset_category_with_library=find_asset_category_with_library,
+    find_asset_category_in_library=find_asset_category_in_library,
+    find_asset_item_in_library=find_asset_item_in_library,
+    unique_asset_category_dir=unique_asset_category_dir,
+    make_asset_library_item=make_asset_library_item,
+    remove_asset_library_file=remove_asset_library_file,
+    asset_library_media_kind=asset_library_media_kind,
+    asset_library_workflow_category=asset_library_workflow_category,
+    make_workflow_library_item_from_bytes=make_workflow_library_item_from_bytes,
+    get_api_provider=get_api_provider,
+    avatar_platform_for_provider=avatar_platform_for_provider,
+    upload_media_for_apimart=upload_media_for_apimart,
+    valid_apimart_video_image_input=valid_apimart_video_image_input,
+    submit_apimart_avatar_asset=submit_apimart_avatar_asset,
+    volcengine_public_asset_url=volcengine_public_asset_url,
+    submit_volcengine_avatar_asset=submit_volcengine_avatar_asset,
+    check_apimart_avatar_task=check_apimart_avatar_task,
+    check_volcengine_avatar_task=check_volcengine_avatar_task,
+    now_ms=now_ms,
+    sanitize_asset_name=sanitize_asset_name,
+    public_prompt_libraries=public_prompt_libraries,
+    load_prompt_libraries=load_prompt_libraries,
+    save_prompt_libraries=save_prompt_libraries,
+    find_prompt_library=find_prompt_library,
+    normalize_prompt_library_item=normalize_prompt_library_item,
+    shared_folders_load=shared_folders_load,
+    shared_folder_abs=shared_folder_abs,
+    shared_resolve_register=shared_resolve_register,
+    shared_folders_save=shared_folders_save,
+    shared_folder_by_id=shared_folder_by_id,
+    scan_shared_tree=scan_shared_tree,
+    shared_child_abs=shared_child_abs,
+    content_type_for_path=content_type_for_path,
+    register_canvas_asset=register_canvas_asset,
+    load_canvas=load_canvas,
+    collect_canvas_assets=collect_canvas_assets,
+    load_assets_registry=load_assets_registry,
+    find_asset_registry_record=find_asset_registry_record,
+    update_env_values=update_env_values,
+    reload_env_globals=reload_env_globals,
+    load_storage_settings=load_storage_settings,
+    save_storage_settings=save_storage_settings,
+    storage_kind_dir=storage_kind_dir,
+    storage_file_path=storage_file_path,
+    storage_file_item=storage_file_item,
+)
+from server.routes.assets import router as _assets_router
+app.include_router(_assets_router)
+
+
 if __name__ == "__main__":
     import uvicorn
     port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("NOVAI_PORT", 3000))

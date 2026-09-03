@@ -6,13 +6,14 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>素材库管理</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/theme.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.111.1786930085.1785603211"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.111.1786930085.1786205339">
-    <link rel="stylesheet" href="/static/css/asset-manager.css?v=1.0.111.1786930085.1786267152">
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.112-beta.2.1787122934"></script>
+    <script defer src="/static/js/shared/icons.js?v=1.0.112-beta.2.1788315411"></script>
+    <script src="/static/js/theme.js?v=1.0.112-beta.2.1788416878"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.112-beta.2.1787122934"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.112-beta.2.1787639828">
+    <link rel="stylesheet" href="/static/css/asset-manager.css?v=1.0.112-beta.2.1787640275">
 
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.111.1786930085.1785603211">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.112-beta.2.1787644934">
 <style>
 /* ═══ V4 Apple-style Glassmorphism 设计变量 ═══ */
 :root {
@@ -20,17 +21,17 @@
     --v4-text: #1d1d1f;
     --v4-muted: #656569;
     --v4-faint: #98989d;
-    --v4-card-bg: rgba(255, 255, 255, 0.72);
+    --v4-card-bg: rgba(255, 255, 255, 0.6);
     --v4-card-solid: rgba(255, 255, 255, 0.92);
     --v4-card-shadow: rgba(0, 0, 0, 0.06);
     --v4-card-shadow-hover: rgba(0, 0, 0, 0.1);
     --v4-btn-bg: #1d1d1f;
     --v4-btn-text: #ffffff;
-    --v4-focus-ring: #0071e3;
+    --v4-focus-ring: #1d1d1f;
     --v4-ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
     --v4-ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
-    --v4-accent: #0071e3;
-    --v4-accent-soft: rgba(0,113,227,0.08);
+    --v4-accent: #1d1d1f;
+    --v4-accent-soft: rgba(29,29,31,0.08);
     --v4-danger: #ef4444;
     --v4-danger-soft: rgba(239,68,68,0.08);
     --v4-success: #10b981;
@@ -46,9 +47,9 @@
     --v4-card-shadow-hover: rgba(0, 0, 0, 0.5);
     --v4-btn-bg: #f5f5f7;
     --v4-btn-text: #1d1d1f;
-    --v4-focus-ring: #0a84ff;
-    --v4-accent: #0a84ff;
-    --v4-accent-soft: rgba(10,132,255,0.12);
+    --v4-focus-ring: rgba(245,245,247,0.6);
+    --v4-accent: #f5f5f7;
+    --v4-accent-soft: rgba(245,245,247,0.12);
 }
 
 /* ═══ 全局 ═══ */
@@ -163,8 +164,8 @@ body::-webkit-scrollbar { width: 0; height: 0; display: none; }
 /* ═══ TABS ═══ */
 .asset-tabs {
     background: var(--v4-card-bg) !important;
-    backdrop-filter: blur(40px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
     border: 1px solid transparent !important;
     border-radius: 14px !important;
     padding: 5px !important;
@@ -204,8 +205,8 @@ body::-webkit-scrollbar { width: 0; height: 0; display: none; }
 .asset-panel {
     border-radius: 16px !important;
     background: var(--v4-card-bg) !important;
-    backdrop-filter: blur(40px) saturate(200%) !important;
-    -webkit-backdrop-filter: blur(40px) saturate(200%) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
     border: 1px solid transparent !important;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--v4-card-shadow) !important;
     overflow: hidden !important;
@@ -699,7 +700,7 @@ html body .asset-page .asset-content .content-toolbar .content-heading span {
     </div>
 
     <input id="assetUploadInput" type="file" accept="image/*,video/*,audio/*,.json,.zip,application/json,application/zip" multiple hidden>
-    <script defer src="/static/js/asset-manager.js?v=1.0.111.1786930085.1786267118"></script>
+    <script defer src="/static/js/asset-manager.js?v=1.0.112-beta.2.1787122934"></script>
     <script>
     /* --- 素材存储目录管理 --- */
     async function loadStorageConfig() {

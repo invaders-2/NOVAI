@@ -92,37 +92,37 @@
 
         let selecting = false;
 
-        /* -------- 工具条 -------- */
+        /* -------- 工具条（常驻：全选 / 删除所有 / 导出 / 完成） -------- */
         const bar = document.createElement('div');
         bar.className = 'hbm-toolbar';
-
-        const manageBtn = document.createElement('button');
-        manageBtn.type = 'button';
-        manageBtn.className = 'hbm-btn';
-        manageBtn.innerHTML = '<i data-lucide="check-square" style="width:14px;height:14px"></i><span></span>';
-        const manageLabel = manageBtn.querySelector('span');
 
         const spacer = document.createElement('div');
         spacer.className = 'hbm-spacer';
 
         const countEl = document.createElement('span');
-        countEl.className = 'hbm-count hbm-hide';
+        countEl.className = 'hbm-count';
 
         const selectAllBtn = document.createElement('button');
         selectAllBtn.type = 'button';
-        selectAllBtn.className = 'hbm-btn hbm-hide';
+        selectAllBtn.className = 'hbm-btn';
 
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
-        deleteBtn.className = 'hbm-btn hbm-danger hbm-hide';
+        deleteBtn.className = 'hbm-btn hbm-danger';
         deleteBtn.innerHTML = '<i data-lucide="trash-2" style="width:14px;height:14px"></i><span></span>';
         const deleteLabel = deleteBtn.querySelector('span');
 
+        const exportBtn = document.createElement('button');
+        exportBtn.type = 'button';
+        exportBtn.className = 'hbm-btn';
+        exportBtn.innerHTML = '<i data-lucide="download" style="width:14px;height:14px"></i><span></span>';
+        const exportLabel = exportBtn.querySelector('span');
+
         const exitBtn = document.createElement('button');
         exitBtn.type = 'button';
-        exitBtn.className = 'hbm-btn hbm-primary hbm-hide';
+        exitBtn.className = 'hbm-btn hbm-primary';
 
-        bar.append(manageBtn, spacer, countEl, selectAllBtn, deleteBtn, exitBtn);
+        bar.append(spacer, countEl, selectAllBtn, deleteBtn, exportBtn, exitBtn);
         masonry.parentNode.insertBefore(bar, masonry);
 
         function cards(){
@@ -133,14 +133,18 @@
         }
 
         function refreshLabels(){
-            manageLabel.textContent = tr('bulk.manage');
             const all = cards();
             const sel = selectedCards();
             countEl.textContent = fmt('bulk.selectedCount', { n: sel.length });
             const allSelected = all.length > 0 && sel.length === all.length;
             selectAllBtn.textContent = allSelected ? tr('bulk.deselectAll') : tr('bulk.selectAll');
-            deleteLabel.textContent = tr('bulk.deleteSelected');
-            deleteBtn.disabled = sel.length === 0;
+            deleteLabel.textContent = tr('bulk.deleteAll');
+            exportLabel.textContent = tr('bulk.export');
+            const has = all.length > 0;
+            selectAllBtn.disabled = !has;
+            deleteBtn.disabled = !has;
+            exportBtn.disabled = !has;
+            exitBtn.disabled = !selecting;
             exitBtn.textContent = tr('bulk.exit');
             if(window.lucide && lucide.createIcons) lucide.createIcons();
         }
@@ -148,23 +152,19 @@
         function enter(){
             selecting = true;
             document.body.classList.add('history-bulk-selecting');
-            manageBtn.classList.add('hbm-hide');
-            [countEl, selectAllBtn, deleteBtn, exitBtn].forEach(el => el.classList.remove('hbm-hide'));
             refreshLabels();
         }
         function exit(){
             selecting = false;
             document.body.classList.remove('history-bulk-selecting');
             cards().forEach(c => c.classList.remove('hbm-selected'));
-            manageBtn.classList.remove('hbm-hide');
-            [countEl, selectAllBtn, deleteBtn, exitBtn].forEach(el => el.classList.add('hbm-hide'));
             refreshLabels();
         }
 
-        manageBtn.addEventListener('click', enter);
-        exitBtn.addEventListener('click', exit);
+        exitBtn.addEventListener('click', () => { if(selecting) exit(); });
 
         selectAllBtn.addEventListener('click', () => {
+            if(!selecting) enter();
             const all = cards();
             const allSelected = all.length > 0 && selectedCards().length === all.length;
             all.forEach(c => c.classList.toggle('hbm-selected', !allSelected));
@@ -182,15 +182,15 @@
             refreshLabels();
         }, true);
 
-        async function doDelete(){
-            const sel = selectedCards();
-            if(sel.length === 0) return;
-            if(!confirm(fmt('bulk.deleteConfirm', { n: sel.length }))) return;
+        async function doDeleteAll(){
+            const all = cards();
+            if(all.length === 0) return;
+            if(!confirm(fmt('bulk.deleteAllConfirm', { n: all.length }))) return;
 
             deleteBtn.disabled = true;
             deleteLabel.textContent = tr('bulk.deleting');
 
-            const results = await Promise.allSettled(sel.map(card => {
+            const results = await Promise.allSettled(all.map(card => {
                 const ts = card.dataset.historyTs;
                 return fetch('/api/history/delete', {
                     method: 'POST',
@@ -203,13 +203,50 @@
             }));
 
             const failed = results.filter(r => r.status === 'rejected').length;
-            if(failed > 0) alert(failed + ' / ' + sel.length + ' ✗');
+            if(failed > 0) alert(failed + ' / ' + all.length + ' ✗');
 
             refreshLabels();
-            if(selectedCards().length === 0 && cards().length === 0){ exit(); }
-            else { deleteBtn.disabled = selectedCards().length === 0; deleteLabel.textContent = tr('bulk.deleteSelected'); }
+            if(cards().length === 0){ exit(); }
+            else { deleteLabel.textContent = tr('bulk.deleteAll'); }
         }
-        deleteBtn.addEventListener('click', doDelete);
+        deleteBtn.addEventListener('click', doDeleteAll);
+
+        /* 导出：优先导出选中的，未选中时导出全部 */
+        async function doExport(){
+            const all = cards();
+            if(all.length === 0) return;
+            const targets = selectedCards().length > 0 ? selectedCards() : all;
+
+            exportBtn.disabled = true;
+            const origin = exportLabel.textContent;
+            exportLabel.textContent = tr('bulk.exporting');
+
+            let ok = 0;
+            for(const card of targets){
+                const img = card.querySelector('img');
+                if(!img || !img.src) continue;
+                try{
+                    const res = await fetch(img.src);
+                    if(!res.ok) continue;
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const name = (img.src.split('/').pop().split('?')[0]) || ('novai-' + Date.now());
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = name;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 4000);
+                    ok++;
+                }catch(e){ /* 忽略单张失败 */ }
+            }
+
+            exportBtn.disabled = false;
+            exportLabel.textContent = origin;
+            if(ok === 0) alert(tr('bulk.exportFailed'));
+        }
+        exportBtn.addEventListener('click', doExport);
 
         /* 语言切换时刷新文案 */
         window.addEventListener('studio-lang-change', refreshLabels);

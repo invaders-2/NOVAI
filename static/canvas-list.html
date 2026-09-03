@@ -6,16 +6,17 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>画布工作台</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.111.1786930085.1785603211"></script>
-    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/theme.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/shared/viewport.js?v=1.0.111.1786930085.1785603211"></script>
-    <script defer src="/static/js/touch-mouse.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/i18n.js?v=1.0.111.1786930085.1786205339"></script>
-    <link rel="stylesheet" href="/static/css/canvas-list.css?v=1.0.111.1786930085.1786205339">
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.111.1786930085.1786205339">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.111.1786930085.1785603211">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.112-beta.2.1787122934"></script>
+    <script defer src="/static/vendor/js/lucide-subset.js?v=1.0.112-beta.2.1787122934"></script>
+    <script defer src="/static/js/shared/icons.js?v=1.0.112-beta.2.1788315411"></script>
+    <script src="/static/js/theme.js?v=1.0.112-beta.2.1788416878"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/shared/viewport.js?v=1.0.112-beta.2.1787122934"></script>
+    <script defer src="/static/js/touch-mouse.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/i18n.js?v=1.0.112-beta.2.1787122934"></script>
+    <link rel="stylesheet" href="/static/css/canvas-list.css?v=1.0.112-beta.2.1787645596">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.112-beta.2.1787639828">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.112-beta.2.1787644934">
 
     <style>
         /* ═══ V4 Apple-style Glassmorphism Design System ═══ */
@@ -23,12 +24,12 @@
             --v4-bg: #f5f5f7;
             --v4-text: #1d1d1f;
             --v4-muted: #656569;
-            --v4-card-bg: rgba(255, 255, 255, 0.72);
+            --v4-card-bg: rgba(255, 255, 255, 0.6);
             --v4-card-shadow: rgba(0, 0, 0, 0.06);
             --v4-card-shadow-hover: rgba(0, 0, 0, 0.1);
             --v4-btn-bg: #1d1d1f;
             --v4-btn-text: #ffffff;
-            --v4-focus-ring: #0071e3;
+            --v4-focus-ring: #1d1d1f;
             --v4-ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
             --v4-ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -41,7 +42,7 @@
             --v4-card-shadow-hover: rgba(0, 0, 0, 0.5);
             --v4-btn-bg: #f5f5f7;
             --v4-btn-text: #1d1d1f;
-            --v4-focus-ring: #0a84ff;
+            --v4-focus-ring: rgba(245,245,247,0.6);
         }
 
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -141,8 +142,8 @@
         .btn-secondary {
             display: inline-flex; align-items: center; gap: 8px;
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             color: var(--v4-text);
             border: 1px solid transparent;
             border-radius: 12px;
@@ -293,8 +294,8 @@
         }
         .project-card {
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid transparent;
             border-radius: 16px;
             overflow: hidden;
@@ -391,8 +392,8 @@
             padding: 6px;
             border-radius: 12px;
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid transparent;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--v4-card-shadow-hover);
             opacity: 0;
@@ -471,8 +472,8 @@
             width: 48px; height: 48px;
             border-radius: 50%;
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--v4-card-shadow);
             color: var(--v4-muted);
             display: flex; align-items: center; justify-content: center;
@@ -510,8 +511,8 @@
         .view-more-btn {
             display: inline-flex; align-items: center; gap: 6px;
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             color: var(--v4-text);
             border: 1px solid transparent;
             border-radius: 12px;
@@ -549,8 +550,8 @@
             padding: 24px;
             border-radius: 20px;
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid transparent;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--v4-card-shadow-hover);
             transform: translateY(8px) scale(0.97);
@@ -628,8 +629,8 @@
             width: 420px; max-width: calc(100vw - 48px); max-height: 80vh;
             border-radius: 20px;
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid transparent;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--v4-card-shadow-hover);
             transform: translateY(8px) scale(0.97);
@@ -722,8 +723,8 @@
             width: 340px; max-width: calc(100vw - 48px);
             border-radius: 20px;
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid transparent;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 20px 48px -12px var(--v4-card-shadow-hover);
             transform: translateY(8px) scale(0.97);
@@ -809,7 +810,7 @@
                     </div>
                     <div class="carousel-slide">
                         <video class="carousel-slide-img" src="/static/images/concept/pinterest_carousel.mp4" muted loop playsinline autoplay preload="auto" onerror="this.classList.add('error')"></video>
-                        <div class="carousel-slide-gradient" style="background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.55) 100%), radial-gradient(circle at 30% 25%, rgba(59,130,246,0.25), transparent 60%);"></div>
+                        <div class="carousel-slide-gradient" style="background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.55) 100%), radial-gradient(circle at 30% 25%, rgba(165,165,165,0.25), transparent 60%);"></div>
                         <div class="carousel-caption">
                             <div>
                                 <div class="carousel-caption-title">AI 视频生成</div>
@@ -953,7 +954,7 @@
         <span class="trash-badge" id="trashBadgeV4" style="display:none">0</span>
     </button>
 
-    <script defer src="/static/js/canvas-list.js?v=1.0.111.1786930085.1786205339"></script>
+    <script defer src="/static/js/canvas-list.js?v=1.0.112-beta.2.1787122934"></script>
     <script>
         /* ═══ V4 集成层 — 与 canvas-list.js 数据桥接 ═══ */
         (function() {
@@ -1533,6 +1534,21 @@
             // 页面加载时主动获取数据（canvas-list.js 也会加载，但我们不依赖它）
             refreshAll();
             loadTrash();
+
+            // ═══ 首页导入图片：自动打开待导入画布 ═══
+            window.addEventListener('message', function(event) {
+                if (event.origin && event.origin !== location.origin) return;
+                if (!event.data || event.data.type !== 'open-canvas') return;
+                var pending = null;
+                try { pending = JSON.parse(localStorage.getItem('hp_pending_import') || 'null'); } catch(e) {}
+                if (!pending || !pending.canvasId) return;
+                fetch('/api/canvases/' + encodeURIComponent(pending.canvasId))
+                    .then(function(r) { return r.ok ? r.json() : null; })
+                    .then(function(data) {
+                        if (data && data.canvas) openCanvas(data.canvas);
+                    })
+                    .catch(function(err) { console.error('[canvas-list] open pending import failed:', err); });
+            });
 
             // ═══ DARK MODE TOGGLE ═══
             console.log('💡 Press Cmd+D to toggle dark mode');

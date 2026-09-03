@@ -7,14 +7,15 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>Flux Modern Gallery | Unified Console</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/vendor/js/lucide-subset.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/theme.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/i18n.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/image-preview.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/history-bulk-manager.js?v=1.0.111.1786930085.1786205339"></script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.111.1786930085.1786205339">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/vendor/js/lucide-subset.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/shared/icons.js?v=1.0.112-beta.2.1788315411"></script>
+    <script src="/static/js/theme.js?v=1.0.112-beta.2.1788416878"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/i18n.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/image-preview.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/history-bulk-manager.js?v=1.0.112-beta.2.1787824938"></script>
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.112-beta.2.1787122934">
     <style>
         :root {
             --bg-base: #f8f8f8;
@@ -57,7 +58,7 @@
             position: relative;
             background: #f1f1f1;
             padding: 4px;
-            border-radius: 14px;
+            border-radius:var(--radius-md);
             display: flex;
             width: 260px;
         }
@@ -85,7 +86,7 @@
             height: calc(100% - 8px);
             width: calc(50% - 4px);
             background: #fff;
-            border-radius: 11px;
+            border-radius:var(--radius-md);
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
             transition: transform 0.3s var(--easing);
             z-index: 1;
@@ -105,10 +106,10 @@
 
         .masonry-item {
             aspect-ratio: 1 / 1;
-            border-radius: 24px;
+            border-radius:var(--radius-xl);
             overflow: hidden;
             background: #eee;
-            border: 1px solid #e5e5e5;
+            border: 1px solid var(--border);
             transition: all 0.5s var(--easing);
             position: relative;
         }
@@ -142,7 +143,7 @@
             display: none;
         }
     </style>
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.111.1786930085.1785603211">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.112-beta.2.1787644934">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
         body { background: var(--bg) !important; color: var(--text) !important; }
@@ -157,7 +158,7 @@ input[type="text"]:focus, input[type="number"]:focus { border-color: var(--text)
 button.generate { background: var(--text) !important; color: var(--bg) !important; border-radius: var(--radius-md) !important; }
 </style>
 
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.111.1786930085.1786205339">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.112-beta.2.1787639828">
 </head>
 
 <body class="antialiased">

@@ -56,6 +56,11 @@
         "bulk.selectedCount": { zh: "已选 {n} 张", en: "{n} selected" },
         "bulk.deleteConfirm": { zh: "确认删除选中的 {n} 张图片？此操作不可恢复。", en: "Delete the selected {n} image(s)? This cannot be undone." },
         "bulk.deleting": { zh: "删除中…", en: "Deleting…" },
-        "bulk.noSelection": { zh: "请先选择要删除的图片", en: "Select images to delete first" }
+        "bulk.noSelection": { zh: "请先选择要删除的图片", en: "Select images to delete first" },
+        "bulk.deleteAll": { zh: "删除所有", en: "Delete All" },
+        "bulk.deleteAllConfirm": { zh: "确认删除全部 {n} 张历史图片？此操作不可恢复。", en: "Delete all {n} history image(s)? This cannot be undone." },
+        "bulk.export": { zh: "导出", en: "Export" },
+        "bulk.exporting": { zh: "导出中…", en: "Exporting…" },
+        "bulk.exportFailed": { zh: "没有可导出的图片", en: "No images to export" }
     });
 })();

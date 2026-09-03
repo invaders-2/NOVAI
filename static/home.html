@@ -5,21 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NOVAI - 首页</title>
     <script>(function(){try{var t=localStorage.getItem('studio_theme')||localStorage.getItem('canvas_theme')||'light';if(t==='dark'){document.documentElement.classList.add('studio-theme-dark');document.documentElement.classList.add('theme-dark');}}catch(e){}})();</script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.111.1786930085.1786205339">
-    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.111.1786930085.1785603211">
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.112-beta.2.1787122934">
+    <link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.112-beta.2.1787644934">
+    <link rel="stylesheet" href="/static/css/nv-beam.css?v=1.0.112-beta.2.1787889061">
     <style>
         /* ═══ V4 Apple-style Glassmorphism Design System ═══ */
         :root {
             --v4-bg: #f5f5f7;
             --v4-text: #1d1d1f;
             --v4-muted: #656569;
-            --v4-card-bg: rgba(255, 255, 255, 0.72);
+            --v4-card-bg: rgba(255, 255, 255, 0.6);
             --v4-card-solid: rgba(255, 255, 255, 0.92);
             --v4-card-shadow: rgba(0, 0, 0, 0.06);
             --v4-card-shadow-hover: rgba(0, 0, 0, 0.1);
             --v4-btn-bg: #1d1d1f;
             --v4-btn-text: #ffffff;
-            --v4-focus-ring: #0071e3;
+            --v4-focus-ring: #1d1d1f;
             --v4-ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
             --v4-ease-hover: cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -34,7 +35,7 @@
             --v4-card-shadow-hover: rgba(0, 0, 0, 0.5);
             --v4-btn-bg: #f5f5f7;
             --v4-btn-text: #1d1d1f;
-            --v4-focus-ring: #0a84ff;
+            --v4-focus-ring: rgba(245,245,247,0.6);
         }
 
         * {
@@ -70,45 +71,49 @@
 
         .home-container {
             width: 100%;
-            max-width: 780px;
-            padding: 80px 0 48px;
+            max-width: 860px;
+            padding: 56px 0 48px;
             display: flex;
             flex-direction: column;
-            gap: 40px;
+            gap: 20px;
         }
 
-        /* ===== Hero 区 ===== */
-        .hero {
-            text-align: center;
+        /* ===== 欢迎工作台头部 ===== */
+        .hp-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
             animation: fadeUp 0.7s var(--v4-ease-out) both;
         }
 
-        .hero-title {
-            font-size: 47px;
+        .hp-head h1 {
+            font-size: 48px;
             font-weight: 400;
             letter-spacing: 0.02em;
             line-height: 1.1;
-            margin-bottom: 12px;
+            margin: 0;
             background: linear-gradient(135deg, var(--v4-text) 0%, var(--v4-muted) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
 
-        .hero-subtitle {
-            font-size: 17px;
-            font-weight: 500;
+        .hp-head .sub {
+            font-size: 13px;
             color: var(--v4-muted);
-            margin-bottom: 12px;
-            letter-spacing: 0.01em;
+            margin-top: 5px;
+            font-weight: 400;
         }
 
-        .hero-desc {
-            font-size: 14px;
+        .hp-sec-label {
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
             color: var(--v4-muted);
-            max-width: 400px;
-            margin: 0 auto;
-            line-height: 1.6;
+            margin-top: 28px;
+            margin-bottom: 12px;
+            padding-left: 4px;
         }
 
         @keyframes fadeUp {
@@ -116,148 +121,141 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* ===== 功能卡片区 ===== */
-        .cards-grid {
+        /* ===== 创作工具区 ===== */
+        .hp-tools {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
             animation: fadeUp 0.7s var(--v4-ease-out) 0.08s both;
         }
 
-        .feature-card {
+        .hp-tool {
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid transparent;
-            border-radius: 16px;
-            padding: 24px 20px;
+            border-radius: 14px;
+            padding: 16px 16px 14px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 4px 16px -4px var(--v4-card-shadow);
-            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
+            transition: transform 0.25s cubic-bezier(0.25,0.1,0.25,1), box-shadow 0.25s, border-color 0.25s;
             cursor: pointer;
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
             text-decoration: none;
             color: inherit;
-            position: relative;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .feature-card:nth-child(2) { animation-delay: 0.14s; }
-        .feature-card:nth-child(3) { animation-delay: 0.2s; }
-        .feature-card:nth-child(4) { animation-delay: 0.26s; }
+        .hp-tool:nth-child(2) { animation-delay: 0.14s; }
+        .hp-tool:nth-child(3) { animation-delay: 0.2s; }
 
-        .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px -8px var(--v4-card-shadow-hover);
-            border-color: rgba(0,0,0,0.12);
+        .hp-tool:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 14px 30px -12px var(--v4-card-shadow-hover);
+            border-color: rgba(0,0,0,0.1);
         }
+        .theme-dark .hp-tool:hover { border-color: rgba(255,255,255,0.1); }
 
-        .feature-card:active {
+        .hp-tool:active {
             transform: translateY(0) scale(0.98);
         }
 
-        .feature-card:focus-visible {
+        .hp-tool:focus-visible {
             outline: 2px solid var(--v4-focus-ring);
             outline-offset: 2px;
         }
 
-        .feature-card-icon {
-            width: 40px;
-            height: 40px;
+        .hp-tool-icon {
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 12px;
+            border-radius: 9px;
             background: var(--v4-bg);
             color: var(--v4-muted);
             flex-shrink: 0;
         }
 
-        .feature-card-icon svg {
-            width: 20px;
-            height: 20px;
+        .hp-tool-icon svg {
+            width: 15px;
+            height: 15px;
         }
 
-        .feature-card-content {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .feature-card-title {
-            font-size: 14px;
+        .hp-tool h4 {
+            font-size: 13.5px;
             font-weight: 600;
-            margin-bottom: 4px;
+            letter-spacing: -0.01em;
+            margin: 0;
             color: var(--v4-text);
-            letter-spacing: 0.01em;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
-        .feature-card-arrow {
-            width: 14px;
-            height: 14px;
-            opacity: 0;
-            transform: translateX(-4px);
-            transition: opacity 0.25s var(--v4-ease-out), transform 0.25s var(--v4-ease-out);
-            color: var(--v4-muted);
-        }
-
-        .feature-card:hover .feature-card-arrow {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .feature-card-desc {
-            font-size: 12px;
+        .hp-tool p {
+            font-size: 11.5px;
             font-weight: 400;
             color: var(--v4-muted);
             line-height: 1.5;
+            margin: 0;
         }
 
-        /* ===== CTA 区 ===== */
-        .cta-section {
-            text-align: center;
-            animation: fadeUp 0.7s var(--v4-ease-out) 0.32s both;
+        /* ===== 主操作区 ===== */
+        .hp-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            animation: fadeUp 0.7s var(--v4-ease-out) 0.3s both;
         }
 
-        .cta-button {
+        .hp-btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: var(--v4-btn-bg);
-            color: var(--v4-btn-text);
             border: none;
-            border-radius: 12px;
-            padding: 14px 32px;
+            cursor: pointer;
+            font-family: var(--font-sans, inherit);
             font-size: 14px;
             font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease-out;
-            text-decoration: none;
+            border-radius: 12px;
+            padding: 14px 32px;
             letter-spacing: 0.01em;
+            text-decoration: none;
+            transition: all 0.35s var(--v4-ease-out);
         }
 
-        .cta-button:hover {
-            transform: scale(1.03);
-            box-shadow: 0 6px 20px -6px var(--v4-card-shadow-hover);
-            background: linear-gradient(135deg, var(--v4-btn-bg) 0%, #444 100%);
-        }
+        .hp-btn:hover { transform: scale(1.03); box-shadow: 0 6px 20px -6px var(--v4-card-shadow-hover); }
+        .hp-btn:active { transform: scale(0.97); }
+        .hp-btn:focus-visible { outline: 2px solid var(--v4-focus-ring); outline-offset: 3px; }
 
-        .cta-button:active {
-            transform: scale(0.97);
-        }
-
-        .cta-button:focus-visible {
-            outline: 2px solid var(--v4-focus-ring);
-            outline-offset: 3px;
-        }
-
-        .cta-button svg {
+        .hp-btn svg {
             width: 16px;
             height: 16px;
         }
+
+        .hp-btn-primary {
+            background: var(--v4-btn-bg);
+            color: var(--v4-btn-text);
+        }
+        .theme-dark .hp-btn-primary { box-shadow: 0 8px 20px -8px rgba(0,0,0,0.6); }
+        .hp-btn-primary:hover { transform: scale(1.03); box-shadow: 0 6px 20px -6px var(--v4-card-shadow-hover); }
+
+        /* ===== 开始创作按钮：动态光束边框（nv-beam，与在线生图页生成按钮同款柠檬绿） ===== */
+        #hpCreateBtn.nv-beam { --beam-core: rgba(180,255,60,.8); --beam-mid: rgba(180,255,60,.35); --beam-glow: rgba(180,255,60,.4); }
+        /* 深色主题：按钮保持深底（与浅色主题按钮同色），柠檬绿光束在深底上清晰可见 */
+        html.theme-dark #hpCreateBtn, html.studio-theme-dark #hpCreateBtn {
+            background: #1d1d1f !important;
+            color: #fff !important;
+        }
+
+        .hp-btn-ghost {
+            background: var(--v4-card-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid transparent;
+            color: var(--v4-text);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 2px 8px -2px var(--v4-card-shadow);
+        }
+        .hp-btn-ghost:hover { transform: scale(1.03); box-shadow: 0 6px 20px -6px var(--v4-card-shadow-hover); border-color: rgba(0,0,0,0.08); }
+        .theme-dark .hp-btn-ghost:hover { border-color: rgba(255,255,255,0.08); }
 
         /* ===== 最近项目 ===== */
         .recent-section {
@@ -314,73 +312,94 @@
             display: none;
         }
 
-        .recent-grid {
+        .hp-proj-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
         }
 
-        .recent-card {
+        .hp-proj {
             background: var(--v4-card-bg);
-            backdrop-filter: blur(40px) saturate(200%);
-            -webkit-backdrop-filter: blur(40px) saturate(200%);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
             border: 1px solid transparent;
-            border-radius: 12px;
-            padding: 12px 14px;
+            border-radius: 14px;
+            overflow: hidden;
             cursor: pointer;
             box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 2px 8px -2px var(--v4-card-shadow);
-            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border-color 0.2s ease-out;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            transition: transform 0.25s cubic-bezier(0.25,0.1,0.25,1), box-shadow 0.25s, border-color 0.25s;
             text-decoration: none;
             color: var(--v4-text);
+            display: flex;
+            flex-direction: column;
         }
 
-        .recent-card:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px -6px var(--v4-card-shadow-hover);
-            border-color: rgba(0,0,0,0.08);
+        .hp-proj:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 10px 28px -8px var(--v4-card-shadow-hover);
+            border-color: rgba(0,0,0,0.09);
         }
-        .theme-dark .recent-card:hover { border-color: rgba(255,255,255,0.08); }
+        .theme-dark .hp-proj:hover { border-color: rgba(255,255,255,0.09); }
 
-        .recent-card:focus-visible {
+        .hp-proj:focus-visible {
             outline: 2px solid var(--v4-focus-ring);
             outline-offset: 2px;
         }
 
-        .recent-card-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+        .hp-proj-thumb {
+            position: relative;
+            aspect-ratio: 16 / 9;
             background: var(--v4-bg);
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
-            overflow: hidden;
-            position: relative;
         }
 
-        .recent-card-icon svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .recent-card-thumb {
+        .hp-proj-thumb img {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
-            border-radius: 8px;
         }
 
-        .recent-card-info {
-            min-width: 0;
+        .hp-proj-thumb .ph-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
+        }
+        .hp-proj-thumb .ph-icon svg {
+            width: 22px;
+            height: 22px;
         }
 
-        .recent-card-name {
+        .hp-proj-tag {
+            position: absolute;
+            right: 6px;
+            bottom: 6px;
+            font-size: 10px;
+            font-weight: 500;
+            line-height: 1;
+            padding: 3px 6px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+        .theme-dark .hp-proj-tag { background: rgba(255,255,255,0.18); }
+
+        .hp-proj-info {
+            background: var(--v4-card-bg);
+            padding: 9px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .hp-proj-name {
             font-size: 12px;
             font-weight: 500;
             white-space: nowrap;
@@ -388,10 +407,51 @@
             text-overflow: ellipsis;
         }
 
-        .recent-card-time {
+        .hp-proj-time {
             font-size: 10px;
             color: var(--v4-muted);
-            margin-top: 2px;
+        }
+
+        .hp-proj-new {
+            border: 1.5px dashed rgba(0,0,0,0.18);
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            box-shadow: none;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-height: 0;
+            color: var(--v4-muted);
+            border-radius: 14px;
+        }
+        .theme-dark .hp-proj-new { border-color: rgba(255,255,255,0.22); }
+
+        .hp-proj-new:hover {
+            border-color: rgba(0,0,0,0.4);
+            background: var(--v4-card-bg);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transform: translateY(-2px);
+        }
+        .theme-dark .hp-proj-new:hover { border-color: rgba(255,255,255,0.45); }
+
+        .hp-proj-new .plus {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--v4-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 400;
+            line-height: 1;
+        }
+
+        .hp-proj-new .new-label {
+            font-size: 11.5px;
+            font-weight: 500;
+            color: var(--v4-muted);
         }
 
         .recent-empty {
@@ -432,22 +492,21 @@
         /* ===== 响应式 ===== */
         @media (max-width: 640px) {
             .home-container {
-                padding: 48px 0 32px;
-                gap: 32px;
+                padding: 40px 0 32px;
+                gap: 18px;
             }
-            .hero-title { font-size: 40px; }
-            .hero-subtitle { font-size: 15px; }
-            .cards-grid {
+            .hp-head h1 { font-size: 21px; }
+            .hp-tools {
                 grid-template-columns: 1fr;
             }
-            .recent-grid {
-                grid-template-columns: 1fr;
+            .hp-proj-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
 
         @media (max-width: 480px) {
-            .hero-title { font-size: 34px; }
-            .feature-card { padding: 18px 16px; }
+            .hp-head { flex-direction: column; gap: 12px; }
+            .hp-actions { flex-wrap: wrap; }
         }
 
         /* ===== 局域网访问通知条 ===== */
@@ -494,7 +553,7 @@
         .lan-notice-url {
             font-size: 12px;
             color: var(--v4-muted);
-            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-family:var(--font-mono);
             word-break: break-all;
         }
         .lan-notice-actions {
@@ -584,6 +643,80 @@
 </head>
 <body>
     <div class="home-container">
+        <!-- 欢迎工作台头部 -->
+        <section class="hp-head">
+            <div>
+                <h1>欢迎回来</h1>
+                <p class="sub" id="hpSub">继续你的创意之旅</p>
+            </div>
+        </section>
+
+        <!-- 最近项目 -->
+        <section class="recent-section">
+            <div class="hp-sec-label">最近项目</div>
+            <div class="hp-proj-grid" id="recentProjects">
+                <div class="recent-empty">暂无最近画布，点击下方新建开始创作</div>
+            </div>
+        </section>
+
+        <!-- 主操作区 -->
+        <section class="hp-actions">
+            <button class="hp-btn hp-btn-primary nv-beam" id="hpCreateBtn" onclick="createNewCanvas()">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                开始创作
+            </button>
+            <button class="hp-btn hp-btn-ghost" id="hpImportBtn" onclick="continueLast()">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                继续上次
+            </button>
+        </section>
+
+        <!-- 创作工具 -->
+        <div class="hp-sec-label">创作工具</div>
+        <section class="hp-tools">
+            <div class="hp-tool" onclick="parent.postMessage({type:'navigate',route:'online'},'*')">
+                <div class="hp-tool-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                </div>
+                <h4>在线生图</h4>
+                <p>文生图、图生图等多种 AI 生成模式</p>
+            </div>
+
+            <div class="hp-tool" onclick="parent.postMessage({type:'navigate',route:'gpt-chat'},'*')">
+                <div class="hp-tool-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                </div>
+                <h4>GPT 对话</h4>
+                <p>AI 助手辅助创意构思与提示词优化</p>
+            </div>
+
+            <div class="hp-tool" onclick="parent.postMessage({type:'navigate',route:'asset-manager'},'*')">
+                <div class="hp-tool-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5V6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v12.7"/>
+                        <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5V8.8A2.8 2.8 0 0 0 17.2 6H6.8A2.8 2.8 0 0 0 4 8.8v10.7z"/>
+                    </svg>
+                </div>
+                <h4>素材库</h4>
+                <p>集中管理生成作品与上传素材</p>
+            </div>
+        </section>
+
+        <!-- 底部状态 -->
+        <section class="status-bar">
+            <div class="status-indicator">
+                <span class="status-dot"></span>
+                系统就绪
+            </div>
+        </section>
+
         <!-- 局域网访问通知条（手机/iPad 扫码访问） -->
         <div class="lan-notice" id="lanNotice">
             <div class="lan-notice-text">
@@ -623,126 +756,6 @@
                 </button>
             </div>
         </div>
-
-        <!-- Hero 区 -->
-        <section class="hero">
-            <h1 class="hero-title">NOVAI</h1>
-            <p class="hero-subtitle">AI 图像与视频生成平台</p>
-            <p class="hero-desc">
-                一站式 AI 创作工作台，集在线生图、智能对话、无限画布与素材管理于一体，让你的创意即刻落地。
-            </p>
-        </section>
-
-        <!-- 功能卡片区 -->
-        <section class="cards-grid">
-            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'online'},'*')">
-                <div class="feature-card-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
-                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                    </svg>
-                </div>
-                <div class="feature-card-content">
-                    <div class="feature-card-title">
-                        在线生图
-                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </div>
-                    <div class="feature-card-desc">AI 驱动的图像生成引擎，支持文生图、图生图等多种模式</div>
-                </div>
-            </div>
-
-            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'gpt-chat'},'*')">
-                <div class="feature-card-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                    </svg>
-                </div>
-                <div class="feature-card-content">
-                    <div class="feature-card-title">
-                        GPT 对话
-                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </div>
-                    <div class="feature-card-desc">智能 AI 助手，辅助创意构思与提示词优化</div>
-                </div>
-            </div>
-
-            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
-                <div class="feature-card-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="3" width="7" height="7"/>
-                        <rect x="14" y="3" width="7" height="7"/>
-                        <rect x="14" y="14" width="7" height="7"/>
-                        <rect x="3" y="14" width="7" height="7"/>
-                    </svg>
-                </div>
-                <div class="feature-card-content">
-                    <div class="feature-card-title">
-                        无限画布
-                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </div>
-                    <div class="feature-card-desc">自由布局的创作空间，支持多图拼接与图层编辑</div>
-                </div>
-            </div>
-
-            <div class="feature-card" onclick="parent.postMessage({type:'navigate',route:'asset-manager'},'*')">
-                <div class="feature-card-icon">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M4 19.5V6.8A2.8 2.8 0 0 1 6.8 4h10.4A2.8 2.8 0 0 1 20 6.8v12.7"/>
-                        <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22h11a2.5 2.5 0 0 0 2.5-2.5V8.8A2.8 2.8 0 0 0 17.2 6H6.8A2.8 2.8 0 0 0 4 8.8v10.7z"/>
-                    </svg>
-                </div>
-                <div class="feature-card-content">
-                    <div class="feature-card-title">
-                        素材库
-                        <svg class="feature-card-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </div>
-                    <div class="feature-card-desc">集中管理生成作品与上传素材，快速检索与复用</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 快捷入口区 -->
-        <section class="cta-section">
-            <button class="cta-button" onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
-                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                </svg>
-                开始创作
-            </button>
-        </section>
-
-        <!-- 最新画布 -->
-        <section class="recent-section">
-            <div class="section-header">
-                <div class="section-title">最新画布</div>
-                <button type="button" class="view-all-btn" id="viewAllBtn" hidden onclick="parent.postMessage({type:'navigate',route:'canvas'},'*')">
-                    查看全部
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 18l6-6-6-6"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="recent-grid" id="recentProjects">
-                <div class="recent-empty">暂无最近画布，开始创作后这里将显示你最近访问的画布</div>
-            </div>
-        </section>
-
-        <!-- 底部状态 -->
-        <section class="status-bar">
-            <div class="status-indicator">
-                <span class="status-dot"></span>
-                系统就绪
-            </div>
-        </section>
     </div>
 
     <script>
@@ -820,43 +833,92 @@
                     return r.json();
                 })
                 .then(function(canvases) {
-                    if (!canvases || !Array.isArray(canvases) || !canvases.length) {
-                        console.log('[home] No recent canvases');
-                        return;
-                    }
+                    if (!canvases || !Array.isArray(canvases)) canvases = [];
                     console.log('[home] Recent canvases:', canvases);
-                    var viewAllBtn = document.getElementById('viewAllBtn');
-                    if (viewAllBtn) viewAllBtn.hidden = canvases.length <= 6;
+                    var recent = canvases.slice(0, 3);
                     var html = '';
-                    canvases.slice(0, 6).forEach(function(c) {
+                    recent.forEach(function(c) {
                         try {
                             var name = escapeHtml(c.title || c.name || '未命名画布');
                             var canvasId = c.id || '';
-                            var timeAgo = getTimeAgo(c.updated_at || c.lastOpened);
-                            var onclick = canvasId
-                                ? "parent.postMessage({type:'navigate',route:'canvas',canvasId:'" + canvasId + "'},'*')"
+                            var kindLabel = (c.kind === 'smart') ? '智能画布' : '画布';
+                            var timeText = formatUpdateTime(c.updated_at || c.lastOpened);
+                            var encId = canvasId ? encodeURIComponent(canvasId) : '';
+                            var onclick = encId
+                                ? "parent.postMessage({type:'navigate',route:'canvas',canvasId:'" + encId + "'},'*')"
                                 : "parent.postMessage({type:'navigate',route:'canvas'},'*')";
                             var thumb = c.thumbnail || '';
-                            var fallbackSvg = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-                                  '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>' +
-                                  '<rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>' +
-                                  '</svg>';
-                            var iconHtml = thumb
-                                ? fallbackSvg + '<img class="recent-card-thumb" src="' + escapeHtml(thumb) + '" loading="lazy" onerror="this.remove()">'
-                                : fallbackSvg;
-                            html += '<div class="recent-card" onclick="' + onclick + '">' +
-                                '<div class="recent-card-icon">' + iconHtml + '</div>' +
-                                '<div class="recent-card-info">' +
-                                '<div class="recent-card-name">' + name + '</div>' +
-                                '<div class="recent-card-time">' + timeAgo + '</div>' +
-                                '</div></div>';
+                            var thumbHtml = thumb
+                                ? '<img src="' + escapeHtml(thumb) + '" loading="lazy" onerror="this.remove()">'
+                                : '<span class="ph-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>';
+                            html += '<div class="hp-proj" onclick="' + onclick + '" role="link" tabindex="0">' +
+                                '<div class="hp-proj-thumb">' + thumbHtml + '<span class="hp-proj-tag">' + kindLabel + '</span></div>' +
+                                '<div class="hp-proj-info">' +
+                                    '<div class="hp-proj-name">' + name + '</div>' +
+                                    '<div class="hp-proj-time">更新于 ' + timeText + '</div>' +
+                                '</div>' +
+                                '</div>';
                         } catch(e) {
                             console.warn('[home] Failed to render canvas card:', e, c);
                         }
                     });
-                    if (html) grid.innerHTML = html;
+                    html += '<div class="hp-proj hp-proj-new" onclick="createNewCanvas()" role="button" tabindex="0">' +
+                        '<div class="plus">+</div>' +
+                        '<div class="new-label">新建项目</div>' +
+                        '</div>';
+                    grid.innerHTML = html;
                 })
                 .catch(function(err) { console.error('[home] Failed to load recent canvases:', err); });
+        }
+
+        function createNewCanvas() {
+            fetch('/api/canvases', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: '画布 ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+                    icon: 'layers',
+                    kind: 'classic',
+                    project: 'default',
+                    board_x: 40,
+                    board_y: 40
+                })
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error('create canvas failed');
+                return r.json();
+            })
+            .then(function(data) {
+                var nc = data && data.canvas;
+                if (!nc) throw new Error('no canvas in response');
+                var enc = encodeURIComponent(nc.id);
+                var project = encodeURIComponent(nc.project || 'default');
+                parent.postMessage({ type: 'navigate', route: 'canvas', canvasId: nc.id }, '*');
+            })
+            .catch(function(err) { console.error('[home] create canvas failed:', err); alert('创建画布失败'); });
+        }
+
+        function continueLast() {
+            fetch('/api/recent-canvases', { cache: 'no-store' })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(function(canvases) {
+                    var list = (canvases && Array.isArray(canvases)) ? canvases : [];
+                    if (!list.length) {
+                        alert('还没有画布，先开始创作吧');
+                        return;
+                    }
+                    var latest = list[0];
+                    var encId = latest.id ? encodeURIComponent(latest.id) : '';
+                    if (encId) {
+                        parent.postMessage({ type: 'navigate', route: 'canvas', canvasId: encId }, '*');
+                    } else {
+                        parent.postMessage({ type: 'navigate', route: 'canvas' }, '*');
+                    }
+                })
+                .catch(function(err) { console.error('[home] continueLast failed:', err); alert('打开失败，请重试'); });
         }
 
         // 监听从父页面发来的刷新消息（如切换回首页时）
@@ -870,6 +932,14 @@
             document.addEventListener('DOMContentLoaded', renderRecentProjects);
         } else {
             renderRecentProjects();
+        }
+
+        function formatUpdateTime(timestamp) {
+            if (!timestamp) return '';
+            var d = new Date(timestamp);
+            if (isNaN(d.getTime())) return '';
+            var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+            return (d.getMonth() + 1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
         }
 
         function getTimeAgo(timestamp) {

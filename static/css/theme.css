@@ -31,7 +31,7 @@ body {
     background-color: rgba(120, 120, 120, .4) !important;
     border: 2px solid transparent !important;
     background-clip: padding-box !important;
-    border-radius: 999px !important;
+    border-radius:var(--radius-full) !important;
     transition: background-color 0.2s;
 }
 
@@ -537,7 +537,7 @@ body.studio-theme-dark .shell.theme-dark {
     --card-solid: var(--surface);
     --soft: var(--bg);
     --soft-2: var(--surface-2);
-    --line: rgba(132, 132, 132, .16);
+    --line: var(--border-2);
     --line-2: rgba(120, 120, 120, .22);
     --text: var(--text);
     --muted: var(--text-3);
@@ -773,7 +773,7 @@ html.studio-theme-dark body .shell .port::after,
 body.studio-theme-dark .shell .port::after {
     background: var(--accent) !important;
     border-color: transparent !important;
-    box-shadow: 0 0 0 1px rgba(132, 132, 132, .32) !important;
+    box-shadow: 0 0 0 1px var(--border-2) !important;
 }
 
 html.studio-theme-dark body .shell .drop-overlay,
@@ -792,7 +792,7 @@ body.studio-theme-dark .output-drag-preview,
     width: 150px;
     height: 150px;
     padding: 8px;
-    border-radius: 18px;
+    border-radius:var(--radius-lg);
     background: var(--bg);
     border: 1px solid transparent;
     box-shadow: 0 16px 40px rgba(0,0,0,.28);
@@ -804,7 +804,7 @@ body.studio-theme-dark .output-drag-preview,
     width: 100%;
     height: 100%;
     object-fit: contain;
-    border-radius: 12px;
+    border-radius:var(--radius-md);
     background: var(--bg);
 }
 
@@ -963,7 +963,6 @@ body.studio-theme-dark {
     --panel: rgba(14, 14, 14, .92);
     --text: var(--text);
     --text-main: var(--text);
-    --accent: var(--text);
     --line: var(--surface-2);
     --line-2: var(--border-strong);
 }
@@ -1141,7 +1140,6 @@ body.studio-theme-dark {
     --panel: rgba(21,21,21,.92);
     --text: var(--text);
     --text-main: var(--text);
-    --accent: var(--text);
     --line: var(--surface-2);
     --line-2: var(--border-strong);
 }
@@ -1379,13 +1377,13 @@ html.studio-theme-dark body .engine-btn,
 body.studio-theme-dark .engine-btn,
 html.studio-theme-dark body .provider-btn,
 body.studio-theme-dark .provider-btn {
-    border-radius: 999px !important;
+    border-radius:var(--radius-full) !important;
     letter-spacing: .02em !important;
 }
 
 html.studio-theme-dark body .provider-switch button,
 body.studio-theme-dark .provider-switch button {
-    border-radius: 999px !important;
+    border-radius:var(--radius-full) !important;
     min-height: 30px !important;
     font-size: 10px !important;
     font-weight: 600 !important;

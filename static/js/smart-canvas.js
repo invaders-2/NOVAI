@@ -387,6 +387,20 @@ const SIZE_MAP = {
     ultrawide: {'1k':'1280x544','2k':'2048x880','4k':'3840x1648'},
     ultratall: {'1k':'544x1280','2k':'880x2048','4k':'1648x3840'}
 };
+// gpt-image-2 官方 size 是离散枚举（1024x1024 / 1536x1024 / 1024x1536 / 2048x2048 /
+// 2048x1152 / 3840x2160 / 2160x3840 / auto），长边 ≤3840、总像素 ≤8294400、宽高比 ≤3:1，
+// 且没有正方形 4K。通用 SIZE_MAP 会生成 4096x4096 / 2352x3520 等非法值被上游拒，故单独映射。
+const GPT_IMAGE_2_SIZE_MAP = {
+    square:       {'1k':'1024x1024','2k':'2048x2048','4k':'2048x2048'},
+    portrait:     {'1k':'1024x1536','2k':'1024x1536','4k':'2160x3840'},
+    landscape:    {'1k':'1536x1024','2k':'2048x1152','4k':'3840x2160'},
+    portrait43:   {'1k':'1024x1536','2k':'1024x1536','4k':'2160x3840'},
+    landscape43:  {'1k':'1536x1024','2k':'2048x1152','4k':'3840x2160'},
+    story:        {'1k':'1024x1536','2k':'1024x1536','4k':'2160x3840'},
+    wide:         {'1k':'1536x1024','2k':'2048x1152','4k':'3840x2160'},
+    ultrawide:    {'1k':'1536x1024','2k':'2048x1152','4k':'3840x2160'},
+    ultratall:    {'1k':'1024x1536','2k':'1024x1536','4k':'2160x3840'}
+};
 const RES_LONG_SIDE = { '1k':1536, '2k':2048, '4k':3840 };
 const RES_PIXEL_LIMIT = { '1k':1572864, '2k':4194304, '4k':8294400 };
 // Clipboard helpers: delegate to NovaUtils
@@ -2900,7 +2914,7 @@ function parseRatioValue(value){
     const h = Number(parts[1]);
     return w > 0 && h > 0 ? w / h : 0;
 }
-function apiImageSize(ratioValue, resolutionValue, customRatioValue='', customSizeValue=''){
+function apiImageSize(ratioValue, resolutionValue, customRatioValue='', customSizeValue='', model=''){
     if(resolutionValue === 'auto') return 'auto';
     if(resolutionValue === 'custom') return String(customSizeValue || '').trim();
     const resolutionKey = resolutionValue || '1k';
@@ -2917,7 +2931,8 @@ function apiImageSize(ratioValue, resolutionValue, customRatioValue='', customSi
         }
     }
     const ratioKey = ratioValue && SIZE_MAP[ratioValue] ? ratioValue : 'square';
-    return SIZE_MAP[ratioKey]?.[resolutionKey] || SIZE_MAP.square[resolutionKey] || SIZE_MAP.square['1k'];
+    const table = isGptImageAutoSizeModel(model) ? GPT_IMAGE_2_SIZE_MAP : SIZE_MAP;
+    return table[ratioKey]?.[resolutionKey] || table.square[resolutionKey] || table.square['1k'];
 }
 function normalizeApiSizeSettings(prefix=''){
     const ratioKey = prefix ? `${prefix}Ratio` : 'ratio';
@@ -3525,7 +3540,7 @@ function renderSizePickerControl(prefix='', includeSource=false){
                     ${ratios.map(([value, label, sub]) => `<button type="button" class="size-picker-option ${value === currentRatio ? 'active' : ''}" data-smart-param="${ratioKey}" data-smart-value="${escapeHtml(value)}"><span>${escapeHtml(label)}</span><small>${escapeHtml(sub)}</small></button>`).join('')}
                 </div>
                 <div class="size-picker-list">
-                    ${options.filter(v => v !== 'auto').map(value => `<button type="button" class="size-picker-option ${value === currentRes ? 'active' : ''}" data-smart-param="${resKey}" data-smart-value="${value}"><span>${value.toUpperCase()}</span><small>${escapeHtml(apiImageSize(currentRatio, value, currentCustomRatio, '') || '')}</small></button>`).join('')}
+                    ${options.filter(v => v !== 'auto').map(value => `<button type="button" class="size-picker-option ${value === currentRes ? 'active' : ''}" data-smart-param="${resKey}" data-smart-value="${value}"><span>${value.toUpperCase()}</span><small>${escapeHtml(apiImageSize(currentRatio, value, currentCustomRatio, '', settings.model) || '')}</small></button>`).join('')}
                 </div>
             </div>` : ''}
             ${scope === 'custom' ? `<div class="size-picker-pane size-picker-custom">
@@ -14182,7 +14197,7 @@ function sizeForRun(sourceSettings=settings){
     const fallbackResolution = sourceSettings.engine === 'api' && isGptImageAutoSizeModel(sourceSettings.model)
         ? defaultSmartApiResolution(sourceSettings.model)
         : '1k';
-    return apiImageSize(sourceSettings.ratio || 'square', sourceSettings.resolution || fallbackResolution, sourceSettings.customRatio || '', sourceSettings.customSize || '') || '1024x1024';
+    return apiImageSize(sourceSettings.ratio || 'square', sourceSettings.resolution || fallbackResolution, sourceSettings.customRatio || '', sourceSettings.customSize || '', sourceSettings.model) || '1024x1024';
 }
 function expectedOutputSize(){
     if(settings.engine === 'comfy'){

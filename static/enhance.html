@@ -7,14 +7,15 @@
     <link rel="icon" href="/static/images/logo.png" type="image/png">
     <title>Z-IMAGE | 极简影像重塑</title>
     <script>(function(){try{var t=localStorage.getItem("studio_theme")||localStorage.getItem("canvas_theme")||"light";if(t==="dark"){document.documentElement.classList.add("studio-theme-dark");document.documentElement.classList.add("theme-dark");}}catch(e){}})();</script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/vendor/js/lucide-subset.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/theme.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/shared/utils.js?v=1.0.111.1786930085.1785603211"></script>
-    <script src="/static/js/i18n.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/image-preview.js?v=1.0.111.1786930085.1786205339"></script>
-    <script src="/static/js/history-bulk-manager.js?v=1.0.111.1786930085.1786205339"></script>
-    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.111.1786930085.1786205339">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/vendor/js/lucide-subset.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/shared/icons.js?v=1.0.112-beta.2.1788315411"></script>
+    <script src="/static/js/theme.js?v=1.0.112-beta.2.1788416878"></script>
+    <script src="/static/js/shared/utils.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/i18n.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/image-preview.js?v=1.0.112-beta.2.1787122934"></script>
+    <script src="/static/js/history-bulk-manager.js?v=1.0.112-beta.2.1787824938"></script>
+    <link rel="stylesheet" href="/static/vendor/css/fonts.css?v=1.0.112-beta.2.1787122934">
     <style>
 
         :root {
@@ -44,7 +45,7 @@
 
         /* 统一组件风格 */
         .glass-btn {
-            background: #1c1c1e;
+            background: var(--text);
             transition: all 0.3s var(--easing);
         }
 
@@ -72,8 +73,8 @@
 
         .result-frame {
             background: #ffffff;
-            border-radius: 32px;
-            border: 1px solid #e5e5e5;
+            border-radius:var(--radius-xl);
+            border: 1px solid var(--border);
             box-shadow: 0 2px 15px rgba(0, 0, 0, 0.02);
         }
 
@@ -81,8 +82,8 @@
             break-inside: avoid;
             margin-bottom: 1.25rem;
             background: #fff;
-            border: 1px solid #e5e5e5;
-            border-radius: 24px;
+            border: 1px solid var(--border);
+            border-radius:var(--radius-xl);
             overflow: hidden;
             transition: all 0.5s var(--easing);
         }
@@ -101,7 +102,7 @@
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
             height: 2px;
-            background: #e5e5e5;
+            background: var(--border);
             border-radius: 1px;
         }
 
@@ -109,7 +110,7 @@
             -webkit-appearance: none;
             height: 14px;
             width: 14px;
-            border-radius: 50%;
+            border-radius:var(--radius-full);
             background: var(--accent);
             margin-top: -6px;
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
@@ -163,7 +164,7 @@
             left: 2px;
             bottom: 2px;
             background: white;
-            border-radius: 50%;
+            border-radius:var(--radius-full);
             transition: 0.3s var(--easing);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
         }
@@ -173,9 +174,9 @@
         }
 
         .engine-switch {
-            background: #f5f5f7;
+            background: var(--bg);
             border: 1px solid #dcdcde;
-            border-radius: 999px;
+            border-radius:var(--radius-full);
             padding: 3px;
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -183,13 +184,13 @@
         }
 
         .engine-btn {
-            border-radius: 999px;
+            border-radius:var(--radius-full);
             height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            color: #58585a;
+            color: var(--muted);
             font-size: 10px;
             font-weight: 600;
             letter-spacing: .02em;
@@ -199,19 +200,19 @@
 
         .engine-btn.active {
             background: #fff;
-            color: #1c1c1e;
+            color: var(--text);
             box-shadow: 0 1px 3px rgba(28,28,28,.08);
         }
 
         .engine-btn:not(.active):hover {
-            color: #1c1c1e;
+            color: var(--text);
             background: rgba(0,0,0,.04);
         }
 
         .engine-panel {
             background: #fff;
             border: 1px solid #ececee;
-            border-radius: 24px;
+            border-radius:var(--radius-xl);
             padding: 12px;
             display: flex;
             flex-direction: column;
@@ -222,16 +223,16 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            color: #848488;
+            color: var(--text-3);
             font-size: 10px;
             font-weight: 600;
             letter-spacing: .04em;
         }
     </style>
-<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.111.1786930085.1785603211">
+<link rel="stylesheet" href="/static/css/marvis-shared.css?v=1.0.112-beta.2.1787644934">
 <style>
 /* --- 页面特定 Marvis 覆盖 --- */
-        :root { --accent: var(--text); --bg: #f5f5f7; --card: var(--stage-bg); }
+        :root { --accent: #1c1c1e; --bg: #f5f5f7; --card: var(--stage-bg); }
         body { background: var(--bg) !important; color: var(--text) !important; }
         .container-box { margin-top: 60px; }
         .glass-btn { background: var(--text) !important; border-radius: var(--radius-md) !important; }
@@ -245,7 +246,7 @@
         html.theme-dark body { background: var(--bg) !important; }
 </style>
 
-    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.111.1786930085.1786205339">
+    <link rel="stylesheet" href="/static/css/theme.css?v=1.0.112-beta.2.1787639828">
 </head>
 
 <body class="selection:bg-black selection:text-white">

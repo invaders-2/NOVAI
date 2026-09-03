@@ -11,10 +11,10 @@
     --surface: #ffffff;
     --surface-2: #fafafa;
     --elevated: #ffffff;
-    --overlay: rgba(255, 255, 255, 0.72);
+    --overlay: rgba(255, 255, 255, 0.6);
     --canvas-bg: #f5f5f7;
     --panel-bg: rgba(255, 255, 255, 0.92);
-    --sidebar-bg: rgba(245, 245, 247, 0.72);
+    --sidebar-bg: rgba(255, 255, 255, 0.6);
     --stage-bg: #ffffff;
 
     /* ── 文字层 ── */
@@ -23,8 +23,10 @@
     --text-3: #86868b;
     --text-on-accent: #ffffff;
     --accent: #1d1d1f;
-    --accent-hover: #000000;
+    --accent-hover: #3a3a3c;
+    --accent-pressed: #000000;
     --accent-text: #ffffff;
+    --accent-subtle: rgba(29, 29, 31, 0.08);
 
     /* ── 语义色 ── */
     --danger: #dc2626;
@@ -53,10 +55,10 @@
     --scrollbar: rgba(0, 0, 0, 0.12);
 
     /* ── 阴影 ── */
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.06);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.10);
+    --shadow-sm: 0 0.5px 1.5px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.03);
+    --shadow-md: 0 2px 6px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.06), 0 16px 40px rgba(0,0,0,0.08);
+    --shadow-xl: 0 8px 24px rgba(0,0,0,0.08), 0 24px 64px rgba(0,0,0,0.12);
     /* 原始阴影色（用于自定义 box-shadow 组合） */
     --shadow-color: rgba(0,0,0,0.06);
     --shadow-color-lg: rgba(0,0,0,0.10);
@@ -64,15 +66,66 @@
     /* ── 网格点 ── */
     --grid-color: #c8c8c8;
 
-    /* ── 圆角 ── */
+    /* ── 圆角（Apple 对齐：10 输入 / 12 按钮 / 18 卡片 / 24 浮层） ── */
     --radius-sm: 10px;
-    --radius-md: 14px;
-    --radius-lg: 20px;
-    --radius-xl: 28px;
+    --radius-md: 12px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
 
-    /* ── 动效 ── */
+    /* ── 间距 Scale ── */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+
+    /* ── 字号 Scale ── */
+    --text-xs: 11px;
+    --text-sm: 12.5px;
+    --text-base: 14px;
+    --text-lg: 16px;
+    --text-xl: 20px;
+    --text-2xl: 26px;
+    --text-3xl: 32px;
+
+    /* ── 字距 Scale（随字号：大字号收紧、小字号微展） ── */
+    --tracking-3xl: -0.02em;
+    --tracking-2xl: -0.01em;
+    --tracking-xl: -0.01em;
+    --tracking-lg: 0em;
+    --tracking-base: 0.01em;
+    --tracking-sm: 0.015em;
+    --tracking-xs: 0.02em;
+
+    /* ── 动效（Apple ease） ── */
+    --ease-apple: cubic-bezier(0.25, 0.1, 0.25, 1.0);
     --fluid-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-    --fast-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    --fast-ease: var(--ease-apple);
+    --duration-fast: 200ms;
+    --duration-normal: 300ms;
+    --duration-slow: 400ms;
+
+    /* ── 语义别名（统一收编旧页面映射变量，指向全局 token） ── */
+    --panel: var(--panel-bg);
+    --panel-solid: var(--surface);
+    --card: var(--surface);
+    --soft: var(--nav-hover-bg);
+    --soft-2: var(--surface-2);
+    --line: var(--border);
+    --line-2: var(--border-2);
+    --line-strong: var(--border-strong);
+    --muted: var(--text-2);
+    --faint: var(--text-3);
+    --strong: var(--accent);
+    --strong-text: var(--accent-text);
+    --page: var(--bg);
+    --ok: var(--success);
+    --grid: var(--grid-color);
+    --ease: var(--fast-ease);
+    --shadow: var(--shadow-color);
 }
 
 /* ── 暗色模式：只需重定义变量值 ── */
@@ -85,20 +138,22 @@ body.studio-theme-dark {
     --surface: #141414;
     --surface-2: #1a1a1a;
     --elevated: #1c1c1c;
-    --overlay: rgba(13, 13, 13, 0.78);
+    --overlay: rgba(13, 13, 13, 0.6);
     --canvas-bg: #0d0d0d;
     --panel-bg: rgba(20, 20, 20, 0.92);
-    --sidebar-bg: rgba(13, 13, 13, 0.78);
+    --sidebar-bg: rgba(13, 13, 13, 0.6);
     --stage-bg: #161616;
 
     /* 文字层 */
     --text: #f5f5f7;
     --text-2: #a5a5a5;
     --text-3: #808080;
-    --text-on-accent: #0d0d0d;
-    --accent: #dcdcdc;
-    --accent-hover: #f5f5f5;
-    --accent-text: #0d0d0d;
+    --text-on-accent: #1d1d1f;
+    --accent: #f5f5f7;
+    --accent-hover: #ffffff;
+    --accent-pressed: #d1d1d6;
+    --accent-text: #1d1d1f;
+    --accent-subtle: rgba(245, 245, 247, 0.12);
 
     /* 语义色（暗色微调） */
     --danger: #ef4444;
@@ -113,10 +168,10 @@ body.studio-theme-dark {
     --warning-bg: rgba(251, 191, 36, 0.12);
     --warning-border: rgba(251, 191, 36, 0.30);
     --warning-text: #fcd34d;
-    --info: #60a5fa;
-    --info-bg: rgba(96, 165, 250, 0.12);
-    --info-border: rgba(96, 165, 250, 0.30);
-    --info-text: #93c5fd;
+    --info: #a5a5a5;
+    --info-bg: rgba(165, 165, 165, 0.12);
+    --info-border: rgba(165, 165, 165, 0.30);
+    --info-text: #c9c9cf;
 
     /* 边框 */
     --border: rgba(255, 255, 255, 0.06);
@@ -127,10 +182,11 @@ body.studio-theme-dark {
     --scrollbar: rgba(255, 255, 255, 0.16);
 
     /* 阴影（暗色更深） */
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.18);
-    --shadow-md: 0 4px 16px rgba(0,0,0,0.28);
-    --shadow-lg: 0 8px 32px rgba(0,0,0,0.34);
-    --shadow-xl: 0 16px 48px rgba(0,0,0,0.42);
+    --shadow-sm: 0 0.5px 1.5px rgba(0,0,0,0.20), 0 1px 3px rgba(0,0,0,0.18);
+    --shadow-md: 0 2px 6px rgba(0,0,0,0.26), 0 8px 24px rgba(0,0,0,0.30);
+    --shadow-lg: 0 4px 12px rgba(0,0,0,0.30), 0 16px 40px rgba(0,0,0,0.34);
+    --shadow-xl: 0 8px 24px rgba(0,0,0,0.34), 0 24px 64px rgba(0,0,0,0.42);
+    --shadow-elevated: 0 20px 40px rgba(0,0,0,0.45);
     --shadow-color: rgba(0,0,0,0.28);
     --shadow-color-lg: rgba(0,0,0,0.42);
 
@@ -146,7 +202,7 @@ body.studio-theme-dark {
 
 *::-webkit-scrollbar { width: 6px; height: 6px; }
 *::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 999px; }
+*::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: var(--radius-full); }
 *::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
 
 /* ── 基础排版 ── */
@@ -156,6 +212,7 @@ body {
     -moz-osx-font-smoothing: grayscale;
     background-color: var(--bg);
     color: var(--text);
+    letter-spacing: var(--tracking-base);
 }
 
 /* ── 等宽文本工具类 ── */
@@ -178,7 +235,7 @@ body {
     border: 3px solid transparent !important;
     border-right-width: 5px !important;
     background-clip: padding-box !important;
-    border-radius: 10px !important;
+    border-radius: var(--radius-sm) !important;
 }
 *::-webkit-scrollbar-thumb:hover {
     background-color: #c0c0c0 !important;
@@ -251,4 +308,106 @@ html.settings-embed *::-webkit-scrollbar {
 }
 .ios-switch .ios-slider:before {
     transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ═══════════════════════════════════════════
+   Apple 规范（WWDC 2026 八大原则）视觉补齐追加层
+   ═══════════════════════════════════════════ */
+
+/* ── 亮色顶边：标题栏/侧边栏顶部 1px 高光 ── */
+.frameless-titlebar,
+.sidebar {
+    border-top: 1px solid rgba(255, 255, 255, 0.4);
+}
+html.theme-dark .frameless-titlebar,
+html.theme-dark .sidebar,
+body.theme-dark .frameless-titlebar,
+body.theme-dark .sidebar {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ── 滚动边缘渐变：标题栏底部分隔线改渐隐过渡 ── */
+.frameless-titlebar {
+    border-bottom: none;
+}
+.frameless-titlebar::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border) 12%, var(--border) 88%, transparent);
+    pointer-events: none;
+}
+
+/* ── 滚动内容容器边缘渐隐遮罩（侧边栏底部淡出） ── */
+.sidebar nav {
+    -webkit-mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 82%, transparent 100%);
+}
+
+/* ── Vibrancy 文字：半透明表面文字更高对比/字重 ── */
+.frameless-titlebar {
+    color: var(--text);
+    font-weight: 500;
+    text-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.4);
+}
+html.theme-dark .frameless-titlebar,
+body.theme-dark .frameless-titlebar {
+    text-shadow: 0 0.5px 0 rgba(0, 0, 0, 0.35);
+}
+.sidebar {
+    --text-2: #58585e;
+    --text-3: #6e6e73;
+    text-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.35);
+}
+html.theme-dark .sidebar,
+body.theme-dark .sidebar {
+    --text-2: #b3b3b8;
+    --text-3: #8e8e93;
+    text-shadow: 0 0.5px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* ── 字距随字号：大标题收紧、小字微展 ── */
+.frameless-titlebar .titlebar-logo {
+    letter-spacing: var(--tracking-sm);
+}
+.sidebar .logo-text {
+    letter-spacing: var(--tracking-sm);
+}
+.sidebar nav .nav-item,
+.sidebar nav .side-pill {
+    letter-spacing: var(--tracking-xs);
+}
+
+/* ── 降级：prefers-reduced-motion 关闭/减弱 blur 与动画 ── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    .frameless-titlebar,
+    .sidebar {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+}
+
+/* ── 降级：prefers-reduced-transparency 提高半透明表面不透明度 ── */
+@media (prefers-reduced-transparency: reduce) {
+    :root {
+        --overlay: rgba(255, 255, 255, 0.94);
+        --sidebar-bg: rgba(255, 255, 255, 0.94);
+        --panel-bg: rgba(255, 255, 255, 0.94);
+    }
+    html.theme-dark,
+    html.studio-theme-dark,
+    body.theme-dark,
+    body.studio-theme-dark {
+        --overlay: rgba(13, 13, 13, 0.94);
+        --sidebar-bg: rgba(13, 13, 13, 0.94);
+        --panel-bg: rgba(20, 20, 20, 0.94);
+    }
 }

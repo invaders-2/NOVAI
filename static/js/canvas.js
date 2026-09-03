@@ -567,6 +567,21 @@ const SIZE_MAP = {
     ultrawide: { '1k':'1280x544', '2k':'2048x880', '4k':'3840x1648' },
     ultratall: { '1k':'544x1280', '2k':'880x2048', '4k':'1648x3840' }
 };
+// gpt-image-2 官方 size 是离散枚举（1024x1024 / 1536x1024 / 1024x1536 / 2048x2048 /
+// 2048x1152 / 3840x2160 / 2160x3840 / auto），且长边 ≤3840、总像素 ≤8294400、宽高比 ≤3:1。
+// 它没有正方形 4K（4096² 超限、2880² 不在枚举），也没有 4:3 / 21:9 等非官方比例。
+// 用通用 SIZE_MAP 会生成 4096x4096 / 2352x3520 等非法值被上游拒，故单独映射到最近的合法档。
+const GPT_IMAGE_2_SIZE_MAP = {
+    square:       { '1k':'1024x1024', '2k':'2048x2048', '4k':'2048x2048' },
+    portrait:     { '1k':'1024x1536', '2k':'1024x1536', '4k':'2160x3840' },
+    landscape:    { '1k':'1536x1024', '2k':'2048x1152', '4k':'3840x2160' },
+    portrait43:   { '1k':'1024x1536', '2k':'1024x1536', '4k':'2160x3840' },
+    landscape43:  { '1k':'1536x1024', '2k':'2048x1152', '4k':'3840x2160' },
+    story:        { '1k':'1024x1536', '2k':'1024x1536', '4k':'2160x3840' },
+    wide:         { '1k':'1536x1024', '2k':'2048x1152', '4k':'3840x2160' },
+    ultrawide:    { '1k':'1536x1024', '2k':'2048x1152', '4k':'3840x2160' },
+    ultratall:    { '1k':'1024x1536', '2k':'1024x1536', '4k':'2160x3840' }
+};
 const RES_LONG_SIDE = { '1k':1536, '2k':2048, '4k':3840 };
 const RES_PIXEL_LIMIT = { '1k':1572864, '2k':4194304, '4k':8294400 };
 const CUSTOM_IMAGE_MODELS_KEY = 'canvas_custom_image_models';
@@ -1080,7 +1095,7 @@ function ratioPartsFromDimensions(width, height){
     const g = gcdInt(best.width, best.height);
     return {width:best.width / g, height:best.height / g};
 }
-function apiImageSize(ratioValue, resolutionValue, customRatioValue = '', customSizeValue = ''){
+function apiImageSize(ratioValue, resolutionValue, customRatioValue = '', customSizeValue = '', model = ''){
     if(resolutionValue === 'auto') return 'auto';
     if(resolutionValue === 'custom') return String(customSizeValue || '').trim();
     const resolutionKey = resolutionValue || '1k';
@@ -1097,7 +1112,8 @@ function apiImageSize(ratioValue, resolutionValue, customRatioValue = '', custom
         }
     }
     const ratioKey = ratioValue && SIZE_MAP[ratioValue] ? ratioValue : 'square';
-    return SIZE_MAP[ratioKey]?.[resolutionKey] || SIZE_MAP.square[resolutionKey] || SIZE_MAP.square['1k'];
+    const table = isGptImageAutoSizeModel(model) ? GPT_IMAGE_2_SIZE_MAP : SIZE_MAP;
+    return table[ratioKey]?.[resolutionKey] || table.square[resolutionKey] || table.square['1k'];
 }
 function parseSizePair(value){
     const match = String(value || '').match(/(\d+)\s*x\s*(\d+)/i);
@@ -1144,7 +1160,7 @@ async function generatorSizeForRun(gen, refs){
     const ratio = (gen.ratio === 'source' && !gen.customRatio)
         ? 'square'
         : (gen.ratio ?? 'square');
-    return apiImageSize(ratio, gen.resolution || defaultApiImageResolution(gen.model), gen.customRatio || '', gen.customSize || '');
+    return apiImageSize(ratio, gen.resolution || defaultApiImageResolution(gen.model), gen.customRatio || '', gen.customSize || '', resolveImageModel(gen.model));
 }
 function normalizeApiNodeLayout(node){
     if(!node || node.type !== 'generator') return;
@@ -2278,6 +2294,7 @@ async function openCanvas(id){
         resumeCanvasImageTasks();
         startCanvasRemotePolling();
         setStatus('Ready');
+        consumePendingImport();
     } catch(e) {
         setStatus(tr('canvas.openFailed'));
         console.error(e);
@@ -2285,6 +2302,37 @@ async function openCanvas(id){
         window.location.replace(canvasListUrlForProject(canvas?.project || requestedCanvasListProject() || rememberedCanvasListProject()));
     }
 }
+function dataUrlToFile(dataUrl, name){
+    try {
+        const meta = (dataUrl.split(',')[0] || '').match(/data:(.*?)(;|$)/);
+        const mime = meta ? meta[1] : 'image/png';
+        const b64 = dataUrl.split(',')[1] || '';
+        const bin = atob(b64);
+        const arr = new Uint8Array(bin.length);
+        for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        return new File([arr], name || ('import-' + Date.now() + '.png'), { type: mime });
+    } catch(e) {
+        console.error('dataUrlToFile failed:', e);
+        return null;
+    }
+}
+
+async function consumePendingImport(){
+    let pending = null;
+    try { pending = JSON.parse(localStorage.getItem('hp_pending_import') || 'null'); } catch(e) {}
+    if(!pending || !pending.canvasId || !canvas || pending.canvasId !== canvas.id) return;
+    localStorage.removeItem('hp_pending_import');
+    if(!pending.dataUrl) return;
+    try {
+        const file = dataUrlToFile(pending.dataUrl, pending.name);
+        if(!file) return;
+        const node = addNode({id: uid('img'), type:'image', x: 80, y: 60, url:'', name: pending.name || '导入图片'});
+        await fillImageNode(node.id, [file]);
+    } catch(e) {
+        console.error('consumePendingImport failed:', e);
+    }
+}
+
 function applyRemoteCanvasData(remote){
     if(!remote || !canvas || remote.id !== canvas.id) return;
     if(localCanvasDirty || saveTimer || savingCanvasNow || saveCanvasAgain){

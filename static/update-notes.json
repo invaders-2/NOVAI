@@ -1,13 +1,39 @@
 {
-  "version": "1.0.112-beta.2",
-  "updated_at": "2026-08-18T17:46:55+08:00",
+  "version": "1.0.112",
+  "updated_at": "2026-09-03T17:00:00+08:00",
   "items": [
     {
       "type": "feature",
-      "text": "素材默认存储位置跟随安装目录——Windows 安装到可写目录（如 D 盘）时默认写入「安装目录\\assets」，安装到 Program Files 等只读位置时自动回落系统数据目录；Mac/Linux 因 app 包只读同样回落；老用户已有素材则保持原路径不迁移；设置页显示与实际写入路径统一"
+      "text": "前端视觉统一升级：11 个功能页设计 token 收敛（marvis-shared/theme 样式体系），配色、间距、圆角、字体全局统一"
+    },
+    {
+      "type": "feature",
+      "text": "GPT 聊天顶栏/输入框/空态/模型选择弹窗 V17-V19 重构，交互与视觉全面焕新"
+    },
+    {
+      "type": "feature",
+      "text": "思考强度能力配置化：后端能力下发，前端直读生效"
+    },
+    {
+      "type": "fix",
+      "text": "显式尺寸选择不再被提示词关键词覆盖（gpt-image-2 分辨率稳定）；gemini 偏红误修回滚等后端修复"
+    },
+    {
+      "type": "improvement",
+      "text": "beam 灯光视觉特效、前端图标集中管理（shared/icons.js）；新增 jsonschema 后端依赖"
     }
   ],
   "history": [
+    {
+      "version": "1.0.112-beta.2",
+      "updated_at": "2026-08-18T17:46:55+08:00",
+      "items": [
+        {
+          "type": "feature",
+          "text": "素材默认存储位置跟随安装目录——Windows 安装到可写目录（如 D 盘）时默认写入「安装目录\\assets」，安装到 Program Files 等只读位置时自动回落系统数据目录；Mac/Linux 因 app 包只读同样回落；老用户已有素材则保持原路径不迁移；设置页显示与实际写入路径统一"
+        }
+      ]
+    },
     {
       "version": "1.0.112-beta.1",
       "updated_at": "2026-08-18T11:15:17+08:00",

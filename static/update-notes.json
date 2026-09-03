@@ -1,29 +1,39 @@
 {
-  "version": "1.0.112",
-  "updated_at": "2026-09-03T17:00:00+08:00",
+  "version": "1.0.113",
+  "updated_at": "2026-09-03T18:30:00+08:00",
   "items": [
     {
-      "type": "feature",
-      "text": "前端视觉统一升级：11 个功能页设计 token 收敛（marvis-shared/theme 样式体系），配色、间距、圆角、字体全局统一"
-    },
-    {
-      "type": "feature",
-      "text": "GPT 聊天顶栏/输入框/空态/模型选择弹窗 V17-V19 重构，交互与视觉全面焕新"
-    },
-    {
-      "type": "feature",
-      "text": "思考强度能力配置化：后端能力下发，前端直读生效"
-    },
-    {
       "type": "fix",
-      "text": "显式尺寸选择不再被提示词关键词覆盖（gpt-image-2 分辨率稳定）；gemini 偏红误修回滚等后端修复"
-    },
-    {
-      "type": "improvement",
-      "text": "beam 灯光视觉特效、前端图标集中管理（shared/icons.js）；新增 jsonschema 后端依赖"
+      "text": "修复安装包无法启动：云端打包缺失 server 后端模块导致启动报 No module named 'server'；server 路由模块已纳入仓库并重新构建，素材库/本地素材/提示词库等接口恢复正常"
     }
   ],
   "history": [
+    {
+      "version": "1.0.112",
+      "updated_at": "2026-09-03T17:00:00+08:00",
+      "items": [
+        {
+          "type": "feature",
+          "text": "前端视觉统一升级：11 个功能页设计 token 收敛（marvis-shared/theme 样式体系），配色、间距、圆角、字体全局统一"
+        },
+        {
+          "type": "feature",
+          "text": "GPT 聊天顶栏/输入框/空态/模型选择弹窗 V17-V19 重构，交互与视觉全面焕新"
+        },
+        {
+          "type": "feature",
+          "text": "思考强度能力配置化：后端能力下发，前端直读生效"
+        },
+        {
+          "type": "fix",
+          "text": "显式尺寸选择不再被提示词关键词覆盖（gpt-image-2 分辨率稳定）；gemini 偏红误修回滚等后端修复"
+        },
+        {
+          "type": "improvement",
+          "text": "beam 灯光视觉特效、前端图标集中管理（shared/icons.js）；新增 jsonschema 后端依赖"
+        }
+      ]
+    },
     {
       "version": "1.0.112-beta.2",
       "updated_at": "2026-08-18T17:46:55+08:00",

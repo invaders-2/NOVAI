@@ -150,6 +150,22 @@ The app checks all three sources for the latest version on startup, pushes updat
 
 ## Changelog
 
+### v1.0.114
+
+- **Historical asset fix**: fixed missing historical images after macOS upgrades — the asset directory was wrongly resolved to a read-only folder inside the app bundle; it now falls back to the real data directory (`~/NOVAI/assets`), restoring canvases and local assets
+
+### v1.0.113
+
+- **Install & launch fix**: fixed installers failing to start — cloud builds were missing the server backend module, causing `No module named 'server'`; the server router module is now included in the repo and rebuilt into the packages, restoring the asset library / local assets / prompt library APIs
+
+### v1.0.112
+
+- **Unified visual refresh**: design tokens converged across 11 feature pages (marvis-shared/theme), unifying colors, spacing, radius and typography
+- **GPT chat revamp**: header / input / empty state / model picker (V17-V19) redesigned
+- **Configurable thinking effort**: pushed from backend, read directly by frontend
+- **Fixes**: explicit size selection no longer overridden by prompt keywords (stable gpt-image-2 resolutions); gemini color-cast rollback and other backend fixes
+- **Other**: beam lighting visual effects, centralized frontend icons (shared/icons.js)
+
 ### v1.0.112-beta.1 (Beta)
 
 - **Electron desktop client**: bundled Chromium engine; shares port 3000 + the same data directory with the official build (full data interop); tray / native dialogs / window controls
